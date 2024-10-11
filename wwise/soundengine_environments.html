@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -48,14 +48,14 @@
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The values used in the API range from 0 to 1, representing a percentage of the full volume. 0 stands for 0% and 1 stands for 100%. When volumes are applied in more than one place, the resulting values are multiplied. For example, if the <code>GAME_OBJECT_ID_HUMAN</code> game object is 50% in the Auxiliary Bus "Hangar" and the Auxiliary Bus "Hangar" is attenuated at 90%, then the sounds emitted by this game object will go into its Effects at 45% (<code>0.50f * 0.90</code>). </td></tr>
 </table>
 <p>Handling the game-defined auxiliary sends is done using the following functions:</p><ul>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161.html#adf1401ce64872af26cdff05b36e98161">AK::SoundEngine::SetGameObjectOutputBusVolume()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d.html#a1aae6ebdec25946fb2897ce0e025366d">AK::SoundEngine::GetIDFromString()</a></li>
+<li>AK::SoundEngine::SetGameObjectAuxSendValues()</li>
+<li>AK::SoundEngine::SetGameObjectOutputBusVolume()</li>
+<li>AK::SoundEngine::GetIDFromString()</li>
 </ul>
-<p>Dynamic Auxiliary Bus routing: <a class="el" href="soundengine_environments.html#soundengine_environments_dynamic_aux_bus_routing">Dynamically Sending To Auxiliary Busses.</a></p>
+<p>Dynamic Auxiliary Bus routing: Dynamically Sending To Auxiliary Busses.</p>
 <h1><a class="anchor" id="soundengine_environments_listener_id"></a>
 Auxiliary Sends and Listener Game Objects</h1>
-<p>Every instance of a bus in the Wwise sound engine is associated with a game object. When we create an aux send, we create a listener-emitter association in the sound engine, with a specific aux bus as the target. The positions of the emitter and listener game objects are used in the source and target audio node to spatialize the sound (if the sound is set to 3D in the authoring tool). When defining an aux send, it is often desirable to use the same listener for the target aux bus as has already been assigned for the direct output of the source audio node – that is the listener(s) that have been assigned via <code><a class="el" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">SetListeners()</a></code> or <code><a class="el" href="namespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe.html#a4fe9102cd3cb2b59dda5d3d635dc49fe">SetDefaultListeners()</a></code>. To facilitate this behaviour, and to avoid having to remember which game object has already been associated to which listener, one may simply pass <code>AK_INVALID_GAME_OBJECT</code> as the <code>listenerID</code>.</p>
+<p>Every instance of a bus in the Wwise sound engine is associated with a game object. When we create an aux send, we create a listener-emitter association in the sound engine, with a specific aux bus as the target. The positions of the emitter and listener game objects are used in the source and target audio node to spatialize the sound (if the sound is set to 3D in the authoring tool). When defining an aux send, it is often desirable to use the same listener for the target aux bus as has already been assigned for the direct output of the source audio node â€“ that is the listener(s) that have been assigned via <code>SetListeners()</code> or <code>SetDefaultListeners()</code>. To facilitate this behaviour, and to avoid having to remember which game object has already been associated to which listener, one may simply pass <code>AK_INVALID_GAME_OBJECT</code> as the <code>listenerID</code>.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> It is important to fill out the <code>listenerID</code> field in the <code><a class="el" href="struct_ak_aux_send_value.html" title="Auxiliary bus sends information per game object per given auxiliary bus.">AkAuxSendValue</a></code> structure. Leaving it uninitialized will result in undefined behaviour. </td></tr>
@@ -99,8 +99,8 @@ Working with IDs</h1>
 <div class="line"> </div>
 <div class="line">    <span class="keyword">namespace </span>AUX_BUSSES</div>
 <div class="line">    {</div>
-<div class="line">        <span class="keyword">static</span> <span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc.html#a8341fa4d01d2fa852c3cc410401b04dc">AkUniqueID</a> HANGAR_ENV = 2112490296U;</div>
-<div class="line">        <span class="keyword">static</span> <span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc.html#a8341fa4d01d2fa852c3cc410401b04dc">AkUniqueID</a> TUNNEL_ENV = 2112490296U;</div>
+<div class="line">        <span class="keyword">static</span> <span class="keyword">const</span> AkUniqueID HANGAR_ENV = 2112490296U;</div>
+<div class="line">        <span class="keyword">static</span> <span class="keyword">const</span> AkUniqueID TUNNEL_ENV = 2112490296U;</div>
 <div class="line">    } <span class="comment">// namespace AUX_BUSSES</span></div>
 <div class="line"> </div>
 <div class="line">} <span class="comment">// namespace AK</span></div>
@@ -111,45 +111,45 @@ Working with IDs</h1>
 <h2><a class="anchor" id="soundengine_environments_working_with_ids_example1"></a>
 Example: String Conversion (Unicode Version)</h2>
 <p>The following method performs run-time conversion of unicode strings into IDs. This allows you to make a one time look-up in the string table per environment, and then use the ID.</p>
-<div class="fragment"><div class="line"><a class="code" href="_common_2_ak_types_8h_a90cfd84c4feec568941a46c13aa964e0.html#a90cfd84c4feec568941a46c13aa964e0">AkAuxBusID</a> <a class="code" href="namespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d.html#a1aae6ebdec25946fb2897ce0e025366d">AK::SoundEngine::GetIDFromString</a>( <span class="keyword">const</span> <span class="keywordtype">wchar_t</span> * in_pszString );</div>
+<div class="fragment"><div class="line">AkAuxBusID AK::SoundEngine::GetIDFromString( <span class="keyword">const</span> <span class="keywordtype">wchar_t</span> * in_pszString );</div>
 </div><!-- fragment --><h1><a class="anchor" id="soundengine_environments_dynamic_aux_bus_routing"></a>
 Dynamically Sending To Auxiliary Busses.</h1>
-<p>Dynamically driving the aux bus routing is done using the <code><a class="el" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues()</a></code> function. The first parameter of the function is the game object ID to which the game-defined aux bus routing will be applied. The second and third parameters represent an array of structure of type <code><a class="el" href="struct_ak_aux_send_value.html" title="Auxiliary bus sends information per game object per given auxiliary bus.">AkAuxSendValue</a></code> and the number of Auxiliary Busses to send to. If the sound does not have the option "Use game-defined auxiliary sends" enabled, then no environments will be applied to this game object. For every Auxiliary Bus to which a game object is sent, a control value must be set representing the percentage application of the environment. The control value is a value ranging from 0.0f to 1.0f, where 0 represents no send and 1 represents 100% send.</p>
+<p>Dynamically driving the aux bus routing is done using the <code>AK::SoundEngine::SetGameObjectAuxSendValues()</code> function. The first parameter of the function is the game object ID to which the game-defined aux bus routing will be applied. The second and third parameters represent an array of structure of type <code><a class="el" href="struct_ak_aux_send_value.html" title="Auxiliary bus sends information per game object per given auxiliary bus.">AkAuxSendValue</a></code> and the number of Auxiliary Busses to send to. If the sound does not have the option "Use game-defined auxiliary sends" enabled, then no environments will be applied to this game object. For every Auxiliary Bus to which a game object is sent, a control value must be set representing the percentage application of the environment. The control value is a value ranging from 0.0f to 1.0f, where 0 represents no send and 1 represents 100% send.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> When you change the auxiliary sends of an object, the sound engine interpolates environments to avoid glitches. Thus, in a given frame, an object may be connected to more Auxiliary Busses that you would expect. </td></tr>
 </table>
 <h2><a class="anchor" id="soundengine_environments_example1"></a>
 Example: Setting the Environments of a Main Character Using Unicode Strings</h2>
-<p>Setting Hangar Aux bus to 100%. </p><div class="fragment"><div class="line"><span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> GAME_OBJECT_ID_HUMAN = 200;</div>
+<p>Setting Hangar Aux bus to 100%. </p><div class="fragment"><div class="line"><span class="keyword">const</span> AkGameObjectID GAME_OBJECT_ID_HUMAN = 200;</div>
 <div class="line"><span class="preprocessor">#define NUM_ENVIRONMENT 1</span></div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="struct_ak_aux_send_value.html">AkAuxSendValue</a> aEnv[NUM_ENVIRONMENT];</div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519.html#a185a87e879e5a602446b07252bdd8519">listenerID</a> = <a class="code" href="_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34.html#a82290a98a9cf7901722a69a590aeee34">AK_INVALID_GAME_OBJECT</a>; <span class="comment">// Use the same set of listeners assigned via the SetListeners/SetDefaultListeners API.</span></div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256.html#a985acf05c92308c7569dd4a91a3e4256">auxBusID</a> = <a class="code" href="namespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d.html#a1aae6ebdec25946fb2897ce0e025366d">GetIDFromString</a>( L<span class="stringliteral">&quot;Hangar&quot;</span> );</div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4.html#a1e3fe0e1490d0e15af8a46d8ab4078f4">fControlValue</a> = 1.0f; <span class="comment">// 1.0f stands for 100%, the control value ranges from 0 to 1.</span></div>
+<div class="line">aEnv[0].listenerID = AK_INVALID_GAME_OBJECT; <span class="comment">// Use the same set of listeners assigned via the SetListeners/SetDefaultListeners API.</span></div>
+<div class="line">aEnv[0].auxBusID = GetIDFromString( L<span class="stringliteral">&quot;Hangar&quot;</span> );</div>
+<div class="line">aEnv[0].fControlValue = 1.0f; <span class="comment">// 1.0f stands for 100%, the control value ranges from 0 to 1.</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues</a>( GAME_OBJECT_ID_HUMAN, aEnv, NUM_ENVIRONMENT );</div>
+<div class="line">AK::SoundEngine::SetGameObjectAuxSendValues( GAME_OBJECT_ID_HUMAN, aEnv, NUM_ENVIRONMENT );</div>
 </div><!-- fragment --><h2><a class="anchor" id="soundengine_environments_example2"></a>
 Example: Setting the Environments of a Main Character Using IDs Setting Hangar to 75% and Tunnel to 25%.</h2>
-<div class="fragment"><div class="line"><span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> GAME_OBJECT_ID_HUMAN = 200;</div>
+<div class="fragment"><div class="line"><span class="keyword">const</span> AkGameObjectID GAME_OBJECT_ID_HUMAN = 200;</div>
 <div class="line"><span class="preprocessor">#define NUM_ENVIRONMENT 2</span></div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="struct_ak_aux_send_value.html">AkAuxSendValue</a> aEnv[NUM_ENVIRONMENT];</div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519.html#a185a87e879e5a602446b07252bdd8519">listenerID</a> = <a class="code" href="_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34.html#a82290a98a9cf7901722a69a590aeee34">AK_INVALID_GAME_OBJECT</a>; <span class="comment">// Use the same set of listeners assigned via the SetListeners/SetDefaultListeners API.</span></div>
-<div class="line">aEnv[1].<a class="code" href="struct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519.html#a185a87e879e5a602446b07252bdd8519">listenerID</a> = <a class="code" href="_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34.html#a82290a98a9cf7901722a69a590aeee34">AK_INVALID_GAME_OBJECT</a>; </div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256.html#a985acf05c92308c7569dd4a91a3e4256">auxBusID</a> = AK::AUX_BUSSES::HANGAR_ENV;</div>
-<div class="line">aEnv[1].<a class="code" href="struct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256.html#a985acf05c92308c7569dd4a91a3e4256">auxBusID</a> = AK::AUX_BUSSES::TUNNEL_ENV;</div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4.html#a1e3fe0e1490d0e15af8a46d8ab4078f4">fControlValue</a> = 0.75f; <span class="comment">// 0.75 stands for 75%, the control value ranges from 0 to 1.</span></div>
-<div class="line">aEnv[1].<a class="code" href="struct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4.html#a1e3fe0e1490d0e15af8a46d8ab4078f4">fControlValue</a> = 0.25f; <span class="comment">// 0.25 stands for 25%, the control value ranges from 0 to 1.</span></div>
+<div class="line">aEnv[0].listenerID = AK_INVALID_GAME_OBJECT; <span class="comment">// Use the same set of listeners assigned via the SetListeners/SetDefaultListeners API.</span></div>
+<div class="line">aEnv[1].listenerID = AK_INVALID_GAME_OBJECT; </div>
+<div class="line">aEnv[0].auxBusID = AK::AUX_BUSSES::HANGAR_ENV;</div>
+<div class="line">aEnv[1].auxBusID = AK::AUX_BUSSES::TUNNEL_ENV;</div>
+<div class="line">aEnv[0].fControlValue = 0.75f; <span class="comment">// 0.75 stands for 75%, the control value ranges from 0 to 1.</span></div>
+<div class="line">aEnv[1].fControlValue = 0.25f; <span class="comment">// 0.25 stands for 25%, the control value ranges from 0 to 1.</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues</a>( GAME_OBJECT_ID_HUMAN, aEnv, NUM_ENVIRONMENT );</div>
+<div class="line">AK::SoundEngine::SetGameObjectAuxSendValues( GAME_OBJECT_ID_HUMAN, aEnv, NUM_ENVIRONMENT );</div>
 </div><!-- fragment --><p>Using the control values, it is possible to make sounds go smoothly from one environment to another.</p>
 <h2><a class="anchor" id="soundengine_environments_example3"></a>
 Example: Setting No Aux Send.</h2>
-<div class="fragment"><div class="line"><span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> GAME_OBJECT_ID_HUMAN = 200;</div>
+<div class="fragment"><div class="line"><span class="keyword">const</span> AkGameObjectID GAME_OBJECT_ID_HUMAN = 200;</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues</a>( GAME_OBJECT_ID_HUMAN, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, 0 );</div>
+<div class="line">AK::SoundEngine::SetGameObjectAuxSendValues( GAME_OBJECT_ID_HUMAN, NULL, 0 );</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> The total of the aux sends values do not have to equal 100%. For instance, to set only a light environmental effect on a game object, you could set the game object to be 25% in one environment. </td></tr>
@@ -160,27 +160,27 @@ Example: Setting No Aux Send.</h2>
 </table>
 <h2><a class="anchor" id="soundengine_environments_example4"></a>
 Example: Assigning an Aux Send to an Alternate Listener Game Object to Simulate an Acoustic Portal</h2>
-<p>In the following example, we have registered a game object that is used to simulate an acoustic portal in 3D space. The game object represents an environment that neither the sound, nor the main listener are inside. Setting the <code>listenerID</code> field to a valid game object ID creates an emitter-listener association in a similar manner to <code><a class="el" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">SetListeners()</a></code>, however it applies to an auxiliary output from an audio node, whereas <code><a class="el" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">SetListeners()</a></code> applies to the direct output. The audio node that sends audio is controlled by setting the "Use game-defined auxiliary sends" flag in the authoring tool. To visualize how setting <code>listenerID</code> creates an instance of the bus specified by <code>auxBusID</code> on the game object <code>listenerID</code>, see the voice graph tab in the advanced profiler of the Wwise authoring tool.</p>
-<div class="fragment"><div class="line"><span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> GAME_OBJECT_ID_HUMAN = 200;</div>
-<div class="line"><span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> GAME_OBJECT_ID_PORTAL = 201;</div>
+<p>In the following example, we have registered a game object that is used to simulate an acoustic portal in 3D space. The game object represents an environment that neither the sound, nor the main listener are inside. Setting the <code>listenerID</code> field to a valid game object ID creates an emitter-listener association in a similar manner to <code>SetListeners()</code>, however it applies to an auxiliary output from an audio node, whereas <code>SetListeners()</code> applies to the direct output. The audio node that sends audio is controlled by setting the "Use game-defined auxiliary sends" flag in the authoring tool. To visualize how setting <code>listenerID</code> creates an instance of the bus specified by <code>auxBusID</code> on the game object <code>listenerID</code>, see the voice graph tab in the advanced profiler of the Wwise authoring tool.</p>
+<div class="fragment"><div class="line"><span class="keyword">const</span> AkGameObjectID GAME_OBJECT_ID_HUMAN = 200;</div>
+<div class="line"><span class="keyword">const</span> AkGameObjectID GAME_OBJECT_ID_PORTAL = 201;</div>
 <div class="line"><span class="preprocessor">#define NUM_ENVIRONMENT 1</span></div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="struct_ak_aux_send_value.html">AkAuxSendValue</a> aEnv[NUM_ENVIRONMENT];</div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519.html#a185a87e879e5a602446b07252bdd8519">listenerID</a> = GAME_OBJECT_ID_PORTAL; <span class="comment">// Target game object ID for this aux send.</span></div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256.html#a985acf05c92308c7569dd4a91a3e4256">auxBusID</a> = AK::AUX_BUSSES::TUNNEL_ENV_PORTAL; <span class="comment">// Target aux bus ID for this aux send.</span></div>
-<div class="line">aEnv[0].<a class="code" href="struct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4.html#a1e3fe0e1490d0e15af8a46d8ab4078f4">fControlValue</a> = 1.0f;</div>
+<div class="line">aEnv[0].listenerID = GAME_OBJECT_ID_PORTAL; <span class="comment">// Target game object ID for this aux send.</span></div>
+<div class="line">aEnv[0].auxBusID = AK::AUX_BUSSES::TUNNEL_ENV_PORTAL; <span class="comment">// Target aux bus ID for this aux send.</span></div>
+<div class="line">aEnv[0].fControlValue = 1.0f;</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues</a>( GAME_OBJECT_ID_HUMAN, aEnv, NUM_ENVIRONMENT );</div>
-</div><!-- fragment --><p>In this example, the <code>AK::AUX_BUSSES::TUNNEL_ENV_PORTAL</code> aux bus should be set to “Enable Positioning” and positioning type 3D in the Wwise authoring tool, so that is can also emit sound in the 3D simulation.</p>
+<div class="line">AK::SoundEngine::SetGameObjectAuxSendValues( GAME_OBJECT_ID_HUMAN, aEnv, NUM_ENVIRONMENT );</div>
+</div><!-- fragment --><p>In this example, the <code>AK::AUX_BUSSES::TUNNEL_ENV_PORTAL</code> aux bus should be set to â€œEnable Positioningâ€ and positioning type 3D in the Wwise authoring tool, so that is can also emit sound in the 3D simulation.</p>
 <h1><a class="anchor" id="soundengine_environments_setting_dry_environment"></a>
 Setting Main Output Level (or Dry level)</h1>
-<p>As well as changing the Auxiliary Busses to which a game object belongs, you can also reduce its dry component by using the <code><a class="el" href="namespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161.html#adf1401ce64872af26cdff05b36e98161">AK::SoundEngine::SetGameObjectOutputBusVolume()</a></code> function. This function can be used to simulate obstruction. Every game object has initially a dry level set to 100% (1.0f) (unless specified otherwise in the sound object properties).</p>
+<p>As well as changing the Auxiliary Busses to which a game object belongs, you can also reduce its dry component by using the <code>AK::SoundEngine::SetGameObjectOutputBusVolume()</code> function. This function can be used to simulate obstruction. Every game object has initially a dry level set to 100% (1.0f) (unless specified otherwise in the sound object properties).</p>
 <h2><a class="anchor" id="soundengine_environments_example5"></a>
 Example: Setting the Main Character Sounds Main Output Level to 45%</h2>
-<div class="fragment"><div class="line"><span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> GAME_OBJECT_ID_HUMAN = 200;</div>
+<div class="fragment"><div class="line"><span class="keyword">const</span> AkGameObjectID GAME_OBJECT_ID_HUMAN = 200;</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Setting the main character sounds&#39; dry level to 45% on all connected listeners.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161.html#adf1401ce64872af26cdff05b36e98161">AK::SoundEngine::SetGameObjectOutputBusVolume</a>( GAME_OBJECT_ID_HUMAN, <a class="code" href="_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34.html#a82290a98a9cf7901722a69a590aeee34">AK_INVALID_GAME_OBJECT</a>, 0.45f );</div>
+<div class="line">AK::SoundEngine::SetGameObjectOutputBusVolume( GAME_OBJECT_ID_HUMAN, AK_INVALID_GAME_OBJECT, 0.45f );</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> To simulate a sound so far away that the listener can only hear its reverberations, set the dry level to 0%. </td></tr>
@@ -191,25 +191,26 @@ Setting Auxiliary Bus Volume</h1>
 <dl class="section see"><dt>See also</dt><dd><ul>
 <li><a class="el" href="concept_environments.html">Concept: Environments and game-defined auxiliary sends</a></li>
 <li><a class="el" href="soundengine_obsocc.html">Obstruction and Occlusion with game-defined auxiliary sends</a></li>
-<li><code><a class="el" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues()</a></code> </li>
-<li><code><a class="el" href="namespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161.html#adf1401ce64872af26cdff05b36e98161">AK::SoundEngine::SetGameObjectOutputBusVolume()</a></code> </li>
-<li><code><a class="el" href="namespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d.html#a1aae6ebdec25946fb2897ce0e025366d">AK::SoundEngine::GetIDFromString()</a></code> </li>
+<li><code>AK::SoundEngine::SetGameObjectAuxSendValues()</code> </li>
+<li><code>AK::SoundEngine::SetGameObjectOutputBusVolume()</code> </li>
+<li><code>AK::SoundEngine::GetIDFromString()</code> </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="astruct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4_html_a1e3fe0e1490d0e15af8a46d8ab4078f4"><div class="ttname"><a href="struct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4.html#a1e3fe0e1490d0e15af8a46d8ab4078f4">AkAuxSendValue::fControlValue</a></div><div class="ttdeci">AkReal32 fControlValue</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00950">AkTypes.h:950</a></div></div>
-<div class="ttc" id="anamespace_a_k_html"><div class="ttname"><a href="namespace_a_k.html">AK</a></div><div class="ttdoc">Audiokinetic namespace.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_wwise_s_d_k_version_8cs_source.html#l00030">AkWwiseSDKVersion.cs:31</a></div></div>
-<div class="ttc" id="astruct_ak_aux_send_value_html"><div class="ttname"><a href="struct_ak_aux_send_value.html">AkAuxSendValue</a></div><div class="ttdoc">Auxiliary bus sends information per game object per given auxiliary bus.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00946">AkTypes.h:947</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname"><a href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a></div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00142">AkTypes.h:142</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc_html_a8341fa4d01d2fa852c3cc410401b04dc"><div class="ttname"><a href="_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc.html#a8341fa4d01d2fa852c3cc410401b04dc">AkUniqueID</a></div><div class="ttdeci">AkUInt32 AkUniqueID</div><div class="ttdoc">Unique 32-bit ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00134">AkTypes.h:134</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4_html_af960fca0239e219b9d08c2659fe9e5d4"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetGameObjectAuxSendValues(AkGameObjectID in_gameObjectID, AkAuxSendValue *in_aAuxSendValues, AkUInt32 in_uNumSendValues)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d_html_a1aae6ebdec25946fb2897ce0e025366d"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d.html#a1aae6ebdec25946fb2897ce0e025366d">AK::SoundEngine::GetIDFromString</a></div><div class="ttdeci">AKSOUNDENGINE_API AkUInt32 GetIDFromString(const char *in_pszString)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161_html_adf1401ce64872af26cdff05b36e98161"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161.html#adf1401ce64872af26cdff05b36e98161">AK::SoundEngine::SetGameObjectOutputBusVolume</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetGameObjectOutputBusVolume(AkGameObjectID in_emitterObjID, AkGameObjectID in_listenerObjID, AkReal32 in_fControlValue)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34_html_a82290a98a9cf7901722a69a590aeee34"><div class="ttname"><a href="_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34.html#a82290a98a9cf7901722a69a590aeee34">AK_INVALID_GAME_OBJECT</a></div><div class="ttdeci">static const AkGameObjectID AK_INVALID_GAME_OBJECT</div><div class="ttdoc">Invalid game object (may also mean all game objects)</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00176">AkTypes.h:176</a></div></div>
-<div class="ttc" id="astruct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519_html_a185a87e879e5a602446b07252bdd8519"><div class="ttname"><a href="struct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519.html#a185a87e879e5a602446b07252bdd8519">AkAuxSendValue::listenerID</a></div><div class="ttdeci">AkGameObjectID listenerID</div><div class="ttdoc">Game object ID of the listener associated with this send. Use AK_INVALID_GAME_OBJECT as a wildcard to...</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00948">AkTypes.h:948</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a90cfd84c4feec568941a46c13aa964e0_html_a90cfd84c4feec568941a46c13aa964e0"><div class="ttname"><a href="_common_2_ak_types_8h_a90cfd84c4feec568941a46c13aa964e0.html#a90cfd84c4feec568941a46c13aa964e0">AkAuxBusID</a></div><div class="ttdeci">AkUInt32 AkAuxBusID</div><div class="ttdoc">Auxilliary bus ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00147">AkTypes.h:147</a></div></div>
-<div class="ttc" id="astruct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256_html_a985acf05c92308c7569dd4a91a3e4256"><div class="ttname"><a href="struct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256.html#a985acf05c92308c7569dd4a91a3e4256">AkAuxSendValue::auxBusID</a></div><div class="ttdeci">AkAuxBusID auxBusID</div><div class="ttdoc">Auxiliary bus ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00949">AkTypes.h:949</a></div></div>
+<div class="ttc" id="astruct_ak_aux_send_value_a1e3fe0e1490d0e15af8a46d8ab4078f4_html_a1e3fe0e1490d0e15af8a46d8ab4078f4"><div class="ttname">AkAuxSendValue::fControlValue</div><div class="ttdeci">AkReal32 fControlValue</div><div class="ttdef"><b>Definition:</b> AkTypes.h:950</div></div>
+<div class="ttc" id="anamespace_a_k_html"><div class="ttname"><a href="namespace_a_k.html">AK</a></div><div class="ttdoc">Audiokinetic namespace.</div><div class="ttdef"><b>Definition:</b> AkWwiseSDKVersion.cs:31</div></div>
+<div class="ttc" id="astruct_ak_aux_send_value_html"><div class="ttname"><a href="struct_ak_aux_send_value.html">AkAuxSendValue</a></div><div class="ttdoc">Auxiliary bus sends information per game object per given auxiliary bus.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:947</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname">AkGameObjectID</div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:142</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc_html_a8341fa4d01d2fa852c3cc410401b04dc"><div class="ttname">AkUniqueID</div><div class="ttdeci">AkUInt32 AkUniqueID</div><div class="ttdoc">Unique 32-bit ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:134</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4_html_af960fca0239e219b9d08c2659fe9e5d4"><div class="ttname">AK::SoundEngine::SetGameObjectAuxSendValues</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetGameObjectAuxSendValues(AkGameObjectID in_gameObjectID, AkAuxSendValue *in_aAuxSendValues, AkUInt32 in_uNumSendValues)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a1aae6ebdec25946fb2897ce0e025366d_html_a1aae6ebdec25946fb2897ce0e025366d"><div class="ttname">AK::SoundEngine::GetIDFromString</div><div class="ttdeci">AKSOUNDENGINE_API AkUInt32 GetIDFromString(const char *in_pszString)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_adf1401ce64872af26cdff05b36e98161_html_adf1401ce64872af26cdff05b36e98161"><div class="ttname">AK::SoundEngine::SetGameObjectOutputBusVolume</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetGameObjectOutputBusVolume(AkGameObjectID in_emitterObjID, AkGameObjectID in_listenerObjID, AkReal32 in_fControlValue)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a82290a98a9cf7901722a69a590aeee34_html_a82290a98a9cf7901722a69a590aeee34"><div class="ttname">AK_INVALID_GAME_OBJECT</div><div class="ttdeci">static const AkGameObjectID AK_INVALID_GAME_OBJECT</div><div class="ttdoc">Invalid game object (may also mean all game objects)</div><div class="ttdef"><b>Definition:</b> AkTypes.h:176</div></div>
+<div class="ttc" id="astruct_ak_aux_send_value_a185a87e879e5a602446b07252bdd8519_html_a185a87e879e5a602446b07252bdd8519"><div class="ttname">AkAuxSendValue::listenerID</div><div class="ttdeci">AkGameObjectID listenerID</div><div class="ttdoc">Game object ID of the listener associated with this send. Use AK_INVALID_GAME_OBJECT as a wildcard to...</div><div class="ttdef"><b>Definition:</b> AkTypes.h:948</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a90cfd84c4feec568941a46c13aa964e0_html_a90cfd84c4feec568941a46c13aa964e0"><div class="ttname">AkAuxBusID</div><div class="ttdeci">AkUInt32 AkAuxBusID</div><div class="ttdoc">Auxilliary bus ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:147</div></div>
+<div class="ttc" id="astruct_ak_aux_send_value_a985acf05c92308c7569dd4a91a3e4256_html_a985acf05c92308c7569dd4a91a3e4256"><div class="ttname">AkAuxSendValue::auxBusID</div><div class="ttdeci">AkAuxBusID auxBusID</div><div class="ttdoc">Auxiliary bus ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:949</div></div>
 </body>
 </html>
+

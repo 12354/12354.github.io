@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -59,7 +59,7 @@ Load Balancing</h1>
 <h2><a class="anchor" id="raytracing_geometry_guide_load_balancing_use_cases"></a>
 Load Balancing Use Cases</h2>
 <p>There are several ways to tweak spatial audio performance: you can apply a CPU limit, change the order of reflection, enable or disable diffraction and diffraction on reflections, and adjust the motion threshold setting. You can combine load balancing with the other settings to achieve the desired balance between quality and performance.</p>
-<p>Although load balancing can be used in any scenario, it is most appropriate for scenes that involve multiple active emitters. Load balancing behavior is controlled through the <a class="el" href="struct_ak_spatial_audio_init_settings_adb7560b0a616975d9f95fb932380002e.html#adb7560b0a616975d9f95fb932380002e" title="Spread the computation of paths on uLoadBalancingSpread frames [1..[. When uLoadBalancingSpread is se...">AkSpatialAudioInitSettings::uLoadBalancingSpread</a> setting (see <a class="el" href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a>). A spread of 1 frame is equivalent to disabling the feature, because every task is executed immediately. Higher values increase CPU performance, but can lead to less accurate results. For example, a spread of 4 frames for a frame buffer of 1024 samples (around 21ms at 48kHz) executes the tasks over a period of 84 ms. Spread values under 10 should not noticeably affect quality.</p>
+<p>Although load balancing can be used in any scenario, it is most appropriate for scenes that involve multiple active emitters. Load balancing behavior is controlled through the AkSpatialAudioInitSettings::uLoadBalancingSpread setting (see <a class="el" href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a>). A spread of 1 frame is equivalent to disabling the feature, because every task is executed immediately. Higher values increase CPU performance, but can lead to less accurate results. For example, a spread of 4 frames for a frame buffer of 1024 samples (around 21ms at 48kHz) executes the tasks over a period of 84 ms. Spread values under 10 should not noticeably affect quality.</p>
 <h2><a class="anchor" id="raytracing_geometry_guide_load_balancing_examples"></a>
 Load Balancing Example</h2>
 <p>The following example compares the performance in the same scene with three different spread values: 1 (disable), 4, and 10. The scene has 944 triangles and 649 diffraction edges. The number of emitters is 4. Reflection order is set to 4 and diffraction is enabled.</p>
@@ -192,7 +192,7 @@ Performance Tweaking</h1>
 <li>
 <b>Decrease the number of primary rays:</b> values as low as 5 can still produce good results.  </li>
 <li>
-<b>Enable CPU limit (<a class="el" href="raytracing_geometry_guide.html#raytracing_geometry_guide_cpu_limit_mode">CPU Limit Mode</a>):</b> set your desired CPU percentage, and the feature will automatically control the number of primary rays to keep the CPU around the specified value. Note that this will have no effect on portal ray tracing.  </li>
+<b>Enable CPU limit (CPU Limit Mode):</b> set your desired CPU percentage, and the feature will automatically control the number of primary rays to keep the CPU around the specified value. Note that this will have no effect on portal ray tracing.  </li>
 </ul>
 </td></tr>
 <tr>
@@ -223,3 +223,4 @@ Performance Tweaking</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

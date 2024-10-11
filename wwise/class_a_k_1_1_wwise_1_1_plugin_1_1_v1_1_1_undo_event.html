@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -43,7 +43,7 @@
 <div class="contents">
 
 <p>Base API to create a custom undo event in a plug-in.  
- <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event.html#details">More...</a></p>
+ More...</p>
 
 <p><code>#include &lt;<a class="el" href="_host_undo_manager_8h_source.html">HostUndoManager.h</a>&gt;</code></p>
 <div class="dynheader">
@@ -66,42 +66,42 @@ Classes</h2></td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a30342aa2a944cf4d391c0d32766f1cc0"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_ae842a059fdebdeeb075be53d62a301a5.html#ae842a059fdebdeeb075be53d62a301a5">BaseUndoEvent::Interface</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_a30342aa2a944cf4d391c0d32766f1cc0.html#a30342aa2a944cf4d391c0d32766f1cc0">GetInterfacePointer</a> () final</td></tr>
+<tr class="memitem:a30342aa2a944cf4d391c0d32766f1cc0"><td class="memItemLeft" align="right" valign="top">virtual BaseUndoEvent::Interface *&#160;</td><td class="memItemRight" valign="bottom">GetInterfacePointer () final</td></tr>
 <tr class="separator:a30342aa2a944cf4d391c0d32766f1cc0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ac7f7250af8b8676f3d03e7c6cb3485a0"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_ac7f7250af8b8676f3d03e7c6cb3485a0.html#ac7f7250af8b8676f3d03e7c6cb3485a0">Undo</a> (Backend &amp;in_backend)=0</td></tr>
-<tr class="memdesc:ac7f7250af8b8676f3d03e7c6cb3485a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when the user asks to undo an action.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_ac7f7250af8b8676f3d03e7c6cb3485a0.html#ac7f7250af8b8676f3d03e7c6cb3485a0">More...</a><br /></td></tr>
+<tr class="memitem:ac7f7250af8b8676f3d03e7c6cb3485a0"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom">Undo (Backend &amp;in_backend)=0</td></tr>
+<tr class="memdesc:ac7f7250af8b8676f3d03e7c6cb3485a0"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when the user asks to undo an action.  More...<br /></td></tr>
 <tr class="separator:ac7f7250af8b8676f3d03e7c6cb3485a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa346dcb74fee30109385e723d7102d6d"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_aa346dcb74fee30109385e723d7102d6d.html#aa346dcb74fee30109385e723d7102d6d">Redo</a> (Backend &amp;in_backend)=0</td></tr>
-<tr class="memdesc:aa346dcb74fee30109385e723d7102d6d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when the user asks to redo an action.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_aa346dcb74fee30109385e723d7102d6d.html#aa346dcb74fee30109385e723d7102d6d">More...</a><br /></td></tr>
+<tr class="memitem:aa346dcb74fee30109385e723d7102d6d"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom">Redo (Backend &amp;in_backend)=0</td></tr>
+<tr class="memdesc:aa346dcb74fee30109385e723d7102d6d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Called when the user asks to redo an action.  More...<br /></td></tr>
 <tr class="separator:aa346dcb74fee30109385e723d7102d6d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aad07cf18120d7d951f781fcb92edca43"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_aad07cf18120d7d951f781fcb92edca43.html#aad07cf18120d7d951f781fcb92edca43">GetName</a> (const char **out_csName) const =0</td></tr>
-<tr class="memdesc:aad07cf18120d7d951f781fcb92edca43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the event name, to show after the "Undo " and "Redo " terms in the menu.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_aad07cf18120d7d951f781fcb92edca43.html#aad07cf18120d7d951f781fcb92edca43">More...</a><br /></td></tr>
+<tr class="memitem:aad07cf18120d7d951f781fcb92edca43"><td class="memItemLeft" align="right" valign="top">virtual bool&#160;</td><td class="memItemRight" valign="bottom">GetName (const char **out_csName) const =0</td></tr>
+<tr class="memdesc:aad07cf18120d7d951f781fcb92edca43"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the event name, to show after the "Undo " and "Redo " terms in the menu.  More...<br /></td></tr>
 <tr class="separator:aad07cf18120d7d951f781fcb92edca43"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event.html">AK.Wwise::Plugin::V1::BaseUndoEvent</a></td></tr>
-<tr class="memitem:ac4584d58ed897a37cae2d482efb09242 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structak__wwise__plugin__undo__event__v1_a2f3ddaf6257dcf06ca0c20ad1280c51a.html#a2f3ddaf6257dcf06ca0c20ad1280c51a">CUndoEvent::Instance</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_ac4584d58ed897a37cae2d482efb09242.html#ac4584d58ed897a37cae2d482efb09242">GetInstancePointer</a> ()</td></tr>
+<tr class="memitem:ac4584d58ed897a37cae2d482efb09242 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">CUndoEvent::Instance *&#160;</td><td class="memItemRight" valign="bottom">GetInstancePointer ()</td></tr>
 <tr class="separator:ac4584d58ed897a37cae2d482efb09242 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a232705e053b90d9ca946700293a2b812 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">const <a class="el" href="structak__wwise__plugin__undo__event__v1_a2f3ddaf6257dcf06ca0c20ad1280c51a.html#a2f3ddaf6257dcf06ca0c20ad1280c51a">CUndoEvent::Instance</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_a232705e053b90d9ca946700293a2b812.html#a232705e053b90d9ca946700293a2b812">GetInstancePointer</a> () const</td></tr>
+<tr class="memitem:a232705e053b90d9ca946700293a2b812 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">const CUndoEvent::Instance *&#160;</td><td class="memItemRight" valign="bottom">GetInstancePointer () const</td></tr>
 <tr class="separator:a232705e053b90d9ca946700293a2b812 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeed2c9cdcbb01d0ce21e81871fe78c46 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_aeed2c9cdcbb01d0ce21e81871fe78c46.html#aeed2c9cdcbb01d0ce21e81871fe78c46">BaseUndoEvent</a> ()</td></tr>
+<tr class="memitem:aeed2c9cdcbb01d0ce21e81871fe78c46 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom">BaseUndoEvent ()</td></tr>
 <tr class="separator:aeed2c9cdcbb01d0ce21e81871fe78c46 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb6f2c0b007941637d763be6c066f7d0 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_aeb6f2c0b007941637d763be6c066f7d0.html#aeb6f2c0b007941637d763be6c066f7d0">~BaseUndoEvent</a> ()</td></tr>
+<tr class="memitem:aeb6f2c0b007941637d763be6c066f7d0 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom">~BaseUndoEvent ()</td></tr>
 <tr class="separator:aeb6f2c0b007941637d763be6c066f7d0 inherit pub_methods_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_methods_structak__wwise__plugin__cpp__base__instance"><td colspan="2" onclick="javascript:toggleInherit('pub_methods_structak__wwise__plugin__cpp__base__instance')"><img src="closed.png" alt="-"/>&#160;Public Member Functions inherited from <a class="el" href="structak__wwise__plugin__cpp__base__instance.html">ak_wwise_plugin_cpp_base_instance</a></td></tr>
-<tr class="memitem:a38e5192dde370d925b0489a70374ff01 inherit pub_methods_structak__wwise__plugin__cpp__base__instance"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structak__wwise__plugin__cpp__base__instance_a38e5192dde370d925b0489a70374ff01.html#a38e5192dde370d925b0489a70374ff01">~ak_wwise_plugin_cpp_base_instance</a> ()</td></tr>
+<tr class="memitem:a38e5192dde370d925b0489a70374ff01 inherit pub_methods_structak__wwise__plugin__cpp__base__instance"><td class="memItemLeft" align="right" valign="top">virtual&#160;</td><td class="memItemRight" valign="bottom">~ak_wwise_plugin_cpp_base_instance ()</td></tr>
 <tr class="separator:a38e5192dde370d925b0489a70374ff01 inherit pub_methods_structak__wwise__plugin__cpp__base__instance"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td colspan="2" onclick="javascript:toggleInherit('pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event.html">AK.Wwise::Plugin::V1::BaseUndoEvent</a></td></tr>
-<tr class="memitem:a137141696b8eb70aa15d0b9111025475 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceTypeValue { <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_a137141696b8eb70aa15d0b9111025475.html#a137141696b8eb70aa15d0b9111025475ae7372dd26d982339aaeccc1f0d72c5b1">k_interfaceType</a> = AK_WWISE_PLUGIN_INTERFACE_TYPE_UNDO_EVENT
+<tr class="memitem:a137141696b8eb70aa15d0b9111025475 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceTypeValue { k_interfaceType = AK_WWISE_PLUGIN_INTERFACE_TYPE_UNDO_EVENT
  }</td></tr>
-<tr class="memdesc:a137141696b8eb70aa15d0b9111025475"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface type, as provided by this plug-in.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_a137141696b8eb70aa15d0b9111025475.html#a137141696b8eb70aa15d0b9111025475">More...</a><br /></td></tr>
+<tr class="memdesc:a137141696b8eb70aa15d0b9111025475"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface type, as provided by this plug-in.  More...<br /></td></tr>
 <tr class="separator:a137141696b8eb70aa15d0b9111025475 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a35467a9a52f07811e0dfc4ca8b239f5e inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceVersion { <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_a35467a9a52f07811e0dfc4ca8b239f5e.html#a35467a9a52f07811e0dfc4ca8b239f5ea96684bd92ed20a3fef32ee486ccf9694">k_interfaceVersion</a> = 1
+<tr class="memitem:a35467a9a52f07811e0dfc4ca8b239f5e inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceVersion { k_interfaceVersion = 1
  }</td></tr>
-<tr class="memdesc:a35467a9a52f07811e0dfc4ca8b239f5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface version, as provided by this plug-in.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_a35467a9a52f07811e0dfc4ca8b239f5e.html#a35467a9a52f07811e0dfc4ca8b239f5e">More...</a><br /></td></tr>
+<tr class="memdesc:a35467a9a52f07811e0dfc4ca8b239f5e"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface version, as provided by this plug-in.  More...<br /></td></tr>
 <tr class="separator:a35467a9a52f07811e0dfc4ca8b239f5e inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae842a059fdebdeeb075be53d62a301a5 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event_ae842a059fdebdeeb075be53d62a301a5.html#ae842a059fdebdeeb075be53d62a301a5">Interface</a> = <a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_1_1_v1_a0af52d142b140c8a7ada1115d2ed005d.html#a0af52d142b140c8a7ada1115d2ed005d">CUndoEvent</a></td></tr>
+<tr class="memitem:ae842a059fdebdeeb075be53d62a301a5 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom">Interface = CUndoEvent</td></tr>
 <tr class="separator:ae842a059fdebdeeb075be53d62a301a5 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -110,7 +110,7 @@ class AK.Wwise::Plugin::V1::UndoEvent&lt; Backend &gt;</h3>
 
 <p>Base API to create a custom undo event in a plug-in. </p>
 <p>This is useful when you handle custom properties, not handled by Property Sets.</p>
-<p>Undo events should be derived by your undo class, providing <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_ac7f7250af8b8676f3d03e7c6cb3485a0.html#ac7f7250af8b8676f3d03e7c6cb3485a0">UndoEvent::Undo</a>, <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_aa346dcb74fee30109385e723d7102d6d.html#aa346dcb74fee30109385e723d7102d6d">UndoEvent::Redo</a> and <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_event_aad07cf18120d7d951f781fcb92edca43.html#aad07cf18120d7d951f781fcb92edca43">UndoEvent::GetName</a> methods.</p>
+<p>Undo events should be derived by your undo class, providing UndoEvent::Undo, UndoEvent::Redo and UndoEvent::GetName methods.</p>
 <p>No pointer to the backend class should be kept inside the undo event, as the object can be deleted and recreated when the plug-in gets removed through undo. The backend will be recreated at that point, making the pointer invalid.</p>
 <dl class="tparams"><dt>Template Parameters</dt><dd>
   <table class="tparams">
@@ -119,7 +119,8 @@ class AK.Wwise::Plugin::V1::UndoEvent&lt; Backend &gt;</h3>
   </dd>
 </dl>
 
-<p class="definition">Definition at line <a class="el" href="_host_undo_manager_8h_source.html#l00327">327</a> of file <a class="el" href="_host_undo_manager_8h_source.html">HostUndoManager.h</a>.</p>
+<p class="definition">Definition at line 327 of file <a class="el" href="_host_undo_manager_8h_source.html">HostUndoManager.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+

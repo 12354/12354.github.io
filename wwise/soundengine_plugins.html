@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -33,29 +33,29 @@
 <div class="title">Creating Sound Engine Plug-ins </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Creating Wwise sound engine plug-ins is empowering, but it can be complex. We strongly recommend that you read through the following sections in tandem with the samples we provide in the <a class="el" href="samplecode.html#samplecode_plugins">Sample Plug-ins</a> section. Our samples offer a reliable style and structure for the basis of your own creations.</p><ul>
-<li><a class="el" href="soundengine_plugins.html#se_plugins_overview">Sound Engine Plug-ins Overview</a></li>
-<li><a class="el" href="soundengine_plugins.html#register_effects">Plug-in Static Registration</a></li>
-<li><a class="el" href="soundengine_plugins.html#soundengine_plugins_binaries">Creating Dynamic Libraries</a></li>
-<li><a class="el" href="soundengine_plugins.html#fx_memory_alloc">Allocating/De-allocating Memory in Audio Plug-ins</a></li>
-<li><a class="el" href="soundengine_plugins.html#shared_parameter_interface">Parameter Node Interface Implementation</a></li>
-<li><a class="el" href="soundengine_plugins.html#software_effect_interface">Audio Plug-in Interface Implementation</a></li>
-<li><a class="el" href="soundengine_plugins.html#fx_audiobuffer_struct">Accessing Data Using AkAudioBuffer Structure</a></li>
-<li><a class="el" href="soundengine_plugins.html#software_effect_interface">Audio Plug-in Interface Implementation</a></li>
-<li><a class="el" href="soundengine_plugins.html#fx_global_hooks">Using Global Sound Engine Callbacks From Plug-ins</a></li>
+<div class="textblock"><p>Creating Wwise sound engine plug-ins is empowering, but it can be complex. We strongly recommend that you read through the following sections in tandem with the samples we provide in the Sample Plug-ins section. Our samples offer a reliable style and structure for the basis of your own creations.</p><ul>
+<li>Sound Engine Plug-ins Overview</li>
+<li>Plug-in Static Registration</li>
+<li>Creating Dynamic Libraries</li>
+<li>Allocating/De-allocating Memory in Audio Plug-ins</li>
+<li>Parameter Node Interface Implementation</li>
+<li>Audio Plug-in Interface Implementation</li>
+<li>Accessing Data Using AkAudioBuffer Structure</li>
+<li>Audio Plug-in Interface Implementation</li>
+<li>Using Global Sound Engine Callbacks From Plug-ins</li>
 </ul>
 <h1><a class="anchor" id="se_plugins_overview"></a>
 Sound Engine Plug-ins Overview</h1>
 <p>Plug-ins allow you to insert custom DSP routines into the overall signal processing chain performed by the sound engine. The plug-in parameters can be controlled either from the authoring tool or in-game through RTPCs (refer to <a class="el" href="concept_rtpc.html">Concept: Real-Time Parameter Controls (RTPCs)</a>).</p>
 <p>Each plug-in consists of two components:</p><ul>
-<li>A runtime component integrated into the sound engine that can be developed cross-platform or optimized for a specific platform. The game will need to register this plug-in (see <a class="el" href="soundengine_plugins.html#register_effects">Plug-in Static Registration</a>) and link against its implementation.</li>
+<li>A runtime component integrated into the sound engine that can be developed cross-platform or optimized for a specific platform. The game will need to register this plug-in (see Plug-in Static Registration) and link against its implementation.</li>
 <li>An authoring component for SoundBank generation and user interface integrated into the authoring tool. This component is found in a DLL loaded by Wwise (see <a class="el" href="plugin_dll.html">Authoring Plug-in Library Format</a>). All plug-in parameters determined in the UI are stored in banks so this component is not used in game. If a parameter is to be controlled in game through RTPCs, the necessary information will also be stored in banks.</li>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Create a common static library for the runtime component. This way it can be linked by both the game and the plug-in user interface, a DLL which is loaded by Wwise. </td></tr>
 </table>
-<p>A parameter node interface needs to be implemented to react to changes coming from either the sound engine's RTPC manager or the Wwise authoring tool and retrieve the current plug-in instance parameters during execution. (See <a class="el" href="soundengine_plugins.html#shared_parameter_interface">Parameter Node Interface Implementation</a>.)</p>
+<p>A parameter node interface needs to be implemented to react to changes coming from either the sound engine's RTPC manager or the Wwise authoring tool and retrieve the current plug-in instance parameters during execution. (See Parameter Node Interface Implementation.)</p>
 <p>There are 3 main categories of plug-ins that can be integrated into the sound engine:</p><ul>
 <li>Source plug-ins, which produce audio content using synthesis methods such as physical modeling, modulation synthesis, sampling synthesis, and so on. Refer to <a class="el" href="soundengine_plugins_source.html">Creating Sound Engine Source Plug-ins</a> for more information.</li>
 <li>Effect plug-ins, which apply DSP algorithms to existing sounds processed as input audio data. Refer to <a class="el" href="soundengine_plugins_effects.html">Creating Sound Engine Effect Plug-ins</a> for more information.</li>
@@ -65,32 +65,32 @@ Sound Engine Plug-ins Overview</h1>
 <div class="fragment"><div class="line"><span class="comment">// Static parameter node creation function callback to be registered to the plug-in manager.</span></div>
 <div class="line"><a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a> * CreateMyPluginParams( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
 <div class="line">{</div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW</a>( in_pAllocator, CAkMyPluginParams() );</div>
+<div class="line">    <span class="keywordflow">return</span> AK_PLUGIN_NEW( in_pAllocator, CAkMyPluginParams() );</div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Static plug-in creation function callback to be registered to the plug-in manager.</span></div>
 <div class="line"><a class="code" href="class_a_k_1_1_i_ak_plugin.html">AK::IAkPlugin</a> * CreateMyPlugin( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
 <div class="line">{</div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW</a>( in_pAllocator, CAkMyPlugin() );</div>
+<div class="line">    <span class="keywordflow">return</span> AK_PLUGIN_NEW( in_pAllocator, CAkMyPlugin() );</div>
 <div class="line">}</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">//Static initializer object to automatically register the plug-in into the sound engine.</span></div>
-<div class="line"><a class="code" href="_i_ak_plugin_8h_a13b2972f82acec4f7cedcb073d51619c.html#a13b2972f82acec4f7cedcb073d51619c">AK_IMPLEMENT_PLUGIN_FACTORY</a>(MyPlugin, <a class="code" href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d">AkPluginTypeEffect</a>, AKCOMPANYID_MYCOMPANY, EFFECTID_MYPLUGIN);</div>
+<div class="line">AK_IMPLEMENT_PLUGIN_FACTORY(MyPlugin, AkPluginTypeEffect, AKCOMPANYID_MYCOMPANY, EFFECTID_MYPLUGIN);</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> Set the AkPluginType argument of the <a class="el" href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a> function appropriately depending on the type of plug-in you make. For example, AkPluginTypeSource for source plug-ins and AkPluginTypeEffect for effect plug-ins. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The naming of the Registration object is important. It goes with the AK_STATIC_LINK_PLUGIN(<em>pluginname</em>) macro which will concatenate "Registration" after <em>pluginname</em>. See below <a class="el" href="soundengine_plugins.html#register_effects">Plug-in Static Registration</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The naming of the Registration object is important. It goes with the AK_STATIC_LINK_PLUGIN(<em>pluginname</em>) macro which will concatenate "Registration" after <em>pluginname</em>. See below Plug-in Static Registration. </td></tr>
 </table>
-<p>If you are a plug-in provider and wish to ensure that your plug-ins will not have the same ID as plug-ins from other vendors, please contact <a href="#" onclick="location.href='mai'+'lto:'+'sup'+'po'+'rt@'+'au'+'dio'+'ki'+'net'+'ic'+'.co'+'m'; return false;">support@audiokinetic.com</a> to obtain a reserved company ID.</p>
+<p>If you are a plug-in provider and wish to ensure that your plug-ins will not have the same ID as plug-ins from other vendors, please contact support@audiokinetic.com to obtain a reserved company ID.</p>
 <h1><a class="anchor" id="register_effects"></a>
 Plug-in Static Registration</h1>
 <p>Various instances of audio plug-ins are all handled by the Plug-in Manager, which recognizes different plug-in classes using both CompanyIDs and PluginIDs. Plug-ins must be registered to the Plug-in Manager before they can be used in game. The registration process binds a PluginID to the creation function callbacks provided as arguments.</p>
 <p>The sample code below demonstrates how plug-ins can be registered by the game. Plug-ins provided by Audiokinetic must also be registered if they are used by a game.</p>
 <p>For ease of use, all plugins also have a Factory header file which only contains the AK_STATIC_LINK_PLUGIN macro. To make plugin management easier, name your Factory header the same way as your library concatenated with "Factory". For example, the code below would be the content for MyPluginFactory.h associated with MyPlugin.lib.</p>
-<div class="fragment"><div class="line"><a class="code" href="_i_ak_plugin_8h_a8e9fc150137c878499f2200e7e27a256.html#a8e9fc150137c878499f2200e7e27a256">AK_STATIC_LINK_PLUGIN</a>(MyPlugin);    <span class="comment">//This macro registers the plugin in the sound engine.</span></div>
+<div class="fragment"><div class="line">AK_STATIC_LINK_PLUGIN(MyPlugin);    <span class="comment">//This macro registers the plugin in the sound engine.</span></div>
 </div><!-- fragment --><p>A game using MyPlugin would simply include the MyPluginFactory file and link with MyPlugin.lib. </p><div class="fragment"><div class="line"><span class="preprocessor">#include &lt;AK/Plugin/MyPluginFactory.h&gt;</span>  <span class="comment">// Factory headers forces linking of the plugin code through AK_STATIC_LINK_PLUGIN.</span></div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -98,7 +98,7 @@ Plug-in Static Registration</h1>
 </table>
 <h1><a class="anchor" id="soundengine_plugins_binaries"></a>
 Creating Dynamic Libraries</h1>
-<p>There are two ways to use plug-ins in a game: through static libraries and dynamic libraries. Distributing a static library is mandatory. Distributing dynamic libraries is optional but highly recommended because the Wwise integration for <a href="https://www.audiokinetic.com/library/?source=Unity&amp;id=pg__building.html#sect_build_desc" target="_blank">Unity</a> uses dynamic libraries. The Wwise Unreal integration, however, needs to use static libraries.</p>
+<p>There are two ways to use plug-ins in a game: through static libraries and dynamic libraries. Distributing a static library is mandatory. Distributing dynamic libraries is optional but highly recommended because the Wwise integration for Unity uses dynamic libraries. The Wwise Unreal integration, however, needs to use static libraries.</p>
 <p>Creating a dynamic library from the library is quite easy. Audiokinetic did this for all the Effect plug-ins, so you can find many examples in the folder <code>\SDK\samples\DynamicLibraries</code>. You must:</p><ul>
 <li>Ensure the project links the static library you built.</li>
 <li>Include one reference to AK_STATIC_LINK_PLUGIN either directly or through a header file.</li>
@@ -106,8 +106,8 @@ Creating Dynamic Libraries</h1>
 <li>Name your dynamic library according to your XML declaration. If you did not specify the <code>EngineDllName</code> attribute in the XML, name it the same name as the XML. Note that you can group multiple plug-ins in a single DLL.</li>
 </ul>
 <p>In short, the code you need to transform your static library into a dynamic library is only: </p><div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="_i_ak_plugin_8h.html">AK/SoundEngine/Common/IAkPlugin.h</a>&gt;</span></div>
-<div class="line"><a class="code" href="_i_ak_plugin_8h_a8e9fc150137c878499f2200e7e27a256.html#a8e9fc150137c878499f2200e7e27a256">AK_STATIC_LINK_PLUGIN</a>(MyPlugin);</div>
-<div class="line"><a class="code" href="_i_ak_plugin_8h_a0e58fa7b5f9d73031a83e4667c6f8933.html#a0e58fa7b5f9d73031a83e4667c6f8933">DEFINE_PLUGIN_REGISTER_HOOK</a>;</div>
+<div class="line">AK_STATIC_LINK_PLUGIN(MyPlugin);</div>
+<div class="line">DEFINE_PLUGIN_REGISTER_HOOK;</div>
 </div><!-- fragment --><p>To deploy your plug-in in Unity, put a copy of the dynamic library in the Wwise\Deployment\Plugins\[Platform]\DSP folder. All DSP plug-ins in that folder should be in an optimized configuration, ready for game release.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -134,57 +134,57 @@ Creating Dynamic Libraries</h1>
 Allocating/De-allocating Memory in Audio Plug-ins</h1>
 <p>You should perform all dynamic memory allocation or deallocation inside audio plug-ins through the provided memory allocator interface. This ensures that all memory consumed and released by plug-ins can be tracked by the Memory Manager, marked with a specific memory category, and displayed in the Wwise profiler.</p>
 <p>Macros are provided to overload the new/delete operators and call malloc()/free() using the provided memory allocator. These macros are provided in <a class="el" href="_i_ak_plugin_mem_alloc_8h.html">IAkPluginMemAlloc.h</a>.</p>
-<p>To allocate objects, use the <a class="el" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW()</a> macro and pass the pointer to the memory allocator interface and the desired object type. The macro returns a pointer to the newly-allocated object. The corresponding <a class="el" href="_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa.html#ac6fa6544d3120811e155136866fc24aa">AK_PLUGIN_DELETE()</a> macro should be used to release memory.</p>
-<p>To allocate arrays use the <a class="el" href="_i_ak_plugin_mem_alloc_8h_abf61bf0827a987e8799a75a4d0e2f615.html#abf61bf0827a987e8799a75a4d0e2f615">AK_PLUGIN_ALLOC()</a>, which gets the requested size in bytes from the Memory Manager and returns a void pointer to the allocated memory address. Use the corresponding <a class="el" href="_i_ak_plugin_mem_alloc_8h_a37dac3dbf976521288ecb8f36a16af3a.html#a37dac3dbf976521288ecb8f36a16af3a">AK_PLUGIN_FREE()</a> macro to release the allocated memory. The sample code below demonstrates how to use the macros.</p>
+<p>To allocate objects, use the AK_PLUGIN_NEW() macro and pass the pointer to the memory allocator interface and the desired object type. The macro returns a pointer to the newly-allocated object. The corresponding AK_PLUGIN_DELETE() macro should be used to release memory.</p>
+<p>To allocate arrays use the AK_PLUGIN_ALLOC(), which gets the requested size in bytes from the Memory Manager and returns a void pointer to the allocated memory address. Use the corresponding AK_PLUGIN_FREE() macro to release the allocated memory. The sample code below demonstrates how to use the macros.</p>
 <div class="fragment"><div class="line"><span class="comment">// Allocate single CAkMyObject</span></div>
-<div class="line">CAkMykObject * pSingleObject = <a class="code" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW</a>( in_pAllocator, CAkMyObject );</div>
+<div class="line">CAkMykObject * pSingleObject = AK_PLUGIN_NEW( in_pAllocator, CAkMyObject );</div>
 <div class="line"><span class="comment">// Release pSingleObject</span></div>
-<div class="line"><a class="code" href="_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa.html#ac6fa6544d3120811e155136866fc24aa">AK_PLUGIN_DELETE</a>( in_pAllocator, pSingleObject );</div>
+<div class="line">AK_PLUGIN_DELETE( in_pAllocator, pSingleObject );</div>
 <div class="line"><span class="comment">// Allocate an array of uNumSamples audio samples</span></div>
-<div class="line"><a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a> * pData = <span class="keyword">static_cast&lt;</span><a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a> *<span class="keyword">&gt;</span>( <a class="code" href="_i_ak_plugin_mem_alloc_8h_abf61bf0827a987e8799a75a4d0e2f615.html#abf61bf0827a987e8799a75a4d0e2f615">AK_PLUGIN_ALLOC</a>( in_pAllocator, <span class="keyword">sizeof</span>(<a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a>) * uNumSamples) );</div>
+<div class="line">AkSampleType * pData = <span class="keyword">static_cast&lt;</span>AkSampleType *<span class="keyword">&gt;</span>( AK_PLUGIN_ALLOC( in_pAllocator, <span class="keyword">sizeof</span>(AkSampleType) * uNumSamples) );</div>
 <div class="line"><span class="comment">// Free array of audio samples</span></div>
-<div class="line"><a class="code" href="_i_ak_plugin_mem_alloc_8h_a37dac3dbf976521288ecb8f36a16af3a.html#a37dac3dbf976521288ecb8f36a16af3a">AK_PLUGIN_FREE</a>( in_pAllocator, pData );</div>
+<div class="line">AK_PLUGIN_FREE( in_pAllocator, pData );</div>
 </div><!-- fragment --><h1><a class="anchor" id="shared_parameter_interface"></a>
 Parameter Node Interface Implementation</h1>
 <p>The parameter node essentially centralizes read and write access to parameters. The plug-in parameter interface consists of the following methods:</p>
 <h2><a class="anchor" id="iakeffectparam_clone"></a>
 AK::IAkPluginParam::Clone()</h2>
-<p>This method should create a duplicate of the parameter instance and adjust necessary internal state variables to be ready to be used with a new plug-in instance. This situation occurs, for example, when an event creates a new playback instance. The function must return a new parameter node instance using the <a class="el" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW()</a> macro. In many cases, a copy constructor call is sufficient (as in the code example below). In cases where memory is allocated within the parameter node, a deep copy should be implemented.</p>
+<p>This method should create a duplicate of the parameter instance and adjust necessary internal state variables to be ready to be used with a new plug-in instance. This situation occurs, for example, when an event creates a new playback instance. The function must return a new parameter node instance using the AK_PLUGIN_NEW() macro. In many cases, a copy constructor call is sufficient (as in the code example below). In cases where memory is allocated within the parameter node, a deep copy should be implemented.</p>
 <div class="fragment"><div class="line"><span class="comment">// Creating a shared parameters duplicate.</span></div>
 <div class="line"><a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a> * CAkMyPluginParams::Clone( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
 <div class="line">{</div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW</a>( in_pAllocator, CAkMyPluginParams(*<span class="keyword">this</span>) );</div>
+<div class="line">    <span class="keywordflow">return</span> AK_PLUGIN_NEW( in_pAllocator, CAkMyPluginParams(*<span class="keyword">this</span>) );</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="iakeffectparam_init"></a>
 AK::IAkPluginParam::Init()</h2>
-<p>This function initializes the parameters with the provided parameter block. When the provided parameter block size is zero (i.e. when the plug-in is used within the authoring tool), <a class="el" href="class_a_k_1_1_i_ak_plugin_param_ab432d055afc355a17121ac2afdcd5639.html#ab432d055afc355a17121ac2afdcd5639">AK::IAkPluginParam::Init()</a> should initialize the parameter structure using default values.</p>
+<p>This function initializes the parameters with the provided parameter block. When the provided parameter block size is zero (i.e. when the plug-in is used within the authoring tool), AK::IAkPluginParam::Init() should initialize the parameter structure using default values.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Call <a class="el" href="class_a_k_1_1_i_ak_plugin_param_ae186f2f0aa56fe0e52ab1c2218df2c7c.html#ae186f2f0aa56fe0e52ab1c2218df2c7c">AK::IAkPluginParam::SetParamsBlock()</a> to initialize the parameter block when it is valid. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Call AK::IAkPluginParam::SetParamsBlock() to initialize the parameter block when it is valid. </td></tr>
 </table>
 <div class="fragment"><div class="line"><span class="comment">// Parameter node initialization.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">CAkMyPluginParams::Init</a>( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator, <span class="keywordtype">void</span> * in_pParamsBlock, <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_ulBlockSize )</div>
+<div class="line">AKRESULT CAkMyPluginParams::Init( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator, <span class="keywordtype">void</span> * in_pParamsBlock, AkUInt32 in_ulBlockSize )</div>
 <div class="line">{</div>
 <div class="line">    <span class="keywordflow">if</span> ( in_ulBlockSize == 0)</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Init with default values if we got an invalid parameter block.</span></div>
-<div class="line">        <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
+<div class="line">        <span class="keywordflow">return</span> AK_Success;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> SetParamsBlock( in_pParamsBlock, in_ulBlockSize );</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="iakeffectparam_setparamsblock"></a>
 AK::IAkPluginParam::SetParamsBlock()</h2>
-<p>This method sets all plug-in parameters at once using a parameter block that was stored through <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_audio_plugin_ae59a3955718ed3bbde0521da21cd8539.html#ae59a3955718ed3bbde0521da21cd8539" title="Obtains parameters that will be written to a bank.">AK::Wwise::Plugin::AudioPlugin::GetBankParameters()</a> during bank creation in Wwise. The parameters will be read in the same format they were written into the bank by the Wwise counterpart of the plug-in. Note that data is in packed format and thus variables may not be aligned based on the data type as required for some target platforms. Use the READBANKDATA helper macro provided in <a class="el" href="_ak_bank_read_helpers_8h.html">AkBankReadHelpers.h</a> to avoid theses platform specific concerns. There is no need to worry about endianness issues for the plug-in parameters as data is properly byte swapped by the application.</p>
+<p>This method sets all plug-in parameters at once using a parameter block that was stored through AK::Wwise::Plugin::AudioPlugin::GetBankParameters() during bank creation in Wwise. The parameters will be read in the same format they were written into the bank by the Wwise counterpart of the plug-in. Note that data is in packed format and thus variables may not be aligned based on the data type as required for some target platforms. Use the READBANKDATA helper macro provided in <a class="el" href="_ak_bank_read_helpers_8h.html">AkBankReadHelpers.h</a> to avoid theses platform specific concerns. There is no need to worry about endianness issues for the plug-in parameters as data is properly byte swapped by the application.</p>
 <div class="fragment"><div class="line"><span class="comment">// Read and parse parameter block.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> CAkMyPluginParams::SetParamsBlock( <span class="keywordtype">void</span> * in_pParamsBlock, <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_uBlockSize )</div>
+<div class="line">AKRESULT CAkMyPluginParams::SetParamsBlock( <span class="keywordtype">void</span> * in_pParamsBlock, AkUInt32 in_uBlockSize )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Read data in the order it was put in the bank</span></div>
-<div class="line">    <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a6a754f6e0ddd97ae59f3aae854cde270.html#a6a754f6e0ddd97ae59f3aae854cde270">AkUInt8</a> * pParamsBlock = (<a class="code" href="_ak_numeral_types_8h_a6a754f6e0ddd97ae59f3aae854cde270.html#a6a754f6e0ddd97ae59f3aae854cde270">AkUInt8</a> *)in_pParamsBlock;</div>
-<div class="line">    m_fFloatParam1 = <a class="code" href="_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5.html#a18513ab855bc8316634d74b9a17138c5">READBANKDATA</a>( <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>, pParamsBlock, in_ulBlockSize );</div>
-<div class="line">    m_bBoolParam2 = <a class="code" href="_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5.html#a18513ab855bc8316634d74b9a17138c5">READBANKDATA</a>( <span class="keywordtype">bool</span>, pParamsBlock, in_ulBlockSize );</div>
-<div class="line">    <a class="code" href="_ak_bank_read_helpers_8h_a50c3e7712a0452bd3ee8d5ac2185d2cf.html#a50c3e7712a0452bd3ee8d5ac2185d2cf">CHECKBANKDATASIZE</a>( in_ulBlockSize, eResult );</div>
+<div class="line">    AKRESULT eResult = AK_Success;</div>
+<div class="line">    AkUInt8 * pParamsBlock = (AkUInt8 *)in_pParamsBlock;</div>
+<div class="line">    m_fFloatParam1 = READBANKDATA( AkReal32, pParamsBlock, in_ulBlockSize );</div>
+<div class="line">    m_bBoolParam2 = READBANKDATA( <span class="keywordtype">bool</span>, pParamsBlock, in_ulBlockSize );</div>
+<div class="line">    CHECKBANKDATASIZE( in_ulBlockSize, eResult );</div>
 <div class="line">    <span class="keywordflow">return</span> eResult;</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="iakeffectparam_setparam"></a>
@@ -199,42 +199,42 @@ AK::IAkPluginParam::SetParam()</h2>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> Parameters that support RTPCs are assigned the type AkReal32 regardless of the property type specified in the XML file. </td></tr>
 </table>
 <div class="fragment"><div class="line"><span class="comment">// Parameters IDs for Wwise or RTPCs.</span></div>
-<div class="line"><span class="keyword">static</span> <span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a> AK_MYFLOATPARAM1_ID    = 0;</div>
-<div class="line"><span class="keyword">static</span> <span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a> AK_MYBOOLPARAM2_ID     = 1;</div>
+<div class="line"><span class="keyword">static</span> <span class="keyword">const</span> AkPluginParamID AK_MYFLOATPARAM1_ID    = 0;</div>
+<div class="line"><span class="keyword">static</span> <span class="keyword">const</span> AkPluginParamID AK_MYBOOLPARAM2_ID     = 1;</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> CAkMyPluginParams::SetParam( <a class="code" href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a> in_ParamID, <span class="keywordtype">void</span> * in_pValue, <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_uParamSize )</div>
+<div class="line">AKRESULT CAkMyPluginParams::SetParam( AkPluginParamID in_ParamID, <span class="keywordtype">void</span> * in_pValue, AkUInt32 in_uParamSize )</div>
 <div class="line">{</div>
 <div class="line">        <span class="comment">// Set parameter value.</span></div>
 <div class="line">        <span class="keywordflow">switch</span> ( in_ParamID )</div>
 <div class="line">        {</div>
 <div class="line">        <span class="keywordflow">case</span> AK_MYFLOATPARAM1_ID:</div>
-<div class="line">            m_fFloatParam1.fParam2 = *(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>*)( in_pValue );</div>
+<div class="line">            m_fFloatParam1.fParam2 = *(AkReal32*)( in_pValue );</div>
 <div class="line">            <span class="keywordflow">break</span>;</div>
 <div class="line">        <span class="keywordflow">case</span> AK_MYBOOLPARAM2_ID:</div>
 <div class="line">            m_bBoolParam2 = *(<span class="keywordtype">bool</span>*)( in_pValue ); <span class="comment">// Parameter does not support RTPC</span></div>
 <div class="line">                or ...</div>
 <div class="line">            <span class="comment">// Note RTPC parameters are always of type float regardless of property type in XML plugin description</span></div>
-<div class="line">            m_bBoolParam2 = (*(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>*)(in_pValue)) != 0;</div>
+<div class="line">            m_bBoolParam2 = (*(AkReal32*)(in_pValue)) != 0;</div>
 <div class="line">            <span class="keywordflow">break</span>;</div>
 <div class="line">        </div>
 <div class="line">        <span class="keywordflow">default</span>:</div>
-<div class="line">            <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a94ab17d09b6d684fa77c083126157b1d">AK_InvalidParameter</a>;</div>
+<div class="line">            <span class="keywordflow">return</span> AK_InvalidParameter;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
+<div class="line">    <span class="keywordflow">return</span> AK_Success;</div>
 <div class="line">}</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If you use <a class="el" href="plugin_backend_model.html#wwiseplugin_complexproperty">complex properties</a>, you must handle <code><a class="el" href="class_a_k_1_1_i_ak_plugin_param_a7d4422a73ca832f64edc0465e59be771.html#a7d4422a73ca832f64edc0465e59be771">AK::IAkPluginParam::ALL_PLUGIN_DATA_ID</a></code> in <code><a class="el" href="class_a_k_1_1_i_ak_plugin_param_ad47732326b85527316287e923d37a3e1.html#ad47732326b85527316287e923d37a3e1">AK::IAkPluginParam::SetParam</a></code> and <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_custom_data_a6740b8fc3bfeec655cfcbe5fd69e1b98.html#a6740b8fc3bfeec655cfcbe5fd69e1b98" title="Obtains parameters that will be sent to the sound engine when Wwise is connected.">AK::Wwise::Plugin::CustomData::GetPluginData</a></code>. It will be used at least once, when the plug-in is played for the first time. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If you use complex properties, you must handle <code>AK::IAkPluginParam::ALL_PLUGIN_DATA_ID</code> in <code>AK::IAkPluginParam::SetParam</code> and <code>AK::Wwise::Plugin::CustomData::GetPluginData</code>. It will be used at least once, when the plug-in is played for the first time. </td></tr>
 </table>
 <h2><a class="anchor" id="iakeffectparam_term"></a>
 AK::IAkPluginParam::Term()</h2>
 <p>This method is called by the sound engine when a parameter node is terminated. Any memory resources used must be released and the parameter node instance is responsible for self-destruction.</p>
 <div class="fragment"><div class="line"><span class="comment">// Shared parameters termination.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">CAkMyPluginParams::Term</a>( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
+<div class="line">AKRESULT CAkMyPluginParams::Term( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
 <div class="line">{</div>
-<div class="line">    <a class="code" href="_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa.html#ac6fa6544d3120811e155136866fc24aa">AK_PLUGIN_DELETE</a>( in_pAllocator, <span class="keyword">this</span> );</div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
+<div class="line">    AK_PLUGIN_DELETE( in_pAllocator, <span class="keyword">this</span> );</div>
+<div class="line">    <span class="keywordflow">return</span> AK_Success;</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="iakeffectparam_communication"></a>
 Communication Between Parameter Nodes and Plug-ins.</h2>
@@ -242,31 +242,31 @@ Communication Between Parameter Nodes and Plug-ins.</h2>
 <h1><a class="anchor" id="software_effect_interface"></a>
 Audio Plug-in Interface Implementation</h1>
 <p>To develop an audio plug-in, you must implement certain functions to allow the plug-in to function properly within the engine's audio data flow. For source plug-ins you should derive from the <a class="el" href="class_a_k_1_1_i_ak_source_plugin.html" title="Wwise sound engine source plug-in interface (see Creating Sound Engine Source Plug-ins).">AK::IAkSourcePlugin</a> interface, for effects that can replace the input buffer with the output (e.g. no need for unordered access or change in data rate) you should derive from the <a class="el" href="class_a_k_1_1_i_ak_in_place_effect_plugin.html" title="Software effect plug-in interface for in-place processing (see Creating Sound Engine Effect Plug-ins)...">AK::IAkInPlaceEffectPlugin</a>. For other effects that require out of place implementation, you should derive from the <a class="el" href="class_a_k_1_1_i_ak_out_of_place_effect_plugin.html" title="Software effect plug-in interface for out-of-place processing (see Creating Sound Engine Effect Plug-...">AK::IAkOutOfPlaceEffectPlugin</a> interface.</p>
-<p>A plug-in life cycle always begins with a call to one of the <a class="el" href="class_a_k_1_1_i_ak_audio_device_effect_plugin_ac2b7ed06052a176e4445b743e7b3dfe7.html#ac2b7ed06052a176e4445b743e7b3dfe7">AK::IAkAudioDeviceEffectPlugin::Init()</a>, <a class="el" href="class_a_k_1_1_i_ak_effect_plugin_ae5a44837c4adddf6ff58fab57453b020.html#ae5a44837c4adddf6ff58fab57453b020">AK::IAkEffectPlugin::Init()</a>, <a class="el" href="class_a_k_1_1_i_ak_sink_plugin_base_ab13c519292782b8e485912cb85506f25.html#ab13c519292782b8e485912cb85506f25">AK::IAkSinkPluginBase::Init()</a> or <a class="el" href="class_a_k_1_1_i_ak_source_plugin_a101429095bd300db35cb0795254a9a53.html#a101429095bd300db35cb0795254a9a53">AK::IAkSourcePlugin::Init()</a> functions, immediately followed by a call to <a class="el" href="class_a_k_1_1_i_ak_plugin_a08c841c8b811acb993acd0353bd9db75.html#a08c841c8b811acb993acd0353bd9db75">AK::IAkPlugin::Reset()</a>. As long as the plug-in needs to output more data, AK::IAkPlugin::Execute() is called with new buffers. When the plug-in is no longer needed, <a class="el" href="class_a_k_1_1_i_ak_plugin_a29db8d2afc4fe2571c2c75deb00a359d.html#a29db8d2afc4fe2571c2c75deb00a359d">AK::IAkPlugin::Term()</a> is called.</p>
+<p>A plug-in life cycle always begins with a call to one of the AK::IAkAudioDeviceEffectPlugin::Init(), AK::IAkEffectPlugin::Init(), AK::IAkSinkPluginBase::Init() or AK::IAkSourcePlugin::Init() functions, immediately followed by a call to AK::IAkPlugin::Reset(). As long as the plug-in needs to output more data, AK::IAkPlugin::Execute() is called with new buffers. When the plug-in is no longer needed, AK::IAkPlugin::Term() is called.</p>
 <h2><a class="anchor" id="iakeffect_term"></a>
 AK::IAkPlugin::Term()</h2>
-<p>This method is called when the plug-in is terminated. <a class="el" href="class_a_k_1_1_i_ak_plugin_a29db8d2afc4fe2571c2c75deb00a359d.html#a29db8d2afc4fe2571c2c75deb00a359d">AK::IAkPlugin::Term()</a> must release all memory resources used by the plug-in and self-destruct the plug-in instance.</p>
-<div class="fragment"><div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">CAkMyPlugin::Term</a>( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
+<p>This method is called when the plug-in is terminated. AK::IAkPlugin::Term() must release all memory resources used by the plug-in and self-destruct the plug-in instance.</p>
+<div class="fragment"><div class="line">AKRESULT CAkMyPlugin::Term( <a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator )</div>
 <div class="line">{</div>
-<div class="line">    <span class="keywordflow">if</span> ( m_pMyDelayLine != <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( m_pMyDelayLine != NULL )</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_i_ak_plugin_mem_alloc_8h_a37dac3dbf976521288ecb8f36a16af3a.html#a37dac3dbf976521288ecb8f36a16af3a">AK_PLUGIN_FREE</a>( in_pAllocator, m_pMyDelayLine );</div>
-<div class="line">        m_pMyDelayLine = <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>;</div>
+<div class="line">        AK_PLUGIN_FREE( in_pAllocator, m_pMyDelayLine );</div>
+<div class="line">        m_pMyDelayLine = NULL;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
-<div class="line">    <a class="code" href="_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa.html#ac6fa6544d3120811e155136866fc24aa">AK_PLUGIN_DELETE</a>( in_pAllocator, <span class="keyword">this</span> );</div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
+<div class="line">    AK_PLUGIN_DELETE( in_pAllocator, <span class="keyword">this</span> );</div>
+<div class="line">    <span class="keywordflow">return</span> AK_Success;</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="iakeffect_reset"></a>
 AK::IAkPlugin::Reset()</h2>
-<p>The reset method must reinitialize the state of the plug-in to prepare it to accommodate new unrelated audio content. The sound engine pipeline will call <a class="el" href="class_a_k_1_1_i_ak_plugin_a08c841c8b811acb993acd0353bd9db75.html#a08c841c8b811acb993acd0353bd9db75">AK::IAkPlugin::Reset()</a> immediately after initialization and at any other time the state of the object needs to be reset. Typically all memory allocations should be performed at initialization but the status of delay lines and sample counts for example should be cleared on <a class="el" href="class_a_k_1_1_i_ak_plugin_a08c841c8b811acb993acd0353bd9db75.html#a08c841c8b811acb993acd0353bd9db75">AK::IAkPlugin::Reset()</a>.</p>
+<p>The reset method must reinitialize the state of the plug-in to prepare it to accommodate new unrelated audio content. The sound engine pipeline will call AK::IAkPlugin::Reset() immediately after initialization and at any other time the state of the object needs to be reset. Typically all memory allocations should be performed at initialization but the status of delay lines and sample counts for example should be cleared on AK::IAkPlugin::Reset().</p>
 <div class="fragment"><div class="line"><span class="comment">// Reset internal state of plug-in</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_af3d99fab833c0b3c4bc7ce7b78d7b4bf.html#af3d99fab833c0b3c4bc7ce7b78d7b4bf">CAkMyPlugin::Reset</a>( )</div>
+<div class="line">AKRESULT CAkMyPlugin::Reset( )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Reset delay line</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( m_pMyDelayLine != <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> )</div>
-<div class="line">        memset( m_pMyDelayLine, 0, m_uNumDelaySamples * <span class="keyword">sizeof</span>(<a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a>) );</div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
+<div class="line">    <span class="keywordflow">if</span> ( m_pMyDelayLine != NULL )</div>
+<div class="line">        memset( m_pMyDelayLine, 0, m_uNumDelaySamples * <span class="keyword">sizeof</span>(AkSampleType) );</div>
+<div class="line">    <span class="keywordflow">return</span> AK_Success;</div>
 <div class="line">}</div>
 </div><!-- fragment --><h2><a class="anchor" id="iakeffect_geteffectinfo"></a>
 AK::IAkPlugin::GetPluginInfo()</h2>
@@ -275,39 +275,39 @@ AK::IAkPlugin::GetPluginInfo()</h2>
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> Effect plug-ins should be synchronous on all platforms.</p>
 <div class="fragment"><div class="line"><span class="comment">// Effect info query from sound engine.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> CAkMyPlugin::GetPluginInfo( <a class="code" href="struct_ak_plugin_info.html">AkPluginInfo</a> &amp; out_rPluginInfo )</div>
+<div class="line">AKRESULT CAkMyPlugin::GetPluginInfo( <a class="code" href="struct_ak_plugin_info.html">AkPluginInfo</a> &amp; out_rPluginInfo )</div>
 <div class="line">{</div>
-<div class="line">    out_rPluginInfo.<a class="code" href="struct_ak_plugin_info_a3ba9f6803016c5467ea437cb921214c5.html#a3ba9f6803016c5467ea437cb921214c5">eType</a> = <a class="code" href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca49c271d98bfaeb22fd40e522ba77685f">AkPluginTypeSource</a>; <span class="comment">// Source plug-in.</span></div>
-<div class="line">    out_rPluginInfo.<a class="code" href="struct_ak_plugin_info_a70fb541431bdc08cdb490a926ccc3ee4.html#a70fb541431bdc08cdb490a926ccc3ee4">bIsInPlace</a> = <span class="keyword">true</span>;          <span class="comment">// In-place plug-in.</span></div>
+<div class="line">    out_rPluginInfo.eType = AkPluginTypeSource; <span class="comment">// Source plug-in.</span></div>
+<div class="line">    out_rPluginInfo.bIsInPlace = <span class="keyword">true</span>;          <span class="comment">// In-place plug-in.</span></div>
 <div class="line">    out_rPluginInfo.bIsAsynchronous = <span class="keyword">false</span>;    <span class="comment">// Synchronous plug-in.</span></div>
-<div class="line">    <span class="keywordflow">return</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>;</div>
+<div class="line">    <span class="keywordflow">return</span> AK_Success;</div>
 <div class="line">}</div>
 </div><!-- fragment --><p class="endtd"></p>
 </td></tr>
 </table>
 <h1><a class="anchor" id="fx_audiobuffer_struct"></a>
 Accessing Data Using AkAudioBuffer Structure</h1>
-<p>Audio data buffers are passed to plug-ins at execution time through a pointer to an <a class="el" href="class_ak_audio_buffer.html">AkAudioBuffer</a> structure. All audio buffers passed to plug-ins use a fixed format. For platforms supporting software effects, audio buffers’ channels are not interleaved, and all samples are normalized 32-bit floating point in the (-1.f,1.f) range running at a 48 kHz sampling rate.</p>
-<p>The <a class="el" href="class_ak_audio_buffer.html">AkAudioBuffer</a> structure provides means for accessing both interleaved and deinterleaved data. It contains a field to specify the number of sample frames valid in each channel buffer (<a class="el" href="class_ak_audio_buffer_ab7f90fd99119b56e92e4cbf3559f98cd.html#ab7f90fd99119b56e92e4cbf3559f98cd" title="Number of valid sample frames in the audio buffer.">AkAudioBuffer::uValidFrames</a>) along with the maximum number of sample frames that these buffers can contain (returned by <a class="el" href="class_ak_audio_buffer_a537445dce6e3ed09dd2c337fd73c6b41.html#a537445dce6e3ed09dd2c337fd73c6b41">AkAudioBuffer::MaxFrames()</a>).</p>
-<p>The <a class="el" href="class_ak_audio_buffer.html">AkAudioBuffer</a> structure also contains the buffer's channel mask, which defines the channels that are present in the data. If you just need the number of channels, use <a class="el" href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f" title="Get the number of channels.">AkAudioBuffer::NumChannels()</a>.</p>
+<p>Audio data buffers are passed to plug-ins at execution time through a pointer to an <a class="el" href="class_ak_audio_buffer.html">AkAudioBuffer</a> structure. All audio buffers passed to plug-ins use a fixed format. For platforms supporting software effects, audio buffersâ€™ channels are not interleaved, and all samples are normalized 32-bit floating point in the (-1.f,1.f) range running at a 48 kHz sampling rate.</p>
+<p>The <a class="el" href="class_ak_audio_buffer.html">AkAudioBuffer</a> structure provides means for accessing both interleaved and deinterleaved data. It contains a field to specify the number of sample frames valid in each channel buffer (AkAudioBuffer::uValidFrames) along with the maximum number of sample frames that these buffers can contain (returned by AkAudioBuffer::MaxFrames()).</p>
+<p>The <a class="el" href="class_ak_audio_buffer.html">AkAudioBuffer</a> structure also contains the buffer's channel mask, which defines the channels that are present in the data. If you just need the number of channels, use AkAudioBuffer::NumChannels().</p>
 <h2><a class="anchor" id="fx_audiobuffer_interleaved"></a>
 Retrieving Interleaved Data.</h2>
-<p>A plug-in can access a buffer of interleaved data through <a class="el" href="class_ak_audio_buffer_a8b3f75d4e95d5ce9af0b4573fae87510.html#a8b3f75d4e95d5ce9af0b4573fae87510">AkAudioBuffer::GetInterleavedData()</a>. Only source plug-ins should access and output interleaved data. In order to do so, they must correctly prepare the sound engine during initialization (see <a class="el" href="soundengine_plugins_source.html#iaksourceeffect_init">AK::IAkSourcePlugin::Init()</a>). The sound engine will instantiate the DSP processed in order to properly convert the data into the native pipeline format.</p>
+<p>A plug-in can access a buffer of interleaved data through AkAudioBuffer::GetInterleavedData(). Only source plug-ins should access and output interleaved data. In order to do so, they must correctly prepare the sound engine during initialization (see AK::IAkSourcePlugin::Init()). The sound engine will instantiate the DSP processed in order to properly convert the data into the native pipeline format.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> You can get better performance, if the source plug-in outputs data that is already in the sound engine's native format. </td></tr>
 </table>
 <h2><a class="anchor" id="fx_audiobuffer_deinterleaved"></a>
 Retrieving Deinterleaved Data.</h2>
-<p>A plug-in accesses individual deinterleaved channels through <a class="el" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">AkAudioBuffer::GetChannel()</a>. The data type always conforms to the sound engine's native format (AkSampleType). The example code below shows how all deinterleaved channels can be retrieved for processing.</p>
+<p>A plug-in accesses individual deinterleaved channels through AkAudioBuffer::GetChannel(). The data type always conforms to the sound engine's native format (AkSampleType). The example code below shows how all deinterleaved channels can be retrieved for processing.</p>
 <div class="fragment"><div class="line"><span class="comment">// Process all channels independently.</span></div>
 <div class="line"><span class="keywordtype">void</span> CAkMyPlugin::Execute( <a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a> * io_pBuffer )     <span class="comment">// Input/Output buffer (processing is done in place).</span></div>
 <div class="line">{</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uNumChannels = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f">NumChannels</a>();</div>
+<div class="line">    AkUInt32 uNumChannels = io_pBuffer-&gt;NumChannels();</div>
 <div class="line">    </div>
-<div class="line">    <span class="keywordflow">for</span> ( <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uChan=0; uChan&lt;uNumChannels; uChan++ )</div>
+<div class="line">    <span class="keywordflow">for</span> ( AkUInt32 uChan=0; uChan&lt;uNumChannels; uChan++ )</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a> * pChannel = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">GetChannel</a>( uChan );</div>
+<div class="line">        AkSampleType * pChannel = io_pBuffer-&gt;GetChannel( uChan );</div>
 <div class="line">        <span class="comment">// Process data of pChannel...</span></div>
 <div class="line">    }</div>
 <div class="line">}</div>
@@ -317,11 +317,11 @@ Retrieving Deinterleaved Data.</h2>
 </table>
 <h2><a class="anchor" id="fx_audiobuffer_struct_channels"></a>
 Channel Ordering</h2>
-<p>The channels for processing audio are ordered as follows: Front Left, Front Right, Center, Rear Left, Rear Right, and LFE. The Low-Frequency channel (LFE) is <b>always</b> placed at the end (except for Source plug-ins), so that it can be handled separately because many DSP processings require it. A plug-in can query if the LFE channel is present in the audio buffer with <code><a class="el" href="class_ak_audio_buffer_a9ac12a3c62e9c1e734b5a42d68896bf4.html#a9ac12a3c62e9c1e734b5a42d68896bf4" title="Returns true if there is an LFE channel present.">AkAudioBuffer::HasLFE()</a></code>. It can access the LFE channel directly by calling <code><a class="el" href="class_ak_audio_buffer_a06f9e3184b8664df136f8d123b04cc81.html#a06f9e3184b8664df136f8d123b04cc81">AkAudioBuffer::GetLFE()</a></code>. The following code demonstrates two different ways for handling the LFE channel separately.</p>
+<p>The channels for processing audio are ordered as follows: Front Left, Front Right, Center, Rear Left, Rear Right, and LFE. The Low-Frequency channel (LFE) is <b>always</b> placed at the end (except for Source plug-ins), so that it can be handled separately because many DSP processings require it. A plug-in can query if the LFE channel is present in the audio buffer with <code>AkAudioBuffer::HasLFE()</code>. It can access the LFE channel directly by calling <code>AkAudioBuffer::GetLFE()</code>. The following code demonstrates two different ways for handling the LFE channel separately.</p>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> CAkMyPlugin::Execute( <a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a> * io_pBuffer )     <span class="comment">// Input/Output buffer (processing is done in place).</span></div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Get LFE channel with GetLFE().</span></div>
-<div class="line">    <a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a> * pLFE = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_a06f9e3184b8664df136f8d123b04cc81.html#a06f9e3184b8664df136f8d123b04cc81">GetLFE</a>();</div>
+<div class="line">    AkSampleType * pLFE = io_pBuffer-&gt;GetLFE();</div>
 <div class="line">    <span class="keywordflow">if</span> ( pLFE )</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Process data of pLFE...</span></div>
@@ -330,9 +330,9 @@ Channel Ordering</h2>
 <div class="line">    OR ...</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// Get LFE channel with GetChannel().</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_a9ac12a3c62e9c1e734b5a42d68896bf4.html#a9ac12a3c62e9c1e734b5a42d68896bf4">HasLFE</a>() )</div>
+<div class="line">    <span class="keywordflow">if</span> ( io_pBuffer-&gt;HasLFE() )</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a> * pLFE = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">GetChannel</a>( io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f">NumChannels</a>() - 1 );</div>
+<div class="line">        AkSampleType * pLFE = io_pBuffer-&gt;GetChannel( io_pBuffer-&gt;NumChannels() - 1 );</div>
 <div class="line">        <span class="comment">// Process data of pLFE...</span></div>
 <div class="line">    }</div>
 <div class="line">}</div>
@@ -341,10 +341,10 @@ Channel Ordering</h2>
 <div class="line"><span class="keywordtype">void</span> CAkMyPlugin::Execute( <a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a> * io_pBuffer )     <span class="comment">// Input/Output buffer (processing is done in place).</span></div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Query for specific channel configuration.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( io_pBuffer-&gt;GetChannelMask() == <a class="code" href="_ak_speaker_config_8h_af181b7b2236165b1e43fc8d54f5dee9d.html#af181b7b2236165b1e43fc8d54f5dee9d">AK_SPEAKER_SETUP_5</a> || io_pBuffer-&gt;GetChannelMask() == <a class="code" href="_ak_speaker_config_8h_a666b8c74f7cca22244ae5d96b6a665e0.html#a666b8c74f7cca22244ae5d96b6a665e0">AK_SPEAKER_SETUP_5POINT1</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( io_pBuffer-&gt;GetChannelMask() == AK_SPEAKER_SETUP_5 || io_pBuffer-&gt;GetChannelMask() == AK_SPEAKER_SETUP_5POINT1 )</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Access channel using the index defined for the appropriate configuration.</span></div>
-<div class="line">        <a class="code" href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a> * pCenter = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">GetChannel</a>( <a class="code" href="_ak_speaker_config_8h_a2639ea7a4d6c2a1a0fa9368ef9d15f33.html#a2639ea7a4d6c2a1a0fa9368ef9d15f33">AK_IDX_SETUP_5_CENTER</a> );</div>
+<div class="line">        AkSampleType * pCenter = io_pBuffer-&gt;GetChannel( AK_IDX_SETUP_5_CENTER );</div>
 <div class="line">        <span class="comment">// Process data of pCenter...</span></div>
 <div class="line">    }</div>
 <div class="line">}</div>
@@ -358,7 +358,7 @@ Channel Ordering</h2>
 </table>
 <h1><a class="anchor" id="fx_global_hooks"></a>
 Using Global Sound Engine Callbacks From Plug-ins</h1>
-<p>Plugins may use <code><a class="el" href="class_a_k_1_1_i_ak_global_plugin_context_a1cbd90dbcb3c0e69a8c80fd4aefc822c.html#a1cbd90dbcb3c0e69a8c80fd4aefc822c">AK::IAkGlobalPluginContext::RegisterGlobalCallback()</a></code> to register to various global sound engine callbacks. For example, a plug-in class may need to be called once per audio frame, via a singleton, of which plug-in instances are aware. You may also use global hooks for initializing data structures that remain during the whole lifetime of the sound engine.</p>
+<p>Plugins may use <code>AK::IAkGlobalPluginContext::RegisterGlobalCallback()</code> to register to various global sound engine callbacks. For example, a plug-in class may need to be called once per audio frame, via a singleton, of which plug-in instances are aware. You may also use global hooks for initializing data structures that remain during the whole lifetime of the sound engine.</p>
 <p>To do so, replace the default AK_IMPLEMENT_PLUGIN_FACTORY macro with your own implementation, to utilize the <a class="el" href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a>'s "RegisterCallback". In the code snippet below, a static callback called MyRegisterCallback is defined for this purpose and passed to the <a class="el" href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a> object MyPluginRegistration.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -366,47 +366,47 @@ Using Global Sound Engine Callbacks From Plug-ins</h1>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> It is only allowed to call <code><a class="el" href="class_a_k_1_1_i_ak_global_plugin_context_a1cbd90dbcb3c0e69a8c80fd4aefc822c.html#a1cbd90dbcb3c0e69a8c80fd4aefc822c">AK::IAkGlobalPluginContext::RegisterGlobalCallback()</a></code> from inside the plug-in registration callback, exclusively when receiving <code>AkGlobalCallbackLocation::AkGlobalCallbackLocation_Register</code>, and <code><a class="el" href="class_a_k_1_1_i_ak_global_plugin_context_a64909d48d5693809ddb5b64b8dabf93a.html#a64909d48d5693809ddb5b64b8dabf93a">AK::IAkGlobalPluginContext::UnregisterGlobalCallback()</a></code>, when receiving <code>AkGlobalCallbackLocation::AkGlobalCallbackLocation_Term</code>, as illustrated in the example below. Specifically, this function should not be called from inside the plug-in instance (e.g. in Init, Execute, etc.) to prevent deadlocks when processing plug-ins in parallel. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> It is only allowed to call <code>AK::IAkGlobalPluginContext::RegisterGlobalCallback()</code> from inside the plug-in registration callback, exclusively when receiving <code>AkGlobalCallbackLocation::AkGlobalCallbackLocation_Register</code>, and <code>AK::IAkGlobalPluginContext::UnregisterGlobalCallback()</code>, when receiving <code>AkGlobalCallbackLocation::AkGlobalCallbackLocation_Term</code>, as illustrated in the example below. Specifically, this function should not be called from inside the plug-in instance (e.g. in Init, Execute, etc.) to prevent deadlocks when processing plug-ins in parallel. </td></tr>
 </table>
 <div class="fragment"><div class="line"><span class="comment">// A global callback for initializing and terminating MyPluginManager (AkGlobalCallbackFunc).</span></div>
 <div class="line"><span class="keyword">static</span> <span class="keywordtype">void</span> MyRegisterCallback(</div>
 <div class="line">    <a class="code" href="class_a_k_1_1_i_ak_global_plugin_context.html">AK::IAkGlobalPluginContext</a> * in_pContext,   <span class="comment">///&lt; Engine context.</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676">AkGlobalCallbackLocation</a> in_eLocation,      <span class="comment">///&lt; Location where this callback is fired.</span></div>
+<div class="line"><span class="comment"></span>    AkGlobalCallbackLocation in_eLocation,      <span class="comment">///&lt; Location where this callback is fired.</span></div>
 <div class="line"><span class="comment"></span>    <span class="keywordtype">void</span> * in_pCookie                           <span class="comment">///&lt; User cookie passed to AK::SoundEngine::RegisterGlobalCallback().</span></div>
 <div class="line"><span class="comment"></span>    )</div>
 <div class="line">{</div>
-<div class="line">    <span class="keywordflow">if</span> (in_eLocation == <a class="code" href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676a68917ce14320bb481b9ab2cfe6b228b6">AkGlobalCallbackLocation_Register</a>)</div>
+<div class="line">    <span class="keywordflow">if</span> (in_eLocation == AkGlobalCallbackLocation_Register)</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Registration time: called when sound engine is initialized, or when dynamic plugin lib is loaded.</span></div>
 <div class="line"> </div>
 <div class="line">        <span class="comment">// Create our singleton. Use the allocator provided by the global context for allocations that should span the whole lifetime of the sound engine.</span></div>
-<div class="line">        MyPluginManager * pMyPluginManager = <a class="code" href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW</a>(in_pContext-&gt;<a class="code" href="class_a_k_1_1_i_ak_global_plugin_context_a9856698ca2c6d1897b7c871e259b93aa.html#a9856698ca2c6d1897b7c871e259b93aa">GetAllocator</a>(), MyPluginManager);</div>
+<div class="line">        MyPluginManager * pMyPluginManager = AK_PLUGIN_NEW(in_pContext-&gt;GetAllocator(), MyPluginManager);</div>
 <div class="line">        <span class="keywordflow">if</span> (pMyPluginManager)</div>
 <div class="line">        {</div>
 <div class="line">            <span class="comment">// Succeeded. Register to the &quot;Term&quot; callback for terminating our manager.</span></div>
-<div class="line">            <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = in_pContext-&gt;<a class="code" href="class_a_k_1_1_i_ak_global_plugin_context_a1cbd90dbcb3c0e69a8c80fd4aefc822c.html#a1cbd90dbcb3c0e69a8c80fd4aefc822c">RegisterGlobalCallback</a>(</div>
-<div class="line">                <a class="code" href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d">AkPluginTypeEffect</a>,</div>
+<div class="line">            AKRESULT eResult = in_pContext-&gt;RegisterGlobalCallback(</div>
+<div class="line">                AkPluginTypeEffect,</div>
 <div class="line">                MY_COMPANY_ID,</div>
 <div class="line">                MY_PLUGIN_ID,</div>
 <div class="line">                MyRegisterCallback,</div>
-<div class="line">                <a class="code" href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676aa5c7eebdf589a1b0ea29989e78e8ea2d">AkGlobalCallbackLocation_Term</a>,</div>
+<div class="line">                AkGlobalCallbackLocation_Term,</div>
 <div class="line">                pMyPluginManager</div>
 <div class="line">            );</div>
 <div class="line">            </div>
 <div class="line">            <span class="comment">// Handle registration failure.</span></div>
-<div class="line">            <span class="keywordflow">if</span> (eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a>)</div>
+<div class="line">            <span class="keywordflow">if</span> (eResult != AK_Success)</div>
 <div class="line">            {</div>
 <div class="line">                <span class="comment">// ...</span></div>
 <div class="line">            }</div>
 <div class="line">        }</div>
 <div class="line">    }</div>
-<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (in_eLocation == <a class="code" href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676aa5c7eebdf589a1b0ea29989e78e8ea2d">AkGlobalCallbackLocation_Term</a>)</div>
+<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span> (in_eLocation == AkGlobalCallbackLocation_Term)</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Termination time: called when sound engine is terminated. </span></div>
 <div class="line">        <span class="comment">// The cookie is our instance of MyPluginManager, as was registered above.</span></div>
-<div class="line">        <a class="code" href="_ak_assert_8h_ac0e6cc4061c0a7c154a8c921a0af74cb.html#ac0e6cc4061c0a7c154a8c921a0af74cb">AKASSERT</a>(in_pCookie);</div>
+<div class="line">        AKASSERT(in_pCookie);</div>
 <div class="line">        <span class="comment">// Destroy it.</span></div>
-<div class="line">        <a class="code" href="_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa.html#ac6fa6544d3120811e155136866fc24aa">AK_PLUGIN_DELETE</a>(in_pContext-&gt;<a class="code" href="class_a_k_1_1_i_ak_global_plugin_context_a9856698ca2c6d1897b7c871e259b93aa.html#a9856698ca2c6d1897b7c871e259b93aa">GetAllocator</a>(), (MyPluginManager*)in_pCookie);</div>
+<div class="line">        AK_PLUGIN_DELETE(in_pContext-&gt;GetAllocator(), (MyPluginManager*)in_pCookie);</div>
 <div class="line">    }</div>
 <div class="line">}</div>
 <div class="line"> </div>
@@ -414,60 +414,61 @@ Using Global Sound Engine Callbacks From Plug-ins</h1>
 <div class="line"><span class="comment">// Here, &quot;MyPlugin&quot; should be replaced by the name of your plugin.</span></div>
 <div class="line"><a class="code" href="class_a_k_1_1_i_ak_plugin.html">AK::IAkPlugin</a>* CreateMyPlugin(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator);</div>
 <div class="line"><a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a> * CreateMyPluginParams(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a> * in_pAllocator);</div>
-<div class="line"><a class="code" href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a> MyPluginRegistration(<a class="code" href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d">AkPluginTypeEffect</a>, MY_COMPANY_ID, MY_PLUGIN_ID, CreateMyPlugin, CreateMyPluginParams, MyRegisterCallback, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>);</div>
+<div class="line"><a class="code" href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a> MyPluginRegistration(AkPluginTypeEffect, MY_COMPANY_ID, MY_PLUGIN_ID, CreateMyPlugin, CreateMyPluginParams, MyRegisterCallback, NULL);</div>
 </div><!-- fragment --><p>For more information, refer to the following sections:</p>
 <ul>
-<li><a class="el" href="soundengine_plugins_source.html#se_source_effect">Source Plug-in Interface Implementation</a></li>
-<li><a class="el" href="soundengine_plugins_effects.html#se_insert_effect">Implementing an Effect Plug-in Interface</a></li>
+<li>Source Plug-in Interface Implementation</li>
+<li>Implementing an Effect Plug-in Interface</li>
 <li><a class="el" href="effectpluginwwise.html">Writing the Authoring Part of an Audio Plug-in</a> </li>
 </ul>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="aclass_ak_audio_buffer_a9ac12a3c62e9c1e734b5a42d68896bf4_html_a9ac12a3c62e9c1e734b5a42d68896bf4"><div class="ttname"><a href="class_ak_audio_buffer_a9ac12a3c62e9c1e734b5a42d68896bf4.html#a9ac12a3c62e9c1e734b5a42d68896bf4">AkAudioBuffer::HasLFE</a></div><div class="ttdeci">AkForceInline bool HasLFE() const</div><div class="ttdoc">Returns true if there is an LFE channel present.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00496">AkCommonDefs.h:496</a></div></div>
-<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa_html_ac6fa6544d3120811e155136866fc24aa"><div class="ttname"><a href="_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa.html#ac6fa6544d3120811e155136866fc24aa">AK_PLUGIN_DELETE</a></div><div class="ttdeci">AkForceInline void AK_PLUGIN_DELETE(AK::IAkPluginMemAlloc *in_pAllocator, T *in_pObject)</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_mem_alloc_8h_source.html#l00179">IAkPluginMemAlloc.h:179</a></div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c_html_ad2bc3b8ddd61eaa0c111798d5f9e8c9c"><div class="ttname"><a href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">AkAudioBuffer::GetChannel</a></div><div class="ttdeci">AkSampleType * GetChannel(AkUInt32 in_uIndex)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00574">AkCommonDefs.h:574</a></div></div>
-<div class="ttc" id="a_i_ak_plugin_8h_a8e9fc150137c878499f2200e7e27a256_html_a8e9fc150137c878499f2200e7e27a256"><div class="ttname"><a href="_i_ak_plugin_8h_a8e9fc150137c878499f2200e7e27a256.html#a8e9fc150137c878499f2200e7e27a256">AK_STATIC_LINK_PLUGIN</a></div><div class="ttdeci">#define AK_STATIC_LINK_PLUGIN(_pluginName_)</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l01886">IAkPlugin.h:1886</a></div></div>
-<div class="ttc" id="a_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676_html_ae7a5e30e1402c7cf90d1b47420911676a68917ce14320bb481b9ab2cfe6b228b6"><div class="ttname"><a href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676a68917ce14320bb481b9ab2cfe6b228b6">AkGlobalCallbackLocation_Register</a></div><div class="ttdeci">@ AkGlobalCallbackLocation_Register</div><div class="ttdoc">Right after successful registration of callback/plugin. Typically used by plugins along with AkGlobal...</div><div class="ttdef"><b>Definition:</b> <a href="_ak_callback_8h_source.html#l00336">AkCallback.h:336</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_param_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00619">IAkPlugin.h:620</a></div></div>
-<div class="ttc" id="a_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676_html_ae7a5e30e1402c7cf90d1b47420911676aa5c7eebdf589a1b0ea29989e78e8ea2d"><div class="ttname"><a href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676aa5c7eebdf589a1b0ea29989e78e8ea2d">AkGlobalCallbackLocation_Term</a></div><div class="ttdeci">@ AkGlobalCallbackLocation_Term</div><div class="ttdoc">Sound engine termination.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_callback_8h_source.html#l00347">AkCallback.h:347</a></div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f_html_a4523322478ec9a0f9de0c7c72e65df2f"><div class="ttname"><a href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f">AkAudioBuffer::NumChannels</a></div><div class="ttdeci">AkForceInline AkUInt32 NumChannels() const</div><div class="ttdoc">Get the number of channels.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00490">AkCommonDefs.h:490</a></div></div>
-<div class="ttc" id="a_ak_bank_read_helpers_8h_a50c3e7712a0452bd3ee8d5ac2185d2cf_html_a50c3e7712a0452bd3ee8d5ac2185d2cf"><div class="ttname"><a href="_ak_bank_read_helpers_8h_a50c3e7712a0452bd3ee8d5ac2185d2cf.html#a50c3e7712a0452bd3ee8d5ac2185d2cf">CHECKBANKDATASIZE</a></div><div class="ttdeci">#define CHECKBANKDATASIZE(_DATASIZE_, _ERESULT_)</div><div class="ttdoc">Helper macro to determine whether the full content of a block of memory was properly parsed.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_bank_read_helpers_8h_source.html#l00266">AkBankReadHelpers.h:266</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a></div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00212">AkTypes.h:213</a></div></div>
-<div class="ttc" id="astruct_ak_plugin_info_a70fb541431bdc08cdb490a926ccc3ee4_html_a70fb541431bdc08cdb490a926ccc3ee4"><div class="ttname"><a href="struct_ak_plugin_info_a70fb541431bdc08cdb490a926ccc3ee4.html#a70fb541431bdc08cdb490a926ccc3ee4">AkPluginInfo::bIsInPlace</a></div><div class="ttdeci">bool bIsInPlace</div><div class="ttdoc">Buffer usage (in-place or not). If true, and the plug-in is an insert effect, it should implement IAk...</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00077">IAkPlugin.h:77</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c_html_a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d"><div class="ttname"><a href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d">AkPluginTypeEffect</a></div><div class="ttdeci">@ AkPluginTypeEffect</div><div class="ttdoc">Effect plug-in: applies processing to audio data.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l01253">AkTypes.h:1253</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a6a754f6e0ddd97ae59f3aae854cde270_html_a6a754f6e0ddd97ae59f3aae854cde270"><div class="ttname"><a href="_ak_numeral_types_8h_a6a754f6e0ddd97ae59f3aae854cde270.html#a6a754f6e0ddd97ae59f3aae854cde270">AkUInt8</a></div><div class="ttdeci">uint8_t AkUInt8</div><div class="ttdoc">Unsigned 8-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00036">AkNumeralTypes.h:36</a></div></div>
-<div class="ttc" id="a_ak_speaker_config_8h_af181b7b2236165b1e43fc8d54f5dee9d_html_af181b7b2236165b1e43fc8d54f5dee9d"><div class="ttname"><a href="_ak_speaker_config_8h_af181b7b2236165b1e43fc8d54f5dee9d.html#af181b7b2236165b1e43fc8d54f5dee9d">AK_SPEAKER_SETUP_5</a></div><div class="ttdeci">#define AK_SPEAKER_SETUP_5</div><div class="ttdoc">5.0 setup channel mask</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00066">AkSpeakerConfig.h:66</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_af3d99fab833c0b3c4bc7ce7b78d7b4bf_html_af3d99fab833c0b3c4bc7ce7b78d7b4bf"><div class="ttname"><a href="namespace_a_k_1_1_comm_af3d99fab833c0b3c4bc7ce7b78d7b4bf.html#af3d99fab833c0b3c4bc7ce7b78d7b4bf">AK::Comm::Reset</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Reset()</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname"><a href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
-<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479_html_aca786bdd3829c192297a174d5d2d2479"><div class="ttname"><a href="_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479.html#aca786bdd3829c192297a174d5d2d2479">AK_PLUGIN_NEW</a></div><div class="ttdeci">#define AK_PLUGIN_NEW(_allocator, _what)</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_mem_alloc_8h_source.html#l00124">IAkPluginMemAlloc.h:124</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="a_i_ak_plugin_8h_a13b2972f82acec4f7cedcb073d51619c_html_a13b2972f82acec4f7cedcb073d51619c"><div class="ttname"><a href="_i_ak_plugin_8h_a13b2972f82acec4f7cedcb073d51619c.html#a13b2972f82acec4f7cedcb073d51619c">AK_IMPLEMENT_PLUGIN_FACTORY</a></div><div class="ttdeci">#define AK_IMPLEMENT_PLUGIN_FACTORY(_pluginName_, _plugintype_, _companyid_, _pluginid_)</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l01881">IAkPlugin.h:1881</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98_html_afc38459f26e2b23defe588026e886a98"><div class="ttname"><a href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a></div><div class="ttdeci">float AkReal32</div><div class="ttdoc">32-bit floating point</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00046">AkNumeralTypes.h:46</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a></div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00215">AkTypes.h:215</a></div></div>
-<div class="ttc" id="a_ak_speaker_config_8h_a2639ea7a4d6c2a1a0fa9368ef9d15f33_html_a2639ea7a4d6c2a1a0fa9368ef9d15f33"><div class="ttname"><a href="_ak_speaker_config_8h_a2639ea7a4d6c2a1a0fa9368ef9d15f33.html#a2639ea7a4d6c2a1a0fa9368ef9d15f33">AK_IDX_SETUP_5_CENTER</a></div><div class="ttdeci">#define AK_IDX_SETUP_5_CENTER</div><div class="ttdoc">Index of center channel in 5.x setups (use with AkAudioBuffer::GetChannel())</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00158">AkSpeakerConfig.h:158</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f_html_a94e307d2974b89cc4fbc8ab0fef20d2f"><div class="ttname"><a href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">AK::Comm::Term</a></div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_mem_alloc_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_mem_alloc_8h_source.html#l00042">IAkPluginMemAlloc.h:43</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a94ab17d09b6d684fa77c083126157b1d"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a94ab17d09b6d684fa77c083126157b1d">AK_InvalidParameter</a></div><div class="ttdeci">@ AK_InvalidParameter</div><div class="ttdoc">Something is not within bounds, check the documentation of the function returning this code.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00231">AkTypes.h:231</a></div></div>
-<div class="ttc" id="a_i_ak_plugin_8h_a0e58fa7b5f9d73031a83e4667c6f8933_html_a0e58fa7b5f9d73031a83e4667c6f8933"><div class="ttname"><a href="_i_ak_plugin_8h_a0e58fa7b5f9d73031a83e4667c6f8933.html#a0e58fa7b5f9d73031a83e4667c6f8933">DEFINE_PLUGIN_REGISTER_HOOK</a></div><div class="ttdeci">#define DEFINE_PLUGIN_REGISTER_HOOK</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l01890">IAkPlugin.h:1890</a></div></div>
-<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_a37dac3dbf976521288ecb8f36a16af3a_html_a37dac3dbf976521288ecb8f36a16af3a"><div class="ttname"><a href="_i_ak_plugin_mem_alloc_8h_a37dac3dbf976521288ecb8f36a16af3a.html#a37dac3dbf976521288ecb8f36a16af3a">AK_PLUGIN_FREE</a></div><div class="ttdeci">#define AK_PLUGIN_FREE(_allocator, _pvmem)</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_mem_alloc_8h_source.html#l00194">IAkPluginMemAlloc.h:194</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_plugin_registration_html"><div class="ttname"><a href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l01761">IAkPlugin.h:1762</a></div></div>
-<div class="ttc" id="a_ak_assert_8h_ac0e6cc4061c0a7c154a8c921a0af74cb_html_ac0e6cc4061c0a7c154a8c921a0af74cb"><div class="ttname"><a href="_ak_assert_8h_ac0e6cc4061c0a7c154a8c921a0af74cb.html#ac0e6cc4061c0a7c154a8c921a0af74cb">AKASSERT</a></div><div class="ttdeci">#define AKASSERT(Condition)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_assert_8h_source.html#l00067">AkAssert.h:67</a></div></div>
-<div class="ttc" id="astruct_ak_plugin_info_a3ba9f6803016c5467ea437cb921214c5_html_a3ba9f6803016c5467ea437cb921214c5"><div class="ttname"><a href="struct_ak_plugin_info_a3ba9f6803016c5467ea437cb921214c5.html#a3ba9f6803016c5467ea437cb921214c5">AkPluginInfo::eType</a></div><div class="ttdeci">AkPluginType eType</div><div class="ttdoc">Plug-in type.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00075">IAkPlugin.h:75</a></div></div>
-<div class="ttc" id="astruct_ak_plugin_info_html"><div class="ttname"><a href="struct_ak_plugin_info.html">AkPluginInfo</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00060">IAkPlugin.h:61</a></div></div>
-<div class="ttc" id="a_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb_html_a58f11a728038d16fe4187612a7a842fb"><div class="ttname"><a href="_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb.html#a58f11a728038d16fe4187612a7a842fb">AkSampleType</a></div><div class="ttdeci">AkReal32 AkSampleType</div><div class="ttdoc">Audio sample data type (32 bit floating point)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00456">AkCommonDefs.h:456</a></div></div>
-<div class="ttc" id="a_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676_html_ae7a5e30e1402c7cf90d1b47420911676"><div class="ttname"><a href="_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676.html#ae7a5e30e1402c7cf90d1b47420911676">AkGlobalCallbackLocation</a></div><div class="ttdeci">AkGlobalCallbackLocation</div><div class="ttdoc">Bit field of various locations in the audio processing loop where the game can be called back.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_callback_8h_source.html#l00334">AkCallback.h:335</a></div></div>
-<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_abf61bf0827a987e8799a75a4d0e2f615_html_abf61bf0827a987e8799a75a4d0e2f615"><div class="ttname"><a href="_i_ak_plugin_mem_alloc_8h_abf61bf0827a987e8799a75a4d0e2f615.html#abf61bf0827a987e8799a75a4d0e2f615">AK_PLUGIN_ALLOC</a></div><div class="ttdeci">#define AK_PLUGIN_ALLOC(_allocator, _size)</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_mem_alloc_8h_source.html#l00135">IAkPluginMemAlloc.h:135</a></div></div>
-<div class="ttc" id="a_ak_speaker_config_8h_a666b8c74f7cca22244ae5d96b6a665e0_html_a666b8c74f7cca22244ae5d96b6a665e0"><div class="ttname"><a href="_ak_speaker_config_8h_a666b8c74f7cca22244ae5d96b6a665e0.html#a666b8c74f7cca22244ae5d96b6a665e0">AK_SPEAKER_SETUP_5POINT1</a></div><div class="ttdeci">#define AK_SPEAKER_SETUP_5POINT1</div><div class="ttdoc">5.1 setup channel mask</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00067">AkSpeakerConfig.h:67</a></div></div>
-<div class="ttc" id="a_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5_html_a18513ab855bc8316634d74b9a17138c5"><div class="ttname"><a href="_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5.html#a18513ab855bc8316634d74b9a17138c5">READBANKDATA</a></div><div class="ttdeci">#define READBANKDATA(_Type, _Ptr, _Size)</div><div class="ttdoc">Read and return bank data of a given type, incrementing running pointer and decrementing block size f...</div><div class="ttdef"><b>Definition:</b> <a href="_ak_bank_read_helpers_8h_source.html#l00225">AkBankReadHelpers.h:225</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_global_plugin_context_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_global_plugin_context.html">AK::IAkGlobalPluginContext</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l01211">IAkPlugin.h:1212</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c_html_a1a77eb101e82e7d712f25e2a6394ac4ca49c271d98bfaeb22fd40e522ba77685f"><div class="ttname"><a href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca49c271d98bfaeb22fd40e522ba77685f">AkPluginTypeSource</a></div><div class="ttdeci">@ AkPluginTypeSource</div><div class="ttdoc">Source plug-in: creates sound by synthesis method (no input, just output).</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l01252">AkTypes.h:1252</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname"><a href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a></div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00038">AkNumeralTypes.h:38</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926_html_a4cb8ff0b7014efdaa21697f4ef928926"><div class="ttname"><a href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a></div><div class="ttdeci">AkInt16 AkPluginParamID</div><div class="ttdoc">Source or effect plug-in parameter ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00148">AkTypes.h:148</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_global_plugin_context_a9856698ca2c6d1897b7c871e259b93aa_html_a9856698ca2c6d1897b7c871e259b93aa"><div class="ttname"><a href="class_a_k_1_1_i_ak_global_plugin_context_a9856698ca2c6d1897b7c871e259b93aa.html#a9856698ca2c6d1897b7c871e259b93aa">AK::IAkGlobalPluginContext::GetAllocator</a></div><div class="ttdeci">virtual AK::IAkPluginMemAlloc * GetAllocator()=0</div><div class="ttdoc">Get the default allocator for plugins. This is useful for performing global initialization tasks shar...</div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_html"><div class="ttname"><a href="class_ak_audio_buffer.html">AkAudioBuffer</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00462">AkCommonDefs.h:463</a></div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_a06f9e3184b8664df136f8d123b04cc81_html_a06f9e3184b8664df136f8d123b04cc81"><div class="ttname"><a href="class_ak_audio_buffer_a06f9e3184b8664df136f8d123b04cc81.html#a06f9e3184b8664df136f8d123b04cc81">AkAudioBuffer::GetLFE</a></div><div class="ttdeci">AkSampleType * GetLFE()</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00586">AkCommonDefs.h:586</a></div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_a9ac12a3c62e9c1e734b5a42d68896bf4_html_a9ac12a3c62e9c1e734b5a42d68896bf4"><div class="ttname">AkAudioBuffer::HasLFE</div><div class="ttdeci">AkForceInline bool HasLFE() const</div><div class="ttdoc">Returns true if there is an LFE channel present.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:496</div></div>
+<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_ac6fa6544d3120811e155136866fc24aa_html_ac6fa6544d3120811e155136866fc24aa"><div class="ttname">AK_PLUGIN_DELETE</div><div class="ttdeci">AkForceInline void AK_PLUGIN_DELETE(AK::IAkPluginMemAlloc *in_pAllocator, T *in_pObject)</div><div class="ttdef"><b>Definition:</b> IAkPluginMemAlloc.h:179</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c_html_ad2bc3b8ddd61eaa0c111798d5f9e8c9c"><div class="ttname">AkAudioBuffer::GetChannel</div><div class="ttdeci">AkSampleType * GetChannel(AkUInt32 in_uIndex)</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:574</div></div>
+<div class="ttc" id="a_i_ak_plugin_8h_a8e9fc150137c878499f2200e7e27a256_html_a8e9fc150137c878499f2200e7e27a256"><div class="ttname">AK_STATIC_LINK_PLUGIN</div><div class="ttdeci">#define AK_STATIC_LINK_PLUGIN(_pluginName_)</div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:1886</div></div>
+<div class="ttc" id="a_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676_html_ae7a5e30e1402c7cf90d1b47420911676a68917ce14320bb481b9ab2cfe6b228b6"><div class="ttname">AkGlobalCallbackLocation_Register</div><div class="ttdeci">@ AkGlobalCallbackLocation_Register</div><div class="ttdoc">Right after successful registration of callback/plugin. Typically used by plugins along with AkGlobal...</div><div class="ttdef"><b>Definition:</b> AkCallback.h:336</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_param_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:620</div></div>
+<div class="ttc" id="a_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676_html_ae7a5e30e1402c7cf90d1b47420911676aa5c7eebdf589a1b0ea29989e78e8ea2d"><div class="ttname">AkGlobalCallbackLocation_Term</div><div class="ttdeci">@ AkGlobalCallbackLocation_Term</div><div class="ttdoc">Sound engine termination.</div><div class="ttdef"><b>Definition:</b> AkCallback.h:347</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f_html_a4523322478ec9a0f9de0c7c72e65df2f"><div class="ttname">AkAudioBuffer::NumChannels</div><div class="ttdeci">AkForceInline AkUInt32 NumChannels() const</div><div class="ttdoc">Get the number of channels.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:490</div></div>
+<div class="ttc" id="a_ak_bank_read_helpers_8h_a50c3e7712a0452bd3ee8d5ac2185d2cf_html_a50c3e7712a0452bd3ee8d5ac2185d2cf"><div class="ttname">CHECKBANKDATASIZE</div><div class="ttdeci">#define CHECKBANKDATASIZE(_DATASIZE_, _ERESULT_)</div><div class="ttdoc">Helper macro to determine whether the full content of a block of memory was properly parsed.</div><div class="ttdef"><b>Definition:</b> AkBankReadHelpers.h:266</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname">AKRESULT</div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:213</div></div>
+<div class="ttc" id="astruct_ak_plugin_info_a70fb541431bdc08cdb490a926ccc3ee4_html_a70fb541431bdc08cdb490a926ccc3ee4"><div class="ttname">AkPluginInfo::bIsInPlace</div><div class="ttdeci">bool bIsInPlace</div><div class="ttdoc">Buffer usage (in-place or not). If true, and the plug-in is an insert effect, it should implement IAk...</div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:77</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c_html_a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d"><div class="ttname">AkPluginTypeEffect</div><div class="ttdeci">@ AkPluginTypeEffect</div><div class="ttdoc">Effect plug-in: applies processing to audio data.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:1253</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a6a754f6e0ddd97ae59f3aae854cde270_html_a6a754f6e0ddd97ae59f3aae854cde270"><div class="ttname">AkUInt8</div><div class="ttdeci">uint8_t AkUInt8</div><div class="ttdoc">Unsigned 8-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:36</div></div>
+<div class="ttc" id="a_ak_speaker_config_8h_af181b7b2236165b1e43fc8d54f5dee9d_html_af181b7b2236165b1e43fc8d54f5dee9d"><div class="ttname">AK_SPEAKER_SETUP_5</div><div class="ttdeci">#define AK_SPEAKER_SETUP_5</div><div class="ttdoc">5.0 setup channel mask</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:66</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_af3d99fab833c0b3c4bc7ce7b78d7b4bf_html_af3d99fab833c0b3c4bc7ce7b78d7b4bf"><div class="ttname">AK::Comm::Reset</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Reset()</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname">AK::Comm::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
+<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_aca786bdd3829c192297a174d5d2d2479_html_aca786bdd3829c192297a174d5d2d2479"><div class="ttname">AK_PLUGIN_NEW</div><div class="ttdeci">#define AK_PLUGIN_NEW(_allocator, _what)</div><div class="ttdef"><b>Definition:</b> IAkPluginMemAlloc.h:124</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="a_i_ak_plugin_8h_a13b2972f82acec4f7cedcb073d51619c_html_a13b2972f82acec4f7cedcb073d51619c"><div class="ttname">AK_IMPLEMENT_PLUGIN_FACTORY</div><div class="ttdeci">#define AK_IMPLEMENT_PLUGIN_FACTORY(_pluginName_, _plugintype_, _companyid_, _pluginid_)</div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:1881</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98_html_afc38459f26e2b23defe588026e886a98"><div class="ttname">AkReal32</div><div class="ttdeci">float AkReal32</div><div class="ttdoc">32-bit floating point</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:46</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname">AK_Success</div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:215</div></div>
+<div class="ttc" id="a_ak_speaker_config_8h_a2639ea7a4d6c2a1a0fa9368ef9d15f33_html_a2639ea7a4d6c2a1a0fa9368ef9d15f33"><div class="ttname">AK_IDX_SETUP_5_CENTER</div><div class="ttdeci">#define AK_IDX_SETUP_5_CENTER</div><div class="ttdoc">Index of center channel in 5.x setups (use with AkAudioBuffer::GetChannel())</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:158</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f_html_a94e307d2974b89cc4fbc8ab0fef20d2f"><div class="ttname">AK::Comm::Term</div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_mem_alloc_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a></div><div class="ttdef"><b>Definition:</b> IAkPluginMemAlloc.h:43</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a94ab17d09b6d684fa77c083126157b1d"><div class="ttname">AK_InvalidParameter</div><div class="ttdeci">@ AK_InvalidParameter</div><div class="ttdoc">Something is not within bounds, check the documentation of the function returning this code.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:231</div></div>
+<div class="ttc" id="a_i_ak_plugin_8h_a0e58fa7b5f9d73031a83e4667c6f8933_html_a0e58fa7b5f9d73031a83e4667c6f8933"><div class="ttname">DEFINE_PLUGIN_REGISTER_HOOK</div><div class="ttdeci">#define DEFINE_PLUGIN_REGISTER_HOOK</div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:1890</div></div>
+<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_a37dac3dbf976521288ecb8f36a16af3a_html_a37dac3dbf976521288ecb8f36a16af3a"><div class="ttname">AK_PLUGIN_FREE</div><div class="ttdeci">#define AK_PLUGIN_FREE(_allocator, _pvmem)</div><div class="ttdef"><b>Definition:</b> IAkPluginMemAlloc.h:194</div></div>
+<div class="ttc" id="aclass_a_k_1_1_plugin_registration_html"><div class="ttname"><a href="class_a_k_1_1_plugin_registration.html">AK::PluginRegistration</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:1762</div></div>
+<div class="ttc" id="a_ak_assert_8h_ac0e6cc4061c0a7c154a8c921a0af74cb_html_ac0e6cc4061c0a7c154a8c921a0af74cb"><div class="ttname">AKASSERT</div><div class="ttdeci">#define AKASSERT(Condition)</div><div class="ttdef"><b>Definition:</b> AkAssert.h:67</div></div>
+<div class="ttc" id="astruct_ak_plugin_info_a3ba9f6803016c5467ea437cb921214c5_html_a3ba9f6803016c5467ea437cb921214c5"><div class="ttname">AkPluginInfo::eType</div><div class="ttdeci">AkPluginType eType</div><div class="ttdoc">Plug-in type.</div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:75</div></div>
+<div class="ttc" id="astruct_ak_plugin_info_html"><div class="ttname"><a href="struct_ak_plugin_info.html">AkPluginInfo</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:61</div></div>
+<div class="ttc" id="a_ak_common_defs_8h_a58f11a728038d16fe4187612a7a842fb_html_a58f11a728038d16fe4187612a7a842fb"><div class="ttname">AkSampleType</div><div class="ttdeci">AkReal32 AkSampleType</div><div class="ttdoc">Audio sample data type (32 bit floating point)</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:456</div></div>
+<div class="ttc" id="a_ak_callback_8h_ae7a5e30e1402c7cf90d1b47420911676_html_ae7a5e30e1402c7cf90d1b47420911676"><div class="ttname">AkGlobalCallbackLocation</div><div class="ttdeci">AkGlobalCallbackLocation</div><div class="ttdoc">Bit field of various locations in the audio processing loop where the game can be called back.</div><div class="ttdef"><b>Definition:</b> AkCallback.h:335</div></div>
+<div class="ttc" id="a_i_ak_plugin_mem_alloc_8h_abf61bf0827a987e8799a75a4d0e2f615_html_abf61bf0827a987e8799a75a4d0e2f615"><div class="ttname">AK_PLUGIN_ALLOC</div><div class="ttdeci">#define AK_PLUGIN_ALLOC(_allocator, _size)</div><div class="ttdef"><b>Definition:</b> IAkPluginMemAlloc.h:135</div></div>
+<div class="ttc" id="a_ak_speaker_config_8h_a666b8c74f7cca22244ae5d96b6a665e0_html_a666b8c74f7cca22244ae5d96b6a665e0"><div class="ttname">AK_SPEAKER_SETUP_5POINT1</div><div class="ttdeci">#define AK_SPEAKER_SETUP_5POINT1</div><div class="ttdoc">5.1 setup channel mask</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:67</div></div>
+<div class="ttc" id="a_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5_html_a18513ab855bc8316634d74b9a17138c5"><div class="ttname">READBANKDATA</div><div class="ttdeci">#define READBANKDATA(_Type, _Ptr, _Size)</div><div class="ttdoc">Read and return bank data of a given type, incrementing running pointer and decrementing block size f...</div><div class="ttdef"><b>Definition:</b> AkBankReadHelpers.h:225</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_global_plugin_context_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_global_plugin_context.html">AK::IAkGlobalPluginContext</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:1212</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c_html_a1a77eb101e82e7d712f25e2a6394ac4ca49c271d98bfaeb22fd40e522ba77685f"><div class="ttname">AkPluginTypeSource</div><div class="ttdeci">@ AkPluginTypeSource</div><div class="ttdoc">Source plug-in: creates sound by synthesis method (no input, just output).</div><div class="ttdef"><b>Definition:</b> AkTypes.h:1252</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname">AkUInt32</div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:38</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926_html_a4cb8ff0b7014efdaa21697f4ef928926"><div class="ttname">AkPluginParamID</div><div class="ttdeci">AkInt16 AkPluginParamID</div><div class="ttdoc">Source or effect plug-in parameter ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:148</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_global_plugin_context_a9856698ca2c6d1897b7c871e259b93aa_html_a9856698ca2c6d1897b7c871e259b93aa"><div class="ttname">AK::IAkGlobalPluginContext::GetAllocator</div><div class="ttdeci">virtual AK::IAkPluginMemAlloc * GetAllocator()=0</div><div class="ttdoc">Get the default allocator for plugins. This is useful for performing global initialization tasks shar...</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_html"><div class="ttname"><a href="class_ak_audio_buffer.html">AkAudioBuffer</a></div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:463</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_a06f9e3184b8664df136f8d123b04cc81_html_a06f9e3184b8664df136f8d123b04cc81"><div class="ttname">AkAudioBuffer::GetLFE</div><div class="ttdeci">AkSampleType * GetLFE()</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:586</div></div>
 <div class="ttc" id="a_i_ak_plugin_8h_html"><div class="ttname"><a href="_i_ak_plugin_8h.html">IAkPlugin.h</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_global_plugin_context_a1cbd90dbcb3c0e69a8c80fd4aefc822c_html_a1cbd90dbcb3c0e69a8c80fd4aefc822c"><div class="ttname"><a href="class_a_k_1_1_i_ak_global_plugin_context_a1cbd90dbcb3c0e69a8c80fd4aefc822c.html#a1cbd90dbcb3c0e69a8c80fd4aefc822c">AK::IAkGlobalPluginContext::RegisterGlobalCallback</a></div><div class="ttdeci">virtual AKRESULT RegisterGlobalCallback(AkPluginType in_eType, AkUInt32 in_ulCompanyID, AkUInt32 in_ulPluginID, AkGlobalCallbackFunc in_pCallback, AkUInt32 in_eLocation=AkGlobalCallbackLocation_BeginRender, void *in_pCookie=NULL)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin.html">AK::IAkPlugin</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00690">IAkPlugin.h:691</a></div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_global_plugin_context_a1cbd90dbcb3c0e69a8c80fd4aefc822c_html_a1cbd90dbcb3c0e69a8c80fd4aefc822c"><div class="ttname">AK::IAkGlobalPluginContext::RegisterGlobalCallback</div><div class="ttdeci">virtual AKRESULT RegisterGlobalCallback(AkPluginType in_eType, AkUInt32 in_ulCompanyID, AkUInt32 in_ulPluginID, AkGlobalCallbackFunc in_pCallback, AkUInt32 in_eLocation=AkGlobalCallbackLocation_BeginRender, void *in_pCookie=NULL)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin.html">AK::IAkPlugin</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:691</div></div>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -34,75 +34,75 @@
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><ul>
-<li><a class="el" href="soundengine_listeners.html#soundengine_listeners_intro">Introduction</a></li>
-<li><a class="el" href="soundengine_listeners.html#soundengine_registering_listeners">Registering a Listener</a></li>
-<li><a class="el" href="soundengine_listeners.html#soundengine_listeners_settingpos">Setting the Listener's Positioning Information</a></li>
-<li><a class="el" href="soundengine_listeners.html#third_person_perspective">Working with Listeners in Third-Person Perspective Games</a></li>
-<li><a class="el" href="soundengine_listeners.html#distance_probe">Distance Probe</a></li>
-<li><a class="el" href="soundengine_listeners.html#soundengine_listeners_multi">Multiple Listeners In A Single Output Device</a></li>
+<li>Introduction</li>
+<li>Registering a Listener</li>
+<li>Setting the Listener's Positioning Information</li>
+<li>Working with Listeners in Third-Person Perspective Games</li>
+<li>Distance Probe</li>
+<li>Multiple Listeners In A Single Output Device</li>
 </ul>
 <h1><a class="anchor" id="soundengine_listeners_intro"></a>
 Introduction</h1>
-<p>A listener is a game object that represents a microphone position in the game. Designating a game object as a listeners allows 3D sounds to be assigned to the speakers to mimic a real 3D environment. Similarly, an emitter game object represents a virtual speaker, and when assigned to a listener, the emitter’s positional information is mapped into the listener's coordinate system to render a 3D sound. Game objects in Wwise, whether acting as emitters or listeners (or both) are assigned a transform - a position vector, as well as front and top orientation vectors. Game object’s transforms must be updated on each frame to ensure that sounds are rendered through the correct speakers.</p>
+<p>A listener is a game object that represents a microphone position in the game. Designating a game object as a listeners allows 3D sounds to be assigned to the speakers to mimic a real 3D environment. Similarly, an emitter game object represents a virtual speaker, and when assigned to a listener, the emitterâ€™s positional information is mapped into the listener's coordinate system to render a 3D sound. Game objects in Wwise, whether acting as emitters or listeners (or both) are assigned a transform - a position vector, as well as front and top orientation vectors. Game objectâ€™s transforms must be updated on each frame to ensure that sounds are rendered through the correct speakers.</p>
 <h1><a class="anchor" id="soundengine_registering_listeners"></a>
 Registering a Listener</h1>
-<p>In order to hear sound, at least one game object must be registered and assigned as a listener. You may use <code><a class="el" href="namespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe.html#a4fe9102cd3cb2b59dda5d3d635dc49fe">AK::SoundEngine::SetDefaultListeners</a></code> to assign a listener to all other game objects, or <code><a class="el" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">AK::SoundEngine::SetListeners</a></code> to assign a listener to a specific game object, and override what has been set using <code><a class="el" href="namespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe.html#a4fe9102cd3cb2b59dda5d3d635dc49fe">AK::SoundEngine::SetDefaultListeners</a></code>. Here is how we register a game object, and assign it as a default listener:</p>
-<div class="fragment"><div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> MY_DEFAULT_LISTENER = 0; </div>
+<p>In order to hear sound, at least one game object must be registered and assigned as a listener. You may use <code>AK::SoundEngine::SetDefaultListeners</code> to assign a listener to all other game objects, or <code>AK::SoundEngine::SetListeners</code> to assign a listener to a specific game object, and override what has been set using <code>AK::SoundEngine::SetDefaultListeners</code>. Here is how we register a game object, and assign it as a default listener:</p>
+<div class="fragment"><div class="line">AkGameObjectID MY_DEFAULT_LISTENER = 0; </div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Register the main listener.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>(MY_DEFAULT_LISTENER, <span class="stringliteral">&quot;My Default Listener&quot;</span>);</div>
+<div class="line">AK::SoundEngine::RegisterGameObj(MY_DEFAULT_LISTENER, <span class="stringliteral">&quot;My Default Listener&quot;</span>);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Set one listener as the default.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe.html#a4fe9102cd3cb2b59dda5d3d635dc49fe">AK::SoundEngine::SetDefaultListeners</a>(&amp;MY_DEFAULT_LISTENER, 1);</div>
+<div class="line">AK::SoundEngine::SetDefaultListeners(&amp;MY_DEFAULT_LISTENER, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Register a game object for playing sounds</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> MY_EMITTER = 1; </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>(MY_EMITTER, <span class="stringliteral">&quot;My Emitter&quot;</span>);</div>
+<div class="line">AkGameObjectID MY_EMITTER = 1; </div>
+<div class="line">AK::SoundEngine::RegisterGameObj(MY_EMITTER, <span class="stringliteral">&quot;My Emitter&quot;</span>);</div>
 <div class="line"><span class="comment">// At this point &quot;My Emitter&quot; has 1 listener, &quot;My Default Listener&quot;, because we designated it as the default listener.</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> MY_LISTENER_NO2 = 2; </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>(MY_LISTENER_NO2, <span class="stringliteral">&quot;My Listener #2&quot;</span>);</div>
+<div class="line">AkGameObjectID MY_LISTENER_NO2 = 2; </div>
+<div class="line">AK::SoundEngine::RegisterGameObj(MY_LISTENER_NO2, <span class="stringliteral">&quot;My Listener #2&quot;</span>);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// If we want to change the listener for only &quot;My Emitter&quot;, we do so as follows:</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">AK::SoundEngine::SetListeners</a>(MY_EMITTER , &amp;MY_LISTENER_NO2, 1);</div>
+<div class="line">AK::SoundEngine::SetListeners(MY_EMITTER , &amp;MY_LISTENER_NO2, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// At this point, &quot;My Emitter&quot; has listener &quot;My Listener #2&quot;. All other game object still have &quot;My Default Listener&quot; as their listener.</span></div>
-</div><!-- fragment --><p>You may inspect the emitter-listener associations that have been assigned in code by looking at the Emitter-Listener tab of the Advanced Profiler in the Wwise authoring tool. A simple game will elect a single game object as the default listener for all game objects; however, it is possible to use multiple listeners to output to a single output device. See <a class="el" href="soundengine_listeners.html#soundengine_listeners_multi">Multiple Listeners In A Single Output Device</a> below. It is also possible to use listeners for 3D positioning of submixes. To do so, it is necessary to assign listeners to game object that are also listeners creating a directed graph of game objects, connected by emitter-listener associations.</p>
+</div><!-- fragment --><p>You may inspect the emitter-listener associations that have been assigned in code by looking at the Emitter-Listener tab of the Advanced Profiler in the Wwise authoring tool. A simple game will elect a single game object as the default listener for all game objects; however, it is possible to use multiple listeners to output to a single output device. See Multiple Listeners In A Single Output Device below. It is also possible to use listeners for 3D positioning of submixes. To do so, it is necessary to assign listeners to game object that are also listeners creating a directed graph of game objects, connected by emitter-listener associations.</p>
 <h1><a class="anchor" id="soundengine_listeners_settingpos"></a>
 Setting the Listener's Positioning Information</h1>
-<p>The <code><a class="el" href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition()</a></code> function is used, like for all game objects, to set the listener's position. This should be done every time any of the listener's position or orientation vectors change.</p>
+<p>The <code>AK::SoundEngine::SetPosition()</code> function is used, like for all game objects, to set the listener's position. This should be done every time any of the listener's position or orientation vectors change.</p>
 <div class="fragment"><div class="line"><a class="code" href="class_ak_transform.html">AkTransform</a> listenerTransform;</div>
 <div class="line"> </div>
 <div class="line">(... set the position and orientation members of listenerTransform here...)</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition</a>( listenerPosition );</div>
+<div class="line">AK::SoundEngine::SetPosition( listenerPosition );</div>
 </div><!-- fragment --><p>The <a class="el" href="class_ak_transform.html" title="Position and orientation of objects in a &quot;local&quot; space.">AkTransform</a> classes hold the information that define the listener's location and orientation in the game's 3D space. The listener's location (Position), OrientationFront, and OrientationTop vectors may be accessed and set using the getters and setters of the <code><a class="el" href="class_ak_transform.html" title="Position and orientation of objects in a &quot;local&quot; space.">AkTransform</a></code> class.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The <code>OrientationFront</code> vector defines the direction that the listener's head is facing. It should be orthogonal to the OrientationTop vector, which defines the incline of the listener's head. For a human listener, one could think of the OrientationFront vector as the listener's nose (going away from the face), while the OrientationTop vector would be orthogonal to it, going up from the nose, between the listener's eyes, past the forehead and beyond. </td></tr>
 </table>
-<p>Refer to <a class="el" href="soundengine_3dpositions.html#soundengine_3dpositions_xyz">X-Y-Z Coordinate System</a> for information regarding how the X, Y, and Z axes are defined in the Wwise sound engine.</p>
+<p>Refer to X-Y-Z Coordinate System for information regarding how the X, Y, and Z axes are defined in the Wwise sound engine.</p>
 <p>The orientation vectors must be defined for the audio to be rendered properly. They cannot be zero vectors and need to be unit vectors. They also need to be at right angles.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The listener's position is updated at most once per frame. Even if multiple calls to the <code><a class="el" href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition()</a></code> function were made, only the last value will be considered when <code><a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio()</a></code> is called. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The listener's position is updated at most once per frame. Even if multiple calls to the <code>AK::SoundEngine::SetPosition()</code> function were made, only the last value will be considered when <code>AK::SoundEngine::RenderAudio()</code> is called. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> If you are experiencing unexpected sound rendering, for example what was expected on the left speakers is actually heard on the right speakers, check the listener's positional information that is provided to the sound engine through the <code><a class="el" href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition()</a></code> function. You may try to set a known constant listener's position and check that the rendering is correct in that case to rule out any mix-up in the X, Y, and Z axes. For more information about this, refer to <a class="el" href="soundengine_3dpositions.html#soundengine_3dpositions_xyz">X-Y-Z Coordinate System</a>. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> If you are experiencing unexpected sound rendering, for example what was expected on the left speakers is actually heard on the right speakers, check the listener's positional information that is provided to the sound engine through the <code>AK::SoundEngine::SetPosition()</code> function. You may try to set a known constant listener's position and check that the rendering is correct in that case to rule out any mix-up in the X, Y, and Z axes. For more information about this, refer to X-Y-Z Coordinate System. </td></tr>
 </table>
 <h1><a class="anchor" id="third_person_perspective"></a>
 Working with Listeners in Third-Person Perspective Games</h1>
-<p>When implementing audio in a game or simulation that uses a third-person perspective (TPP), it’s not always obvious where to place the Listener Game Object; some would suggest the position of the camera, while others would suggest the position of the character controlled by the player. Despite having different positions, both the camera and the character controlled by the player are in some ways “you”, the player. Associating a Distance Probe with the main camera Listener allows both of these positions to contribute to sound computations, each in their own way. To understand this approach, it’s necessary to analyze the various aspects of the simulation.</p>
+<p>When implementing audio in a game or simulation that uses a third-person perspective (TPP), itâ€™s not always obvious where to place the Listener Game Object; some would suggest the position of the camera, while others would suggest the position of the character controlled by the player. Despite having different positions, both the camera and the character controlled by the player are in some ways â€œyouâ€, the player. Associating a Distance Probe with the main camera Listener allows both of these positions to contribute to sound computations, each in their own way. To understand this approach, itâ€™s necessary to analyze the various aspects of the simulation.</p>
 <h2><a class="anchor" id="third_person_panning"></a>
 Panning and Spatialization</h2>
-<p>In almost all scenarios, panning and spatialization, including spread and focus in Wwise, should be based on the camera’s position and orientation. Any disconnect between the camera and the relative orientation of the sounds in the simulation, with respect to the final speaker array (whether physical or virtual binaural), results in a loss of immersion. For example, if the camera is looking directly at a sound, then that sound should come from the center speaker channel. A sound to the left of the camera should come from the left speaker(s), and so on.</p>
+<p>In almost all scenarios, panning and spatialization, including spread and focus in Wwise, should be based on the cameraâ€™s position and orientation. Any disconnect between the camera and the relative orientation of the sounds in the simulation, with respect to the final speaker array (whether physical or virtual binaural), results in a loss of immersion. For example, if the camera is looking directly at a sound, then that sound should come from the center speaker channel. A sound to the left of the camera should come from the left speaker(s), and so on.</p>
 <p>To achieve this goal, the Listener Game Object must be placed on the active camera, and the orientation of the Listener must be updated to match.</p>
 <h2><a class="anchor" id="third_person_attenuation"></a>
 Distance-Based Attenuation</h2>
-<p>A 3D sound is typically attenuated according to the distance between the Emitter and the Listener Game Objects, applied to the sound’s attenuation curve to get volume, high-pass and low-pass filter values. The result is that closer sounds, which are more important to the experience, are louder.</p>
+<p>A 3D sound is typically attenuated according to the distance between the Emitter and the Listener Game Objects, applied to the soundâ€™s attenuation curve to get volume, high-pass and low-pass filter values. The result is that closer sounds, which are more important to the experience, are louder.</p>
 <p>In a TPP game, however, the focus of attention is not the camera itself, but is instead the character that the player controls. For this reason, a greater sense of immersion is experienced when sounds attenuate according to the distance between the Emitter and the player character, instead of between the Emitter and the camera.</p>
-<p>To understand why this is so, it’s helpful to consider a scenario where we get undesirable volume fluctuations when distance attenuation is based on the position of the camera. Picture a TPP game where a camera is following the player character down a hallway lit with torches. Each torch emits a low-intensity sound with a sharp falloff. To turn the camera around and face the other direction, it’s necessary to orbit the camera around the character. In doing so, the camera passes closely to one or more of the torches, getting louder and then quieter again. The player character hasn’t moved, the relative importance of the torches in the scene hasn’t changed, and yet the volume fluctuations suggest otherwise.</p>
+<p>To understand why this is so, itâ€™s helpful to consider a scenario where we get undesirable volume fluctuations when distance attenuation is based on the position of the camera. Picture a TPP game where a camera is following the player character down a hallway lit with torches. Each torch emits a low-intensity sound with a sharp falloff. To turn the camera around and face the other direction, itâ€™s necessary to orbit the camera around the character. In doing so, the camera passes closely to one or more of the torches, getting louder and then quieter again. The player character hasnâ€™t moved, the relative importance of the torches in the scene hasnâ€™t changed, and yet the volume fluctuations suggest otherwise.</p>
 <p>To achieve the goal of having sounds attenuate based on the distance to the player character, a Game Object must be placed at the position of the player character and designated as the Distance Probe for the main Listener.</p>
 <h1><a class="anchor" id="distance_probe"></a>
 Distance Probe</h1>
@@ -113,10 +113,10 @@ Distance Probe</h1>
 <li>A single Game Object may be the Distance Probe for multiple Listeners.</li>
 <li>Assigning a Listener to be its own Distance Probe is equivalent to setting the Distance Probe to none.</li>
 </ul>
-<p>A Distance Probe is assigned to a Listener Game Object using the <code><a class="el" href="namespace_a_k_1_1_sound_engine_a33b1e3641f5845fb2149c3088ad2214a.html#a33b1e3641f5845fb2149c3088ad2214a">AK::SoundEngine::SetDistanceProbe</a></code> API.</p>
+<p>A Distance Probe is assigned to a Listener Game Object using the <code>AK::SoundEngine::SetDistanceProbe</code> API.</p>
 <h2><a class="anchor" id="profiling_distance_probe"></a>
 Profiling the Distance Probe</h2>
-<p>All assigned Distance Probes are visible in the Listeners tab of the Advanced Profiler. The following image shows that a game object named “Distance Probe” has been assigned to “Listener L” using the <code><a class="el" href="namespace_a_k_1_1_sound_engine_a33b1e3641f5845fb2149c3088ad2214a.html#a33b1e3641f5845fb2149c3088ad2214a">AK::SoundEngine::SetDistanceProbe</a></code> API.</p>
+<p>All assigned Distance Probes are visible in the Listeners tab of the Advanced Profiler. The following image shows that a game object named â€œDistance Probeâ€ has been assigned to â€œListener Lâ€ using the <code>AK::SoundEngine::SetDistanceProbe</code> API.</p>
 <div class="image">
 <img src="advanced_profiler_distance_probe.png" alt=""/>
 </div>
@@ -138,8 +138,8 @@ Multiple Listeners In A Single Output Device</h1>
 <div class="caption">
 Figure: Two listeners hearing the same source in different speakers</div></div>
 <p>Wwise can have any number of listeners, and by default all listeners will mix in the main output device, unless:</p><ul>
-<li>they are explicitly made to emit towards another listener, via <code><a class="el" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">AK::SoundEngine::SetListeners</a></code>, or</li>
-<li>they are explicitly routed to a secondary device , via <code><a class="el" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AK::SoundEngine::AddOutput</a></code>.</li>
+<li>they are explicitly made to emit towards another listener, via <code>AK::SoundEngine::SetListeners</code>, or</li>
+<li>they are explicitly routed to a secondary device , via <code>AK::SoundEngine::AddOutput</code>.</li>
 </ul>
 <p>The following sections cover the cases where all listeners merge into the same output device, and describe how the Wwise sound engine lets the programmer manipulate these listeners to achieve the expected behavior.</p>
 <table border="0" cellspacing="0" cellpadding="2">
@@ -178,29 +178,29 @@ Volume Offset and Spatialization</h2>
 <p><em>3D Spatialization</em> pans sounds across the various speakers based on the positions of those sounds relative to the listeners.</p>
 <p>However, if the game is played by two players on a split screen, you might want to hear listener 1 (the first player) in the left speakers and listener 2 (the second player) in the right speakers, completely bypassing regular positioning of sounds across speakers based on their positions relative to each listener.</p>
 <p>To give more control and flexibility, Wwise allows the game programmer to disable spatialization for a given listener and, optionally, set custom volume offsets for each channel, thus specifying how the sounds captured by this listener will be heard in each speaker.</p>
-<p>These settings can be modified for each listener by calling <code><a class="el" href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization()</a></code>:</p>
-<div class="fragment"><div class="line"><span class="keyword">virtual</span> <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization</a>(</div>
-<div class="line">    <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> in_uListenerID,              <span class="comment">// Listener game object ID</span></div>
+<p>These settings can be modified for each listener by calling <code>AK::SoundEngine::SetListenerSpatialization()</code>:</p>
+<div class="fragment"><div class="line"><span class="keyword">virtual</span> AKRESULT AK::SoundEngine::SetListenerSpatialization(</div>
+<div class="line">    AkGameObjectID in_uListenerID,              <span class="comment">// Listener game object ID</span></div>
 <div class="line">    <span class="keywordtype">bool</span> in_bSpatialized,                       <span class="comment">// Spatialization toggle (True : enable spatialization, False : disable spatialization)</span></div>
 <div class="line">    <a class="code" href="struct_ak_channel_config.html">AkChannelConfig</a> in_channelConfig,           <span class="comment">// Channel configuration associated with volumes in_pVolumeOffsets. Ignored if in_pVolumeOffsets is NULL.</span></div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_speaker_volumes_addc873645db70ede7a0adb9f8fd94a87.html#addc873645db70ede7a0adb9f8fd94a87">AK::SpeakerVolumes::VectorPtr</a> in_pVolumeOffsets = <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>  <span class="comment">// Per-speaker volume offset, in dB. See AkSpeakerVolumes.h for how to manipulate this vector.</span></div>
+<div class="line">    AK::SpeakerVolumes::VectorPtr in_pVolumeOffsets = NULL  <span class="comment">// Per-speaker volume offset, in dB. See AkSpeakerVolumes.h for how to manipulate this vector.</span></div>
 <div class="line">) = 0;</div>
 </div><!-- fragment --><p>The first parameter is the listener ID. The second parameter must be set to <code>True</code> to enable spatialization for this listener and <code>False</code> to disable it. Finally, the two last parameters represent a vector that contains the attenuation, in dB, for each channel on that listener. If <code>in_bSpatialized</code> is <code>False</code>, then it sets the volume for each channel, which are 0 dB by default. If <code>in_bSpatialized</code> is <code>True</code>, it offsets the volume computed by default 3D spatialization computation by a given amount for each channel.</p>
 <p>The volume vector is tied to the channel configuration <code>in_channelConfig</code>. If <code>in_channelConfig</code> means 5.1, then the volume vector should have 6 values. Use functions defined in the <a class="el" href="namespace_a_k_1_1_speaker_volumes_1_1_vector.html" title="Volume vector services.">AK::SpeakerVolumes::Vector</a> namespace to manipulate it. The channel ordering corresponds to the channel mask bits defined in <a class="el" href="_ak_speaker_config_8h.html">AkSpeakerConfig.h</a>, except for the LFE which is always at the end.</p>
 <p>For the example where two players use a split screen, the programmer could use the following code:</p>
 <div class="fragment"><div class="line"><span class="comment">// Register listeners 1 and 2 as default listeners for all emitters.</span></div>
 <div class="line"><span class="comment">// You may want to explicitly pick and choose which emitters emit to which listeners by using AK::SoundEngine::SetListeners instead.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> listeners[2] = {1,2};</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>(listeners[0]);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>(listeners[1]);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe.html#a4fe9102cd3cb2b59dda5d3d635dc49fe">AK::SetDefaultListeners</a>(listeners[0],2);</div>
+<div class="line">AkGameObjectID listeners[2] = {1,2};</div>
+<div class="line">AK::SoundEngine::RegisterGameObj(listeners[0]);</div>
+<div class="line">AK::SoundEngine::RegisterGameObj(listeners[1]);</div>
+<div class="line">AK::SetDefaultListeners(listeners[0],2);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Define speaker offsets using a 7.1 speaker setup (if platform supports it).</span></div>
 <div class="line"><a class="code" href="struct_ak_channel_config.html">AkChannelConfig</a> cfg;</div>
-<div class="line">cfg.<a class="code" href="struct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7.html#a4c0f4b3d39608a10c9b330c1ef8281a7">SetStandard</a>( <a class="code" href="_ak_speaker_config_8h_a69b5f93e12513edd50b60f5fe763dfd5.html#a69b5f93e12513edd50b60f5fe763dfd5">AK_SPEAKER_SETUP_7_1</a> );</div>
+<div class="line">cfg.SetStandard( AK_SPEAKER_SETUP_7_1 );</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uVectorSize = <a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_matrix_a59458aba2b1be3fa678021a3aea813b9.html#a59458aba2b1be3fa678021a3aea813b9">AK::SpeakerVolumes::Vector::GetRequiredSize</a>( cfg.<a class="code" href="struct_ak_channel_config_af86d291ad68bcc75d3a47e4582dc69fc.html#af86d291ad68bcc75d3a47e4582dc69fc">uNumChannels</a> );</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_speaker_volumes_addc873645db70ede7a0adb9f8fd94a87.html#addc873645db70ede7a0adb9f8fd94a87">AK::SpeakerVolumes::VectorPtr</a> vVolumes = (<a class="code" href="namespace_a_k_1_1_speaker_volumes_addc873645db70ede7a0adb9f8fd94a87.html#addc873645db70ede7a0adb9f8fd94a87">AK::SpeakerVolumes::VectorPtr</a>)<a class="code" href="_win32_2_ak_platform_funcs_8h_aae886a30b939ee13e0abf036fa9e6a15.html#aae886a30b939ee13e0abf036fa9e6a15">AkAlloca</a>( uVectorSize );</div>
+<div class="line">AkUInt32 uVectorSize = AK::SpeakerVolumes::Vector::GetRequiredSize( cfg.uNumChannels );</div>
+<div class="line">AK::SpeakerVolumes::VectorPtr vVolumes = (AK::SpeakerVolumes::VectorPtr)AkAlloca( uVectorSize );</div>
 <div class="line"> </div>
 <div class="line">vVolumes[0] = 0.f;      <span class="comment">// Left</span></div>
 <div class="line">vVolumes[1] = -96.3f;   <span class="comment">// Right</span></div>
@@ -211,7 +211,7 @@ Volume Offset and Spatialization</h2>
 <div class="line">vVolumes[6] = -96.3f;   <span class="comment">// Side Right</span></div>
 <div class="line">vVolumes[7] = 0.f;      <span class="comment">// LFE</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization</a>( listeners[0], <span class="keyword">false</span>, cfg, vVolumes );</div>
+<div class="line">AK::SoundEngine::SetListenerSpatialization( listeners[0], <span class="keyword">false</span>, cfg, vVolumes );</div>
 <div class="line"> </div>
 <div class="line">vVolumes[0] = -96.3f;   <span class="comment">// Left</span></div>
 <div class="line">vVolumes[1] = 0.f;      <span class="comment">// Right</span></div>
@@ -222,12 +222,12 @@ Volume Offset and Spatialization</h2>
 <div class="line">vVolumes[6] = 0.f;      <span class="comment">// Side Right</span></div>
 <div class="line">vVolumes[7] = 0.f;      <span class="comment">// LFE</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization</a>( listeners[1], <span class="keyword">false</span>, cfg, vVolumes );</div>
+<div class="line">AK::SoundEngine::SetListenerSpatialization( listeners[1], <span class="keyword">false</span>, cfg, vVolumes );</div>
 </div><!-- fragment --><p>If the bus in which sounds are routed has a channel configuration other than 7.1, as per its user-defined channel configuration, the vector will be downmixed internally, using standard downmix recipes, before being applied to sounds.</p>
 <p>To go back to regular spatialization, you would call:</p>
 <div class="fragment"><div class="line"><span class="comment">// Enable regular spatialization on listeners 0 and 1</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization</a>( 0, <span class="keyword">true</span> );</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization</a>( 1, <span class="keyword">true</span> );</div>
+<div class="line">AK::SoundEngine::SetListenerSpatialization( 0, <span class="keyword">true</span> );</div>
+<div class="line">AK::SoundEngine::SetListenerSpatialization( 1, <span class="keyword">true</span> );</div>
 </div><!-- fragment --><h3><a class="anchor" id="soundengine_listeners_spatial_pipeline"></a>
 Volume Pipeline</h3>
 <p>The following figure shows, in order, the different operations performed on every source for each listener to compute the final volume in each speaker:</p>
@@ -236,29 +236,30 @@ Volume Pipeline</h3>
 <div class="caption">
 Figure: Volume Pipeline in the Wwise Sound Engine</div></div>
 <dl class="section see"><dt>See also</dt><dd><ul>
-<li><a class="el" href="samplecode.html#samplecode_integration">Game Integration Sample Code</a></li>
+<li>Game Integration Sample Code</li>
 <li><a class="el" href="soundengine_3dpositions.html">Integration Details - 3D Positions</a></li>
 <li><a class="el" href="soundengine_gameobj.html">Integration Details - Game Objects</a> </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe_html_a4fe9102cd3cb2b59dda5d3d635dc49fe"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe.html#a4fe9102cd3cb2b59dda5d3d635dc49fe">AK::SoundEngine::SetDefaultListeners</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetDefaultListeners(const AkGameObjectID *in_pListenerObjs, AkUInt32 in_uNumListeners)</div></div>
-<div class="ttc" id="astruct_ak_channel_config_af86d291ad68bcc75d3a47e4582dc69fc_html_af86d291ad68bcc75d3a47e4582dc69fc"><div class="ttname"><a href="struct_ak_channel_config_af86d291ad68bcc75d3a47e4582dc69fc.html#af86d291ad68bcc75d3a47e4582dc69fc">AkChannelConfig::uNumChannels</a></div><div class="ttdeci">AkUInt32 uNumChannels</div><div class="ttdoc">Number of channels.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00501">AkSpeakerConfig.h:501</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname"><a href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a></div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00142">AkTypes.h:142</a></div></div>
-<div class="ttc" id="astruct_ak_channel_config_html"><div class="ttname"><a href="struct_ak_channel_config.html">AkChannelConfig</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00495">AkSpeakerConfig.h:496</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a></div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00212">AkTypes.h:213</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_matrix_a59458aba2b1be3fa678021a3aea813b9_html_a59458aba2b1be3fa678021a3aea813b9"><div class="ttname"><a href="namespace_a_k_1_1_speaker_volumes_1_1_matrix_a59458aba2b1be3fa678021a3aea813b9.html#a59458aba2b1be3fa678021a3aea813b9">AK::SpeakerVolumes::Matrix::GetRequiredSize</a></div><div class="ttdeci">AkForceInline AkUInt32 GetRequiredSize(AkUInt32 in_uNumChannelsIn, AkUInt32 in_uNumChannelsOut)</div><div class="ttdoc">Compute size (in bytes) required for given channel configurations.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_volumes_8h_source.html#l00150">AkSpeakerVolumes.h:150</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_addc873645db70ede7a0adb9f8fd94a87_html_addc873645db70ede7a0adb9f8fd94a87"><div class="ttname"><a href="namespace_a_k_1_1_speaker_volumes_addc873645db70ede7a0adb9f8fd94a87.html#addc873645db70ede7a0adb9f8fd94a87">AK::SpeakerVolumes::VectorPtr</a></div><div class="ttdeci">AkReal32 * VectorPtr</div><div class="ttdoc">Volume vector. Access each element with the standard bracket [] operator.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_volumes_8h_source.html#l00048">AkSpeakerVolumes.h:48</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd_html_a3e3e9e5335df01fca37f9b3ed518e2bd"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd.html#a3e3e9e5335df01fca37f9b3ed518e2bd">AK::SoundEngine::SetListenerSpatialization</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetListenerSpatialization(AkGameObjectID in_uListenerID, bool in_bSpatialized, AkChannelConfig in_channelConfig, AK::SpeakerVolumes::VectorPtr in_pVolumeOffsets=NULL)</div></div>
-<div class="ttc" id="a_ak_speaker_config_8h_a69b5f93e12513edd50b60f5fe763dfd5_html_a69b5f93e12513edd50b60f5fe763dfd5"><div class="ttname"><a href="_ak_speaker_config_8h_a69b5f93e12513edd50b60f5fe763dfd5.html#a69b5f93e12513edd50b60f5fe763dfd5">AK_SPEAKER_SETUP_7_1</a></div><div class="ttdeci">#define AK_SPEAKER_SETUP_7_1</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00206">AkSpeakerConfig.h:206</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1_html_a2f85a55c38afa2e0dbc6172a7bec91d1"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">AK::SoundEngine::SetListeners</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetListeners(AkGameObjectID in_emitterGameObj, const AkGameObjectID *in_pListenerGameObjs, AkUInt32 in_uNumListeners)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455_html_a789e25bda32d1e11849afb6584942455"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetPosition(AkGameObjectID in_GameObjectID, const AkSoundPosition &amp;in_Position, AkSetPositionFlags in_eFlags=AkSetPositionFlags_Default)</div></div>
-<div class="ttc" id="astruct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7_html_a4c0f4b3d39608a10c9b330c1ef8281a7"><div class="ttname"><a href="struct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7.html#a4c0f4b3d39608a10c9b330c1ef8281a7">AkChannelConfig::SetStandard</a></div><div class="ttdeci">AkForceInline void SetStandard(AkUInt32 in_uChannelMask)</div><div class="ttdoc">Set channel config as a standard configuration specified with given channel mask.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00563">AkSpeakerConfig.h:563</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname"><a href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a></div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00038">AkNumeralTypes.h:38</a></div></div>
-<div class="ttc" id="a_win32_2_ak_platform_funcs_8h_aae886a30b939ee13e0abf036fa9e6a15_html_aae886a30b939ee13e0abf036fa9e6a15"><div class="ttname"><a href="_win32_2_ak_platform_funcs_8h_aae886a30b939ee13e0abf036fa9e6a15.html#aae886a30b939ee13e0abf036fa9e6a15">AkAlloca</a></div><div class="ttdeci">#define AkAlloca(_size_)</div><div class="ttdoc">Stack allocations.</div><div class="ttdef"><b>Definition:</b> <a href="_win32_2_ak_platform_funcs_8h_source.html#l00501">AkPlatformFuncs.h:501</a></div></div>
-<div class="ttc" id="aclass_ak_transform_html"><div class="ttname"><a href="class_ak_transform.html">AkTransform</a></div><div class="ttdoc">Position and orientation of objects in a &quot;local&quot; space.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00612">AkTypes.h:613</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a4fe9102cd3cb2b59dda5d3d635dc49fe_html_a4fe9102cd3cb2b59dda5d3d635dc49fe"><div class="ttname">AK::SoundEngine::SetDefaultListeners</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetDefaultListeners(const AkGameObjectID *in_pListenerObjs, AkUInt32 in_uNumListeners)</div></div>
+<div class="ttc" id="astruct_ak_channel_config_af86d291ad68bcc75d3a47e4582dc69fc_html_af86d291ad68bcc75d3a47e4582dc69fc"><div class="ttname">AkChannelConfig::uNumChannels</div><div class="ttdeci">AkUInt32 uNumChannels</div><div class="ttdoc">Number of channels.</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:501</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname">AkGameObjectID</div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:142</div></div>
+<div class="ttc" id="astruct_ak_channel_config_html"><div class="ttname"><a href="struct_ak_channel_config.html">AkChannelConfig</a></div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:496</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname">AKRESULT</div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:213</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname">AK::SoundEngine::RegisterGameObj</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_matrix_a59458aba2b1be3fa678021a3aea813b9_html_a59458aba2b1be3fa678021a3aea813b9"><div class="ttname">AK::SpeakerVolumes::Matrix::GetRequiredSize</div><div class="ttdeci">AkForceInline AkUInt32 GetRequiredSize(AkUInt32 in_uNumChannelsIn, AkUInt32 in_uNumChannelsOut)</div><div class="ttdoc">Compute size (in bytes) required for given channel configurations.</div><div class="ttdef"><b>Definition:</b> AkSpeakerVolumes.h:150</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_addc873645db70ede7a0adb9f8fd94a87_html_addc873645db70ede7a0adb9f8fd94a87"><div class="ttname">AK::SpeakerVolumes::VectorPtr</div><div class="ttdeci">AkReal32 * VectorPtr</div><div class="ttdoc">Volume vector. Access each element with the standard bracket [] operator.</div><div class="ttdef"><b>Definition:</b> AkSpeakerVolumes.h:48</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a3e3e9e5335df01fca37f9b3ed518e2bd_html_a3e3e9e5335df01fca37f9b3ed518e2bd"><div class="ttname">AK::SoundEngine::SetListenerSpatialization</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetListenerSpatialization(AkGameObjectID in_uListenerID, bool in_bSpatialized, AkChannelConfig in_channelConfig, AK::SpeakerVolumes::VectorPtr in_pVolumeOffsets=NULL)</div></div>
+<div class="ttc" id="a_ak_speaker_config_8h_a69b5f93e12513edd50b60f5fe763dfd5_html_a69b5f93e12513edd50b60f5fe763dfd5"><div class="ttname">AK_SPEAKER_SETUP_7_1</div><div class="ttdeci">#define AK_SPEAKER_SETUP_7_1</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:206</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1_html_a2f85a55c38afa2e0dbc6172a7bec91d1"><div class="ttname">AK::SoundEngine::SetListeners</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetListeners(AkGameObjectID in_emitterGameObj, const AkGameObjectID *in_pListenerGameObjs, AkUInt32 in_uNumListeners)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455_html_a789e25bda32d1e11849afb6584942455"><div class="ttname">AK::SoundEngine::SetPosition</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetPosition(AkGameObjectID in_GameObjectID, const AkSoundPosition &amp;in_Position, AkSetPositionFlags in_eFlags=AkSetPositionFlags_Default)</div></div>
+<div class="ttc" id="astruct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7_html_a4c0f4b3d39608a10c9b330c1ef8281a7"><div class="ttname">AkChannelConfig::SetStandard</div><div class="ttdeci">AkForceInline void SetStandard(AkUInt32 in_uChannelMask)</div><div class="ttdoc">Set channel config as a standard configuration specified with given channel mask.</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:563</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname">AkUInt32</div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:38</div></div>
+<div class="ttc" id="a_win32_2_ak_platform_funcs_8h_aae886a30b939ee13e0abf036fa9e6a15_html_aae886a30b939ee13e0abf036fa9e6a15"><div class="ttname">AkAlloca</div><div class="ttdeci">#define AkAlloca(_size_)</div><div class="ttdoc">Stack allocations.</div><div class="ttdef"><b>Definition:</b> AkPlatformFuncs.h:501</div></div>
+<div class="ttc" id="aclass_ak_transform_html"><div class="ttname"><a href="class_ak_transform.html">AkTransform</a></div><div class="ttdoc">Position and orientation of objects in a &quot;local&quot; space.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:613</div></div>
 </body>
 </html>
+

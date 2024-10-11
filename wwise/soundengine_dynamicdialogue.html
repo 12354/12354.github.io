@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -39,7 +39,7 @@ Introduction</h1>
 <p>This audio node ID can then be placed into the playlist of a dynamic sequence for playback. The dynamic sequence is essentially a runtime-created sample-accurate sequence container.</p>
 <h1><a class="anchor" id="soundengine_dynamicdialogue_dialogueevent"></a>
 Integrating Dialogue Events</h1>
-<p>You can <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_dialogue_a18385d0523eb14ff57bd4ea9f18c08f6.html#a18385d0523eb14ff57bd4ea9f18c08f6">resolve </a> a dialogue event into an audio node ID using a specified argument path. The order of argument values in the path needs to match the order of arguments set in the Wwise authoring application.</p>
+<p>You can resolve  a dialogue event into an audio node ID using a specified argument path. The order of argument values in the path needs to match the order of arguments set in the Wwise authoring application.</p>
 <p>The argument path can be specified either using either argument value IDs or names. To indicate a fallback argument value, AK_FALLBACK_ARGUMENTVALUE_ID or an empty name (L"") is used.</p>
 <h1><a class="anchor" id="soundengine_dynamicdialogue_dynamicsequence"></a>
 Using Dynamic Sequences</h1>
@@ -47,18 +47,19 @@ Using Dynamic Sequences</h1>
 <ul>
 <li>Enqueue several audio nodes to play with sample-accurate behavior, with an optional delay between items.</li>
 <li>Modify the playlist during playback.</li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_afd87604f8cea6b836be5b657f74723f3.html#afd87604f8cea6b836be5b657f74723f3">Pause</a>, <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_aa34180ccd604c29cd9222de08a449b4a.html#aa34180ccd604c29cd9222de08a449b4a">Resume</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_a3153fbaab7c917914f2a60183523b1cc.html#a3153fbaab7c917914f2a60183523b1cc">Stop</a> playback.</li>
+<li>Pause, Resume and Stop playback.</li>
 <li>Be notified at the end of each playlist item through a callback (in addition to all normal event-related callbacks).</li>
 </ul>
-<p><a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_ae1255816f8ed9f3e1020f2075f12c690.html#ae1255816f8ed9f3e1020f2075f12c690">Opening </a> a Dynamic Sequence yields an AkPlayingID used for further interaction. <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_ab204d963f6b81abc102a6d6b8272b591.html#ab204d963f6b81abc102a6d6b8272b591">Close </a> should be the last call to be made using a given AkPlayingID. Closing a playing dynamic sequence will not stop it: it will play until finished and then deallocate itself. <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_ae2ac4c400d0145c6c25e050d752064bd.html#ae2ac4c400d0145c6c25e050d752064bd">Play </a> starts playback during playback, the dynamic sequence takes items from its playlist. The playlist is progressively emptied until it contains no more items and playback stops.</p>
-<p>To modify the playlist, you must <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_af72d304486f19cc81d24c4488c6ea652.html#af72d304486f19cc81d24c4488c6ea652">lock </a> it. A corresponding <a class="el" href="namespace_a_k_1_1_sound_engine_1_1_dynamic_sequence_aa7b7bbc2b6158423a0006682b44b40c5.html#aa7b7bbc2b6158423a0006682b44b40c5">unlock </a> call needs to be made once the modifications are done. Holding the lock will block the sound engine thread from accessing the playlist. It is therefore necessary to hold the lock for as little time as possible.</p>
+<p>Opening  a Dynamic Sequence yields an AkPlayingID used for further interaction. Close  should be the last call to be made using a given AkPlayingID. Closing a playing dynamic sequence will not stop it: it will play until finished and then deallocate itself. Play  starts playback during playback, the dynamic sequence takes items from its playlist. The playlist is progressively emptied until it contains no more items and playback stops.</p>
+<p>To modify the playlist, you must lock  it. A corresponding unlock  call needs to be made once the modifications are done. Holding the lock will block the sound engine thread from accessing the playlist. It is therefore necessary to hold the lock for as little time as possible.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> Modifying the playlist content is a synchronous call while Pause, Stop, Resume, and Break are done asynchronously.</p>
-<p class="endtd">The <a class="el" href="class_a_k_1_1_sound_engine_1_1_dynamic_sequence_1_1_playlist.html">Playlist </a> class is derived from <a class="el" href="class_ak_array.html" title="Specific implementation of array.">AkArray</a>, so standard array access methods can be used to modify the playlist. A simple <a class="el" href="class_a_k_1_1_sound_engine_1_1_dynamic_sequence_1_1_playlist_a9155f633c7fdda4283d318d89c2cd4bb.html#a9155f633c7fdda4283d318d89c2cd4bb">Enqueue </a> method is provided for convenience. A playlist item consists of an audio node ID, a delay time in milliseconds and a user-data field. </p>
+<p class="endtd">The <a class="el" href="class_a_k_1_1_sound_engine_1_1_dynamic_sequence_1_1_playlist.html">Playlist </a> class is derived from <a class="el" href="class_ak_array.html" title="Specific implementation of array.">AkArray</a>, so standard array access methods can be used to modify the playlist. A simple Enqueue  method is provided for convenience. A playlist item consists of an audio node ID, a delay time in milliseconds and a user-data field. </p>
 </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

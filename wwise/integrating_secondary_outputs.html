@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -36,26 +36,26 @@
 <div class="textblock"><p>In Wwise, a secondary output designates any physical audio end-point that is not the regular TV audio output. The most common secondary outputs are the game controller speakers and headsets. The Secondary Output feature allows you to define a separate mix for each of these outputs, leaving the main speaker/TV mix unaffected. The same Wwise feature set applies to the secondary outputs as for the regular mix, without any particular restrictions except that the output targets controllers instead of the speaker/TV.</p>
 <h1><a class="anchor" id="secondary_output_bus"></a>
 Bus Routing</h1>
-<p>On the authoring side, you need to create new master busses to be able to define a different mix for an Audio Device. Then change the Audio Device ShareSet property on that new bus to point to a different device. Note that if you want to use an Audio Device plug-in created by a third party, you might need to create an Audio Device ShareSet of the right plug-in type first. Then the sounds can be routed normally to the new bus or any child bus. See <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=builtin_audio_devices" target="_blank">Audio Devices</a> for information on which Audio Device is available with Wwise.</p>
+<p>On the authoring side, you need to create new master busses to be able to define a different mix for an Audio Device. Then change the Audio Device ShareSet property on that new bus to point to a different device. Note that if you want to use an Audio Device plug-in created by a third party, you might need to create an Audio Device ShareSet of the right plug-in type first. Then the sounds can be routed normally to the new bus or any child bus. See Audio Devices for information on which Audio Device is available with Wwise.</p>
 <p>Setting the Output Bus directly is the preferred method for sounds that are normally tied to only one secondary output instance. For example, player-initiated gunshots, tennis racket whacks, PDA sounds, gameplay feedback, and so on. However, you can use a User or Game Send to an Auxiliary Bus inside any other bus hierarchy. This is the preferred method if the same sound is going to be heard in multiple outputs and the TV at the same time, such as with a spy camera or announcements.</p>
-<p>It is possible to play the same sound on multiple controllers and on TV at the same time, using the same source. On the design side, there is no knowledge of how many players might be playing the game. The bus hierarchy will be used as a template for routing for each output registered from the game. So, each output may have a different mix and Effect applied, depending on the sources played, as well as RTPC and Switch values active on the game objects. See an example of this in the <a class="el" href="integrating_secondary_outputs.html#secondary_output_examples">Examples</a> section below.</p>
+<p>It is possible to play the same sound on multiple controllers and on TV at the same time, using the same source. On the design side, there is no knowledge of how many players might be playing the game. The bus hierarchy will be used as a template for routing for each output registered from the game. So, each output may have a different mix and Effect applied, depending on the sources played, as well as RTPC and Switch values active on the game objects. See an example of this in the Examples section below.</p>
 <h2><a class="anchor" id="secondary_output_latency"></a>
 A note on synchronization of outputs</h2>
 <p>When outputting the same audio on many devices, such as the TV and a game controller, you will probably notice latency between the devices. This is unavoidable due to different hardware in the audio signal's path. On the controller side, the signal may have to travel through a wireless channel, which might give a different delay than for wired controllers. For the TV, once the signal is out of the console, it goes through a receiver and/or a TV, whose processors add a certain amount of delay. Since the delay produced by the AV setup is different for each system, it's not possible to synchronize sounds routed simultaneously to the speaker/TV and the game controllers. Your sound design may need to take this constraint into consideration.</p>
 <h1><a class="anchor" id="secondary_output_game_side"></a>
 Setting up devices, listeners and game objects for multiple outputs</h1>
-<p>In the case of multiple outputs of the same type (think, for example, a game controller speaker), it is necessary to discriminate between each instance of the devices. The regular <code>Listener/GameObject</code> concept is used because it also allows specific listener/emitter routing. See <a class="el" href="concept_listeners.html">Concept: Listeners</a> for more information. It is the responsibility of the game programmer to associate the output device with a Listener using <code><a class="el" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AK::SoundEngine::AddOutput</a></code>. The programmer must set the association between the listeners and game objects using <code>AK::SoundEngine::SetActiveListeners</code>. Don't forget, you can specify multiple listeners if multiple devices should play this sound at the same time (see example below).</p>
+<p>In the case of multiple outputs of the same type (think, for example, a game controller speaker), it is necessary to discriminate between each instance of the devices. The regular <code>Listener/GameObject</code> concept is used because it also allows specific listener/emitter routing. See <a class="el" href="concept_listeners.html">Concept: Listeners</a> for more information. It is the responsibility of the game programmer to associate the output device with a Listener using <code>AK::SoundEngine::AddOutput</code>. The programmer must set the association between the listeners and game objects using <code>AK::SoundEngine::SetActiveListeners</code>. Don't forget, you can specify multiple listeners if multiple devices should play this sound at the same time (see example below).</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> It is not necessary to have multiple listeners if there is only one output of a particular type (such as System, DVR). In this case, Wwise can rely on the routing specified in the Wwise project. This is also true for player-specific outputs (such as Game Controller Speaker and Communication) if the game is single-player. In other words, if there will only be one controller active in the game. Read more about listeners in <a class="el" href="soundengine_listeners.html">Integrating Listeners</a>. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> In the case of player-devices, the game code is responsible for calling <code><a class="el" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AK::SoundEngine::AddOutput</a></code> and <code><a class="el" href="namespace_a_k_1_1_sound_engine_a0932ed2a3669258ecc3bbe6448314020.html#a0932ed2a3669258ecc3bbe6448314020">AK::SoundEngine::RemoveOutput</a></code> whenever a game controller is connected or disconnected from the system. Wwise can't know automatically which device to associated to which listener and, conceptually, which player. System devices (such as main output and DVR) are handled automatically by Wwise. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> In the case of player-devices, the game code is responsible for calling <code>AK::SoundEngine::AddOutput</code> and <code>AK::SoundEngine::RemoveOutput</code> whenever a game controller is connected or disconnected from the system. Wwise can't know automatically which device to associated to which listener and, conceptually, which player. System devices (such as main output and DVR) are handled automatically by Wwise. </td></tr>
 </table>
 <h1><a class="anchor" id="secondary_output_examples"></a>
 Examples</h1>
-<p>These examples are written for the PS4, but can apply to all other platforms. Please check the documentation for the function <code><a class="el" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AK::SoundEngine::AddOutput</a></code>. You can find a working example of multiple output management in the <a class="el" href="soundengine_integration_samplecode.html">Integration Demo Sample</a>, in the DemoMotion page (multi-player), and in the BGMDemo page (DVR/BGM management).</p>
+<p>These examples are written for the PS4, but can apply to all other platforms. Please check the documentation for the function <code>AK::SoundEngine::AddOutput</code>. You can find a working example of multiple output management in the <a class="el" href="soundengine_integration_samplecode.html">Integration Demo Sample</a>, in the DemoMotion page (multi-player), and in the BGMDemo page (DVR/BGM management).</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> These examples omitted the required <code><a class="el" href="namespace_a_k_1_1_sound_engine.html">AK::SoundEngine</a></code> before the function calls, just to make it easier to read. </td></tr>
@@ -64,80 +64,81 @@ Examples</h1>
 <div class="line">sceUserServiceGetLoginUserIdList(&amp;list);</div>
 </div><!-- fragment --><p><b>Sound on one game controller output:</b> </p><div class="fragment"><div class="line"><span class="comment">// Add a secondary output connected to the speaker endpoint for player 0.</span></div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings(<span class="stringliteral">&quot;Game Controller Speaker&quot;</span>, list.userId[0] <span class="comment">/*Player ID (first player)*/</span>);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(outputSettings);</div>
+<div class="line">AddOutput(outputSettings);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Play an Event. In the Wwise project, this sound must be routed to a master bus that is set to output in &quot;Game Controller Speaker&quot; (or any sub-bus).</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT);</div>
+<div class="line">PostEvent(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT);</div>
 </div><!-- fragment --><p><b>Same sound on two different controllers:</b> </p><div class="fragment"><div class="line"><span class="comment">// Add a secondary output connected to the speaker output for player 0, associated with listener #1.</span></div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings1(<span class="stringliteral">&quot;Game Controller Speaker&quot;</span>, list.userId[0] <span class="comment">/*Player ID (first player)*/</span>);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(outputSettings1, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, listenerArray1, 1);</div>
+<div class="line">AddOutput(outputSettings1, NULL, listenerArray1, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Add a secondary output connected to the speaker output for player 1, associated with listener #2.</span></div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings2(<span class="stringliteral">&quot;Game Controller Speaker&quot;</span>, list.userId[1] <span class="comment">/*Player ID (first player)*/</span>);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(outputSettings2, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, listenerArray2, 1);</div>
+<div class="line">AddOutput(outputSettings2, NULL, listenerArray2, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Set a game object to emit sound to the listener 1(player 0) and 2 (player 1).</span></div>
 <div class="line">SetActiveListeners(EXISTING_GAME_OBJECT, listenerArrayBoth, 2);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Play an Event. In the Wwise project, this sound must be routed to a master bus that is set to output in &quot;Game Controller Speaker&quot; (or any sub-bus).</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>(<span class="stringliteral">&quot;Play_Pow&quot;</span>, EXISTING_GAME_OBJECT);</div>
+<div class="line">PostEvent(<span class="stringliteral">&quot;Play_Pow&quot;</span>, EXISTING_GAME_OBJECT);</div>
 </div><!-- fragment --><p><b>Different sounds on two different controllers:</b> </p><div class="fragment"><div class="line"><span class="comment">// Add a secondary output connected to the speaker output for player 0, associated with listener #1.</span></div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings1(<span class="stringliteral">&quot;Game Controller Speaker&quot;</span>, list.userId[0] <span class="comment">/*Player ID (first player)*/</span>);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(outputSettings1, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, listenerArray1, 1);</div>
+<div class="line">AddOutput(outputSettings1, NULL, listenerArray1, 1);</div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings2(<span class="stringliteral">&quot;Game Controller Speaker&quot;</span>, list.userId[1] <span class="comment">/*Player ID (first player)*/</span>);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(outputSettings2, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, listenerArray2, 1);</div>
+<div class="line">AddOutput(outputSettings2, NULL, listenerArray2, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Set a game object to emit sound to the proper listeners.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">RegisterGameObj</a>(MY_GAME_OBJECT1, listenerArray1, 1);    </div>
+<div class="line">RegisterGameObj(MY_GAME_OBJECT1, listenerArray1, 1);    </div>
 <div class="line">SetActiveListeners(MY_GAME_OBJECT1, listenerArray1, 1);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">RegisterGameObj</a>(MY_GAME_OBJECT2, listenerArray2, 1);    </div>
+<div class="line">RegisterGameObj(MY_GAME_OBJECT2, listenerArray2, 1);    </div>
 <div class="line">SetActiveListeners(MY_GAME_OBJECT2, listenerArray2, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Play an Event. In the Wwise project, this sound must be routed to a master bus which is set to output in &quot;Game Controller Speaker&quot; (or any sub-bus).</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT1);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>(<span class="stringliteral">&quot;Play_Pif&quot;</span>, MY_GAME_OBJECT2);</div>
+<div class="line">PostEvent(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT1);</div>
+<div class="line">PostEvent(<span class="stringliteral">&quot;Play_Pif&quot;</span>, MY_GAME_OBJECT2);</div>
 </div><!-- fragment --><p><b>Same sound on one game controller output and on the TV:</b> </p><div class="fragment"><div class="line"><span class="comment">// Add a secondary output connected to the speaker output for player 0, associated with listener #1.</span></div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings1(<span class="stringliteral">&quot;Game Controller Speaker&quot;</span>, list.userId[0] <span class="comment">/*Player ID (first player)*/</span>);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(outputSettings1, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, listenerArray1, 1);</div>
+<div class="line">AddOutput(outputSettings1, NULL, listenerArray1, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Set a game object to emit sound to the listener 0 (TV) and 1 (controller for player 0).</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> [] listenerArrayWithDefault = {MY_MAIN_LISTENER, MY_LISTENER1};  <span class="comment">// MY_MAIN_LISTENER is the listener you normally use, defined by AK::SoundEngine::SetDefaultListeners.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">RegisterGameObj</a>(MY_GAME_OBJECT);</div>
+<div class="line">AkGameObjectID [] listenerArrayWithDefault = {MY_MAIN_LISTENER, MY_LISTENER1};  <span class="comment">// MY_MAIN_LISTENER is the listener you normally use, defined by AK::SoundEngine::SetDefaultListeners.</span></div>
+<div class="line">RegisterGameObj(MY_GAME_OBJECT);</div>
 <div class="line">SetActiveListeners(MY_GAME_OBJECT, listenerArrayWithDefault, 2);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Play an Event.  </span></div>
 <div class="line"><span class="comment">// In the Wwise project, this sound must be routed to a master bus that is set to output in &quot;Game Controller Speaker&quot; (or any sub-bus).</span></div>
 <div class="line"><span class="comment">// Also, this sound must have an Auxiliary send routed to the master Audio Bus.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT);</div>
+<div class="line">PostEvent(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT);</div>
 </div><!-- fragment --><p>Here's an example of adding a secondary output on Windows, namely the headphones: </p><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> On Windows, all devices are "System" devices. Therefore, adding a device means it is necessary to discriminate between them (see <a class="el" href="integrating_secondary_outputs.html#secondary_output_game_side">Setting up devices, listeners and game objects for multiple outputs</a> for information). Consequently, we need a different listener. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> On Windows, all devices are "System" devices. Therefore, adding a device means it is necessary to discriminate between them (see Setting up devices, listeners and game objects for multiple outputs for information). Consequently, we need a different listener. </td></tr>
 </table>
 <div class="fragment"><div class="line"><span class="comment">// Will search for a device that has &quot;Headphones&quot; in its name.</span></div>
-<div class="line">uDeviceID = <a class="code" href="namespace_a_k_a8609f19bc85d9ea8266c2fdd79ac5084.html#a8609f19bc85d9ea8266c2fdd79ac5084">AK::GetDeviceIDFromName</a>(<span class="stringliteral">&quot;Headphones&quot;</span>);  </div>
+<div class="line">uDeviceID = AK::GetDeviceIDFromName(<span class="stringliteral">&quot;Headphones&quot;</span>);  </div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Add a secondary output connected to the device found previously, associated with listener1.</span></div>
 <div class="line"><a class="code" href="struct_ak_output_settings.html">AkOutputSettings</a> outputSettings1(<span class="stringliteral">&quot;System&quot;</span>, uDeviceID);</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AddOutput</a>(uoutputSettings1, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, listenerArray1, 1);</div>
+<div class="line">AddOutput(uoutputSettings1, NULL, listenerArray1, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Register a game object associated only with listener1.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">RegisterGameObj</a>(MY_GAME_OBJECT, listenerArray1, 1);</div>
+<div class="line">RegisterGameObj(MY_GAME_OBJECT, listenerArray1, 1);</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Play an Event. In the Wwise project, this sound must be routed to a master bus that is set to output in &quot;System&quot; (or any sub-bus).</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT);</div>
+<div class="line">PostEvent(<span class="stringliteral">&quot;Play_Pow&quot;</span>, MY_GAME_OBJECT);</div>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><ul>
 <li><a class="el" href="default_audio_devices.html">Default Wwise Audio Devices</a></li>
-<li><a class="el" href="default_audio_devices.html#obtaining_device_id">Targeting Specific System Devices</a> </li>
+<li>Targeting Specific System Devices </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname"><a href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a></div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00142">AkTypes.h:142</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
-<div class="ttc" id="astruct_ak_output_settings_html"><div class="ttname"><a href="struct_ak_output_settings.html">AkOutputSettings</a></div><div class="ttdoc">Platform-independent initialization settings of output devices.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_sound_engine_8h_source.html#l00115">AkSoundEngine.h:116</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48_html_a15ab79f954a307902f529d8ccde8ad48"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48.html#a15ab79f954a307902f529d8ccde8ad48">AK::SoundEngine::AddOutput</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT AddOutput(const AkOutputSettings &amp;in_Settings, AkOutputDeviceID *out_pDeviceID=NULL, const AkGameObjectID *in_pListenerIDs=NULL, AkUInt32 in_uNumListeners=0)</div></div>
-<div class="ttc" id="anamespace_a_k_a8609f19bc85d9ea8266c2fdd79ac5084_html_a8609f19bc85d9ea8266c2fdd79ac5084"><div class="ttname"><a href="namespace_a_k_a8609f19bc85d9ea8266c2fdd79ac5084.html#a8609f19bc85d9ea8266c2fdd79ac5084">AK::GetDeviceIDFromName</a></div><div class="ttdeci">AKSOUNDENGINE_API AkUInt32 GetDeviceIDFromName(wchar_t *in_szToken)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e_html_a41e9ef8d42951871fe4a8ae58a29a68e"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a></div><div class="ttdeci">AKSOUNDENGINE_API AkPlayingID PostEvent(AkUniqueID in_eventID, AkGameObjectID in_gameObjectID, AkUInt32 in_uFlags=0, AkCallbackFunc in_pfnCallback=NULL, void *in_pCookie=NULL, AkUInt32 in_cExternals=0, AkExternalSourceInfo *in_pExternalSources=NULL, AkPlayingID in_PlayingID=AK_INVALID_PLAYING_ID)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname">AkGameObjectID</div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:142</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname">AK::SoundEngine::RegisterGameObj</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="astruct_ak_output_settings_html"><div class="ttname"><a href="struct_ak_output_settings.html">AkOutputSettings</a></div><div class="ttdoc">Platform-independent initialization settings of output devices.</div><div class="ttdef"><b>Definition:</b> AkSoundEngine.h:116</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a15ab79f954a307902f529d8ccde8ad48_html_a15ab79f954a307902f529d8ccde8ad48"><div class="ttname">AK::SoundEngine::AddOutput</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT AddOutput(const AkOutputSettings &amp;in_Settings, AkOutputDeviceID *out_pDeviceID=NULL, const AkGameObjectID *in_pListenerIDs=NULL, AkUInt32 in_uNumListeners=0)</div></div>
+<div class="ttc" id="anamespace_a_k_a8609f19bc85d9ea8266c2fdd79ac5084_html_a8609f19bc85d9ea8266c2fdd79ac5084"><div class="ttname">AK::GetDeviceIDFromName</div><div class="ttdeci">AKSOUNDENGINE_API AkUInt32 GetDeviceIDFromName(wchar_t *in_szToken)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e_html_a41e9ef8d42951871fe4a8ae58a29a68e"><div class="ttname">AK::SoundEngine::PostEvent</div><div class="ttdeci">AKSOUNDENGINE_API AkPlayingID PostEvent(AkUniqueID in_eventID, AkGameObjectID in_gameObjectID, AkUInt32 in_uFlags=0, AkCallbackFunc in_pfnCallback=NULL, void *in_pCookie=NULL, AkUInt32 in_cExternals=0, AkExternalSourceInfo *in_pExternalSources=NULL, AkPlayingID in_PlayingID=AK_INVALID_PLAYING_ID)</div></div>
 </body>
 </html>
+

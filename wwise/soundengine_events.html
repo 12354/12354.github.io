@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -40,23 +40,23 @@ Introduction</h1>
 <p>Once events are integrated in the game, the Wwise user can continue working on them, changing or modifying the actions they contain, or the objects they refer to. Since your game is still triggering the same event, the changes made by the Wwise user will take effect in the game without requiring extra work from the programmer, and without recompiling the code.</p>
 <h1><a class="anchor" id="soundengine_events_integrating"></a>
 Integrating Events in Your Game</h1>
-<p>The <a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a> "PostEvent()" function queues Events to be processed, and can identify events either by their ID or by their name. It should be called by your game's code whenever an event needs to be triggered.</p>
-<p>However, no event is processed until the <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> "RenderAudio()" function has been called. Calling <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> "RenderAudio()" once per game frame is a good practice.</p>
-<p>When <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> "RenderAudio()" is called:</p><ul>
-<li>The sound engine begins processing all the events that have been posted since the last call to <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> "RenderAudio()".</li>
+<p>The AK::SoundEngine::PostEvent "PostEvent()" function queues Events to be processed, and can identify events either by their ID or by their name. It should be called by your game's code whenever an event needs to be triggered.</p>
+<p>However, no event is processed until the AK::SoundEngine::RenderAudio "RenderAudio()" function has been called. Calling AK::SoundEngine::RenderAudio "RenderAudio()" once per game frame is a good practice.</p>
+<p>When AK::SoundEngine::RenderAudio "RenderAudio()" is called:</p><ul>
+<li>The sound engine begins processing all the events that have been posted since the last call to AK::SoundEngine::RenderAudio "RenderAudio()".</li>
 <li>In addition, new 3D Positions, switches, states, and RTPC values are made available.</li>
 </ul>
 <p>Events will be processed in the exact order in which they were posted by the game. Actions within an event will be processed in the order in which they appear in Wwise.</p>
 <p>As much as possible, all events posted in the same frame will be processed at the same time, with the exception of the actions that contain delays, which will be of course executed later.</p>
-<p>If for any reason, the <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> "RenderAudio()" function is not called for a long period (such as several frames), streaming sounds will continue playing normally, but no new events will be launched and no new positioning will be applied until the next time <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> "RenderAudio()" is called.</p>
+<p>If for any reason, the AK::SoundEngine::RenderAudio "RenderAudio()" function is not called for a long period (such as several frames), streaming sounds will continue playing normally, but no new events will be launched and no new positioning will be applied until the next time AK::SoundEngine::RenderAudio "RenderAudio()" is called.</p>
 <h2><a class="anchor" id="soundengine_events_enabling_ids"></a>
 Enabling ID Usage</h2>
 <p>To work with IDs, the banks must be generated with the "Generate header file" option in the Generate SoundBanks dialog box in Wwise. The definition file, named Wwise_IDs.h, contains all the required IDs. It is updated at each bank generation.</p>
 <h1><a class="anchor" id="soundengine_events_notifications"></a>
 Event Notifications</h1>
-<p>The <a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a> "PostEvent()" function accepts a pointer to an AkEventCallbackFunc() function that will be called when a marker is reached, or when the event is terminated. This may be useful for synchronizing events and sound playback.</p>
+<p>The AK::SoundEngine::PostEvent "PostEvent()" function accepts a pointer to an AkEventCallbackFunc() function that will be called when a marker is reached, or when the event is terminated. This may be useful for synchronizing events and sound playback.</p>
 <p>An event is considered terminated when all of its actions have been executed and all the sounds triggered by this event have finished playing. Note that some events might never end by themselves. For example, if an event contains a sound that loops infinitely, the callback will only be triggered once this sound is stopped by another event.</p>
-<p>Markers have to be created with an external wave file editor such as SoundForge® or Adobe® Audition®. The sound engine will recognize those cue points and will notify your callback function if you specified it when calling <a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a> "PostEvent()" .</p>
+<p>Markers have to be created with an external wave file editor such as SoundForgeÂ® or AdobeÂ® AuditionÂ®. The sound engine will recognize those cue points and will notify your callback function if you specified it when calling AK::SoundEngine::PostEvent "PostEvent()" .</p>
 <dl class="section see"><dt>See also</dt><dd><ul>
 <li><a class="el" href="soundengine_markers.html">Integrating Markers</a></li>
 <li><a class="el" href="soundengine_music_callbacks.html">Integration Details - Music Callbacks</a></li>
@@ -65,14 +65,14 @@ Event Notifications</h1>
 <h1><a class="anchor" id="soundengine_events_latency"></a>
 Latency Between Posting an Event and Actual Sound Playback</h1>
 <p>We can estimate the latency between the time an event is posted and the time audio data starts being played back by the platform.</p>
-<p>From the game thread, call the SDK function <a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent()</a>. Posting an event will post a request to play something. This request will not be processed until the game calls the function <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a>; it does not actually render the audio, but simply sets a notification to process the requests that were posted since the last call to <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a>. Normally, <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a> is called by the game once per game frame. But, this is not a requirement; it can be called anytime to force execution of recently posted events as soon as possible.</p>
-<p>Once <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a> is called, the audio (EventManager) thread will be granted the permission to consume the events/commands that were posted previously. However, note that this thread is synchronized with the consumption rate of the platform's audio. An "audio refill" pass is only executed when the audio output module has consumed a buffer and, therefore, made a section of its ring buffer available for writing.</p>
-<p>Finally, there is the output module's ring buffer size to consider. When initializing the sound engine on Windows, you may specify the ring buffer's size in the platform-specific parameters using <a class="el" href="struct_ak_platform_init_settings_a953085ec90c00bf53ddafc8af700277d.html#a953085ec90c00bf53ddafc8af700277d" title="Number of refill buffers in voice buffer. 2 == double-buffered, defaults to 4.">AkPlatformInitSettings::uNumRefillsInVoice</a>. This gives the number of "refill buffers" in the voice buffer, where two is double-buffered and the default is four. Picking this number is a balance between reducing the latency (smaller buffer) and making the system more resistant to memory starvation (larger buffer).</p>
-<p>The "refill buffer" or "audio frame", as it is generally called, is determined by the sample rate over the frequency. So, on Windows in high-quality mode, this typically gives: <code>(1,024 samples) / (48,000 Hz) = <b>21.3 ms</b></code>. If we set samples to 512, using <a class="el" href="struct_ak_init_settings_a2438a18ece872c83175f70d7f70d659b.html#a2438a18ece872c83175f70d7f70d659b" title="Number of samples per audio frame (256, 512, 1024, or 2048).">AkInitSettings::uNumSamplesPerFrame</a>, then the audio frame would be: <code>(512 samples) / (48,000 Hz) = <b>10.6 ms</b></code>.</p>
+<p>From the game thread, call the SDK function PostEvent(). Posting an event will post a request to play something. This request will not be processed until the game calls the function RenderAudio(); it does not actually render the audio, but simply sets a notification to process the requests that were posted since the last call to RenderAudio(). Normally, RenderAudio() is called by the game once per game frame. But, this is not a requirement; it can be called anytime to force execution of recently posted events as soon as possible.</p>
+<p>Once RenderAudio() is called, the audio (EventManager) thread will be granted the permission to consume the events/commands that were posted previously. However, note that this thread is synchronized with the consumption rate of the platform's audio. An "audio refill" pass is only executed when the audio output module has consumed a buffer and, therefore, made a section of its ring buffer available for writing.</p>
+<p>Finally, there is the output module's ring buffer size to consider. When initializing the sound engine on Windows, you may specify the ring buffer's size in the platform-specific parameters using AkPlatformInitSettings::uNumRefillsInVoice. This gives the number of "refill buffers" in the voice buffer, where two is double-buffered and the default is four. Picking this number is a balance between reducing the latency (smaller buffer) and making the system more resistant to memory starvation (larger buffer).</p>
+<p>The "refill buffer" or "audio frame", as it is generally called, is determined by the sample rate over the frequency. So, on Windows in high-quality mode, this typically gives: <code>(1,024 samples) / (48,000 Hz) = <b>21.3 ms</b></code>. If we set samples to 512, using AkInitSettings::uNumSamplesPerFrame, then the audio frame would be: <code>(512 samples) / (48,000 Hz) = <b>10.6 ms</b></code>.</p>
 <p>So, in summary, the "total sound engine's latency" is determined by:</p>
 <ol type="1">
-<li>The time between the call to <a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent()</a> and the call to <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a> (this is up to the game), meaning 16 ms in a 60 frame per second game which calls <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a> once per frame.</li>
-<li>The time between the call to <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a> and an audio frame boundary: <code>0 to 21 ms</code> depending on whether <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a> was called at the end or at the beginning of the current audio frame.</li>
+<li>The time between the call to PostEvent() and the call to RenderAudio() (this is up to the game), meaning 16 ms in a 60 frame per second game which calls RenderAudio() once per frame.</li>
+<li>The time between the call to RenderAudio() and an audio frame boundary: <code>0 to 21 ms</code> depending on whether RenderAudio() was called at the end or at the beginning of the current audio frame.</li>
 <li>The output stage buffering. With a double-buffered output stage: <code>2 * 21 ms = 42 ms</code> of latency.<ol type="a">
 <li>The audio frame rate. With a reduced audio frame rate and a double-buffered output stage: <code>2 * 11 ms = 22 ms</code> of latency.</li>
 </ol>
@@ -88,31 +88,32 @@ Streaming</h2>
 <h1><a class="anchor" id="soundengine_events_examples"></a>
 Examples of Event Processing</h1>
 <p>Here are few useful examples (pseudo-code):</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Play_Sound1, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Stop_Sound1, GameObj_X)</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio</a>()</div>
+<div class="fragment"><div class="line">PostEvent( Play_Sound1, GameObj_X )</div>
+<div class="line">PostEvent( Stop_Sound1, GameObj_X)</div>
+<div class="line">RenderAudio()</div>
 <div class="line">Result: Nothing will play.</div>
-</div><!-- fragment --><div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Stop_Sound1, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Play_Sound1, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio</a>()</div>
+</div><!-- fragment --><div class="fragment"><div class="line">PostEvent( Stop_Sound1, GameObj_X )</div>
+<div class="line">PostEvent( Play_Sound1, GameObj_X )</div>
+<div class="line">RenderAudio()</div>
 <div class="line">Result: Sound1 will play</div>
-</div><!-- fragment --><div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">SetSwitch</a>( Grass, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Play_SwitchFootStep, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">SetSwitch</a>( Concrete, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Play_SwitchFootStep, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio</a>()</div>
+</div><!-- fragment --><div class="fragment"><div class="line">SetSwitch( Grass, GameObj_X )</div>
+<div class="line">PostEvent( Play_SwitchFootStep, GameObj_X )</div>
+<div class="line">SetSwitch( Concrete, GameObj_X )</div>
+<div class="line">PostEvent( Play_SwitchFootStep, GameObj_X )</div>
+<div class="line">RenderAudio()</div>
 <div class="line">Result: Grass and concrete sounds will both play</div>
-</div><!-- fragment --><div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">SetSwitch</a>( Grass, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">SetSwitch</a>( Concrete, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Play_SwitchFootStep, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">PostEvent</a>( Play_SwitchFootStep, GameObj_X )</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio</a>()</div>
+</div><!-- fragment --><div class="fragment"><div class="line">SetSwitch( Grass, GameObj_X )</div>
+<div class="line">SetSwitch( Concrete, GameObj_X )</div>
+<div class="line">PostEvent( Play_SwitchFootStep, GameObj_X )</div>
+<div class="line">PostEvent( Play_SwitchFootStep, GameObj_X )</div>
+<div class="line">RenderAudio()</div>
 <div class="line">Result: Concrete sounds will play twice</div>
 </div><!-- fragment --><p>For examples of integrating events, refer to <a class="el" href="quickstart_sample_integration_events.html">Quick Start Sample Integration - Events</a>. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264_html_a9c9d57ba7b3af2b896e26297a7657264"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">AK::SoundEngine::SetSwitch</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetSwitch(AkSwitchGroupID in_switchGroup, AkSwitchStateID in_switchState, AkGameObjectID in_gameObjectID)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1_html_afe54af0f5be38be061e8a3c7d7642bb1"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RenderAudio(bool in_bAllowSyncRender=true)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e_html_a41e9ef8d42951871fe4a8ae58a29a68e"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a></div><div class="ttdeci">AKSOUNDENGINE_API AkPlayingID PostEvent(AkUniqueID in_eventID, AkGameObjectID in_gameObjectID, AkUInt32 in_uFlags=0, AkCallbackFunc in_pfnCallback=NULL, void *in_pCookie=NULL, AkUInt32 in_cExternals=0, AkExternalSourceInfo *in_pExternalSources=NULL, AkPlayingID in_PlayingID=AK_INVALID_PLAYING_ID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264_html_a9c9d57ba7b3af2b896e26297a7657264"><div class="ttname">AK::SoundEngine::SetSwitch</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetSwitch(AkSwitchGroupID in_switchGroup, AkSwitchStateID in_switchState, AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1_html_afe54af0f5be38be061e8a3c7d7642bb1"><div class="ttname">AK::SoundEngine::RenderAudio</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RenderAudio(bool in_bAllowSyncRender=true)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e_html_a41e9ef8d42951871fe4a8ae58a29a68e"><div class="ttname">AK::SoundEngine::PostEvent</div><div class="ttdeci">AKSOUNDENGINE_API AkPlayingID PostEvent(AkUniqueID in_eventID, AkGameObjectID in_gameObjectID, AkUInt32 in_uFlags=0, AkCallbackFunc in_pfnCallback=NULL, void *in_pCookie=NULL, AkUInt32 in_cExternals=0, AkExternalSourceInfo *in_pExternalSources=NULL, AkPlayingID in_PlayingID=AK_INVALID_PLAYING_ID)</div></div>
 </body>
 </html>
+

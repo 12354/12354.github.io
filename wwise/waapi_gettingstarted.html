@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -38,12 +38,12 @@ Protocols</h1>
 <p>The Wwise Authoring API is accessible through different protocols and APIs:</p><ul>
 <li><b>WAMP:</b> WAMP is intended to connect application components in distributed applications. WAMP uses WebSocket as its default transport, which allows for ordered, reliable, bidirectional, and message-oriented communications. WAMP allows the clients to call functions with JSON arguments and retrieve structured JSON results. WAMP also allows clients to subscribe to notifications.</li>
 <li><b>HTTP</b> <b>POST:</b> HTTP is an application protocol for distributed applications. HTTP is the most used method to transfer content on the Internet. POST enables the caller to send a document body, which, for the Wwise Authoring API, corresponds to the function arguments as JSON. The HTTP response is the JSON result.</li>
-<li><b>Wwise Plug-ins</b>: The Wwise Authoring plug-in API exposes a way to invoke WAAPI functions: <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v2_1_1_host_a9b037370b1afd2f198efc440a61b6755.html#a9b037370b1afd2f198efc440a61b6755">AK::Wwise::Plugin::Host::WaapiCall()</a></code>. Refer to <a class="el" href="waapi_plugin.html">Using the Wwise Authoring API in Wwise Plug-ins</a>.</li>
+<li><b>Wwise Plug-ins</b>: The Wwise Authoring plug-in API exposes a way to invoke WAAPI functions: <code>AK::Wwise::Plugin::Host::WaapiCall()</code>. Refer to <a class="el" href="waapi_plugin.html">Using the Wwise Authoring API in Wwise Plug-ins</a>.</li>
 </ul>
 <p>WAMP and HTTP protocols can be used with a variety of languages, such as C++, C#, JavaScript, Python, and other languages with HTTP or WebSocket support.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> WAMP is an open standard WebSocket subprotocol that provides unified application routing. WAMP implementations are available in the most popular programming languages. Read more about WAMP at <a href="https://wamp-proto.org/" target="_blank">https://wamp-proto.org</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> WAMP is an open standard WebSocket subprotocol that provides unified application routing. WAMP implementations are available in the most popular programming languages. Read more about WAMP at https://wamp-proto.org. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -51,7 +51,7 @@ Protocols</h1>
 </table>
 <p>In summary, here are the features supported by the protocols: </p><table class="doxtable">
 <tr>
-<td><b>API Feature</b> </td><td><b>WAMP</b> </td><td><b>HTTP POST</b> </td><td><b><code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v2_1_1_host_a9b037370b1afd2f198efc440a61b6755.html#a9b037370b1afd2f198efc440a61b6755">AK::Wwise::Plugin::Host::WaapiCall()</a></code></b> </td></tr>
+<td><b>API Feature</b> </td><td><b>WAMP</b> </td><td><b>HTTP POST</b> </td><td><b><code>AK::Wwise::Plugin::Host::WaapiCall()</code></b> </td></tr>
 <tr>
 <td><p class="starttd"></p>
 <p class="intertd"><b>Remote Procedure Calls</b></p>
@@ -73,7 +73,7 @@ Protocols</h1>
 </table>
 <h1><a class="anchor" id="waapi_languages"></a>
 Programming Languages</h1>
-<p>If you wish to use WAMP as the protocol for WAAPI, several options exist. WAMP Implementations are available across different programming languages. You will be able to find a list of existing implementations on <a href="https://wamp-proto.org/" target="_blank">wamp-proto.org</a>.</p>
+<p>If you wish to use WAMP as the protocol for WAAPI, several options exist. WAMP Implementations are available across different programming languages. You will be able to find a list of existing implementations on wamp-proto.org.</p>
 <p>However, some of these implementations are more difficult or unfriendly to use. Since WAAPI only uses a subset of the features available in WAMP, and to ease the use of WAAPI, we implemented abstraction layers over some of the implementations available. Here is a table that lists our recommendations for the most popular languages.</p>
 <table class="doxtable">
 <tr>
@@ -101,7 +101,7 @@ Programming Languages</h1>
  (<b>Recommended</b>) </td><td><p class="starttd"><b>Use WaapiClientCore or WaapiClientJson</b></p>
 <p class="intertd">You have the choice of:</p><ul>
 <li><b>WaapiClientCore:</b> A Waapi client library implemented in C# solely depending on .NET 4.5, with no 3rd party reference. It includes a WAMP client that is able to connect to Wwise and access WAAPI remote procedures and topic subscription. The API is string-based, so you can provide your own JSON serialization. This client is also compatible with Unity 2018.1+.</li>
-<li><b>WaapiClientJson:</b> A waapi client library implemented in C# with a dependency on <a href="https://www.newtonsoft.com/json" target="_blank">Json.NET</a>. The Json dependency is added as a convenience to manipulate JSON. NuGet package manager extension is required. This client can be compatible with Unity if you also install <code>Json.NET for Unity</code> from Unity Store.</li>
+<li><b>WaapiClientJson:</b> A waapi client library implemented in C# with a dependency on Json.NET. The Json dependency is added as a convenience to manipulate JSON. NuGet package manager extension is required. This client can be compatible with Unity if you also install <code>Json.NET for Unity</code> from Unity Store.</li>
 </ul>
 <p class="intertd"><b>Difficulty:</b> One of the easiest way to use WAAPI. Requires beginner C# programming skills. <br  />
 <b>Instructions:</b> <a class="el" href="wamp_cs.html">C# WaapiClient - WAMP</a> <br  />
@@ -115,8 +115,8 @@ Programming Languages</h1>
 <p class="intertd">waapi-client is an abstraction layer over Autobahn JS. It adds promises and async/await support, and only expose the required WAMP functionality. Please note that waapi-client also includes the TypeScript bindings.</p>
 <p class="intertd"><b>Difficulty:</b> Requires beginner to intermediate JavaScript programming skills. <br  />
 <b>Instructions:</b> <a class="el" href="wamp_js_node.html">JavaScript, Node.js - WAMP</a> <br  />
-<b>Npm:</b> <a href="https://www.npmjs.com/package/waapi-client" target="_blank">https://www.npmjs.com/package/waapi-client</a> <br  />
-<b>Sources:</b> <a href="https://github.com/audiokinetic/waapi-client" target="_blank">https://github.com/audiokinetic/waapi-client</a> <br  />
+<b>Npm:</b> https://www.npmjs.com/package/waapi-client <br  />
+<b>Sources:</b> https://github.com/audiokinetic/waapi-client <br  />
 <b>Sample:</b> SDK\samples\WwiseAuthoringAPI\js\hello-wwise-node-wamp </p>
 <p class="endtd"></p>
 </td></tr>
@@ -125,7 +125,7 @@ Programming Languages</h1>
 <p class="intertd">autobahn-browser is a WAMP implementation ready to use in a browser.</p>
 <p class="intertd"><b>Difficulty:</b> Requires intermediate JavaScript &amp; Web programming skills. <br  />
 <b>Instructions:</b> <a class="el" href="wamp_js_browser.html">JavaScript, In browser - WAMP</a> <br  />
-<b>Sources:</b> <a href="https://github.com/crossbario/autobahn-js-browser" target="_blank">https://github.com/crossbario/autobahn-js-browser</a> <br  />
+<b>Sources:</b> https://github.com/crossbario/autobahn-js-browser <br  />
 <b>Sample:</b> SDK\samples\WwiseAuthoringAPI\js\hello-wwise-web-wamp </p>
 <p class="endtd"></p>
 </td></tr>
@@ -136,13 +136,13 @@ Programming Languages</h1>
 <p class="intertd">waapi-client is an abstraction layer over Autobahn Python. It offers a greatly simplified usage and only exposes the required WAMP functionality.</p>
 <p class="intertd"><b>Difficulty:</b> One of the easiest way to use WAAPI. Requires only beginner Python programming skills. <br  />
 <b>Instructions:</b> <a class="el" href="waapi_client_python_rpc.html">Python (Waapi-Client) - Remote Procedure Call</a> <br  />
-<b>Pypi:</b> <a href="https://pypi.org/project/waapi-client/" target="_blank">https://pypi.org/project/waapi-client/</a> <br  />
-<b>Sources:</b> <a href="https://github.com/audiokinetic/waapi-client-python" target="_blank">https://github.com/audiokinetic/waapi-client-python</a> <br  />
+<b>Pypi:</b> https://pypi.org/project/waapi-client/ <br  />
+<b>Sources:</b> https://github.com/audiokinetic/waapi-client-python <br  />
 <b>Sample:</b> SDK\samples\WwiseAuthoringAPI\python\waapi-client-py3 </p>
 <p class="endtd"></p>
 </td></tr>
 <tr>
-<td>Other languages </td><td><p class="starttd">Use one of the WAMP implementations listed at <a href="https://wamp-proto.org/" target="_blank">https://wamp-proto.org/</a> or use WAAPI with HTTP directly.</p>
+<td>Other languages </td><td><p class="starttd">Use one of the WAMP implementations listed at https://wamp-proto.org/ or use WAAPI with HTTP directly.</p>
 <p class="intertd"></p>
 <p class="endtd"></p>
 </td></tr>
@@ -152,3 +152,4 @@ Programming Languages</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

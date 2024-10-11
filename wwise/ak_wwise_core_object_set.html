@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -58,7 +58,7 @@ Arguments</h1>
 <tr>
 <td>string </td><td>An object <a class="el" href="struct_g_u_i_d.html">GUID</a> of the form: {aabbcc00-1122-3344-5566-77889900aabb}.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].<b>onNameConflict</b> </td><td>string </td><td>The action to take if "object" already has a child with the same name. Default value is "fail". Refer to <a class="el" href="waapi_import.html#waapi_create_objects_modes">Understanding the name conflict modes</a> for more information. Possible values: <ul>
+<td rowspan="1">objects[...].<b>onNameConflict</b> </td><td>string </td><td>The action to take if "object" already has a child with the same name. Default value is "fail". Refer to Understanding the name conflict modes for more information. Possible values: <ul>
 <li>
 rename </li>
 <li>
@@ -70,7 +70,7 @@ merge </li>
 </ul>
 </td></tr>
 <tr>
-<td rowspan="1">objects[...].<b>listMode</b> </td><td>string </td><td>The action to take if "object" already has objects in a specified list. Default value is "append". Refer to <a class="el" href="waapi_import.html#waapi_set_lists_modes">Understanding lists and list modes</a> for more information. Possible values: <ul>
+<td rowspan="1">objects[...].<b>listMode</b> </td><td>string </td><td>The action to take if "object" already has objects in a specified list. Default value is "append". Refer to Understanding lists and list modes for more information. Possible values: <ul>
 <li>
 replaceAll </li>
 <li>
@@ -114,7 +114,7 @@ append </li>
 <tr>
 <td rowspan="1">objects[...].children[...].import.files <b>[...]</b> </td><td>object </td><td>Parameters of one audio file   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].children[...].import.files[...].<b>audioFileBase64</b> </td><td>string </td><td>Base64 encoded WAV audio file data to import with its target file path relative to the Originals folder, separated by a vertical bar. E.g. 'MySound.wav|UklGRu...'.   </td></tr>
 <tr>
@@ -193,7 +193,7 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].import.files <b>[...]</b> </td><td>object </td><td>Parameters of one audio file   </td></tr>
 <tr>
-<td rowspan="1">objects[...].import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].import.files[...].<b>audioFileBase64</b> </td><td>string </td><td>Base64 encoded WAV audio file data to import with its target file path relative to the Originals folder, separated by a vertical bar. E.g. 'MySound.wav|UklGRu...'.   </td></tr>
 <tr>
@@ -255,7 +255,7 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$)[...].import.files <b>[...]</b> </td><td>object </td><td>Parameters of one audio file   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$)[...].import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$)[...].import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$)[...].import.files[...].<b>audioFileBase64</b> </td><td>string </td><td>Base64 encoded WAV audio file data to import with its target file path relative to the Originals folder, separated by a vertical bar. E.g. 'MySound.wav|UklGRu...'.   </td></tr>
 <tr>
@@ -393,7 +393,7 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$).import.files <b>[...]</b> </td><td>object </td><td>Parameters of one audio file   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$).import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$).import.files[...].<b>audioFile</b> </td><td>string </td><td>Path to media file to import. This path must be accessible from Wwise. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[:_a-zA-Z0-9]+$).import.files[...].<b>audioFileBase64</b> </td><td>string </td><td>Base64 encoded WAV audio file data to import with its target file path relative to the Originals folder, separated by a vertical bar. E.g. 'MySound.wav|UklGRu...'.   </td></tr>
 <tr>
@@ -475,7 +475,7 @@ Exp3 </li>
 <tr>
 <td>string </td><td>An object <a class="el" href="struct_g_u_i_d.html">GUID</a> of the form: {aabbcc00-1122-3344-5566-77889900aabb}.   </td></tr>
 <tr>
-<td rowspan="1"><b>onNameConflict</b> </td><td>string </td><td>Unless overriden by an individual "object", the action to take if "object" already has a child with the same name. Default value is "fail". Refer to <a class="el" href="waapi_import.html#waapi_create_objects_modes">Understanding the name conflict modes</a> for more information. Possible values: <ul>
+<td rowspan="1"><b>onNameConflict</b> </td><td>string </td><td>Unless overriden by an individual "object", the action to take if "object" already has a child with the same name. Default value is "fail". Refer to Understanding the name conflict modes for more information. Possible values: <ul>
 <li>
 rename </li>
 <li>
@@ -487,7 +487,7 @@ merge </li>
 </ul>
 </td></tr>
 <tr>
-<td rowspan="1"><b>listMode</b> </td><td>string </td><td>Unless overriden by an individual "object", the action to take if "object" already has objects in a specified list. Default value is "append". Refer to <a class="el" href="waapi_import.html#waapi_set_lists_modes">Understanding lists and list modes</a> for more information. Possible values: <ul>
+<td rowspan="1"><b>listMode</b> </td><td>string </td><td>Unless overriden by an individual "object", the action to take if "object" already has objects in a specified list. Default value is "append". Refer to Understanding lists and list modes for more information. Possible values: <ul>
 <li>
 replaceAll </li>
 <li>
@@ -704,7 +704,7 @@ Result</h1>
 <tr>
 <td rowspan="1">objects[...].children[...].<b>category</b> </td><td>string </td><td>The category of the object. Ex: 'Actor-Mixer Hierarchy'   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].children[...].<b>workunit</b> </td><td>object </td><td>The parent Work Unit containing the object. The 'id' and the 'name' is returned.   </td></tr>
 <tr>
@@ -733,11 +733,11 @@ Result</h1>
 <td rowspan="1">objects[...].children[...].musicPlaylistRoot.<b>id</b> </td><td>string </td><td>The ID (<a class="el" href="struct_g_u_i_d.html">GUID</a>) of the object.<br  />
  An object <a class="el" href="struct_g_u_i_d.html">GUID</a> of the form: {aabbcc00-1122-3344-5566-77889900aabb}.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].children[...].<b>activeSource</b> </td><td>object </td><td>The active source of the sound object.   </td></tr>
 <tr>
@@ -746,11 +746,11 @@ Result</h1>
 <tr>
 <td rowspan="1">objects[...].children[...].activeSource.<b>name</b> </td><td>string </td><td>The name of the object.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].children[...].<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].children[...].<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].children[...].<b>playbackDuration</b> </td><td>object </td><td>The duration root that contains the min and max durations and duration type. Note, this is deprecated. The duration should be used instead. This applies to all objects that can contain Audio Source objects, either directly as a source or indirectly through descendants.   </td></tr>
 <tr>
@@ -949,7 +949,7 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>category</b> </td><td>string </td><td>The category of the object. Ex: 'Actor-Mixer Hierarchy'   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>workunit</b> </td><td>object </td><td>The parent Work Unit containing the object. The 'id' and the 'name' is returned.   </td></tr>
 <tr>
@@ -978,11 +978,11 @@ Exp3 </li>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].musicPlaylistRoot.<b>id</b> </td><td>string </td><td>The ID (<a class="el" href="struct_g_u_i_d.html">GUID</a>) of the object.<br  />
  An object <a class="el" href="struct_g_u_i_d.html">GUID</a> of the form: {aabbcc00-1122-3344-5566-77889900aabb}.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>activeSource</b> </td><td>object </td><td>The active source of the sound object.   </td></tr>
 <tr>
@@ -991,11 +991,11 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].activeSource.<b>name</b> </td><td>string </td><td>The name of the object.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$)[...].<b>playbackDuration</b> </td><td>object </td><td>The duration root that contains the min and max durations and duration type. Note, this is deprecated. The duration should be used instead. This applies to all objects that can contain Audio Source objects, either directly as a source or indirectly through descendants.   </td></tr>
 <tr>
@@ -1185,7 +1185,7 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>category</b> </td><td>string </td><td>The category of the object. Ex: 'Actor-Mixer Hierarchy'   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>workunit</b> </td><td>object </td><td>The parent Work Unit containing the object. The 'id' and the 'name' is returned.   </td></tr>
 <tr>
@@ -1214,11 +1214,11 @@ Exp3 </li>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).musicPlaylistRoot.<b>id</b> </td><td>string </td><td>The ID (<a class="el" href="struct_g_u_i_d.html">GUID</a>) of the object.<br  />
  An object <a class="el" href="struct_g_u_i_d.html">GUID</a> of the form: {aabbcc00-1122-3344-5566-77889900aabb}.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>activeSource</b> </td><td>object </td><td>The active source of the sound object.   </td></tr>
 <tr>
@@ -1227,11 +1227,11 @@ Exp3 </li>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).activeSource.<b>name</b> </td><td>string </td><td>The name of the object.   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">objects[...].regex(^@[_:a-zA-Z0-9]+$).<b>playbackDuration</b> </td><td>object </td><td>The duration root that contains the min and max durations and duration type. Note, this is deprecated. The duration should be used instead. This applies to all objects that can contain Audio Source objects, either directly as a source or indirectly through descendants.   </td></tr>
 <tr>
@@ -1437,3 +1437,4 @@ Examples</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

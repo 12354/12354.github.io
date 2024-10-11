@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -33,7 +33,7 @@
 <div class="title">ak.wwise.core.object.get </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Performs a query and returns the data, as specified in the options, for each object in the query result. The query can specify either a 'waql' argument or a 'from' argument with an optional 'transform' argument. Refer to <a class="el" href="waql_introduction.html">Using the Wwise Authoring Query Language (WAQL)</a> or <a class="el" href="waapi_query.html">Querying the Wwise Project</a> for more information. Refer to <a class="el" href="waapi_query.html#waapi_query_return">Return Options</a> to learn about options.</p>
+<div class="textblock"><p>Performs a query and returns the data, as specified in the options, for each object in the query result. The query can specify either a 'waql' argument or a 'from' argument with an optional 'transform' argument. Refer to <a class="el" href="waql_introduction.html">Using the Wwise Authoring Query Language (WAQL)</a> or <a class="el" href="waapi_query.html">Querying the Wwise Project</a> for more information. Refer to Return Options to learn about options.</p>
 <h1><a class="anchor" id="ak_wwise_core_object_getArguments"></a>
 Arguments</h1>
 <p><table class="doxtable">
@@ -67,7 +67,7 @@ Arguments</h1>
 <td rowspan="1">from.id[...].<b>shortId</b> * </td><td>integer </td><td>The Short ID of the object.<br  />
  Unsigned Integer 32-bit. Range: [0,4294967295]  </td></tr>
 <tr>
-<td rowspan="1">from.id[...].<b>type</b> * </td><td>integer </td><td>This syntax is deprecated and we recommend the use of WAQL. The type of object for the Short ID. The type ​​can be 10 (Event), 12 (SwitchGroup), 14 (StateGroup), 17 (EffectPlugin), 18 (SoundBank), 19 (Bus), 20 (AuxBus), 22 (GameParameter), 41 (Trigger) or 68 (AudioDevicePlugin) Range: [1,*]  </td></tr>
+<td rowspan="1">from.id[...].<b>type</b> * </td><td>integer </td><td>This syntax is deprecated and we recommend the use of WAQL. The type of object for the Short ID. The type â€‹â€‹can be 10 (Event), 12 (SwitchGroup), 14 (StateGroup), 17 (EffectPlugin), 18 (SoundBank), 19 (Bus), 20 (AuxBus), 22 (GameParameter), 41 (Trigger) or 68 (AudioDevicePlugin) Range: [1,*]  </td></tr>
 <tr>
 <td rowspan="1">from.<b>search</b> * </td><td>array </td><td>An array of text tokens used for searching the project.   </td></tr>
 <tr>
@@ -333,7 +333,7 @@ Result</h1>
 <tr>
 <td rowspan="1">return[...].<b>category</b> </td><td>string </td><td>The category of the object. Ex: 'Actor-Mixer Hierarchy'   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>filePath</b> </td><td>string </td><td>The path to the file containing the object. The path can be a Work Unit file or a project file. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">return[...].<b>workunit</b> </td><td>object </td><td>The parent Work Unit containing the object. The 'id' and the 'name' is returned.   </td></tr>
 <tr>
@@ -362,11 +362,11 @@ Result</h1>
 <td rowspan="1">return[...].musicPlaylistRoot.<b>id</b> </td><td>string </td><td>The ID (<a class="el" href="struct_g_u_i_d.html">GUID</a>) of the object.<br  />
  An object <a class="el" href="struct_g_u_i_d.html">GUID</a> of the form: {aabbcc00-1122-3344-5566-77889900aabb}.   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>originalWavFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the original wav file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>originalFilePath</b> </td><td>string </td><td>Absolute path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>originalRelativeFilePath</b> </td><td>string </td><td>Relative (from project's Originals Folder) path to the original file. Only valid for Sound and Audio Source objects. For using WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">return[...].<b>activeSource</b> </td><td>object </td><td>The active source of the sound object.   </td></tr>
 <tr>
@@ -375,11 +375,11 @@ Result</h1>
 <tr>
 <td rowspan="1">return[...].activeSource.<b>name</b> </td><td>string </td><td>The name of the object.   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>convertedWemFilePath</b> </td><td>string </td><td>(DEPRECATED) Absolute path to the converted wem file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>convertedFilePath</b> </td><td>string </td><td>Absolute path to the converted file. Specify the platform in the options. Only valid for Sound and Audio Source objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
-<td rowspan="1">return[...].<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to <a class="el" href="waapi_prepare.html#waapi_path_on_mac">Using WAAPI on Mac</a> .   </td></tr>
+<td rowspan="1">return[...].<b>soundbankBnkFilePath</b> </td><td>string </td><td>Absolute path to the generated SoundBank file associated with the SoundBank object. Only valid for SoundBank objects. To use WAAPI on Mac, please refer to Using WAAPI on Mac .   </td></tr>
 <tr>
 <td rowspan="1">return[...].<b>playbackDuration</b> </td><td>object </td><td>The duration root that contains the min and max durations and duration type. Note, this is deprecated. The duration should be used instead. This applies to all objects that can contain Audio Source objects, either directly as a source or indirectly through descendants.   </td></tr>
 <tr>
@@ -561,3 +561,4 @@ Examples</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

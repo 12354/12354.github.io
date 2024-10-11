@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -46,7 +46,7 @@ Introduction</h1>
 </ul>
 <h1><a class="anchor" id="soundengine_midi_integrating"></a>
 Integrating MIDI Events in Your Game</h1>
-<p>The <a class="el" href="namespace_a_k_1_1_sound_engine_ab24b5dc8bd4d1adbdc6aa5c98d94d946.html#ab24b5dc8bd4d1adbdc6aa5c98d94d946">AK::SoundEngine::PostMIDIOnEvent</a> "PostMIDIOnEvent" function queues MIDI events in the sound engine. The function takes as arguments:</p><ul>
+<p>The AK::SoundEngine::PostMIDIOnEvent "PostMIDIOnEvent" function queues MIDI events in the sound engine. The function takes as arguments:</p><ul>
 <li>the MIDI event.</li>
 <li>an Event ID.</li>
 <li>a Game Object ID.</li>
@@ -62,18 +62,18 @@ Integrating MIDI Events in Your Game</h1>
 <li>event EV2, which has a play action for Wwise Object W0.</li>
 </ul>
 <p>If we post MIDI event ME1 to EV1 with Game Object GO, then the sound engine will add MIDI event ME1 to the MIDI sequences W0-GO-PID1 and W1-GO-PID1, where PID1 is the Playing ID returned by PostMIDIOnEvent. If we then post MIDI event ME2 to event EV2, the sound engine will add MIDI event ME2 to the MIDI sequence W0-GO-PID2.</p>
-<p>Calls to <a class="el" href="namespace_a_k_1_1_sound_engine_ab24b5dc8bd4d1adbdc6aa5c98d94d946.html#ab24b5dc8bd4d1adbdc6aa5c98d94d946">AK::SoundEngine::PostMIDIOnEvent</a> add MIDI events to the MIDI sequences. However, no processing is done until the <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> function has been called. Each call to <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a> processes the message queue, and may produce any number of audio frames; depending on how much time has elapsed since the previous call to RenderAudio. For each frame processed by RenderAudio, the sound engine advances all MIDI sequences by one frame.</p>
+<p>Calls to AK::SoundEngine::PostMIDIOnEvent add MIDI events to the MIDI sequences. However, no processing is done until the AK::SoundEngine::RenderAudio function has been called. Each call to AK::SoundEngine::RenderAudio processes the message queue, and may produce any number of audio frames; depending on how much time has elapsed since the previous call to RenderAudio. For each frame processed by RenderAudio, the sound engine advances all MIDI sequences by one frame.</p>
 <h1><a class="anchor" id="soundengine_midi_event_timing"></a>
 MIDI Event Timing</h1>
 <p>The moment at which a MIDI event is executed is determined by the following factors:</p><ul>
 <li>the moment at which it was queued (via PostMIDIOnEvent),</li>
-<li>the event's member <a class="el" href="struct_ak_m_i_d_i_post_a946b9b31a3345afd96983129151751e9.html#a946b9b31a3345afd96983129151751e9" title="Frame offset (in samples) for MIDI event post.">AkMIDIPost::uOffset</a>,</li>
+<li>the event's member AkMIDIPost::uOffset,</li>
 <li>the argument in_bAbsoluteOffsets provided to the call to PostMIDIOnEvent.</li>
 </ul>
-<p>If in_bAbsoluteOffsets is false, the MIDI event is executed uOffset samples from the time the PostMIDIOnEvent message is read from the sound engine's message queue (see <a class="el" href="soundengine_midi.html#soundengine_midi_update_sequence">Updating MIDI Sequences</a>). If in_bAbsoluteOffsets is true, the MIDI event is executed uOffset samples in absolute time. The current absolute time is obtained via a call to <a class="el" href="namespace_a_k_1_1_sound_engine_ac688bf2d1ae6f2009e7cde602a753b6b.html#ac688bf2d1ae6f2009e7cde602a753b6b">AK::SoundEngine::GetSampleTick</a>.</p>
+<p>If in_bAbsoluteOffsets is false, the MIDI event is executed uOffset samples from the time the PostMIDIOnEvent message is read from the sound engine's message queue (see Updating MIDI Sequences). If in_bAbsoluteOffsets is true, the MIDI event is executed uOffset samples in absolute time. The current absolute time is obtained via a call to AK::SoundEngine::GetSampleTick.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The duration of a sample can be determined from the sound engine's audio settings, via a call to <a class="el" href="namespace_a_k_1_1_sound_engine_a1ecadb91731d6cabe36603fa419b6715.html#a1ecadb91731d6cabe36603fa419b6715">AK::SoundEngine::GetAudioSettings</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The duration of a sample can be determined from the sound engine's audio settings, via a call to AK::SoundEngine::GetAudioSettings. </td></tr>
 </table>
 <h1><a class="anchor" id="soundengine_midi_event_playing_id"></a>
 MIDI Event Sequences - Playing ID</h1>
@@ -97,18 +97,19 @@ MIDI Event Sequences - Playing ID</h1>
 <h1><a class="anchor" id="soundengine_midi_update_sequence"></a>
 Updating MIDI Sequences</h1>
 <p>It is important that each a MIDI sequence be played by the sound engine at the exact time intended by the application. There are two ways a MIDI sequence may be posted to the sound engine.</p>
-<p>If the entire MIDI sequence is known, and it is known that the timing of the MIDI sequence will not change, then the entire MIDI sequence may be posted with one call to <a class="el" href="namespace_a_k_1_1_sound_engine_ab24b5dc8bd4d1adbdc6aa5c98d94d946.html#ab24b5dc8bd4d1adbdc6aa5c98d94d946">AK::SoundEngine::PostMIDIOnEvent</a>.</p>
-<p>However if that is not the case, then the MIDI sequence will have to be updated at each frame. The <a class="el" href="namespace_a_k_1_1_sound_engine_ab24b5dc8bd4d1adbdc6aa5c98d94d946.html#ab24b5dc8bd4d1adbdc6aa5c98d94d946">AK::SoundEngine::PostMIDIOnEvent</a> function may be called at any moment, and anywhere in the application. However, calling this function in a thread other than the main audio thread may lead to synchronization issues. Calls to <a class="el" href="namespace_a_k_1_1_sound_engine_ab24b5dc8bd4d1adbdc6aa5c98d94d946.html#ab24b5dc8bd4d1adbdc6aa5c98d94d946">AK::SoundEngine::PostMIDIOnEvent</a> only post the events in the sound engine's message queue. The message queue is processed during a call to <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a>, and such a call may lead to any number of processed audio frames. To ensure proper synchronization, it is recommended that the application register a global callback function as follows:</p>
+<p>If the entire MIDI sequence is known, and it is known that the timing of the MIDI sequence will not change, then the entire MIDI sequence may be posted with one call to AK::SoundEngine::PostMIDIOnEvent.</p>
+<p>However if that is not the case, then the MIDI sequence will have to be updated at each frame. The AK::SoundEngine::PostMIDIOnEvent function may be called at any moment, and anywhere in the application. However, calling this function in a thread other than the main audio thread may lead to synchronization issues. Calls to AK::SoundEngine::PostMIDIOnEvent only post the events in the sound engine's message queue. The message queue is processed during a call to AK::SoundEngine::RenderAudio, and such a call may lead to any number of processed audio frames. To ensure proper synchronization, it is recommended that the application register a global callback function as follows:</p>
 <ul>
 <li>AK::SoundEngine::RegisterGlobalCallback( &amp;MyCallbackFunction, AkGlobalCallbackLocation_PreProcessMessageQueueForRender );</li>
 </ul>
 <p>The registered function will be called by the sound engine at each audio frame. The application can use the callback function to keep track of audio frames processed by the sound engine. Thus, posting MIDI events in the callback function will ensure proper synchronization.</p>
 <h1><a class="anchor" id="soundengine_midi_stop"></a>
 Stopping a MIDI Sequence</h1>
-<p>Call the <a class="el" href="namespace_a_k_1_1_sound_engine_acce4adb3c2bbd018ef375c85379949e3.html#acce4adb3c2bbd018ef375c85379949e3">AK::SoundEngine::StopMIDIOnEvent</a> "StopMIDIOnEvent" function to stop a MIDI sequence. The function accepts a Playing ID, an Event ID and a Game Object ID as parameters. Any of these parameters can be set to their invalid values to act as wild cards. Thus, if all arguments are set to invalid then all MIDI sequences are stopped.</p>
+<p>Call the AK::SoundEngine::StopMIDIOnEvent "StopMIDIOnEvent" function to stop a MIDI sequence. The function accepts a Playing ID, an Event ID and a Game Object ID as parameters. Any of these parameters can be set to their invalid values to act as wild cards. Thus, if all arguments are set to invalid then all MIDI sequences are stopped.</p>
 <p>A call to this function will clear the MIDI sequence(s) and stop any playing sounds.</p>
 <p>For examples of integrating MIDI, refer to <a class="el" href="quickstart_sample_integration_midi.html">Quick Start Sample Integration - MIDI</a>. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

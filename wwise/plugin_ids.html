@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -67,7 +67,7 @@
 <p>The packed 32-bit class ID is put together like this: <code>Plug-in ID + Company ID + Plug-in Type == Packed 32-bit Class ID</code>. So, in a case where the Plug-in ID is 1, the Company ID is 0, and the Plug-in Type is 1, then the Packed 32-bit Class ID is 0x00010001.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The Company ID used for all Audiokinetic plug-ins (Conversion, Source, and Effect plug-ins) is 0, as defined by <code>AKCOMPANYID_AUDIOKINETIC</code> in <a class="el" href="_platforms_2_windows_2_ak_types_8h.html">AkTypes.h</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The Company ID used for all Audiokinetic plug-ins (Conversion, Source, and Effect plug-ins) is 0, as defined by <code>AKCOMPANYID_AUDIOKINETIC</code> in AkTypes.h. </td></tr>
 </table>
 <h1><a class="anchor" id="plugin_ids_examples"></a>
 Example</h1>
@@ -81,10 +81,11 @@ Example</h1>
 <div class="line">  &lt;EffectPlugin Name=<span class="stringliteral">&quot;FictionalDelay&quot;</span> CompanyID=<span class="stringliteral">&quot;72&quot;</span> PluginID=<span class="stringliteral">&quot;5&quot;</span>&gt;</div>
 <div class="line">     ...</div>
 </div><!-- fragment --><p><b>Plugin Factory:</b> </p><div class="fragment"><div class="line">...</div>
-<div class="line">AK_IMPLEMENT_PLUGIN_FACTORY(FictionalDelayFX, <a class="code" href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d">AkPluginTypeEffect</a>, 72, 5)</div>
+<div class="line">AK_IMPLEMENT_PLUGIN_FACTORY(FictionalDelayFX, AkPluginTypeEffect, 72, 5)</div>
 <div class="line">...</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="a_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c_html_a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d"><div class="ttname"><a href="_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c.html#a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d">AkPluginTypeEffect</a></div><div class="ttdeci">@ AkPluginTypeEffect</div><div class="ttdoc">Effect plug-in: applies processing to audio data.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l01253">AkTypes.h:1253</a></div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a1a77eb101e82e7d712f25e2a6394ac4c_html_a1a77eb101e82e7d712f25e2a6394ac4ca2971cc4c818bf62c55175445d2be117d"><div class="ttname">AkPluginTypeEffect</div><div class="ttdeci">@ AkPluginTypeEffect</div><div class="ttdoc">Effect plug-in: applies processing to audio data.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:1253</div></div>
 </body>
 </html>
+

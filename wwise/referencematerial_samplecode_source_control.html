@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -57,7 +57,7 @@ Perforce Source Control Sample Plug-in</h1>
 How to build the Perforce Source Control Sample Plug-in</h2>
 <p>Before you can build the Perforce plug-in for Wwise, you will need to install the Perforce C++ API and OpenSSL files, and place them at the correct location:</p>
 <ol type="1">
-<li>Download the <em>Helix Core C/C++ API</em> for Windows (x64) libraries from the <a href="https://ftp.perforce.com/perforce/r23.1/bin.ntx64/" target="_blank">Perforce FTP</a>. The version used to build the plug-in included with Wwise is <a href="https://ftp.perforce.com/perforce/r23.1/bin.ntx64/p4api_vs2019_static_openssl3.zip" target="_blank">p4api_vs2019_static_openssl3.zip</a> (version <code>2023.1/2468153</code>).</li>
+<li>Download the <em>Helix Core C/C++ API</em> for Windows (x64) libraries from the Perforce FTP. The version used to build the plug-in included with Wwise is p4api_vs2019_static_openssl3.zip (version <code>2023.1/2468153</code>).</li>
 <li>Create the following directory: "[Wwise Installation Root]/Authoring/source/3rdParty/Perforce/windows"</li>
 <li>Extract the content of <code>p4api-&lt;version&gt;-&lt;configuration&gt;/lib</code> to: <code>[Wwise Installation Root]/Authoring/source/3rdParty/Perforce/windows/lib</code></li>
 <li>Extract the content of <code>p4api-&lt;version&gt;-&lt;configuration&gt;/include</code> to: <code>[Wwise Installation Root]/Authoring/source/3rdParty/Perforce/windows/include</code></li>
@@ -67,7 +67,7 @@ How to build the Perforce Source Control Sample Plug-in</h2>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The Helix C/C++ API archive contains only release libraries. For this reason, a debug build of the plug-in uses the release CRT library and (<code>DEBUG</code>, <code>_DEBUG</code>) are not defined. </td></tr>
 </table>
 <ol type="1">
-<li>Download the <em>OpenSSL 3.1.1 binaries and libraries</em> Windows (x64) from <a href="https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.1.1.zip" target="_blank">https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.1.1.zip</a>. Current version is OpenSSL 3.1.1 (git commit <code>openssl-3.1.1-0-g2cf4e90eaa</code>).</li>
+<li>Download the <em>OpenSSL 3.1.1 binaries and libraries</em> Windows (x64) from https://download.firedaemon.com/FireDaemon-OpenSSL/openssl-3.1.1.zip. Current version is OpenSSL 3.1.1 (git commit <code>openssl-3.1.1-0-g2cf4e90eaa</code>).</li>
 <li>Extract the binaries (<code>libcrypto-3-x64.dll</code>, <code>libssl-3-x64.dll</code>) to: <code>[Wwise Installation Root]\Authoring\source\3rdParty\OpenSSL\bin</code></li>
 <li>Extract the libraries (<code>libcrypto.lib</code>, <code>libssl.lib</code>) to: <code>[Wwise Installation Root]\Authoring\source\3rdParty\OpenSSL\lib</code></li>
 </ol>
@@ -95,3 +95,4 @@ How to build the Subversion Source Control Sample Plug-in</h2>
 </div><!-- PageDoc -->
 </body>
 </html>
+

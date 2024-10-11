@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -45,22 +45,22 @@ Properties Element</h1>
 <li>The references correspond to fields containing a reference to a Wwise object. For example, a reference could point to a Game Parameter object defined in the project.</li>
 </ul>
 <p>A <code>Property</code> is typically defined as follows:</p>
-<div class="fragment"><div class="line">&lt;Property Name=<span class="stringliteral">&quot;GainBand1&quot;</span> <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;Real32&quot;</span> SupportRTPCType=<span class="stringliteral">&quot;Exclusive&quot;</span> DataMeaning=<span class="stringliteral">&quot;Decibels&quot;</span> DisplayName=<span class="stringliteral">&quot;Band 1 Gain&quot;</span>&gt;</div>
+<div class="fragment"><div class="line">&lt;Property Name=<span class="stringliteral">&quot;GainBand1&quot;</span> Type=<span class="stringliteral">&quot;Real32&quot;</span> SupportRTPCType=<span class="stringliteral">&quot;Exclusive&quot;</span> DataMeaning=<span class="stringliteral">&quot;Decibels&quot;</span> DisplayName=<span class="stringliteral">&quot;Band 1 Gain&quot;</span>&gt;</div>
 <div class="line">    &lt;UserInterface Step=<span class="stringliteral">&quot;0.5&quot;</span> Fine=<span class="stringliteral">&quot;0.1&quot;</span> Decimals=<span class="stringliteral">&quot;1&quot;</span> /&gt;</div>
 <div class="line">    &lt;DefaultValue&gt;0&lt;/DefaultValue&gt;</div>
 <div class="line">    &lt;AudioEnginePropertyID&gt;1&lt;/AudioEnginePropertyID&gt;</div>
 <div class="line">    &lt;Restrictions&gt;</div>
 <div class="line">        &lt;ValueRestriction&gt;</div>
-<div class="line">            &lt;Range <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;Real32&quot;</span>&gt;</div>
-<div class="line">                &lt;<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>&gt;-24&lt;/<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>&gt;</div>
-<div class="line">                &lt;<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>&gt;24&lt;/<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>&gt;</div>
+<div class="line">            &lt;Range Type=<span class="stringliteral">&quot;Real32&quot;</span>&gt;</div>
+<div class="line">                &lt;Min&gt;-24&lt;/Min&gt;</div>
+<div class="line">                &lt;Max&gt;24&lt;/Max&gt;</div>
 <div class="line">            &lt;/Range&gt;</div>
 <div class="line">        &lt;/ValueRestriction&gt;</div>
 <div class="line">    &lt;/Restrictions&gt;</div>
 <div class="line">    &lt;Dependencies&gt;</div>
 <div class="line">        &lt;PropertyDependency Name=<span class="stringliteral">&quot;OnOffBand1&quot;</span> Action=<span class="stringliteral">&quot;Enable&quot;</span>&gt;</div>
 <div class="line">            &lt;Condition&gt;</div>
-<div class="line">                &lt;Enumeration <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;bool&quot;</span>&gt;</div>
+<div class="line">                &lt;Enumeration Type=<span class="stringliteral">&quot;bool&quot;</span>&gt;</div>
 <div class="line">                    &lt;Value&gt;1&lt;/Value&gt;</div>
 <div class="line">                &lt;/Enumeration&gt;</div>
 <div class="line">            &lt;/Condition&gt;</div>
@@ -71,7 +71,7 @@ Properties Element</h1>
 <div class="fragment"><div class="line">&lt;Reference Name=<span class="stringliteral">&quot;OutputGameParameter&quot;</span> DisplayName=<span class="stringliteral">&quot;Output Game Parameter&quot;</span>&gt;</div>
 <div class="line">    &lt;Restrictions&gt;</div>
 <div class="line">        &lt;TypeEnumerationRestriction&gt;</div>
-<div class="line">            &lt;<a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a> Name=<span class="stringliteral">&quot;GameParameter&quot;</span> /&gt;</div>
+<div class="line">            &lt;Type Name=<span class="stringliteral">&quot;GameParameter&quot;</span> /&gt;</div>
 <div class="line">        &lt;/TypeEnumerationRestriction&gt;</div>
 <div class="line">    &lt;/Restrictions&gt;</div>
 <div class="line">&lt;/Reference&gt;</div>
@@ -91,9 +91,9 @@ in_szPropertyName parameter in: <ul>
 <li>
 <code>AK::Wwise::Plugin::NotificationsPropertySet::NotifyPropertyChanged()</code>  </li>
 <li>
-<code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_property_display_name_a7e2d1eb64f740de7921fc3d793dc4f37.html#a7e2d1eb64f740de7921fc3d793dc4f37" title="Gets the user-friendly name of the specified property.">AK::Wwise::Plugin::PropertyDisplayName::DisplayNameForProp()</a></code>  </li>
+<code>AK::Wwise::Plugin::PropertyDisplayName::DisplayNameForProp()</code>  </li>
 <li>
-<code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_property_display_name_a2d1788ed6ead7d8d9d38b16ff0c868a9.html#a2d1788ed6ead7d8d9d38b16ff0c868a9" title="Get the user-friendly names of possible values for the specified property.">AK::Wwise::Plugin::PropertyDisplayName::DisplayNamesForPropValues()</a></code>  </li>
+<code>AK::Wwise::Plugin::PropertyDisplayName::DisplayNamesForPropValues()</code>  </li>
 </ul>
 </li>
 </ul>
@@ -107,7 +107,7 @@ in_szPropertyName parameter in: <ul>
 </table>
 </li>
 <li>
-<code>DisplayName [Property, Reference]</code> (<b>type:</b> string, <b>default:</b> empty): Defines the display name of the Property, to be displayed at many places in Wwise. This attribute supersedes the function <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_property_display_name_a7e2d1eb64f740de7921fc3d793dc4f37.html#a7e2d1eb64f740de7921fc3d793dc4f37" title="Gets the user-friendly name of the specified property.">AK::Wwise::Plugin::PropertyDisplayName::DisplayNameForProp</a></code>.  </li>
+<code>DisplayName [Property, Reference]</code> (<b>type:</b> string, <b>default:</b> empty): Defines the display name of the Property, to be displayed at many places in Wwise. This attribute supersedes the function <code>AK::Wwise::Plugin::PropertyDisplayName::DisplayNameForProp</code>.  </li>
 <li>
 <code>DisplayGroup [Property, Reference]</code> (<b>type:</b> string, <b>default:</b> empty): Defines a slash separated path used to organize properties or references in a Tree. Ex: "Audio/HDR" </li>
 <li>
@@ -135,7 +135,7 @@ in_szPropertyName parameter in: <ul>
 <li>
 <code>string:</code> UTF-8, null-terminated character string </li>
 </ul>
-<p>Plug-ins write properties to SoundBanks using the <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a32526a23215a4452f561220b527e12f8.html#a32526a23215a4452f561220b527e12f8" title="Latest version of the C++ DataWriter interface.">AK::Wwise::Plugin::DataWriter</a></code> service, which supports writing any of the types listed above. Strings are serialized as null-terminated UTF-8 c-strings. Bool values are serialized as 1-byte values, where 1 stands for true and 0 for false. <br  />
+<p>Plug-ins write properties to SoundBanks using the <code>AK::Wwise::Plugin::DataWriter</code> service, which supports writing any of the types listed above. Strings are serialized as null-terminated UTF-8 c-strings. Bool values are serialized as 1-byte values, where 1 stands for true and 0 for false. <br  />
  In the case of custom properties added to a Wwise project, the values supported in SoundBanks are restricted to: </p><ul>
 <li>
 <code>int32:</code> 32-bit integer </li>
@@ -246,23 +246,23 @@ UserInterface</h1>
 </table>
 <h1><a class="anchor" id="wwiseplugin_xml_restrictions"></a>
 Restrictions</h1>
-<p>The Wwise XML descriptions can specify <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_restrictions_properties">Property Restrictions</a> and <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_restrictions_references">Reference Restrictions</a>.</p>
+<p>The Wwise XML descriptions can specify Property Restrictions and Reference Restrictions.</p>
 <h2><a class="anchor" id="wwiseplugin_xml_restrictions_properties"></a>
 Property Restrictions</h2>
 <p>A property can optionally have any of the two following restrictions for its data values.</p>
 <p>In a <code>Range</code> restriction (Restrictions/ValueRestriction/Range section), you can define the range of numeric properties.</p>
 <div class="fragment"><div class="line">&lt;Restrictions&gt;</div>
 <div class="line">    &lt;ValueRestriction&gt;</div>
-<div class="line">        &lt;Range <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;Real64&quot;</span>&gt;</div>
-<div class="line">            &lt;<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>&gt;0&lt;/<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>&gt;</div>
-<div class="line">            &lt;<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>&gt;100&lt;/<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>&gt;</div>
+<div class="line">        &lt;Range Type=<span class="stringliteral">&quot;Real64&quot;</span>&gt;</div>
+<div class="line">            &lt;Min&gt;0&lt;/Min&gt;</div>
+<div class="line">            &lt;Max&gt;100&lt;/Max&gt;</div>
 <div class="line">        &lt;/Range&gt;</div>
 <div class="line">    &lt;/ValueRestriction&gt;</div>
 <div class="line">&lt;/Restrictions&gt;</div>
 </div><!-- fragment --><p>In an <code>Enumeration</code> restriction (Restrictions/ValueRestriction/Enumeration section), you can define a list of possible values and the display name for each one.</p>
 <div class="fragment"><div class="line">&lt;Restrictions&gt;</div>
 <div class="line">    &lt;ValueRestriction&gt;</div>
-<div class="line">        &lt;Enumeration <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;int32&quot;</span>&gt;</div>
+<div class="line">        &lt;Enumeration Type=<span class="stringliteral">&quot;int32&quot;</span>&gt;</div>
 <div class="line">            &lt;Value DisplayName=<span class="stringliteral">&quot;Low Pass&quot;</span>&gt;0&lt;/Value&gt;</div>
 <div class="line">            &lt;Value DisplayName=<span class="stringliteral">&quot;High Pass&quot;</span>&gt;1&lt;/Value&gt;</div>
 <div class="line">            &lt;Value DisplayName=<span class="stringliteral">&quot;Band Pass&quot;</span>&gt;2&lt;/Value&gt;</div>
@@ -280,7 +280,7 @@ Reference Restrictions</h2>
 <p>A reference can optionally have a list of any of the following restrictions for referenced objects:</p>
 <p><b>TypeEnumerationRestriction:</b> Defines a list of valid Wwise object types for the reference. </p><div class="fragment"><div class="line">&lt;Restrictions&gt;</div>
 <div class="line">    &lt;TypeEnumerationRestriction&gt;</div>
-<div class="line">        &lt;<a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a> Name=<span class="stringliteral">&quot;GameParameter&quot;</span> /&gt;</div>
+<div class="line">        &lt;Type Name=<span class="stringliteral">&quot;GameParameter&quot;</span> /&gt;</div>
 <div class="line">        ...</div>
 <div class="line">    &lt;/TypeEnumerationRestriction&gt;</div>
 <div class="line">&lt;/Restrictions&gt;</div>
@@ -316,7 +316,7 @@ Dependencies</h1>
 <div class="line">    &lt;Dependencies&gt;</div>
 <div class="line">        &lt;PropertyDependency Name=<span class="stringliteral">&quot;OnOffBand1&quot;</span> Action=<span class="stringliteral">&quot;Enable&quot;</span>&gt;</div>
 <div class="line">            &lt;Condition&gt;</div>
-<div class="line">                &lt;Enumeration <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;bool&quot;</span>&gt;</div>
+<div class="line">                &lt;Enumeration Type=<span class="stringliteral">&quot;bool&quot;</span>&gt;</div>
 <div class="line">                    &lt;Value&gt;True&lt;/Value&gt;</div>
 <div class="line">                &lt;/Enumeration&gt;</div>
 <div class="line">            &lt;/Condition&gt;</div>
@@ -325,14 +325,14 @@ Dependencies</h1>
 <div class="line">&lt;/Property&gt;</div>
 </div><!-- fragment --><p>The <code>Condition</code> element can either contain an <code>Enumeration</code> element or a <code>Range</code> element. The <code>Action</code> attribute specified in the <code>PropertyDependency</code> element must be "Enable". It specifies the property will be enabled when the condition is matching.</p>
 <p><code>Enumeration</code> condition:</p>
-<div class="fragment"><div class="line">&lt;Enumeration <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;int32&quot;</span>&gt;</div>
+<div class="fragment"><div class="line">&lt;Enumeration Type=<span class="stringliteral">&quot;int32&quot;</span>&gt;</div>
 <div class="line">    &lt;Value&gt;0&lt;/Value&gt;</div>
 <div class="line">    &lt;Value&gt;1&lt;/Value&gt;</div>
 <div class="line">&lt;/Enumeration&gt;</div>
 </div><!-- fragment --><p><code>Range</code> condition:</p>
-<div class="fragment"><div class="line">&lt;Range <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;Real32&quot;</span>&gt;</div>
-<div class="line">    &lt;<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>&gt;-24&lt;/<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>&gt;</div>
-<div class="line">    &lt;<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>&gt;24&lt;/<a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>&gt;</div>
+<div class="fragment"><div class="line">&lt;Range Type=<span class="stringliteral">&quot;Real32&quot;</span>&gt;</div>
+<div class="line">    &lt;Min&gt;-24&lt;/Min&gt;</div>
+<div class="line">    &lt;Max&gt;24&lt;/Max&gt;</div>
 <div class="line">&lt;/Range&gt;</div>
 </div><!-- fragment --><p>Additionally, a <code>Context</code> attribute can be specified on a <code>PropertyDependency</code> to change the object on which the <code>Condition</code> will be evaluated. The <code>Context</code> attribute can be set to either "Parent" or "Self", and defaults to "Self" when it is not explicitely given.</p>
 <p>Continuing from the previous example, adding a context to the <code>PropertyDependency</code> will cause the "GainBand1" property to be enabled when "OnOffBand1" is set to "True" <b>on the parent of the current object</b>.</p>
@@ -341,7 +341,7 @@ Dependencies</h1>
 <div class="line">    &lt;Dependencies&gt;</div>
 <div class="line">        &lt;PropertyDependency Name=<span class="stringliteral">&quot;OnOffBand1&quot;</span> Action=<span class="stringliteral">&quot;Enable&quot;</span> Context=<span class="stringliteral">&quot;Parent&quot;</span>&gt;</div>
 <div class="line">            &lt;Condition&gt;</div>
-<div class="line">                &lt;Enumeration <a class="code" href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">Type</a>=<span class="stringliteral">&quot;bool&quot;</span>&gt;</div>
+<div class="line">                &lt;Enumeration Type=<span class="stringliteral">&quot;bool&quot;</span>&gt;</div>
 <div class="line">                    &lt;Value&gt;True&lt;/Value&gt;</div>
 <div class="line">                &lt;/Enumeration&gt;</div>
 <div class="line">            &lt;/Condition&gt;</div>
@@ -350,8 +350,9 @@ Dependencies</h1>
 <div class="line">&lt;/Property&gt;</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c_html_a5cf5edb6e0760f5bd0ef29d98c322d9c"><div class="ttname"><a href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">AK::SpeakerVolumes::Vector::Max</a></div><div class="ttdeci">AkForceInline void Max(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get max for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_volumes_8h_source.html#l00126">AkSpeakerVolumes.h:126</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9_html_a94c6067317869a80ec86af6994a0ebd9"><div class="ttname"><a href="namespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9.html#a94c6067317869a80ec86af6994a0ebd9">AK::TempAlloc::Type</a></div><div class="ttdeci">Type</div><div class="ttdoc">IDs of temporary memory pools used by the sound engine.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_memory_mgr_8h_source.html#l00335">AkMemoryMgr.h:336</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2_html_a8661f38fe4c56e23ffd967dc427bcde2"><div class="ttname"><a href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">AK::SpeakerVolumes::Vector::Min</a></div><div class="ttdeci">AkForceInline void Min(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get min for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_volumes_8h_source.html#l00136">AkSpeakerVolumes.h:136</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c_html_a5cf5edb6e0760f5bd0ef29d98c322d9c"><div class="ttname">AK::SpeakerVolumes::Vector::Max</div><div class="ttdeci">AkForceInline void Max(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get max for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> AkSpeakerVolumes.h:126</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_temp_alloc_a94c6067317869a80ec86af6994a0ebd9_html_a94c6067317869a80ec86af6994a0ebd9"><div class="ttname">AK::TempAlloc::Type</div><div class="ttdeci">Type</div><div class="ttdoc">IDs of temporary memory pools used by the sound engine.</div><div class="ttdef"><b>Definition:</b> AkMemoryMgr.h:336</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2_html_a8661f38fe4c56e23ffd967dc427bcde2"><div class="ttname">AK::SpeakerVolumes::Vector::Min</div><div class="ttdeci">AkForceInline void Min(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get min for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> AkSpeakerVolumes.h:136</div></div>
 </body>
 </html>
+

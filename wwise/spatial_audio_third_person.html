@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -35,7 +35,7 @@
 <div class="contents">
 <div class="textblock"><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> For an introduction to working with listeners in third-person perspective applications, refer to <a class="el" href="soundengine_listeners.html#third_person_perspective">Working with Listeners in Third-Person Perspective Games</a>. This section elaborates with details pertaining specifically to Spatial Audio. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> For an introduction to working with listeners in third-person perspective applications, refer to Working with Listeners in Third-Person Perspective Games. This section elaborates with details pertaining specifically to Spatial Audio. </td></tr>
 </table>
 <p>When working with third-person perspective (TPP) experiences with Wwise Spatial Audio initialized, there are some special considerations.</p>
 <p>Wwise Spatial Audio performs sound propagation calculations using ray-based acoustic simulation techniques. In broad terms, we can think of Spatial Audio as solving for sound propagation paths between a sound emitter and a listener. A sound path may be subject to:</p><ul>
@@ -44,7 +44,7 @@
 <li>Transmission: passing through an object, surface, or room.</li>
 </ul>
 <p>In general, there are many paths between a single sound and a listener, and they are combined to produce the final rendered sound. For more general information on Spatial Audio, refer to <a class="el" href="spatial_audio.html">Spatial Audio</a>.</p>
-<p>In a TPP experience, it’s not uncommon to have discrepancy between what the camera experiences and what the character experiences. In such scenarios, it may be difficult or impossible to follow simple rules for rendering distance attenuation and filtering based on the Distance Probe and panning/spatialization based on the camera position. Calculations performed for acoustic simulation can be CPU intensive, and it’s not possible, nor desirable, to perform the simulation for both the Listener Game Object and the Distance Probe Game Object.</p>
+<p>In a TPP experience, itâ€™s not uncommon to have discrepancy between what the camera experiences and what the character experiences. In such scenarios, it may be difficult or impossible to follow simple rules for rendering distance attenuation and filtering based on the Distance Probe and panning/spatialization based on the camera position. Calculations performed for acoustic simulation can be CPU intensive, and itâ€™s not possible, nor desirable, to perform the simulation for both the Listener Game Object and the Distance Probe Game Object.</p>
 <p>It is however still possible to assign a Distance Probe to the Spatial Audio Listener. The general approach taken by Wwise Spatial Audio is to use the Listener position for the purpose of sound propagation calculations. The distance value passed to the sound engine is augmented to give results closer to what one would expect had the path been computed to the Distance Probe Game Object. The methods used to augment the distance value differ based on the type of path; more details on what that means for reflection, diffraction and transmission paths are provided in the following sections. This approach ensures that spatialization and panning are always true to the simulation and do not disrupt the player's sense of immersion. However, when the position of the Distance Probe and the position of the Listener are highly divergent, the attenuation value may give slightly unexpected results. In any case where Spatial Audio features are in use, but a path computation results in an unobstructed straight line, attenuation results are exactly as expected.</p>
 <p>The following sections describe in detail how the various Spatial Audio features operate when a Distance Probe is assigned to the Spatial Audio Listener.</p>
 <h1><a class="anchor" id="diffraction_virtual_position"></a>
@@ -73,17 +73,17 @@ Reflections</h1>
 <h1><a class="anchor" id="third_person_roomsandportals"></a>
 Rooms and Portals</h1>
 <p>The rooms and portals system, while also used for diffraction calculations for the dry signal path, is the primary method to spatialize reverberation. Spatialized reverb includes the wet signal path and can generally be thought of as either reverb output from a plug-in, or a room tone playing directly on the Room Game Object.</p><ul>
-<li>When the Listener is inside a room that’s excited by reverb or a room tone:<ul>
-<li>The reverb and/or room tone is omnidirectional. The sound field of the room is counter-rotated such that it remains fixed to the room orientation regardless of the Listener’s orientation.</li>
+<li>When the Listener is inside a room thatâ€™s excited by reverb or a room tone:<ul>
+<li>The reverb and/or room tone is omnidirectional. The sound field of the room is counter-rotated such that it remains fixed to the room orientation regardless of the Listenerâ€™s orientation.</li>
 <li>If the Distance Probe is also inside the room, the distance is evaluated as 0.</li>
 <li>If the Distance Probe is outside the room, then the distance between the room and the room extent bounding box is used to evaluate the attenuation curve. Refer to the following image demonstrating this scenario.</li>
 </ul>
 </li>
-<li>When the listener is outside a room that’s excited by reverb or a room tone:<ul>
+<li>When the listener is outside a room thatâ€™s excited by reverb or a room tone:<ul>
 <li>The sound from the room is spatialized according to the positions of the portals leading to the room.</li>
 <li>Each path leading from a portal to the room also has an associated virtual position. The virtual position is calculated so that the contribution from the portal is panned to match the angle of the path from the portal, incident with the listener.<ul>
-<li>If the Distance Probe is also outside the room, the distance between the Distance Probe and the portal’s virtual position is used for attenuation evaluation.</li>
-<li>If the Distance Probe is inside the room, then the distance to the portal’s virtual position is evaluated as 0.</li>
+<li>If the Distance Probe is also outside the room, the distance between the Distance Probe and the portalâ€™s virtual position is used for attenuation evaluation.</li>
+<li>If the Distance Probe is inside the room, then the distance to the portalâ€™s virtual position is evaluated as 0.</li>
 </ul>
 </li>
 <li>For the transmission path of the room, the rules are the same as when the Listener is inside the room (except in this case, a transmission loss is applied to the sound).<ul>
@@ -105,7 +105,7 @@ An Example Scenario</h2>
 <td width="50px"><div class="image">
 <img src="Callout1.png" alt=""/>
 </div>
- </td><td width="750px">Distance: Distance Probe to portal’s virtual position. This distance is used to evaluate the contribution of the portal.  </td></tr>
+ </td><td width="750px">Distance: Distance Probe to portalâ€™s virtual position. This distance is used to evaluate the contribution of the portal.  </td></tr>
 <tr>
 <td><div class="image">
 <img src="Callout2.png" alt=""/>
@@ -115,7 +115,7 @@ An Example Scenario</h2>
 <td><div class="image">
 <img src="Callout3.png" alt=""/>
 </div>
- </td><td>Direction: Listener to portal’s virtual position. This direction is used to pan the contribution of the portal.  </td></tr>
+ </td><td>Direction: Listener to portalâ€™s virtual position. This direction is used to pan the contribution of the portal.  </td></tr>
 <tr>
 <td><div class="image">
 <img src="Callout4.png" alt=""/>
@@ -128,3 +128,4 @@ An Example Scenario</h2>
 </div><!-- PageDoc -->
 </body>
 </html>
+

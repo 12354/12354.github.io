@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -40,9 +40,9 @@
 </table>
 <div platform="Windows" open="1"></div> <h1><a class="anchor" id="audio_output_windows"></a>
 Windows</h1>
-<p>By default on Windows, Wwise takes the system default device's configuration. You can override the default configuration by changing <code><a class="el" href="struct_ak_init_settings_a9c5254abf13a5c3bf60ddd27c48db4d7.html#a9c5254abf13a5c3bf60ddd27c48db4d7" title="Main output device settings.">AkInitSettings::settingsMainOutput</a></code> before calling <code><a class="el" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init()</a></code>.</p>
-<p>By default, Wwise outputs at a sample rate of 48 kHz. You can override this sample rate by setting <code><a class="el" href="struct_ak_platform_init_settings_a2bf6f000f256b146d6cd36401a234b85.html#a2bf6f000f256b146d6cd36401a234b85" title="Sampling Rate. Default is 48000 Hz. Use 24000hz for low quality. Any positive reasonable sample rate ...">AkPlatformInitSettings::uSampleRate</a></code> when calling <code><a class="el" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init()</a></code>.</p>
-<p>When <b>Allow 3D Audio</b> is enabled on the System Audio Device, Wwise can also output a 7.1.4 main mix, an optional stereo passthrough mix, and discrete Audio Objects. For more information on 3D Audio on Windows, see <a class="el" href="windows_specificinfo.html#Windows_Enabling_3DAudio">Enabling 3D Audio</a>.</p>
+<p>By default on Windows, Wwise takes the system default device's configuration. You can override the default configuration by changing <code>AkInitSettings::settingsMainOutput</code> before calling <code>AK::SoundEngine::Init()</code>.</p>
+<p>By default, Wwise outputs at a sample rate of 48 kHz. You can override this sample rate by setting <code>AkPlatformInitSettings::uSampleRate</code> when calling <code>AK::SoundEngine::Init()</code>.</p>
+<p>When <b>Allow 3D Audio</b> is enabled on the System Audio Device, Wwise can also output a 7.1.4 main mix, an optional stereo passthrough mix, and discrete Audio Objects. For more information on 3D Audio on Windows, see Enabling 3D Audio.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> To change the default device configuration on Windows:<ul>
@@ -61,3 +61,4 @@ Windows</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

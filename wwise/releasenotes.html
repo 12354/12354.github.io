@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -35,16 +35,16 @@
 <div class="contents">
 <div class="textblock"><p>The following sections list and describe the changes to Wwise between version 2022.1.8 and version 2023.1.<br  />
  Platform-specific information can be found here:</p>
-<div class="compact"> <div platform="Windows" open="1"></div><p> <a class="el" href="windows_releasenotes_2023_1.html">Windows 2023.1</a> </p><div platform="Windows" open="0"></div> </div><p>For earlier versions, please refer to <a class="el" href="previousreleases.html">Previous Release Notes</a>.</p>
+<div class="compact"> <div platform="Windows" open="1"></div><p> Windows 2023.1 </p><div platform="Windows" open="0"></div> </div><p>For earlier versions, please refer to <a class="el" href="previousreleases.html">Previous Release Notes</a>.</p>
 <ul>
-<li><a class="el" href="releasenotes.html#generic_feature_changes_2023_1">New Features</a></li>
-<li><a class="el" href="releasenotes.html#generic_api_changes_2023_1">API Changes</a></li>
-<li><a class="el" href="releasenotes.html#generic_behavior_changes_2023_1">Behavior Changes</a></li>
-<li><a class="el" href="releasenotes.html#generic_perf_changes_2023_1">Performance Changes</a></li>
-<li><a class="el" href="releasenotes.html#generic_misc_2023_1">Miscellaneous Changes</a></li>
-<li><a class="el" href="releasenotes.html#generic_bugs_2023_1">Bug Fixes</a></li>
-<li><a class="el" href="releasenotes.html#generic_community_bugs_2023_1">Fixes for Community-Reported Bugs</a></li>
-<li><a class="el" href="releasenotes.html#generic_post_beta_bugs_2023_1">Fixes since the Beta for Community-Reported Bugs</a></li>
+<li>New Features</li>
+<li>API Changes</li>
+<li>Behavior Changes</li>
+<li>Performance Changes</li>
+<li>Miscellaneous Changes</li>
+<li>Bug Fixes</li>
+<li>Fixes for Community-Reported Bugs</li>
+<li>Fixes since the Beta for Community-Reported Bugs</li>
 </ul>
 <h1><a class="anchor" id="generic_feature_changes_2023_1"></a>
 New Features</h1>
@@ -62,7 +62,7 @@ New Features</h1>
 <li><b>WG-58608</b> (WAAPI) Added source control API. Refer to <a class="el" href="ak_wwise_core_sourcecontrol_add.html">ak.wwise.core.sourceControl.add</a>, <a class="el" href="ak_wwise_core_sourcecontrol_checkout.html">ak.wwise.core.sourceControl.checkOut</a>, <a class="el" href="ak_wwise_core_sourcecontrol_commit.html">ak.wwise.core.sourceControl.commit</a>, <a class="el" href="ak_wwise_core_sourcecontrol_delete.html">ak.wwise.core.sourceControl.delete</a>, <a class="el" href="ak_wwise_core_sourcecontrol_getsourcefiles.html">ak.wwise.core.sourceControl.getSourceFiles</a>, <a class="el" href="ak_wwise_core_sourcecontrol_getstatus.html">ak.wwise.core.sourceControl.getStatus</a>, <a class="el" href="ak_wwise_core_sourcecontrol_move.html">ak.wwise.core.sourceControl.move</a>, <a class="el" href="ak_wwise_core_sourcecontrol_revert.html">ak.wwise.core.sourceControl.revert</a>, and <a class="el" href="ak_wwise_core_sourcecontrol_setprovider.html">ak.wwise.core.sourceControl.setProvider</a>.</li>
 <li><b>WG-58676</b> (WAAPI) Introduced a JSON anonymous object accessor in the return options to group properties by object.</li>
 <li><b>WG-59020</b> Steering panner can now output to ambisonic busses.</li>
-<li><b>WG-59482</b> (Spatial Audio) The Wwise Spatial Audio library can now perform room containment calculations internally. Previously, it was necessary for you to assign a Game Object to a Room using the <code><a class="el" href="namespace_a_k_1_1_spatial_audio_a3f080206f12c04b3464838cb18c43f4e.html#a3f080206f12c04b3464838cb18c43f4e">AK::SpatialAudio::SetGameObjectInRoom</a></code> API. Now, this containment calculation can be performed automatically as long as each Room is assigned geometry using the <code><a class="el" href="struct_ak_room_params_ac63a7f55f7bf863dde9af7e3e3a69758.html#ac63a7f55f7bf863dde9af7e3e3a69758">AkRoomParams::GeometryInstanceID</a></code>. If you want to override the internal Room containment calculation, call <code><a class="el" href="namespace_a_k_1_1_spatial_audio_a3f080206f12c04b3464838cb18c43f4e.html#a3f080206f12c04b3464838cb18c43f4e">AK::SpatialAudio::SetGameObjectInRoom</a></code>, and Wwise will cease to update the Room automatically for the specified Game Object. You can then call <code><a class="el" href="namespace_a_k_1_1_spatial_audio_a63a469a6dfb61ecc4883607720f1e448.html#a63a469a6dfb61ecc4883607720f1e448">AK::SpatialAudio::UnsetGameObjectInRoom</a></code> to resume internal Room containment calculation. A new member, <code><a class="el" href="struct_ak_room_params_a24b5d2a60d64316231ee7c82daa454d8.html#a24b5d2a60d64316231ee7c82daa454d8">AkRoomParams::RoomPriority</a></code>, has been added to <code><a class="el" href="struct_ak_room_params.html" title="Parameters passed to SetRoom.">AkRoomParams</a></code>. It is used by the internal Room containment algorithm to determine which Room to assign to a Game Object when it is physically located inside two Rooms (for example, a Room inside another Room). In this case, the room with the higher priority is assigned.</li>
+<li><b>WG-59482</b> (Spatial Audio) The Wwise Spatial Audio library can now perform room containment calculations internally. Previously, it was necessary for you to assign a Game Object to a Room using the <code>AK::SpatialAudio::SetGameObjectInRoom</code> API. Now, this containment calculation can be performed automatically as long as each Room is assigned geometry using the <code>AkRoomParams::GeometryInstanceID</code>. If you want to override the internal Room containment calculation, call <code>AK::SpatialAudio::SetGameObjectInRoom</code>, and Wwise will cease to update the Room automatically for the specified Game Object. You can then call <code>AK::SpatialAudio::UnsetGameObjectInRoom</code> to resume internal Room containment calculation. A new member, <code>AkRoomParams::RoomPriority</code>, has been added to <code><a class="el" href="struct_ak_room_params.html" title="Parameters passed to SetRoom.">AkRoomParams</a></code>. It is used by the internal Room containment algorithm to determine which Room to assign to a Game Object when it is physically located inside two Rooms (for example, a Room inside another Room). In this case, the room with the higher priority is assigned.</li>
 <li><b>WG-59684</b> Clicking the Display options button in the Capture Log, Audio Object 3D Viewer, and Game Object 3D Viewer now opens the options in a separate view.</li>
 <li><b>WG-60166</b> (WAAPI) Added support in return options to chain several accessors that return multiple objects. For example, children.name</li>
 <li><b>WG-60274</b> (WAAPI) Improved the user experience when using source control with WAAPI.</li>
@@ -92,7 +92,7 @@ New Features</h1>
 <li><b>WG-63574</b> Added information to the Project Migration dialog to support source control during migration.</li>
 <li><b>WG-64050</b> (Spatial Audio) Reflections can now propagate seamlessly through portals. Reflections might occur on either side of a portal, as well as in intermediate rooms between two portals.</li>
 <li><b>WG-64094</b> (WAAPI) Added support for retrieving the Streamed Media information from profiling data.</li>
-<li><b>WG-64095</b> (Spatial Audio) The new Reverb Zones feature allows you to assign a distinct reverb effect to a specified region inside a Room. A Reverb Zone is a new type of Room, allowing for sound propagation between Rooms without the need for portals. Reverb Zones are particularly useful for spaces not easily delineated by walls, such as covered areas, balconies, and various outdoor environments. Two new API functions have been added to manage Reverb Zones: <code><a class="el" href="namespace_a_k_1_1_spatial_audio_af57f04a0250faecc0246cf0552c03ca6.html#af57f04a0250faecc0246cf0552c03ca6">AK::SpatialAudio::SetReverbZone</a></code> and <code><a class="el" href="namespace_a_k_1_1_spatial_audio_abc3f56c19b125967645dcdfc4082b15a.html#abc3f56c19b125967645dcdfc4082b15a">AK::SpatialAudio::RemoveReverbZone</a></code>.</li>
+<li><b>WG-64095</b> (Spatial Audio) The new Reverb Zones feature allows you to assign a distinct reverb effect to a specified region inside a Room. A Reverb Zone is a new type of Room, allowing for sound propagation between Rooms without the need for portals. Reverb Zones are particularly useful for spaces not easily delineated by walls, such as covered areas, balconies, and various outdoor environments. Two new API functions have been added to manage Reverb Zones: <code>AK::SpatialAudio::SetReverbZone</code> and <code>AK::SpatialAudio::RemoveReverbZone</code>.</li>
 <li><b>WG-64118</b> (WAAPI) Added the following new functions related to mute/solo:<ul>
 <li>ak.wwise.core.audio.mute</li>
 <li>ak.wwise.core.audio.solo</li>
@@ -108,7 +108,7 @@ New Features</h1>
 <li><b>WG-64882</b> Height channels now get 3D spatialized instead of being dropped.</li>
 <li><b>WG-65095</b> Loudness Normalization is now more configurable: a loudness target can be set (with a default value of -23 corresponding to the target from prior releases), and it is now possible to normalize based on the Momentary Max value instead of Integrated, which is usually a better fit for short sound effects. The measured loudness values are also now available as columns in the List View and can be queried using WAAPI and WAQL.</li>
 <li><b>WG-65100</b> Added four User Layouts so you can create custom layouts to suit your workflows.</li>
-<li><b>WG-65118</b> Added GetProjectLicenseID to the <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_af6f9dc5d367c3383c37f96fe9e1b943f.html#af6f9dc5d367c3383c37f96fe9e1b943f" title="Latest version of the C++ Host interface.">AK::Wwise::Plugin::Host</a></code> service, which has been updated to version 2.</li>
+<li><b>WG-65118</b> Added GetProjectLicenseID to the <code>AK::Wwise::Plugin::Host</code> service, which has been updated to version 2.</li>
 <li><b>WG-65177</b> Clicking or dragging anywhere in the Source Editor's timeline ruler now sets the play cursor time. When dragging the cursor, the time is displayed in a tooltip.</li>
 <li><b>WG-65191</b> When using the Recorder Effect in Wwise Authoring, you can now include "%s" in the <b>Authoring Tool Output Path</b> to add a date and time string to the filename. With this, each invocation of the Recorder Effect creates a new file, instead of reusing the same filename and overwriting the contents.</li>
 <li><b>WG-65226</b> Added an option to display transition zones in the 3D viewer.</li>
@@ -118,34 +118,34 @@ New Features</h1>
 <li><b>WG-66562</b> Added support for Effect lists in the Multi Editor.</li>
 <li><b>WG-66725</b> In Wwise Project Settings, you can now specify the line ending (LF vs. CRLF) applied when saving project and SoundBank files.</li>
 <li><b>WG-67403</b> You can now open the Attenuation Editor from the Positioning tab of the Property Editor even when <b>Override parent</b> is not selected.</li>
-<li><b>WG-67559</b> Added the experimental Live Media Transfer feature. Refer to <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=user_preferences" target="blank">User Preferences</a> for details on enabling it.</li>
+<li><b>WG-67559</b> Added the experimental Live Media Transfer feature. Refer to User Preferences for details on enabling it.</li>
 </ul>
 <h1><a class="anchor" id="generic_api_changes_2023_1"></a>
 API Changes</h1>
 <ul>
 <li><b>WG-53660</b> Sound Engine nodes (audio, bus, and output device) now support up to 255 Effects. You can use the following functions to set an Effect on slots 0-254 (parameter in_uFXIndex):<ul>
-<li><code><a class="el" href="namespace_a_k_1_1_sound_engine_a00256bfd86c2bed14c626922fc4417b0.html#a00256bfd86c2bed14c626922fc4417b0">AK::SoundEngine::SetActorMixerEffect</a></code></li>
-<li><code><a class="el" href="namespace_a_k_1_1_sound_engine_aabbeadd26d528e82003a0c143908d825.html#aabbeadd26d528e82003a0c143908d825">AK::SoundEngine::SetBusEffect</a></code></li>
-<li><code><a class="el" href="namespace_a_k_1_1_sound_engine_ad455f291883c352a87b5b03da64549aa.html#ad455f291883c352a87b5b03da64549aa">AK::SoundEngine::SetOutputDeviceEffect</a></code></li>
+<li><code>AK::SoundEngine::SetActorMixerEffect</code></li>
+<li><code>AK::SoundEngine::SetBusEffect</code></li>
+<li><code>AK::SoundEngine::SetOutputDeviceEffect</code></li>
 </ul>
 </li>
 <li><b>WG-61084</b> Removed <code>IAkMixerInputContext</code> from <code><a class="el" href="struct_ak_speaker_volume_matrix_callback_info.html">AkSpeakerVolumeMatrixCallbackInfo</a></code> due to the Mixer plug-in removal.</li>
 <li><b>WG-61344</b> Removed the AK_SCHEDULER_BLOCKING scheduler type flag and the related IAkIOHookBlocking interface. IAkIOHookDeferredBatch is now the only low-level I/O hook interface.</li>
 <li><b>WG-62665</b> Moved function <code>OutputSearchedPaths</code> from <code><a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_file_location_resolver.html">AK::StreamMgr::IAkFileLocationResolver</a></code> to <code><a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook.html">AK::StreamMgr::IAkLowLevelIOHook</a></code>.</li>
 <li><b>WG-63463</b> Corrected typo in error code name "AK_CannotAddItseflAsAChild."</li>
-<li><b>WG-63988</b> Changed the return value of <code><a class="el" href="namespace_a_k_1_1_spatial_audio_1_1_reverb_estimation_a2be1de76cd8b9ddf95217f06b02ebad6.html#a2be1de76cd8b9ddf95217f06b02ebad6">EstimateHFDamping()</a></code> from AKRESULT to AkReal32 and it now directly returns the HF Damping value. Removed the argument __ AkReal32 out_hfDamping.</li>
-<li><b>WG-64048</b> (Spatial Audio) Added <code><a class="el" href="struct_ak_spatial_audio_init_settings_a733e7d1ef6c4bf44af5bd55369ab4a3f.html#a733e7d1ef6c4bf44af5bd55369ab4a3f">AkSpatialAudioInitSettings::uMaxEmitterRoomAuxSends</a></code> to limit the maximum number of game-defined auxiliary sends that can originate from a single emitter.</li>
-<li><b>WG-64966</b> Removed <code>AkMemSettings::bUseDeviceMemAlways</code> in favor of a new setting, <code><a class="el" href="struct_ak_mem_settings_aee1166e37273a008f881351dc184f2de.html#aee1166e37273a008f881351dc184f2de" title="Enable use of device memory heap for all allocations (on applicable platforms).">AkMemSettings::bEnableSeparateDeviceHeap</a></code>. <code><a class="el" href="struct_ak_mem_settings_aee1166e37273a008f881351dc184f2de.html#aee1166e37273a008f881351dc184f2de" title="Enable use of device memory heap for all allocations (on applicable platforms).">AkMemSettings::bEnableSeparateDeviceHeap</a></code> makes it easier to use just one generic memory heap. If you had <code>AkMemSettings::bUseDeviceMemAlways</code> set to true, you should instead set <code><a class="el" href="struct_ak_mem_settings_aee1166e37273a008f881351dc184f2de.html#aee1166e37273a008f881351dc184f2de" title="Enable use of device memory heap for all allocations (on applicable platforms).">AkMemSettings::bEnableSeparateDeviceHeap</a></code> to false, and the custom memory hooks you had set for <code>AkMemSettings::AllocDeviceVM</code> and <code>AkMemSettings::FreeDeviceVM</code> should instead be set for <code>AkMemSettings::AllocVM</code> and <code>AkMemSettings::FreeVM</code>.</li>
-<li><b>WG-65130</b> (Spatial Audio) Removed <code>AkGeometryParams::EnableTriangles</code> and replaced it with <code><a class="el" href="struct_ak_geometry_instance_params_a30ef95f856b020642d4a45d43c3df86d.html#a30ef95f856b020642d4a45d43c3df86d">AkGeometryInstanceParams::UseForReflectionAndDiffraction</a></code>.</li>
+<li><b>WG-63988</b> Changed the return value of <code>EstimateHFDamping()</code> from AKRESULT to AkReal32 and it now directly returns the HF Damping value. Removed the argument __ AkReal32 out_hfDamping.</li>
+<li><b>WG-64048</b> (Spatial Audio) Added <code>AkSpatialAudioInitSettings::uMaxEmitterRoomAuxSends</code> to limit the maximum number of game-defined auxiliary sends that can originate from a single emitter.</li>
+<li><b>WG-64966</b> Removed <code>AkMemSettings::bUseDeviceMemAlways</code> in favor of a new setting, <code>AkMemSettings::bEnableSeparateDeviceHeap</code>. <code>AkMemSettings::bEnableSeparateDeviceHeap</code> makes it easier to use just one generic memory heap. If you had <code>AkMemSettings::bUseDeviceMemAlways</code> set to true, you should instead set <code>AkMemSettings::bEnableSeparateDeviceHeap</code> to false, and the custom memory hooks you had set for <code>AkMemSettings::AllocDeviceVM</code> and <code>AkMemSettings::FreeDeviceVM</code> should instead be set for <code>AkMemSettings::AllocVM</code> and <code>AkMemSettings::FreeVM</code>.</li>
+<li><b>WG-65130</b> (Spatial Audio) Removed <code>AkGeometryParams::EnableTriangles</code> and replaced it with <code>AkGeometryInstanceParams::UseForReflectionAndDiffraction</code>.</li>
 <li><b>WG-65303</b> Simplified <code><a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook.html">AK::StreamMgr::IAkLowLevelIOHook</a></code> interface:<ul>
 <li>I/O functions no longer have to provide a return value.</li>
 <li>Callbacks now only have to be fired for each individual operation and must always be called without exception.</li>
 </ul>
 </li>
 <li><b>WG-65602</b> (Spatial Audio) Changed the default values of <a class="el" href="struct_ak_spatial_audio_init_settings.html" title="Initialization settings of the spatial audio module.">AkSpatialAudioInitSettings</a> to support the ongoing evolution of Spatial Audio. The default settings are a good starting point for most projects. You will need to review and adjust them as necessary to find a balance between performance and quality for your specific product and platform.</li>
-<li><b>WG-66128</b> (Spatial Audio) The use of <code><a class="el" href="struct_ak_geometry_instance_params_aea389b1649781232851f7410554dd5f3.html#aea389b1649781232851f7410554dd5f3">AkGeometryInstanceParams::RoomID</a></code> is now deprecated and the parameter will be removed in a future version. We recommend that you do not use RoomID and instead leave it set to the default value (-1).</li>
-<li><b>WG-66185</b> Added new SDK function <code><a class="el" href="namespace_a_k_1_1_sound_engine_a21095cadf123d0cac1f276db08177139.html#a21095cadf123d0cac1f276db08177139">AK::SoundEngine::IsPluginRegistered</a></code>.</li>
-<li><b>WG-66667</b> The sample functions for <code><a class="el" href="namespace_a_k_p_l_a_t_f_o_r_m_ade6e45ceeae44b17a28eb45503a7a649.html#ade6e45ceeae44b17a28eb45503a7a649">AKPLATFORM::AllocVM</a></code> and <code><a class="el" href="namespace_a_k_p_l_a_t_f_o_r_m_a6d54c5dabd6a862a7661fcc2dc1bfbde.html#a6d54c5dabd6a862a7661fcc2dc1bfbde">AKPLATFORM::FreeVM</a></code>, as well as some other virtual memory-related functions and definitions, have been moved from AkPlatformFuncs.h to AkMemoryMgrFuncs.h. Because of these changes, it might be necessary to modify or add to some header inclusions in code to resolve compiler errors.</li>
+<li><b>WG-66128</b> (Spatial Audio) The use of <code>AkGeometryInstanceParams::RoomID</code> is now deprecated and the parameter will be removed in a future version. We recommend that you do not use RoomID and instead leave it set to the default value (-1).</li>
+<li><b>WG-66185</b> Added new SDK function <code>AK::SoundEngine::IsPluginRegistered</code>.</li>
+<li><b>WG-66667</b> The sample functions for <code>AKPLATFORM::AllocVM</code> and <code>AKPLATFORM::FreeVM</code>, as well as some other virtual memory-related functions and definitions, have been moved from AkPlatformFuncs.h to AkMemoryMgrFuncs.h. Because of these changes, it might be necessary to modify or add to some header inclusions in code to resolve compiler errors.</li>
 <li><b>WG-67001</b> Added size member to <code><a class="el" href="struct_ak_marker_callback_info.html">AkMarkerCallbackInfo</a></code>, added size argument to <code>AddOutputCaptureMarker</code>, and fixed display of concurrent markers in Wwise Wave Viewer.</li>
 <li><b>WG-67058</b> Moved the core types for AK_SIMD from <code>AkSimd.h</code> to <code>AkSimdTypes.h</code>. You might need to modify some header inclusions in code to resolve compilation errors.</li>
 </ul>
@@ -166,7 +166,7 @@ Behavior Changes</h1>
 <li><b>WG-64358</b> In the options dialogs for the Capture Log, Game Object 3D Viewer, and Audio Object 3D Viewer, moved Reset button from lower-right corner to lower-left corner to avoid confusion with typical placement of cancel buttons.</li>
 <li><b>WG-64817</b> The Wwise toolbar now displays the name of the task running in the background if there is only one task. Otherwise, the number of tasks in execution and on hold is displayed.</li>
 <li><b>WG-65038</b> (Spatial Audio) Geometric transmission loss now overrides room transmission loss if geometry is available to a room. Previously, Spatial Audio took the maximum of the geometric (surface) transmission loss and the room transmission loss values. However, this made it problematic to have a room with mixed transmissive and opaque surfaces. Having such a room would necessitate setting the room transmission loss value to the lowest surface transmission loss value, which would then make the reverb and room tones fully audible. By ignoring the room transmission loss value when geometry is available, the room transmission loss can now be set to a representative average and can be used effectively for reverb spatialization and room tone transmission simulation.</li>
-<li><b>WG-65089</b> When using <code><a class="el" href="namespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba.html#a1b3e18a25b405e55ba82de9b70cd11ba">SetObjectObstructionAndOcclusion()</a></code> with Spatial Audio, the obstruction and occlusion values are now only sent to the direct path.</li>
+<li><b>WG-65089</b> When using <code>SetObjectObstructionAndOcclusion()</code> with Spatial Audio, the obstruction and occlusion values are now only sent to the direct path.</li>
 <li><b>WG-65361</b> When changing the acoustic texture associated with an image source across two frames, the output signal of the Reflect plug-in now ducks and fades back in. Previously, only the contribution of the image source was affected, but in a harsher way. Note, the recommended way to handle the real-time swap of acoustic textures is to use a different image source ID.</li>
 </ul>
 <h1><a class="anchor" id="generic_perf_changes_2023_1"></a>
@@ -184,12 +184,12 @@ Performance Changes</h1>
 <li><b>WG-66256</b> The 3D Audio Mixer Effect, and final mix-and-triage of Objects for 3D Audio devices, now perform a simpler mixdown when the source and destination buffers have the same configuration.</li>
 <li><b>WG-66258</b> The audio format of original files is now persisted in a local database for faster access during Wwise Authoring operations.</li>
 <li><b>WG-67234</b> Significantly improved the performance of Audio Objects busses in many situations. Metadata and audio data for Audio Objects no longer create separate memory allocations, or perform copies of the data, when there is only one output connection from a source bus to a destination bus that is processing as Audio Objects. Busses that have multiple output connections due to aux sends or because they are attached to a multi-positioned game object with listener-relative routing still require separate copies of data.</li>
-<li><b>WG-67320</b> Integrated a new memory allocation system, "Temp Alloc", into the sound engine specifically for handling allocations that are only applicable for a single audio-render tick. This is used for audio buffers for audio busses, as well as metadata for audio objects. In most cases, this greatly reduces the number of memory allocations performed during audio rendering, improves performance in some multi-threaded scenarios, and slightly reduces fragmentation of memory pools used for audio processing. For more information on how to tune and manage this new system, refer to <a class="el" href="goingfurther_optimizingmempools_reducing_memory.html#goingfurther_optimizingmempools_tempallocs">Tuning "Temp Alloc" Memory</a>. Note that as a part of this change, it is no longer possible for "Feedback" connections in the Voice Graph to be consumed by Audio Objects busses. This use case could create many other subtle and fatal issues, so it is no longer supported. Applications that create feedback scenarios due to Wwise Spatial Audio or other tools for handling audio propagation, must ensure that the destination busses of any feedback connections are mixing busses instead.</li>
+<li><b>WG-67320</b> Integrated a new memory allocation system, "Temp Alloc", into the sound engine specifically for handling allocations that are only applicable for a single audio-render tick. This is used for audio buffers for audio busses, as well as metadata for audio objects. In most cases, this greatly reduces the number of memory allocations performed during audio rendering, improves performance in some multi-threaded scenarios, and slightly reduces fragmentation of memory pools used for audio processing. For more information on how to tune and manage this new system, refer to Tuning "Temp Alloc" Memory. Note that as a part of this change, it is no longer possible for "Feedback" connections in the Voice Graph to be consumed by Audio Objects busses. This use case could create many other subtle and fatal issues, so it is no longer supported. Applications that create feedback scenarios due to Wwise Spatial Audio or other tools for handling audio propagation, must ensure that the destination busses of any feedback connections are mixing busses instead.</li>
 </ul>
 <h1><a class="anchor" id="generic_misc_2023_1"></a>
 Miscellaneous Changes</h1>
 <ul>
-<li><b>WG-56589</b> Removed Mixer plug-ins. The <a class="el" href="namespace_a_k.html" title="Audiokinetic namespace.">AK</a> Channel Router Mixer plug-in is now an Effect plug-in. Any custom Mixer plug-ins must be migrated to Effect plug-ins. Refer to <a class="el" href="whatsnew_2023_1_migration.html#mixer_plugin_removal">Removal of Mixer Plug-ins</a> for more details.</li>
+<li><b>WG-56589</b> Removed Mixer plug-ins. The <a class="el" href="namespace_a_k.html" title="Audiokinetic namespace.">AK</a> Channel Router Mixer plug-in is now an Effect plug-in. Any custom Mixer plug-ins must be migrated to Effect plug-ins. Refer to Removal of Mixer Plug-ins for more details.</li>
 <li><b>WG-57597</b> Removed the deprecated Wwise Motion Generator Source plug-in.</li>
 <li><b>WG-60924</b> Replaced the term "Workgroup" with the more commonly used "Source Control" throughout the user interface.</li>
 <li><b>WG-62998</b> (WAAPI) Removed the file <code>WwiseAuthoringAPI.json</code>, which was previously located in the installation directory <code>&lt;Wwise&gt;\Authoring\Data\Schemas</code>. It is now split into several files, which are all located in the directory <code>&lt;Wwise&gt;\Authoring\Data\Schemas\WAAPI</code>.</li>
@@ -216,7 +216,7 @@ Bug Fixes</h1>
 <li><b>WG-63485</b> Fixed: AK Convolution Reverb IR begin and end trim are sometimes reset when updating the WAV file.</li>
 <li><b>WG-64251</b> Fixed: When selecting an Event, the Property Editor title is updated to "Event Editor," but when an audio structure is selected, the title doesn't change back to "Property Editor".</li>
 <li><b>WG-64281</b> Fixed: Can't use shortcut menu in Search tool results without inspecting the object.</li>
-<li><b>WG-64283</b> Fixed: The reverb estimation service's <code><a class="el" href="namespace_a_k_1_1_spatial_audio_1_1_reverb_estimation_a2be1de76cd8b9ddf95217f06b02ebad6.html#a2be1de76cd8b9ddf95217f06b02ebad6">EstimateHFDamping()</a></code> function gives an incorrect value that is inconsistent with the definition of HF damping.</li>
+<li><b>WG-64283</b> Fixed: The reverb estimation service's <code>EstimateHFDamping()</code> function gives an incorrect value that is inconsistent with the definition of HF damping.</li>
 <li><b>WG-64342</b> Fixed: WaveViewer.exe doesn't output any audio.</li>
 <li><b>WG-64457</b> Fixed: Crash when closing Wwise after generating an AKD file on a huge audio file.</li>
 <li><b>WG-64913</b> Fixed: Crash when switching from Offline Rendering mode to Real-time mode.</li>
@@ -272,10 +272,10 @@ Fixes for Community-Reported Bugs</h1>
 <li><b>WG-64858</b> Fixed: Audio does not come back when using SetOfflineRendering to false to resume normal playback.</li>
 <li><b>WG-64934</b> Fixed: Removed RTPC curve in Wwise isn't removed in runtime Sound Engine upon Wwise connection.</li>
 <li><b>WG-65184</b> Fixed: Possible crash when removing an Effect.</li>
-<li><b>WG-66145</b> Fixed: Assert in <code><a class="el" href="namespace_a_k_1_1_sound_engine_a81521a4611d3891c499ec9c5eb421ac2.html#a81521a4611d3891c499ec9c5eb421ac2">AK::SoundEngine::ReplaceOutput</a></code> call when called with default parameters.</li>
+<li><b>WG-66145</b> Fixed: Assert in <code>AK::SoundEngine::ReplaceOutput</code> call when called with default parameters.</li>
 <li><b>WG-66303</b> Fixed: Possible crash after doing source operations in the File Manager.</li>
 <li><b>WG-66366</b> Fixed: Performance issue when loading large SoundBanks with numerous active sounds.</li>
-<li><b>WG-66370</b> Fixed: <code><a class="el" href="namespace_a_k_1_1_sound_engine_a81521a4611d3891c499ec9c5eb421ac2.html#a81521a4611d3891c499ec9c5eb421ac2">AK::SoundEngine::ReplaceOutput</a></code> locks.</li>
+<li><b>WG-66370</b> Fixed: <code>AK::SoundEngine::ReplaceOutput</code> locks.</li>
 <li><b>WG-66468</b> Fixed: <code>Wwise_IDs.h</code> is not managed by source control even if the <b>Use Source Control for Generated Files</b> option is enabled in the SoundBanks settings.</li>
 <li><b>WG-66836</b> Fixed: Inconsistent handling of streamed Music Tracks that begin playback as a virtual voice.</li>
 <li><b>WG-67027</b> Fixed: Possible assert in debug when multiple music transitions occur at the same time.</li>
@@ -285,7 +285,7 @@ Fixes for Community-Reported Bugs</h1>
 <li><b>WG-67187</b> Fixed: Possible crash when using arrow keys in the Convolution IR info control.</li>
 <li><b>WG-67349</b> Fixed: Some characters, such as dash, are not accepted in language names used in WAAPI SoundBank generation.</li>
 <li><b>WG-67469</b> Fixed: The MaxAttenuation attribute in a SoundBank XML file can trigger an invalid format error.</li>
-<li><b>WG-68026</b> Fixed: <code><a class="el" href="namespace_a_k_1_1_sound_engine_a77698f766d8d18675e38d91a69987c7a.html#a77698f766d8d18675e38d91a69987c7a">AK::SoundEngine::TryUnsetMedia</a></code> doesn't succeed for active MIDI files.</li>
+<li><b>WG-68026</b> Fixed: <code>AK::SoundEngine::TryUnsetMedia</code> doesn't succeed for active MIDI files.</li>
 <li><b>WG-68039</b> Fixed: Streamed sounds going virtual don't release their file handles.</li>
 <li><b>WG-68060</b> Fixed: Possible crash when typing Perforce password.</li>
 </ul>
@@ -300,11 +300,12 @@ Fixes since the Beta for Community-Reported Bugs</h1>
 </ul>
 <p><br  />
  </p><dl class="section see"><dt>See also</dt><dd><ul>
-<li><a class="el" href="whatsnew_2023_1_new_features.html">New Features Overview 2023.1</a></li>
-<li><a class="el" href="whatsnew_2023_1_migration.html">Important Migration Notes 2023.1</a> </li>
+<li>New Features Overview 2023.1</li>
+<li>Important Migration Notes 2023.1 </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

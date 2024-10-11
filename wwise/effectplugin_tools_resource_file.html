@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -58,75 +58,76 @@
 <li>From a command prompt in your plug-in directory, run the following two commands in order: <div class="fragment"><div class="line">python &quot;%WWISEROOT%/Scripts/Build/Plugins/wp.py&quot; premake Authoring</div>
 <div class="line">python &quot;%WWISEROOT%/Scripts/Build/Plugins/wp.py&quot; build -c Release -x x64 -t vc160 Authoring</div>
 </div><!-- fragment --> The first command includes the <code>Resource.rc</code> file in your project, and the second creates a <code>resource.h</code> file based on the Resource file.</li>
-<li>In the plug-in's <code>Win32</code> subdirectory, open the <code>PluginNamePluginGUI.h</code> file and add the following code: <div class="fragment"><div class="line"><span class="preprocessor">#pragma once</span></div>
+<li>In the plug-in's <code>Win32</code> subdirectory, open the <code>PluginNamePluginGUI.h</code> file and add the following code: <div class="fragment"><div class="line"><span class="preprocessor">#pragmaÂ once</span></div>
 <div class="line"> </div>
-<div class="line"><span class="preprocessor">#include &quot;../MyPlugin.h&quot;</span></div>
+<div class="line"><span class="preprocessor">#includeÂ &quot;../MyPlugin.h&quot;</span></div>
 <div class="line"> </div>
-<div class="line"><span class="preprocessor">#include &quot;../resource.h&quot;</span></div>
+<div class="line"><span class="preprocessor">#includeÂ &quot;../resource.h&quot;</span></div>
 <div class="line"> </div>
-<div class="line">class MyPluginGUI final</div>
-<div class="line">    : public AK::Wwise::Plugin::PluginMFCWindows&lt;&gt;</div>
-<div class="line">    ,<a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5d74c88aa83c4e608fb75d1ac5555c9b.html#a5d74c88aa83c4e608fb75d1ac5555c9b"> public AK::Wwise::Plugin::GUIWindows</a></div>
+<div class="line">classÂ MyPluginGUIÂ final</div>
+<div class="line">Â Â Â Â :Â publicÂ AK::Wwise::Plugin::PluginMFCWindows&lt;&gt;</div>
+<div class="line">Â Â Â Â ,Â publicÂ AK::Wwise::Plugin::GUIWindows</div>
 <div class="line">{</div>
 <div class="line"><span class="keyword">public</span>:</div>
-<div class="line">    MyPluginGUI();</div>
+<div class="line">Â Â Â Â MyPluginGUI();</div>
 <div class="line"> </div>
-<div class="line">    HINSTANCE GetResourceHandle() const override;</div>
+<div class="line">Â Â Â Â HINSTANCEÂ GetResourceHandle()Â constÂ override;</div>
 <div class="line"> </div>
-<div class="line">    bool GetDialog(</div>
-<div class="line">        AK::Wwise::Plugin::eDialog in_eDialog,</div>
-<div class="line">        UINT&amp; out_uiDialogID,</div>
-<div class="line">        AK::Wwise::Plugin::PopulateTableItem*&amp; out_pTable</div>
-<div class="line">    ) const override;</div>
+<div class="line">Â Â Â Â boolÂ GetDialog(</div>
+<div class="line">Â Â Â Â Â Â Â Â AK::Wwise::Plugin::eDialogÂ in_eDialog,</div>
+<div class="line">Â Â Â Â Â Â Â Â UINT&amp;Â out_uiDialogID,</div>
+<div class="line">Â Â Â Â Â Â Â Â AK::Wwise::Plugin::PopulateTableItem*&amp;Â out_pTable</div>
+<div class="line">Â Â Â Â )Â constÂ override;</div>
 <div class="line"> </div>
-<div class="line">    bool WindowProc(</div>
-<div class="line">        AK::Wwise::Plugin::eDialog in_eDialog,</div>
-<div class="line">        HWND in_hWnd,</div>
-<div class="line">        uint32_t in_message,</div>
-<div class="line">        WPARAM in_wParam,</div>
-<div class="line">        LPARAM in_lParam,</div>
-<div class="line">        LRESULT&amp; out_lResult</div>
-<div class="line">    ) override;</div>
+<div class="line">Â Â Â Â boolÂ WindowProc(</div>
+<div class="line">Â Â Â Â Â Â Â Â AK::Wwise::Plugin::eDialogÂ in_eDialog,</div>
+<div class="line">Â Â Â Â Â Â Â Â HWNDÂ in_hWnd,</div>
+<div class="line">Â Â Â Â Â Â Â Â uint32_tÂ in_message,</div>
+<div class="line">Â Â Â Â Â Â Â Â WPARAMÂ in_wParam,</div>
+<div class="line">Â Â Â Â Â Â Â Â LPARAMÂ in_lParam,</div>
+<div class="line">Â Â Â Â Â Â Â Â LRESULT&amp;Â out_lResult</div>
+<div class="line">Â Â Â Â )Â override;</div>
 <div class="line"> </div>
 <div class="line">private:</div>
-<div class="line">    HWND m_hwndPropView = nullptr;</div>
+<div class="line">Â Â Â Â HWNDÂ m_hwndPropViewÂ =Â nullptr;</div>
 <div class="line">};</div>
-</div><!-- fragment --> This code overrides the methods provided by <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a5d74c88aa83c4e608fb75d1ac5555c9b.html#a5d74c88aa83c4e608fb75d1ac5555c9b" title="Latest version of the C++ GUIWindows interface.">AK::Wwise::Plugin::GUIWindows</a></code> and ensures that the plug-in uses the custom interface.</li>
-<li>Add the following code to the <code>PluginNamePluginGUI.cpp</code> file: <div class="fragment"><div class="line">HINSTANCE MyPluginGUI::GetResourceHandle() const</div>
+</div><!-- fragment --> This code overrides the methods provided by <code>AK::Wwise::Plugin::GUIWindows</code> and ensures that the plug-in uses the custom interface.</li>
+<li>Add the following code to the <code>PluginNamePluginGUI.cpp</code> file: <div class="fragment"><div class="line">HINSTANCE MyPluginGUI::GetResourceHandle()Â const</div>
 <div class="line">{</div>
-<div class="line">    AFX_MANAGE_STATE( AfxGetStaticModuleState() );</div>
-<div class="line">    return AfxGetStaticModuleState()-&gt;m_hCurrentResourceHandle;</div>
+<div class="line">Â Â Â Â AFX_MANAGE_STATE(Â AfxGetStaticModuleState()Â );</div>
+<div class="line">Â Â Â Â returnÂ AfxGetStaticModuleState()-&gt;m_hCurrentResourceHandle;</div>
 <div class="line">}</div>
 <div class="line"> </div>
-<div class="line"><span class="keywordtype">bool</span> MyPluginGUI::GetDialog( AK::Wwise::Plugin::eDialog in_eDialog, UINT &amp; out_uiDialogID, AK::Wwise::Plugin::PopulateTableItem *&amp; out_pTable ) const</div>
+<div class="line"><span class="keywordtype">bool</span> MyPluginGUI::GetDialog(Â AK::Wwise::Plugin::eDialogÂ in_eDialog,Â UINTÂ &amp;Â out_uiDialogID,Â AK::Wwise::Plugin::PopulateTableItemÂ *&amp;Â out_pTableÂ )Â const</div>
 <div class="line">{</div>
-<div class="line">    AKASSERT( in_eDialog == AK::Wwise::Plugin::SettingsDialog );</div>
+<div class="line">Â Â Â Â AKASSERT(Â in_eDialogÂ ==Â AK::Wwise::Plugin::SettingsDialogÂ );</div>
 <div class="line"> </div>
-<div class="line">    out_uiDialogID = IDD_DIALOG1;</div>
-<div class="line">    out_pTable = nullptr;</div>
+<div class="line">Â Â Â Â out_uiDialogIDÂ =Â IDD_DIALOG1;</div>
+<div class="line">Â Â Â Â out_pTableÂ =Â nullptr;</div>
 <div class="line"> </div>
-<div class="line">    return true;</div>
+<div class="line">Â Â Â Â returnÂ true;</div>
 <div class="line">}</div>
 <div class="line"> </div>
-<div class="line"><span class="keywordtype">bool</span> MyPluginGUI::WindowProc( AK::Wwise::Plugin::eDialog in_eDialog, HWND in_hWnd, uint32_t in_message, WPARAM in_wParam, LPARAM in_lParam, LRESULT &amp; out_lResult )</div>
+<div class="line"><span class="keywordtype">bool</span> MyPluginGUI::WindowProc(Â AK::Wwise::Plugin::eDialogÂ in_eDialog,Â HWNDÂ in_hWnd,Â uint32_tÂ in_message,Â WPARAMÂ in_wParam,Â LPARAMÂ in_lParam,Â LRESULTÂ &amp;Â out_lResultÂ )</div>
 <div class="line">{</div>
-<div class="line">    switch ( in_message )</div>
-<div class="line">    {</div>
-<div class="line">    case WM_INITDIALOG:</div>
-<div class="line">        m_hwndPropView = in_hWnd;</div>
-<div class="line">        break;</div>
-<div class="line">    case WM_DESTROY:</div>
-<div class="line">        m_hwndPropView = NULL;</div>
-<div class="line">        break;</div>
-<div class="line">    }</div>
-<div class="line">    out_lResult = 0;</div>
-<div class="line">    return false;</div>
+<div class="line">Â Â Â Â switchÂ (Â in_messageÂ )</div>
+<div class="line">Â Â Â Â {</div>
+<div class="line">Â Â Â Â caseÂ WM_INITDIALOG:</div>
+<div class="line">Â Â Â Â Â Â Â Â m_hwndPropViewÂ =Â in_hWnd;</div>
+<div class="line">Â Â Â Â Â Â Â Â break;</div>
+<div class="line">Â Â Â Â caseÂ WM_DESTROY:</div>
+<div class="line">Â Â Â Â Â Â Â Â m_hwndPropViewÂ =Â NULL;</div>
+<div class="line">Â Â Â Â Â Â Â Â break;</div>
+<div class="line">Â Â Â Â }</div>
+<div class="line">Â Â Â Â out_lResultÂ =Â 0;</div>
+<div class="line">Â Â Â Â returnÂ false;</div>
 <div class="line">}</div>
 </div><!-- fragment --></li>
 <li>Save your changes and rebuild the plug-in. It is now available in Wwise as an Effect, which you can add to Wwise objects. </li>
 </ol>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5d74c88aa83c4e608fb75d1ac5555c9b_html_a5d74c88aa83c4e608fb75d1ac5555c9b"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a5d74c88aa83c4e608fb75d1ac5555c9b.html#a5d74c88aa83c4e608fb75d1ac5555c9b">AK.Wwise::Plugin::GUIWindows</a></div><div class="ttdeci">V1::GUIWindows GUIWindows</div><div class="ttdoc">Latest version of the C++ GUIWindows interface.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00334">GUIWindows.h:334</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5d74c88aa83c4e608fb75d1ac5555c9b_html_a5d74c88aa83c4e608fb75d1ac5555c9b"><div class="ttname">AK.Wwise::Plugin::GUIWindows</div><div class="ttdeci">V1::GUIWindows GUIWindows</div><div class="ttdoc">Latest version of the C++ GUIWindows interface.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:334</div></div>
 </body>
 </html>
+

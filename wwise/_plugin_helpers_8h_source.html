@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -79,13 +79,13 @@
 <div class="line"><a name="l00040"></a><span class="lineno">   40</span>&#160; </div>
 <div class="line"><a name="l00041"></a><span class="lineno">   41</span>&#160;<span class="comment">// These definitions are used throughout the Wwise plug-in system</span></div>
 <div class="line"><a name="l00042"></a><span class="lineno">   42</span>&#160;<span class="preprocessor">#ifndef GUID_DEFINED        // Adapted from Windows API, to have exactly the same definition. C-compatible.</span></div>
-<div class="line"><a name="l00043"></a><span class="lineno"><a class="line" href="_plugin_helpers_8h_a6af7f4a2dc8b5db496e6162938280088.html#a6af7f4a2dc8b5db496e6162938280088">   43</a></span>&#160;<span class="preprocessor">#define GUID_DEFINED</span></div>
+<div class="line"><a name="l00043"></a><span class="lineno">   43</span>&#160;<span class="preprocessor">#define GUID_DEFINED</span></div>
 <div class="line"><a name="l00044"></a><span class="lineno">   44</span>&#160;<span class="preprocessor">#pragma pack(push,8)</span></div>
 <div class="line"><a name="l00045"></a><span class="lineno"><a class="line" href="struct_g_u_i_d.html">   45</a></span>&#160;<span class="keyword">typedef</span> <span class="keyword">struct </span>_GUID {</div>
-<div class="line"><a name="l00046"></a><span class="lineno"><a class="line" href="struct_g_u_i_d_acc3fbfb9753461c6ce81ac1c29bf0f79.html#acc3fbfb9753461c6ce81ac1c29bf0f79">   46</a></span>&#160;    uint32_t <a class="code" href="struct_g_u_i_d_acc3fbfb9753461c6ce81ac1c29bf0f79.html#acc3fbfb9753461c6ce81ac1c29bf0f79">Data1</a>;</div>
-<div class="line"><a name="l00047"></a><span class="lineno"><a class="line" href="struct_g_u_i_d_a3258492e8b34a0ab3fe1f6284aac9ab3.html#a3258492e8b34a0ab3fe1f6284aac9ab3">   47</a></span>&#160;    uint16_t <a class="code" href="struct_g_u_i_d_a3258492e8b34a0ab3fe1f6284aac9ab3.html#a3258492e8b34a0ab3fe1f6284aac9ab3">Data2</a>;</div>
-<div class="line"><a name="l00048"></a><span class="lineno"><a class="line" href="struct_g_u_i_d_a53f24ef08e7b3005f9971dc260019502.html#a53f24ef08e7b3005f9971dc260019502">   48</a></span>&#160;    uint16_t <a class="code" href="struct_g_u_i_d_a53f24ef08e7b3005f9971dc260019502.html#a53f24ef08e7b3005f9971dc260019502">Data3</a>;</div>
-<div class="line"><a name="l00049"></a><span class="lineno"><a class="line" href="struct_g_u_i_d_ab45aa69b052bbf792e1c20079695ec7f.html#ab45aa69b052bbf792e1c20079695ec7f">   49</a></span>&#160;    uint8_t  Data4[8];</div>
+<div class="line"><a name="l00046"></a><span class="lineno">   46</span>&#160;    uint32_t Data1;</div>
+<div class="line"><a name="l00047"></a><span class="lineno">   47</span>&#160;    uint16_t Data2;</div>
+<div class="line"><a name="l00048"></a><span class="lineno">   48</span>&#160;    uint16_t Data3;</div>
+<div class="line"><a name="l00049"></a><span class="lineno">   49</span>&#160;    uint8_t  Data4[8];</div>
 <div class="line"><a name="l00050"></a><span class="lineno">   50</span>&#160;} <a class="code" href="struct_g_u_i_d.html">GUID</a>;</div>
 <div class="line"><a name="l00051"></a><span class="lineno">   51</span>&#160;<span class="preprocessor">#pragma pack(pop)</span></div>
 <div class="line"><a name="l00052"></a><span class="lineno">   52</span>&#160;<span class="preprocessor">#endif</span></div>
@@ -106,16 +106,17 @@
 <div class="line"><a name="l00067"></a><span class="lineno">   67</span>&#160;}</div>
 <div class="line"><a name="l00068"></a><span class="lineno">   68</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00069"></a><span class="lineno">   69</span>&#160;<span class="preprocessor">#else</span></div>
-<div class="line"><a name="l00070"></a><span class="lineno"><a class="line" href="_plugin_helpers_8h_afd3cdad7b886459660ecef5d2277504b.html#afd3cdad7b886459660ecef5d2277504b">   70</a></span>&#160;<span class="preprocessor">#define AK_DEFINE_GUID_NULL</span></div>
+<div class="line"><a name="l00070"></a><span class="lineno">   70</span>&#160;<span class="preprocessor">#define AK_DEFINE_GUID_NULL</span></div>
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;<span class="preprocessor">#endif</span></div>
 <div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160; </div>
 <div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;<span class="preprocessor">#ifndef MKBOOL</span></div>
-<div class="line"><a name="l00074"></a><span class="lineno"><a class="line" href="_plugin_helpers_8h_a882080add6cbf456ded3110a9b392405.html#a882080add6cbf456ded3110a9b392405">   74</a></span>&#160;<span class="preprocessor">#define MKBOOL(cond) ((cond) ? true : false)</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;<span class="preprocessor">#define MKBOOL(cond) ((cond) ? true : false)</span></div>
 <div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;<span class="preprocessor">#endif</span></div>
 </div><!-- fragment --></div><!-- contents -->
-<div class="ttc" id="astruct_g_u_i_d_acc3fbfb9753461c6ce81ac1c29bf0f79_html_acc3fbfb9753461c6ce81ac1c29bf0f79"><div class="ttname"><a href="struct_g_u_i_d_acc3fbfb9753461c6ce81ac1c29bf0f79.html#acc3fbfb9753461c6ce81ac1c29bf0f79">GUID::Data1</a></div><div class="ttdeci">uint32_t Data1</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_helpers_8h_source.html#l00046">PluginHelpers.h:46</a></div></div>
-<div class="ttc" id="astruct_g_u_i_d_a3258492e8b34a0ab3fe1f6284aac9ab3_html_a3258492e8b34a0ab3fe1f6284aac9ab3"><div class="ttname"><a href="struct_g_u_i_d_a3258492e8b34a0ab3fe1f6284aac9ab3.html#a3258492e8b34a0ab3fe1f6284aac9ab3">GUID::Data2</a></div><div class="ttdeci">uint16_t Data2</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_helpers_8h_source.html#l00047">PluginHelpers.h:47</a></div></div>
-<div class="ttc" id="astruct_g_u_i_d_a53f24ef08e7b3005f9971dc260019502_html_a53f24ef08e7b3005f9971dc260019502"><div class="ttname"><a href="struct_g_u_i_d_a53f24ef08e7b3005f9971dc260019502.html#a53f24ef08e7b3005f9971dc260019502">GUID::Data3</a></div><div class="ttdeci">uint16_t Data3</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_helpers_8h_source.html#l00048">PluginHelpers.h:48</a></div></div>
-<div class="ttc" id="astruct_g_u_i_d_html"><div class="ttname"><a href="struct_g_u_i_d.html">GUID</a></div><div class="ttdef"><b>Definition:</b> <a href="_plugin_helpers_8h_source.html#l00045">PluginHelpers.h:45</a></div></div>
+<div class="ttc" id="astruct_g_u_i_d_acc3fbfb9753461c6ce81ac1c29bf0f79_html_acc3fbfb9753461c6ce81ac1c29bf0f79"><div class="ttname">GUID::Data1</div><div class="ttdeci">uint32_t Data1</div><div class="ttdef"><b>Definition:</b> PluginHelpers.h:46</div></div>
+<div class="ttc" id="astruct_g_u_i_d_a3258492e8b34a0ab3fe1f6284aac9ab3_html_a3258492e8b34a0ab3fe1f6284aac9ab3"><div class="ttname">GUID::Data2</div><div class="ttdeci">uint16_t Data2</div><div class="ttdef"><b>Definition:</b> PluginHelpers.h:47</div></div>
+<div class="ttc" id="astruct_g_u_i_d_a53f24ef08e7b3005f9971dc260019502_html_a53f24ef08e7b3005f9971dc260019502"><div class="ttname">GUID::Data3</div><div class="ttdeci">uint16_t Data3</div><div class="ttdef"><b>Definition:</b> PluginHelpers.h:48</div></div>
+<div class="ttc" id="astruct_g_u_i_d_html"><div class="ttname"><a href="struct_g_u_i_d.html">GUID</a></div><div class="ttdef"><b>Definition:</b> PluginHelpers.h:45</div></div>
 </body>
 </html>
+

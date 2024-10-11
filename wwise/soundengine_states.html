@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -57,9 +57,9 @@ The State System</h1>
 <h1><a class="anchor" id="soundengine_states_using"></a>
 Using the State System</h1>
 <p>Setting a state from the SDK is as simple as calling:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState</a>( L<span class="stringliteral">&quot;Weather&quot;</span>, L<span class="stringliteral">&quot;Sunny&quot;</span> );</div>
+<div class="fragment"><div class="line">AK::SoundEngine::SetState( L<span class="stringliteral">&quot;Weather&quot;</span>, L<span class="stringliteral">&quot;Sunny&quot;</span> );</div>
 </div><!-- fragment --><p>or</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState</a>( AK::STATES::WEATHER::GROUP, AK::STATES::WEATHER::STATE::SUNNY );</div>
+<div class="fragment"><div class="line">AK::SoundEngine::SetState( AK::STATES::WEATHER::GROUP, AK::STATES::WEATHER::STATE::SUNNY );</div>
 </div><!-- fragment --><h1><a class="anchor" id="soundengine_states_id"></a>
 Identifying States</h1>
 <p>There are two ways to set a state from the SDK: using strings (Unicode or Ansi) or using IDs.</p>
@@ -75,7 +75,7 @@ Enabling ID Usage</h1>
 <p>For more information on generating banks with Wwise, refer to the Wwise Help.</p>
 <h1><a class="anchor" id="soundengine_states_driving"></a>
 Driving States</h1>
-<p>You have two options to drive states: The SDK <code><a class="el" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState()</a></code> function, and the action "SetState" generated in Wwise. However, using both at once in the same state is problematic. For example, if sound designers introduce SetState Actions inside the Events they create while audio programmers drive States using the SDK <code><a class="el" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState()</a></code> function, the States may become difficult to control. We strongly recommend that sound designers and audio programmers decide how the actual States will be driven, either for each State Group or for the entire project. Both ways can be used at once, if there is agreement on how States will change. For example, the audio programmers can initialize States using the SDK <code><a class="el" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">SetState()</a></code> function, but leave the State to be driven by Events for the rest of the game.</p>
+<p>You have two options to drive states: The SDK <code>AK::SoundEngine::SetState()</code> function, and the action "SetState" generated in Wwise. However, using both at once in the same state is problematic. For example, if sound designers introduce SetState Actions inside the Events they create while audio programmers drive States using the SDK <code>AK::SoundEngine::SetState()</code> function, the States may become difficult to control. We strongly recommend that sound designers and audio programmers decide how the actual States will be driven, either for each State Group or for the entire project. Both ways can be used at once, if there is agreement on how States will change. For example, the audio programmers can initialize States using the SDK <code>SetState()</code> function, but leave the State to be driven by Events for the rest of the game.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> If a state behavior is the same for many sounds, you can give those sounds a common parent (such as an actor-mixer) and put the state settings there, instead of duplicating them in each sound. This will make it faster for the sound designer to edit settings. It will also reduce the memory required for storing state parameters, since they will be stored in one place instead of many. </td></tr>
@@ -89,10 +89,11 @@ State Transitions</h1>
 <img src="SoundEngineStates_TransitionInterruption.gif" alt=""/>
 </div>
 <p>State transition time is ignored for Boolean type parameters, and for state-driving switch containers. Switch containers have their own options that drive what happens on state or switch changes.</p>
-<p>For an example of integrating states, refer to <a class="el" href="quickstart_sample_integration_states.html#soundengine_integration_states">State Example</a>.</p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="concept_state.html">Concept: States</a>, <a class="el" href="soundengine_gameobj.html">Integration Details - Game Objects</a>, <a class="el" href="soundengine_switch.html">Integration Details - Switches</a>, <a class="el" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState()</a> </dd></dl>
+<p>For an example of integrating states, refer to State Example.</p>
+<dl class="section see"><dt>See also</dt><dd><a class="el" href="concept_state.html">Concept: States</a>, <a class="el" href="soundengine_gameobj.html">Integration Details - Game Objects</a>, <a class="el" href="soundengine_switch.html">Integration Details - Switches</a>, AK::SoundEngine::SetState() </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5_html_a68dc9be195962c671b82fbb354b68cc5"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetState(AkStateGroupID in_stateGroup, AkStateID in_state)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5_html_a68dc9be195962c671b82fbb354b68cc5"><div class="ttname">AK::SoundEngine::SetState</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetState(AkStateGroupID in_stateGroup, AkStateID in_state)</div></div>
 </body>
 </html>
+

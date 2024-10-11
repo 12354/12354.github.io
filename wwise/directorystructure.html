@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -37,7 +37,7 @@
 <ul>
 <li>
 <b>SDK</b><br  />
-<em>Main SDK folder. Note that the Wwise SDK installer creates an environment variable named <code>WWISESDK</code> that points to this folder. It can be used in scripts or C++ projects instead of hardcoding the path to include files, libraries, and so on. Refer to <a class="el" href="directorystructure.html#wwise_sdk_input_lib_reference">SDK Input Libraries and Distributed Binaries</a> and <a class="el" href="libraries.html#soundengine_integration_cppprojectsettings_includes">Include Files</a> for more information.</em> <ul>
+<em>Main SDK folder. Note that the Wwise SDK installer creates an environment variable named <code>WWISESDK</code> that points to this folder. It can be used in scripts or C++ projects instead of hardcoding the path to include files, libraries, and so on. Refer to SDK Input Libraries and Distributed Binaries and Include Files for more information.</em> <ul>
 <li>
 <b>include</b><br  />
 <em>Main include files folder.</em> <ul>
@@ -145,7 +145,7 @@
 <em>Motion-related sample code.</em> </li>
 <li>
 <b>Plugins</b><br  />
-<em>Sample plug-ins. Refer to <a class="el" href="samplecode.html#samplecode_sourceplugins">Sample Source Plug-ins</a> and <a class="el" href="samplecode.html#samplecode_effectplugins">Sample Effect Plug-in</a> for more details.</em> <ul>
+<em>Sample plug-ins. Refer to Sample Source Plug-ins and Sample Effect Plug-in for more details.</em> <ul>
 <li>
 <b>AkAudioInput</b><br  />
 <em>Audio input source plug-in. Refer to <a class="el" href="referencematerial_audioinput.html">Audio Input Source Plug-in</a> for details about this sample plug-in, and <a class="el" href="effectplugin.html">Audio Plug-ins</a> for information about creating your own source plug-ins.</em> <ul>
@@ -233,24 +233,24 @@
 <em></em> <ul>
 <li>
 <b>Common</b><br  />
-<em>Common code for the default low-level I/O implementations. Refer to <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_default_implementation_walkthrough">Sample Default Implementation Walkthrough</a> for details on the default low-level I/O implementations, and <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a> for a discussion on integrating Wwise I/O in your game.</em> </li>
+<em>Common code for the default low-level I/O implementations. Refer to Sample Default Implementation Walkthrough for details on the default low-level I/O implementations, and <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a> for a discussion on integrating Wwise I/O in your game.</em> </li>
 </ul>
 </li>
 <li>
 <b>SourceControl</b><br  />
-<em>Source Control sample plug-ins. Refer to <a class="el" href="samplecode.html#samplecode_sourcecontrol">Source Control Sample Code</a> for more information.</em> <ul>
+<em>Source Control sample plug-ins. Refer to Source Control Sample Code for more information.</em> <ul>
 <li>
 <b>Common</b><br  />
 <em>Code shared by several sample tools.</em> </li>
 <li>
 <b>Perforce</b><br  />
-<em><a class="el" href="samplecode.html#samplecode_sourcecontrol_perforce">Perforce Source Control Sample Plug-in</a>.</em> </li>
+<em>Perforce Source Control Sample Plug-in.</em> </li>
 <li>
 <b>SourceControlSample</b><br  />
-<em><a class="el" href="samplecode.html#samplecode_sourcecontrol_basic">Basic Source Control Sample Plug-in</a>.</em> </li>
+<em>Basic Source Control Sample Plug-in.</em> </li>
 <li>
 <b>Subversion</b><br  />
-<em><a class="el" href="samplecode.html#samplecode_sourcecontrol_subversion">Subversion Source Control Sample Plug-in</a>.</em> </li>
+<em>Subversion Source Control Sample Plug-in.</em> </li>
 </ul>
 </li>
 <li>
@@ -261,7 +261,7 @@
 <em>Code shared by several sample tools.</em> </li>
 <li>
 <b>FilePackager</b><br  />
-<em>Refer to <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=managing_file_packages" target="_blank">Managing File Packages</a> for more information</em>. </li>
+<em>Refer to Managing File Packages for more information</em>. </li>
 </ul>
 </li>
 <li>
@@ -284,7 +284,7 @@
 </ul>
 <h1><a class="anchor" id="wwise_sdk_input_lib_reference"></a>
 SDK Input Libraries and Distributed Binaries</h1>
-<p>The input libraries required to integrate the Wwise Sound Engine are available for each <a class="el" href="goingfurther_builds.html#wwise_sdk_build_config">build configuration</a> in their respective platform folders contained in the root of the SDK installation directory. The library directory structure is defined as follows:</p><ul>
+<p>The input libraries required to integrate the Wwise Sound Engine are available for each build configuration in their respective platform folders contained in the root of the SDK installation directory. The library directory structure is defined as follows:</p><ul>
 <li>{Wwise SDK Dir}/{Platform name}/{Configuration name}/lib where<ul>
 <li>{Wwise SDK Dir} is the SDK installation directory</li>
 <li>{Platform name} is one of the available platform names (x64, Mac, iOS, ...). A suffix may further refine the CPU architecture or compiler targeted.</li>
@@ -296,9 +296,10 @@ SDK Input Libraries and Distributed Binaries</h1>
 <p>Refer to <a class="el" href="goingfurther_builds.html">Build Configuration</a> for a description of the various libraries contained in this SDK.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> The SDK installer creates an environment variable named <code>WWISESDK</code> that points to the SDK's installation folder. You can use this environment variable in scripts and C++ projects to refer to include, library or binary directories from the SDK. Refer to <a class="el" href="goingfurther_builds.html#wwise_sdk_lib_dependency_requirements_plugins">Source and Effect Plug-ins</a> for more details. <b>Note:</b> WWISESDK variable is not set on the MAC. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> The SDK installer creates an environment variable named <code>WWISESDK</code> that points to the SDK's installation folder. You can use this environment variable in scripts and C++ projects to refer to include, library or binary directories from the SDK. Refer to Source and Effect Plug-ins for more details. <b>Note:</b> WWISESDK variable is not set on the MAC. </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

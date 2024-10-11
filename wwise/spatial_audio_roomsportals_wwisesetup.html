@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -43,7 +43,7 @@ Setting Up a Room Auxiliary Bus in Wwise</h1>
 <div class="image">
 <img src="set_positioning_to_3D.png" alt=""/>
 </div>
-<p>The Room's reference orientation is defined in the room settings (<code><a class="el" href="struct_ak_room_params_a78cc5e2340df7da3ed1279684478a6e2.html#a78cc5e2340df7da3ed1279684478a6e2">AkRoomParams::Up</a></code> and <code><a class="el" href="struct_ak_room_params_a2d7fa07258f077abce22544d5640f13e.html#a2d7fa07258f077abce22544d5640f13e">AkRoomParams::Front</a></code>), and never changes. The corresponding game object's orientation is made equal to the Room's orientation. When the listener is in a Room, the bus's Spread is set to 100 (360 degrees) by Spatial Audio. Thanks to 3D positioning, the output of the reverb is rotated and panned into the parent bus based on the relative orientation of the listener and the Room. This happens because the Auxiliary Bus is tied to the Room's game object, while its parent bus is tied to the listener. The screenshot below shows an emitter, the radio, sending to the Auxiliary Bus <em>Mezzanine2</em>. You can see that a separate game object has been created for this room, <em>Ak_RV_Mezzanine</em>, that is neither the Radio nor the listener (<em>PlayerCameraManager_0</em>).</p>
+<p>The Room's reference orientation is defined in the room settings (<code>AkRoomParams::Up</code> and <code>AkRoomParams::Front</code>), and never changes. The corresponding game object's orientation is made equal to the Room's orientation. When the listener is in a Room, the bus's Spread is set to 100 (360 degrees) by Spatial Audio. Thanks to 3D positioning, the output of the reverb is rotated and panned into the parent bus based on the relative orientation of the listener and the Room. This happens because the Auxiliary Bus is tied to the Room's game object, while its parent bus is tied to the listener. The screenshot below shows an emitter, the radio, sending to the Auxiliary Bus <em>Mezzanine2</em>. You can see that a separate game object has been created for this room, <em>Ak_RV_Mezzanine</em>, that is neither the Radio nor the listener (<em>PlayerCameraManager_0</em>).</p>
 <div class="image">
 <img src="voices_graph.png" alt=""/>
 </div>
@@ -57,17 +57,17 @@ Setting Up a Room Auxiliary Bus in Wwise</h1>
 </table>
 <h1><a class="anchor" id="spatial_audio_roomsportals_coupling"></a>
 Coupling Rooms</h1>
-<p>Room coupling (see <a class="el" href="spatial_audio_concepts.html#spatial_audio_concepts_roomcoupling">Room Coupling</a>) is achieved by 'chaining' room busses. To allow this, make sure that the <b>Enable Game-Defined Sends</b> check box is enabled on Room Auxiliary Busses. This allows a Room to also send to the reverb of the listener's Room (or the next room in the path). A sound's Game-Defined Auxiliary Send volume and attenuation curve controls how much of each sound is mixed into the first bus of a room reverb chain, and the Game-Defined Auxiliary Send volume of each Room determines how much is sent to the next room in the chain. It affects how much acoustic energy is transferred to adjacent rooms via portals.</p>
+<p>Room coupling (see Room Coupling) is achieved by 'chaining' room busses. To allow this, make sure that the <b>Enable Game-Defined Sends</b> check box is enabled on Room Auxiliary Busses. This allows a Room to also send to the reverb of the listener's Room (or the next room in the path). A sound's Game-Defined Auxiliary Send volume and attenuation curve controls how much of each sound is mixed into the first bus of a room reverb chain, and the Game-Defined Auxiliary Send volume of each Room determines how much is sent to the next room in the chain. It affects how much acoustic energy is transferred to adjacent rooms via portals.</p>
 <p>An emitter that has the <b>Enable Game-Defined Sends</b> check box selected sends to its own room's bus as well as all adjacent rooms that have active paths back to the listener. The relative send levels for each room represent the amount of acoustic energy that propagates to adjacent rooms through portals, and how much remains in the emitter's room. All of the portals connected to the emitter's room are included in this ratio calculation even if there is no active connection to the Room Auxiliary Bus opposite that portal.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_roomtonesinwwise"></a>
 Setting Up a Room Tone in Wwise</h1>
-<p>A sound that is to be used as a room tone should have most of the same settings as a room Auxiliary Bus (refer to <a class="el" href="spatial_audio_roomsportals_wwisesetup.html#spatial_audio_roomsportals_using3dreverbs">Setting Up a Room Auxiliary Bus in Wwise</a>), in the Positioning tab of the Property Editor in Wwise. <br  />
+<p>A sound that is to be used as a room tone should have most of the same settings as a room Auxiliary Bus (refer to Setting Up a Room Auxiliary Bus in Wwise), in the Positioning tab of the Property Editor in Wwise. <br  />
 </p>
 <p>The setup of a room tone is similar to the setup of a room Auxiliary Bus. In both cases:</p><ul>
 <li><b>Listener Relative Routing</b> is enabled.</li>
 <li><b>3D Spatialization</b> is set to <b>Position + Orientation</b>.</li>
 <li><b>3D Position</b> is set to <b>Emitter</b>.</li>
-<li><b>Use game-defined aux sends</b> is enabled if it is desired for the room tone to excite the reverb of the room (if configured to do so, see <a class="el" href="spatial_audio_roomsportals_apiconfig.html#spatial_audio_roomsportals_apiconfigroomtones">Posting Events on Room Game Objects</a>) and adjoining rooms.</li>
+<li><b>Use game-defined aux sends</b> is enabled if it is desired for the room tone to excite the reverb of the room (if configured to do so, see Posting Events on Room Game Objects) and adjoining rooms.</li>
 </ul>
 <p>There is one distinction between the two setups:</p><ul>
 <li>A room tone will likely have a unique Attenuation ShareSet, whereas a room Auxiliary Bus will not have an attenuation defined (a room bus will instead use the Auxiliary Send Volume curve of the sound playing on the emitter Game Object). Keep in mind the positioning behavior of the Room Game Object when designing this curve: the distance evaluated will be zero when the listener is inside the room, or exactly at a connected portal, and will increase as the listener moves away from the portal. </li>
@@ -76,3 +76,4 @@ Setting Up a Room Tone in Wwise</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

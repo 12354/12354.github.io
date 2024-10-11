@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -38,12 +38,12 @@
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The Wwise Authoring application on macOS runs through Crossover, a bridge layer based on the open source project Wine. By creating a GUI implementation for Windows, this same implementation will run on macOS using this solution. </td></tr>
 </table>
-<p>The base class <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a5d74c88aa83c4e608fb75d1ac5555c9b.html#a5d74c88aa83c4e608fb75d1ac5555c9b" title="Latest version of the C++ GUIWindows interface.">AK::Wwise::Plugin::GUIWindows</a></code> provides methods to implement that offer a way for Wwise to instantiate specific types of dialogs with controls bound to the plug-in's properties. A standard Win32 window procedure (a "WindowProc") is provided to allow your plug-in to act upon Windows events targeted at your plug-in view instance.</p>
+<p>The base class <code>AK::Wwise::Plugin::GUIWindows</code> provides methods to implement that offer a way for Wwise to instantiate specific types of dialogs with controls bound to the plug-in's properties. A standard Win32 window procedure (a "WindowProc") is provided to allow your plug-in to act upon Windows events targeted at your plug-in view instance.</p>
 <p>The Wwise Authoring application instantiates your plug-in GUI in the following way:</p>
 <ul>
-<li>Wwise requests a type of dialog to be instantiated by your plug-in by calling <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a21b81136769b185c244ada93e6767f14.html#a21b81136769b185c244ada93e6767f14" title="Retrieves the plug-in dialog parameters.">AK::Wwise::Plugin::GUIWindows::GetDialog()</a></code> (See <a class="el" href="plugin_frontend_windows.html#wwiseplugin_dialogcode">Dialog Acquisition</a>).</li>
+<li>Wwise requests a type of dialog to be instantiated by your plug-in by calling <code>AK::Wwise::Plugin::GUIWindows::GetDialog()</code> (See Dialog Acquisition).</li>
 <li>If the dialog type is supported by the plug-in's frontend, the plug-in returns the resource dialog ID corresponding to the type, along with an optional table of property bindings that tells Wwise which control ID corresponds to which property key in its property set (as defined in the plug-in XML, see <a class="el" href="plugin_xml.html">Wwise Plug-in XML Description Files</a> for more details).</li>
-<li>The dialog is instantiated by Wwise using the resource handle provided by the plug-in (See <a class="el" href="plugin_frontend_windows.html#wwise_plugin_frontend_windows_resource">Resource Handle</a>).</li>
+<li>The dialog is instantiated by Wwise using the resource handle provided by the plug-in (See Resource Handle).</li>
 <li>Windows starts calling the WindowProc with events such as WM_INITDIALOG.</li>
 </ul>
 <p>The following sections describe how to implement each method.</p>
@@ -60,46 +60,46 @@ Using MFC</h1>
 </table>
 <h1><a class="anchor" id="wwise_plugin_frontend_windows_resource"></a>
 Resource Handle</h1>
-<p>The resource handle is of type HINSTANCE and corresponds to your dynamic library holding the resource data compiled from a <code>.rc</code> file. It can be created using <a class="el" href="namespace_microsoft.html">Microsoft</a> Visual Studio and holds your custom dialogs and their content. For more information on resource files, consult the <a href="https://docs.microsoft.com/en-us/cpp/windows/how-to-create-a-resource-script-file" target="_blank">Microsoft documentation</a> about how to create resource files.</p>
+<p>The resource handle is of type HINSTANCE and corresponds to your dynamic library holding the resource data compiled from a <code>.rc</code> file. It can be created using <a class="el" href="namespace_microsoft.html">Microsoft</a> Visual Studio and holds your custom dialogs and their content. For more information on resource files, consult the Microsoft documentation about how to create resource files.</p>
 <p>The default implementation provides the module instance from a builtin injected by the MSVC linker.</p>
 <div class="fragment"><div class="line"><span class="comment">// GUIWindows.h</span></div>
 <div class="line"><span class="comment">// Acquire the module instance from the Microsoft linker</span></div>
-<div class="line"><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> IMAGE_DOS_HEADER <a class="code" href="_g_u_i_windows_8h_a983773bd0fac8b545d479971ff56db4d.html#a983773bd0fac8b545d479971ff56db4d">__ImageBase</a>;</div>
+<div class="line"><span class="keyword">extern</span> <span class="stringliteral">&quot;C&quot;</span> IMAGE_DOS_HEADER __ImageBase;</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">virtual</span> HINSTANCE GetResourceHandle()<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
-<div class="line">    <span class="keywordflow">return</span> (HINSTANCE)&amp;<a class="code" href="_g_u_i_windows_8h_a983773bd0fac8b545d479971ff56db4d.html#a983773bd0fac8b545d479971ff56db4d">__ImageBase</a>;</div>
+<div class="line">    <span class="keywordflow">return</span> (HINSTANCE)&amp;__ImageBase;</div>
 <div class="line">}</div>
 </div><!-- fragment --><p>You don't need to implement this function unless a different module owns your dialog resources.</p>
 <p>To create a resource file (<code>.rc</code>), refer to <a class="el" href="effectplugin_tools_resource_file.html">Creating Resource Files for Your Plug-in</a>.</p>
 <h1><a class="anchor" id="wwiseplugin_dialogcode"></a>
 Dialog Acquisition</h1>
-<p>There exists two types of dialogs currently defined by Wwise in <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a></code> :</p>
+<p>There exists two types of dialogs currently defined by Wwise in <code>AK::Wwise::Plugin::eDialog</code> :</p>
 <ul>
 <li><code>SettingsDialog</code>: Main plug-in dialog used for the Source or Effect Editor</li>
 <li><code>ContentsEditorDialog</code>: Small dialog used by Source plug-ins only in the Contents Editor</li>
 </ul>
-<p>The dialog that is provided back to Wwise is then instantiated using the provided <a class="el" href="plugin_frontend_windows.html#wwise_plugin_frontend_windows_resource">Resource Handle</a>. To bind properties to the controls of your dialogs, a table that maps control IDs to the property names as found in the XML definition of your plug-in is used. This table is created using macros as follows:</p>
+<p>The dialog that is provided back to Wwise is then instantiated using the provided Resource Handle. To bind properties to the controls of your dialogs, a table that maps control IDs to the property names as found in the XML definition of your plug-in is used. This table is created using macros as follows:</p>
 <div class="fragment"><div class="line">constexpr <span class="keyword">auto</span> propertyKey = u8<span class="stringliteral">&quot;MyProperty&quot;</span>;</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8.html#ace7e697c1d8a310c9794cf05ce8ce1d8">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</a>(PropertyTable)</div>
-<div class="line">    <a class="code" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a>(IDC_MYPROPERTY_EDIT, propertyKey)</div>
-<div class="line"><a class="code" href="_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76.html#a286a575e82a4a1b002ff737b186d4c76">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</a>()</div>
+<div class="line">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(PropertyTable)</div>
+<div class="line">    AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(IDC_MYPROPERTY_EDIT, propertyKey)</div>
+<div class="line">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div>
 </div><!-- fragment --><p>In this example, the table maps the control <code>IDC_MYPROPERTY_EDIT</code> (from the resource.h file accompanying the .rc file) to the property <code>MyProperty</code>, which must correspond to a property defined in the plug-in's XML definition.</p>
 <p>This instantiates a variable <code>PropertyTable</code> that can then be forwarded to the Wwise Authoring application on GetDialog():</p>
 <div class="fragment"><div class="line"><span class="keywordtype">bool</span> FrontendSourcePlugin::GetDialog(</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a> in_eDialog,</div>
+<div class="line">    AK::Wwise::Plugin::eDialog in_eDialog,</div>
 <div class="line">    UINT&amp; out_uiDialogID,</div>
 <div class="line">    <a class="code" href="struct_a_k_1_1_wwise_1_1_plugin_1_1_populate_table_item.html">AK::Wwise::Plugin::PopulateTableItem</a>*&amp; out_pTable)<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    <span class="keywordflow">switch</span> (in_eDialog)</div>
 <div class="line">    {</div>
-<div class="line">    <span class="keywordflow">case</span> <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc">SettingsDialog</a>:</div>
+<div class="line">    <span class="keywordflow">case</span> SettingsDialog:</div>
 <div class="line">        out_uiDialogID = IDD_SOURCEPLUGIN_SETTINGS;</div>
 <div class="line">        out_pTable = ToneGenProp;</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">case</span> <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da6d085e723d1240d119005b403573dfb5">ContentsEditorDialog</a>:</div>
+<div class="line">    <span class="keywordflow">case</span> ContentsEditorDialog:</div>
 <div class="line">        out_uiDialogID = IDD_SOURCEPLUGIN_CONTENTS;</div>
 <div class="line">        out_pTable = <span class="keyword">nullptr</span>;</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
@@ -111,10 +111,10 @@ Dialog Acquisition</h1>
 <p>Refer to <a class="el" href="wwiseplugin_dialog_guide.html">Wwise Plug-in Dialog Reference</a> for a complete description of the controls you can use in your dialog, how to bind them to properties, and so on.</p>
 <h1><a class="anchor" id="wwise_plugin_frontend_windows_windowproc"></a>
 Windows Events Handling through WindowProc</h1>
-<p>If UI changes require specific actions, such as enabling or disabling controls, you can carry these out by interpreting the window messages received in the <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a8ea33835cc026463f2f64b4327f89b17.html#a8ea33835cc026463f2f64b4327f89b17" title="Window message handler for dialogs.">AK::Wwise::Plugin::GUIWindows::WindowProc()</a></code> function:</p>
+<p>If UI changes require specific actions, such as enabling or disabling controls, you can carry these out by interpreting the window messages received in the <code>AK::Wwise::Plugin::GUIWindows::WindowProc()</code> function:</p>
 <div class="fragment"><div class="line"><span class="comment">// Standard window function allowing the user to intercept whatever message is of interest when implementing UI behavior.</span></div>
 <div class="line"><span class="keywordtype">bool</span> FrontendSourcePlugin::WindowProc(</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a> in_eDialog,</div>
+<div class="line">    AK::Wwise::Plugin::eDialog in_eDialog,</div>
 <div class="line">    HWND in_hWnd,</div>
 <div class="line">    UINT in_message,</div>
 <div class="line">    WPARAM in_wParam,</div>
@@ -127,7 +127,7 @@ Windows Events Handling through WindowProc</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// For example, catch window command actions (only for the main dialog) to enable/disable controls</span></div>
-<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span> ( in_eDialog == <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc">SettingsDialog</a> &amp;&amp; in_message == WM_COMMAND )</div>
+<div class="line">    <span class="keywordflow">else</span> <span class="keywordflow">if</span> ( in_eDialog == SettingsDialog &amp;&amp; in_message == WM_COMMAND )</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Notification code</span></div>
 <div class="line">        <span class="keywordflow">switch</span> ( HIWORD( in_wParam ) )</div>
@@ -159,23 +159,23 @@ Windows Events Handling through WindowProc</h1>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="wwiseplugin_help"></a>
 Displaying Help for a Plug-in</h1>
-<p>When a Wwise user clicks on the '?' icon in a plug-in's dialog title bar, <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a4923a0688cfc1bca88fcd33196c897a7.html#a4923a0688cfc1bca88fcd33196c897a7" title="Called when the user clicks on the &#39;?&#39; icon.">AK::Wwise::Plugin::GUIWindows::Help()</a></code> is called on that plug-in's frontend. You can implement Help with various tools, including HTMLHelp, WinHelp, or a third-party Help browser. The function receives a window handle that can be used as the parent for any window you want to display. The <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a></code> parameter allows you to choose a specific Help topic to match the dialog the Wwise user currently has open. This function must return <code>true</code> if you handled the Help request, or <code>false</code> otherwise, in which case Wwise will display a Help topic related to the Plug-in Manager.</p>
+<p>When a Wwise user clicks on the '?' icon in a plug-in's dialog title bar, <code>AK::Wwise::Plugin::GUIWindows::Help()</code> is called on that plug-in's frontend. You can implement Help with various tools, including HTMLHelp, WinHelp, or a third-party Help browser. The function receives a window handle that can be used as the parent for any window you want to display. The <code>AK::Wwise::Plugin::eDialog</code> parameter allows you to choose a specific Help topic to match the dialog the Wwise user currently has open. This function must return <code>true</code> if you handled the Help request, or <code>false</code> otherwise, in which case Wwise will display a Help topic related to the Plug-in Manager.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> As previously mentioned, source plug-ins have two dialogs. The <code><a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a></code> parameter should be used if your source plug-in has separate Help topics for its two dialogs. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> As previously mentioned, source plug-ins have two dialogs. The <code>AK::Wwise::Plugin::eDialog</code> parameter should be used if your source plug-in has separate Help topics for its two dialogs. </td></tr>
 </table>
 <p>Here is an example of a source plug-in that uses HTML help, with MFC providing the path to the file:</p>
 <div class="fragment"><div class="line"><span class="comment">// Implement online help when the user clicks on the &quot;?&quot; icon</span></div>
-<div class="line"><span class="keywordtype">bool</span> FrontendSourcePluginMFC::Help(HWND in_hWnd, <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a> in_eDialog)<span class="keyword"> const</span></div>
+<div class="line"><span class="keywordtype">bool</span> FrontendSourcePluginMFC::Help(HWND in_hWnd, AK::Wwise::Plugin::eDialog in_eDialog)<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    AFX_MANAGE_STATE( ::AfxGetStaticModuleState() );</div>
 <div class="line"> </div>
 <div class="line">    DWORD dwTopic = ONLINEHELP::Tone_Generator_Settings;</div>
-<div class="line">    <span class="keywordflow">if</span> ( in_eDialog == <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da6d085e723d1240d119005b403573dfb5">AK::Wwise::Plugin::ContentsEditorDialog</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( in_eDialog == AK::Wwise::Plugin::ContentsEditorDialog )</div>
 <div class="line">        dwTopic = ONLINEHELP::Tone_Generator_ContentsEditor;</div>
 <div class="line"> </div>
 <div class="line">    ::HtmlHelp(</div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, <span class="comment">// &lt;&lt;&lt; Must be NULL to launch on the correct parent window</span></div>
+<div class="line">        NULL, <span class="comment">// &lt;&lt;&lt; Must be NULL to launch on the correct parent window</span></div>
 <div class="line">        AfxGetApp()-&gt;m_pszHelpFilePath,</div>
 <div class="line">        HH_HELP_CONTEXT,</div>
 <div class="line">        dwTopic</div>
@@ -185,20 +185,21 @@ Displaying Help for a Plug-in</h1>
 <div class="line">}</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> The <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a4923a0688cfc1bca88fcd33196c897a7.html#a4923a0688cfc1bca88fcd33196c897a7" title="Called when the user clicks on the &#39;?&#39; icon.">AK::Wwise::Plugin::GUIWindows::Help()</a></code> method should NOT call AfxGetApp()-&gt;HtmlHelp(). It will launch the Help window from the wrong parent window which will make floating views behave unexpectedly. Instead, use <code>HtmlHelp()</code> with a NULL window handle, as shown the example above. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> The <code>AK::Wwise::Plugin::GUIWindows::Help()</code> method should NOT call AfxGetApp()-&gt;HtmlHelp(). It will launch the Help window from the wrong parent window which will make floating views behave unexpectedly. Instead, use <code>HtmlHelp()</code> with a NULL window handle, as shown the example above. </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034d"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK.Wwise::Plugin::eDialog</a></div><div class="ttdeci">eDialog</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00136">PluginDef.h:137</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034da6d085e723d1240d119005b403573dfb5"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da6d085e723d1240d119005b403573dfb5">AK.Wwise::Plugin::ContentsEditorDialog</a></div><div class="ttdeci">@ ContentsEditorDialog</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00143">PluginDef.h:141</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc">AK.Wwise::Plugin::SettingsDialog</a></div><div class="ttdeci">@ SettingsDialog</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00140">PluginDef.h:138</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76_html_a286a575e82a4a1b002ff737b186d4c76"><div class="ttname"><a href="_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76.html#a286a575e82a4a1b002ff737b186d4c76">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</a></div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div><div class="ttdoc">Ends the declaration of a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00078">GUIWindows.h:78</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf_html_af6140142c9fe6ff132aee5ad0fde1caf"><div class="ttname"><a href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a></div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(theID, theProp)</div><div class="ttdoc">Declares an association between a control and a property within a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00068">GUIWindows.h:68</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="astruct_a_k_1_1_wwise_1_1_plugin_1_1_populate_table_item_html"><div class="ttname"><a href="struct_a_k_1_1_wwise_1_1_plugin_1_1_populate_table_item.html">AK.Wwise::Plugin::PopulateTableItem</a></div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00125">PluginDef.h:126</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows.html">AK.Wwise::Plugin::V1::GUIWindows</a></div><div class="ttdoc">Windows frontend plug-in API for Audio plug-ins.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00199">GUIWindows.h:200</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8_html_ace7e697c1d8a310c9794cf05ce8ce1d8"><div class="ttname"><a href="_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8.html#ace7e697c1d8a310c9794cf05ce8ce1d8">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</a></div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(theName)</div><div class="ttdoc">Starts a new property-control bindings table.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00054">GUIWindows.h:54</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_a983773bd0fac8b545d479971ff56db4d_html_a983773bd0fac8b545d479971ff56db4d"><div class="ttname"><a href="_g_u_i_windows_8h_a983773bd0fac8b545d479971ff56db4d.html#a983773bd0fac8b545d479971ff56db4d">__ImageBase</a></div><div class="ttdeci">IMAGE_DOS_HEADER __ImageBase</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00039">GUIWindows.h:39</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_plugin_m_f_c_windows_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_plugin_m_f_c_windows.html">AK.Wwise::Plugin::PluginMFCWindows</a></div><div class="ttdoc">Initializes MFC for this plug-in.</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_m_f_c_windows_8h_source.html#l00068">PluginMFCWindows.h:69</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034d"><div class="ttname">AK.Wwise::Plugin::eDialog</div><div class="ttdeci">eDialog</div><div class="ttdef"><b>Definition:</b> PluginDef.h:137</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034da6d085e723d1240d119005b403573dfb5"><div class="ttname">AK.Wwise::Plugin::ContentsEditorDialog</div><div class="ttdeci">@ ContentsEditorDialog</div><div class="ttdef"><b>Definition:</b> PluginDef.h:141</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc"><div class="ttname">AK.Wwise::Plugin::SettingsDialog</div><div class="ttdeci">@ SettingsDialog</div><div class="ttdef"><b>Definition:</b> PluginDef.h:138</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76_html_a286a575e82a4a1b002ff737b186d4c76"><div class="ttname">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div><div class="ttdoc">Ends the declaration of a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:78</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf_html_af6140142c9fe6ff132aee5ad0fde1caf"><div class="ttname">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(theID, theProp)</div><div class="ttdoc">Declares an association between a control and a property within a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:68</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="astruct_a_k_1_1_wwise_1_1_plugin_1_1_populate_table_item_html"><div class="ttname"><a href="struct_a_k_1_1_wwise_1_1_plugin_1_1_populate_table_item.html">AK.Wwise::Plugin::PopulateTableItem</a></div><div class="ttdef"><b>Definition:</b> PluginDef.h:126</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows.html">AK.Wwise::Plugin::V1::GUIWindows</a></div><div class="ttdoc">Windows frontend plug-in API for Audio plug-ins.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:200</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8_html_ace7e697c1d8a310c9794cf05ce8ce1d8"><div class="ttname">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(theName)</div><div class="ttdoc">Starts a new property-control bindings table.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:54</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_a983773bd0fac8b545d479971ff56db4d_html_a983773bd0fac8b545d479971ff56db4d"><div class="ttname">__ImageBase</div><div class="ttdeci">IMAGE_DOS_HEADER __ImageBase</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:39</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_plugin_m_f_c_windows_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_plugin_m_f_c_windows.html">AK.Wwise::Plugin::PluginMFCWindows</a></div><div class="ttdoc">Initializes MFC for this plug-in.</div><div class="ttdef"><b>Definition:</b> PluginMFCWindows.h:69</div></div>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -38,7 +38,7 @@ RTPC Example</h1>
 <p>RTPCs let the sound engine compute a property's value by evaluating a curve, defined by the Wwise user, for the X value that corresponds to a parameter within the game. For example, the following code sets the value of the "RPM" game parameter:</p>
 <div class="fragment"><div class="line"><span class="comment">// Set the game parameter&#39;s value using its name. We could use its</span></div>
 <div class="line"><span class="comment">// ID instead, AK::GAME_PARAMETERS::RPM (from Wwise_IDs.h)</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_ab0e4ddefe5ea550b2f356edaa5a49a26.html#ab0e4ddefe5ea550b2f356edaa5a49a26">AK::SoundEngine::SetRTPCValue</a>( L<span class="stringliteral">&quot;RPM&quot;</span>, (<a class="code" href="_common_2_ak_types_8h_a86459d5c3b5e6055cc885b833661f140.html#a86459d5c3b5e6055cc885b833661f140">AkRtpcValue</a>)nRPM );</div>
+<div class="line">AK::SoundEngine::SetRTPCValue( L<span class="stringliteral">&quot;RPM&quot;</span>, (AkRtpcValue)nRPM );</div>
 </div><!-- fragment --><p>In the sample program you can experiment with RTPCs in two ways:</p><ul>
 <li>In the Car section, select the <code>Play_Engine</code> event, click Post, then move the RPM slider. This changes the value of the RPM game parameter which the engine sound uses to alter its volume and pitch properties</li>
 <li>In the Human section, check/uncheck the "Enable Effect" checkbox, then click on Talk. When the checkbox is checked, the "Enable_Effect" game parameter is set to 100. When its unchecked the game parameter is set to 0. The Voices control bus uses this game parameter to set/clear its "Bypass Effect" property.</li>
@@ -50,7 +50,8 @@ RTPC Example</h1>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_ab0e4ddefe5ea550b2f356edaa5a49a26_html_ab0e4ddefe5ea550b2f356edaa5a49a26"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_ab0e4ddefe5ea550b2f356edaa5a49a26.html#ab0e4ddefe5ea550b2f356edaa5a49a26">AK::SoundEngine::SetRTPCValue</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetRTPCValue(AkRtpcID in_rtpcID, AkRtpcValue in_value, AkGameObjectID in_gameObjectID=AK_INVALID_GAME_OBJECT, AkTimeMs in_uValueChangeDuration=0, AkCurveInterpolation in_eFadeCurve=AkCurveInterpolation_Linear, bool in_bBypassInternalValueInterpolation=false)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a86459d5c3b5e6055cc885b833661f140_html_a86459d5c3b5e6055cc885b833661f140"><div class="ttname"><a href="_common_2_ak_types_8h_a86459d5c3b5e6055cc885b833661f140.html#a86459d5c3b5e6055cc885b833661f140">AkRtpcValue</a></div><div class="ttdeci">AkReal32 AkRtpcValue</div><div class="ttdoc">Real time parameter control value.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00156">AkTypes.h:156</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_ab0e4ddefe5ea550b2f356edaa5a49a26_html_ab0e4ddefe5ea550b2f356edaa5a49a26"><div class="ttname">AK::SoundEngine::SetRTPCValue</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetRTPCValue(AkRtpcID in_rtpcID, AkRtpcValue in_value, AkGameObjectID in_gameObjectID=AK_INVALID_GAME_OBJECT, AkTimeMs in_uValueChangeDuration=0, AkCurveInterpolation in_eFadeCurve=AkCurveInterpolation_Linear, bool in_bBypassInternalValueInterpolation=false)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a86459d5c3b5e6055cc885b833661f140_html_a86459d5c3b5e6055cc885b833661f140"><div class="ttname">AkRtpcValue</div><div class="ttdeci">AkReal32 AkRtpcValue</div><div class="ttdoc">Real time parameter control value.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:156</div></div>
 </body>
 </html>
+

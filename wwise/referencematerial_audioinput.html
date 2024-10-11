@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -40,8 +40,8 @@ About this plug-in</h1>
 Integrating the plug-in</h1>
 <p>Aside from regular plug-in initialization (see <a class="el" href="soundengine_integration_plugins.html">Integration Details - Plug-Ins</a>), integrating the Audio Input plugin requires the game to provide input audio data used by the various instances of the plug-in in the Wwise project. This is done through a callback mechanism, as exposed in <a class="el" href="_ak_audio_input_source_factory_8h.html">AkAudioInputSourceFactory.h</a>:</p>
 <ul>
-<li>At first, the game calls <a class="el" href="_ak_audio_input_plugin_8h_a8af9a8fca59e66e75f68b987e3f48db7.html#a8af9a8fca59e66e75f68b987e3f48db7" title="This function should be called at the same place the AudioInput plug-in is being registered.">SetAudioInputCallbacks()</a> to set the mandatory <a class="el" href="_ak_audio_input_plugin_8h_a27b5a1a19c611de4eb85beb4e5fbb698.html#a27b5a1a19c611de4eb85beb4e5fbb698">AkAudioInputPluginExecuteCallbackFunc</a> which will be called whenever an instance of audio input requires more audio data.<ul>
-<li><p class="startli">If the audio data is not a mono stream of 32-bit floating point values, the <a class="el" href="_ak_audio_input_plugin_8h_aad871e20a8b120f2b436d22157ac7187.html#aad871e20a8b120f2b436d22157ac7187">AkAudioInputPluginGetFormatCallbackFunc</a> must be set. This callback only accepts audio data in the following formats, where the left and right channels are stored as shown for a 16-frame buffer:</p><ul>
+<li>At first, the game calls SetAudioInputCallbacks() to set the mandatory AkAudioInputPluginExecuteCallbackFunc which will be called whenever an instance of audio input requires more audio data.<ul>
+<li><p class="startli">If the audio data is not a mono stream of 32-bit floating point values, the AkAudioInputPluginGetFormatCallbackFunc must be set. This callback only accepts audio data in the following formats, where the left and right channels are stored as shown for a 16-frame buffer:</p><ul>
 <li>interleaved 16-bit integer (also known as <em>planar</em>) <div class="image">
 <img src="dgm_interleaved_audio_format.png" alt=""/>
 </div>
@@ -51,7 +51,7 @@ Integrating the plug-in</h1>
 </div>
 </li>
 </ul>
-<p class="startli"><a class="el" href="_ak_audio_input_plugin_8h_aad871e20a8b120f2b436d22157ac7187.html#aad871e20a8b120f2b436d22157ac7187">AkAudioInputPluginGetFormatCallbackFunc</a> uses <a class="el" href="struct_ak_audio_format.html">AkAudioFormat</a> which can be populated as shown in the example below. <a class="el" href="struct_ak_audio_format.html">AkAudioFormat</a> consists of audio data format specifications and channel configuration <a class="el" href="struct_ak_channel_config.html">AkChannelConfig</a>.</p>
+<p class="startli">AkAudioInputPluginGetFormatCallbackFunc uses <a class="el" href="struct_ak_audio_format.html">AkAudioFormat</a> which can be populated as shown in the example below. <a class="el" href="struct_ak_audio_format.html">AkAudioFormat</a> consists of audio data format specifications and channel configuration <a class="el" href="struct_ak_channel_config.html">AkChannelConfig</a>.</p>
 <p class="startli"><a class="el" href="struct_ak_channel_config.html">AkChannelConfig</a> can be set with the help of one of the calls mentioned below: AkChannelConfig.SetAnonymous(...), AkChannelConfig.SetStandard(...) or AkChannelConfig.SetAmbisonic(...)</p>
 <p class="startli">ChannelMask: There are no restrictions on channelmask. Standard and custom channelmasks are supported.</p>
 <p class="startli">Interleaved format (<code>AK_INTERLEAVED</code>) only supports <code>AK_INT</code>, and non-interleaved format (<code>AK_NONINTERLEAVED</code>) only supports <code>AK_FLOAT</code>.</p>
@@ -61,20 +61,20 @@ Integrating the plug-in</h1>
 </ul>
 <div class="fragment"><div class="line"><a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a> audioFormat;</div>
 <div class="line"><a class="code" href="struct_ak_channel_config.html">AkChannelConfig</a> audioChConfig;</div>
-<div class="line">audioChConfig.<a class="code" href="struct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7.html#a4c0f4b3d39608a10c9b330c1ef8281a7">SetStandard</a>(0);</div>
-<div class="line">audioFormat.<a class="code" href="struct_ak_audio_format_a9faddafaebebeb550993315c8f610aea.html#a9faddafaebebeb550993315c8f610aea">SetAll</a>(</div>
+<div class="line">audioChConfig.SetStandard(0);</div>
+<div class="line">audioFormat.SetAll(</div>
 <div class="line">    48000,                  <span class="comment">// Sample rate</span></div>
 <div class="line">    audioChConfig, <span class="comment">// \ref AkChannelConfig</span></div>
 <div class="line">    16,                     <span class="comment">// Bits per samples</span></div>
 <div class="line">    2,                      <span class="comment">// 2 bytes per samples</span></div>
-<div class="line">    <a class="code" href="_ak_common_defs_8h_a27e63de612e818dbe8b87e583bc175e7.html#a27e63de612e818dbe8b87e583bc175e7">AK_INT</a>,                 <span class="comment">// feeding integers(signed)</span></div>
-<div class="line">    <a class="code" href="_ak_common_defs_8h_a7fa3ccbf7577c429ea9612d9528350b8.html#a7fa3ccbf7577c429ea9612d9528350b8">AK_INTERLEAVED</a></div>
+<div class="line">    AK_INT,                 <span class="comment">// feeding integers(signed)</span></div>
+<div class="line">    AK_INTERLEAVED</div>
 <div class="line">    );</div>
 </div><!-- fragment --><ul>
 <li>Next, the game calls PostEvent to start the audio input plug-in.</li>
-<li>The Sound Engine will call <a class="el" href="_ak_audio_input_plugin_8h_aad871e20a8b120f2b436d22157ac7187.html#aad871e20a8b120f2b436d22157ac7187">AkAudioInputPluginGetFormatCallbackFunc</a> once at the beginning of playback and then <a class="el" href="_ak_audio_input_plugin_8h_a27b5a1a19c611de4eb85beb4e5fbb698.html#a27b5a1a19c611de4eb85beb4e5fbb698">AkAudioInputPluginExecuteCallbackFunc</a> at each audio frame until the plug-in finishes execution (either through a stop action or the execute callback setting <a class="el" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a94ba10d374d31161770fc490e0245802">AK_NoMoreData</a> on io_pBufferOut-&gt;eState).</li>
+<li>The Sound Engine will call AkAudioInputPluginGetFormatCallbackFunc once at the beginning of playback and then AkAudioInputPluginExecuteCallbackFunc at each audio frame until the plug-in finishes execution (either through a stop action or the execute callback setting AK_NoMoreData on io_pBufferOut-&gt;eState).</li>
 </ul>
-<p>A very simple integration is demonstrated in the <a class="el" href="soundengine_integration_samplecode.html#integrationdemo_demos_micro">Microphone/AudioInput Demo</a> demo, using a microphone as the input. In the Integration Demo Wwise Project, a Sound Voice named Microphone uses the Audio Input plug-in as a source. <br  />
+<p>A very simple integration is demonstrated in the Microphone/AudioInput Demo demo, using a microphone as the input. In the Integration Demo Wwise Project, a Sound Voice named Microphone uses the Audio Input plug-in as a source. <br  />
 </p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -82,11 +82,12 @@ Integrating the plug-in</h1>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="astruct_ak_channel_config_html"><div class="ttname"><a href="struct_ak_channel_config.html">AkChannelConfig</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00495">AkSpeakerConfig.h:496</a></div></div>
-<div class="ttc" id="astruct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7_html_a4c0f4b3d39608a10c9b330c1ef8281a7"><div class="ttname"><a href="struct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7.html#a4c0f4b3d39608a10c9b330c1ef8281a7">AkChannelConfig::SetStandard</a></div><div class="ttdeci">AkForceInline void SetStandard(AkUInt32 in_uChannelMask)</div><div class="ttdoc">Set channel config as a standard configuration specified with given channel mask.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_config_8h_source.html#l00563">AkSpeakerConfig.h:563</a></div></div>
-<div class="ttc" id="a_ak_common_defs_8h_a27e63de612e818dbe8b87e583bc175e7_html_a27e63de612e818dbe8b87e583bc175e7"><div class="ttname"><a href="_ak_common_defs_8h_a27e63de612e818dbe8b87e583bc175e7.html#a27e63de612e818dbe8b87e583bc175e7">AK_INT</a></div><div class="ttdeci">const AkDataTypeID AK_INT</div><div class="ttdoc">Integer data type (uchar, short, and so on)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00049">AkCommonDefs.h:49</a></div></div>
-<div class="ttc" id="astruct_ak_audio_format_html"><div class="ttname"><a href="struct_ak_audio_format.html">AkAudioFormat</a></div><div class="ttdoc">Defines the parameters of an audio buffer format.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00061">AkCommonDefs.h:62</a></div></div>
-<div class="ttc" id="a_ak_common_defs_8h_a7fa3ccbf7577c429ea9612d9528350b8_html_a7fa3ccbf7577c429ea9612d9528350b8"><div class="ttname"><a href="_ak_common_defs_8h_a7fa3ccbf7577c429ea9612d9528350b8.html#a7fa3ccbf7577c429ea9612d9528350b8">AK_INTERLEAVED</a></div><div class="ttdeci">const AkDataInterleaveID AK_INTERLEAVED</div><div class="ttdoc">Interleaved data.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00052">AkCommonDefs.h:52</a></div></div>
-<div class="ttc" id="astruct_ak_audio_format_a9faddafaebebeb550993315c8f610aea_html_a9faddafaebebeb550993315c8f610aea"><div class="ttname"><a href="struct_ak_audio_format_a9faddafaebebeb550993315c8f610aea.html#a9faddafaebebeb550993315c8f610aea">AkAudioFormat::SetAll</a></div><div class="ttdeci">void SetAll(AkUInt32 in_uSampleRate, AkChannelConfig in_channelConfig, AkUInt32 in_uBitsPerSample, AkUInt32 in_uBlockAlign, AkUInt32 in_uTypeID, AkUInt32 in_uInterleaveID)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00125">AkCommonDefs.h:125</a></div></div>
+<div class="ttc" id="astruct_ak_channel_config_html"><div class="ttname"><a href="struct_ak_channel_config.html">AkChannelConfig</a></div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:496</div></div>
+<div class="ttc" id="astruct_ak_channel_config_a4c0f4b3d39608a10c9b330c1ef8281a7_html_a4c0f4b3d39608a10c9b330c1ef8281a7"><div class="ttname">AkChannelConfig::SetStandard</div><div class="ttdeci">AkForceInline void SetStandard(AkUInt32 in_uChannelMask)</div><div class="ttdoc">Set channel config as a standard configuration specified with given channel mask.</div><div class="ttdef"><b>Definition:</b> AkSpeakerConfig.h:563</div></div>
+<div class="ttc" id="a_ak_common_defs_8h_a27e63de612e818dbe8b87e583bc175e7_html_a27e63de612e818dbe8b87e583bc175e7"><div class="ttname">AK_INT</div><div class="ttdeci">const AkDataTypeID AK_INT</div><div class="ttdoc">Integer data type (uchar, short, and so on)</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:49</div></div>
+<div class="ttc" id="astruct_ak_audio_format_html"><div class="ttname"><a href="struct_ak_audio_format.html">AkAudioFormat</a></div><div class="ttdoc">Defines the parameters of an audio buffer format.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:62</div></div>
+<div class="ttc" id="a_ak_common_defs_8h_a7fa3ccbf7577c429ea9612d9528350b8_html_a7fa3ccbf7577c429ea9612d9528350b8"><div class="ttname">AK_INTERLEAVED</div><div class="ttdeci">const AkDataInterleaveID AK_INTERLEAVED</div><div class="ttdoc">Interleaved data.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:52</div></div>
+<div class="ttc" id="astruct_ak_audio_format_a9faddafaebebeb550993315c8f610aea_html_a9faddafaebebeb550993315c8f610aea"><div class="ttname">AkAudioFormat::SetAll</div><div class="ttdeci">void SetAll(AkUInt32 in_uSampleRate, AkChannelConfig in_channelConfig, AkUInt32 in_uBitsPerSample, AkUInt32 in_uBlockAlign, AkUInt32 in_uTypeID, AkUInt32 in_uInterleaveID)</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:125</div></div>
 </body>
 </html>
+

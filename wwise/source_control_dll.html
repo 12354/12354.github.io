@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -34,23 +34,23 @@
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>Creating a Wwise source control plug-in DLL requires the following steps:</p><ul>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_new_project">Creating the Project</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object">Building the Source Control Plug-in Interface</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_implementing_actions">Implementing Source Control Actions</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_dialog">Defining the Source Control Plug-in Dialog</a></li>
+<li>Creating the Project</li>
+<li>Building the Source Control Plug-in Interface</li>
+<li>Implementing Source Control Actions</li>
+<li>Defining the Source Control Plug-in Dialog</li>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> A DLL can contain more than one plug-in. For more information, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_exported">Establishing Exported Functions</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> A DLL can contain more than one plug-in. For more information, refer to Establishing Exported Functions. </td></tr>
 </table>
 <h1><a class="anchor" id="source_control_dll_creation"></a>
 Beginning a New Project</h1>
 <p>When you begin a new project, you must create the project and establish the exported functions to be used in the project.</p><ul>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_new_project">Creating the Project</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_exported">Establishing Exported Functions</a></li>
+<li>Creating the Project</li>
+<li>Establishing Exported Functions</li>
 </ul>
 <p>You should also familiarize yourself with the source control interfaces you will be using in your project.</p><ul>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_interfaces">Source Control Interfaces</a></li>
+<li>Source Control Interfaces</li>
 </ul>
 <h2><a class="anchor" id="source_control_dll_creation_new_project"></a>
 Creating the Project</h2>
@@ -76,9 +76,9 @@ Establishing Exported Functions</h2>
 <li>AkSourceControlCreatePlugin(): Creates an instance of your <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a> object.</li>
 </ul>
 <p>Prototypes of these exported functions can be found in the following type definitions:</p><ul>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a5884432f102b445c4c3de021a3867e46.html#a5884432f102b445c4c3de021a3867e46" title="Gets the plug-in ID list contained by the DLL file.">AK::Wwise::ISourceControl::GetSourceControlIDListFuncPtr</a></li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a9e3376c6dbaa3e6094e21e04aa2a28e1.html#a9e3376c6dbaa3e6094e21e04aa2a28e1" title="Gets the AK::Wwise::ISourceControl::PluginInfo class associated with a given plug-in ID.">AK::Wwise::ISourceControl::GetSourceControlPluginInfoFuncPtr</a></li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a5ea75c450aecec73c2b29f51d990a206.html#a5ea75c450aecec73c2b29f51d990a206">AK::Wwise::ISourceControl::GetSourceControlInstanceFuncPtr</a></li>
+<li>AK::Wwise::ISourceControl::GetSourceControlIDListFuncPtr</li>
+<li>AK::Wwise::ISourceControl::GetSourceControlPluginInfoFuncPtr</li>
+<li>AK::Wwise::ISourceControl::GetSourceControlInstanceFuncPtr</li>
 </ul>
 <p>Here is an example of the exported functions for a plug-in DLL containing two plug-ins:</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;<a class="code" href="_i_source_control_8h.html">AK/Wwise/SourceControl/ISourceControl.h</a>&quot;</span></div>
@@ -97,8 +97,8 @@ Establishing Exported Functions</h2>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">void</span> __stdcall AkSourceControlGetPluginIDList ( <a class="code" href="class_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list.html">AK::Wwise::ISourceControl::PluginIDList</a>&amp; out_rPluginIDList )</div>
 <div class="line">{</div>
-<div class="line">    out_rPluginIDList.<a class="code" href="class_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_ad148966a617cb4164a43b3772bb4f321.html#ad148966a617cb4164a43b3772bb4f321">AddTail</a>( s_guidFirstSamplePluginID ); </div>
-<div class="line">    out_rPluginIDList.<a class="code" href="class_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_ad148966a617cb4164a43b3772bb4f321.html#ad148966a617cb4164a43b3772bb4f321">AddTail</a>( s_guidSecondSamplePluginID );</div>
+<div class="line">    out_rPluginIDList.AddTail( s_guidFirstSamplePluginID ); </div>
+<div class="line">    out_rPluginIDList.AddTail( s_guidSecondSamplePluginID );</div>
 <div class="line"> </div>
 <div class="line">}</div>
 <div class="line"> </div>
@@ -118,7 +118,7 @@ Establishing Exported Functions</h2>
 <div class="line"> </div>
 <div class="line"><a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a>* __stdcall AkSourceControlCreatePlugin ( <span class="keyword">const</span> <a class="code" href="struct_g_u_i_d.html">GUID</a>&amp; in_rguidPluginID )</div>
 <div class="line">{</div>
-<div class="line">    <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a>* pSourceControl = <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>;</div>
+<div class="line">    <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a>* pSourceControl = NULL;</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">if</span> ( in_rguidPluginID == s_guidFirstSamplePluginID )</div>
 <div class="line">    {</div>
@@ -153,26 +153,26 @@ Source Control Interfaces</h2>
 <h3><a class="anchor" id="source_control_dll_creation_interfaces_isourcecontrol"></a>
 AK::Wwise::ISourceControl</h3>
 <p>Your plug-in must implement this interface to perform source control operations.</p>
-<p>For more information about this interface, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_object">Building the Source Control Plug-in Interface</a>.</p>
+<p>For more information about this interface, refer to Building the Source Control Plug-in Interface.</p>
 <h3><a class="anchor" id="source_control_dll_creation_interfaces_isourcecontrolutilities"></a>
 AK::Wwise::ISourceControlUtilities</h3>
 <p>This interface is implemented by Wwise and is given to the plug-in at its creation. It exposes some useful utility functions to the plug-in.</p>
-<p>For more information about this interface, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_utilities">Using the Source Control Utilities Interface</a>.</p>
+<p>For more information about this interface, refer to Using the Source Control Utilities Interface.</p>
 <h3><a class="anchor" id="source_control_dll_creation_interfaces_isourcecontroloperationprogress"></a>
 AK::Wwise::ISourceControlOperationProgress</h3>
 <p>This interface is implemented by Wwise and is given to the plug-in via the ISourceControlUtilities class. It exposes functions to manage a simple progress dialog.</p>
-<p>For more information about this interface, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_progress">Implementing the Source Control Operation Progress Interface</a>.</p>
+<p>For more information about this interface, refer to Implementing the Source Control Operation Progress Interface.</p>
 <h3><a class="anchor" id="source_control_dll_creation_interfaces_isourcecontroldialogbase"></a>
 AK::Wwise::ISourceControlDialogBase</h3>
 <p>This is the interface that the plug-in must implement to create dialogs that have the Wwise UI look and feel.</p>
-<p>For more information about this interface, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_dialog">Defining the Source Control Plug-in Dialog</a>.</p>
+<p>For more information about this interface, refer to Defining the Source Control Plug-in Dialog.</p>
 <h1><a class="anchor" id="source_control_dll_creation_object"></a>
 Building the Source Control Plug-in Interface</h1>
 <p>When you implement the methods of <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a>, you define the behavior of your plug-in in response to various situations in Wwise. The methods allow the plug-in to react to the following situations:</p>
 <ul>
 <li>The plug-in instance is initialized or terminated</li>
 <li>The plug-in instance is destroyed</li>
-<li>The Wwise user clicks the "Config…" button in the Project Settings dialog</li>
+<li>The Wwise user clicks the "Configâ€¦" button in the Project Settings dialog</li>
 <li>Wwise refreshes the icons of the Project Explorer</li>
 <li>The file lists of the File Manager's Work Units or Sources tab are refreshed</li>
 <li>A contextual menu that contains source control operations is displayed</li>
@@ -183,7 +183,7 @@ Building the Source Control Plug-in Interface</h1>
 <p>Some of these situations are covered in the following sections, but you can refer directly to the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a> reference for a complete description of the interface and the functions you need to implement.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Many methods in this interface have the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_acf444a7a6671eacbee4a2a29aeb82286.html#acf444a7a6671eacbee4a2a29aeb82286">AK::Wwise::ISourceControl::OperationResult</a> enumeration as return type. It is important to note that the OperationResult_Failed result must be used only when the operation fails globally; that is, when you don't want Wwise to consider data that is returned by the plug-in. Such failures include the following:<ul>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Many methods in this interface have the AK::Wwise::ISourceControl::OperationResult enumeration as return type. It is important to note that the OperationResult_Failed result must be used only when the operation fails globally; that is, when you don't want Wwise to consider data that is returned by the plug-in. Such failures include the following:<ul>
 <li>The connection has failed.</li>
 <li>An internal plug-in error has occurred. </li>
 </ul>
@@ -202,38 +202,38 @@ Sample Code</h2>
 <div class="line">    <span class="keyword">virtual</span> ~SamplePlugin();</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// ISourceControl implementation</span></div>
-<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a965c84c993e7b9644a7d51dafcdeb113.html#a965c84c993e7b9644a7d51dafcdeb113">Init</a>(<a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK::Wwise::ISourceControlUtilities</a>* in_pUtilities ); <span class="comment">// Initializing and Terminating the </span></div>
+<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> Init(<a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK::Wwise::ISourceControlUtilities</a>* in_pUtilities ); <span class="comment">// Initializing and Terminating the </span></div>
 <div class="line">        <span class="comment">// Plug-in Instance</span></div>
-<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11.html#a488a4e256024111dc7c3eceef7970b11">Term</a>(); <span class="comment">// Initializing and Terminating the Plug-in Instance</span></div>
-<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a7682bc6fd40d00c825703604ab79fc85.html#a7682bc6fd40d00c825703604ab79fc85">Destroy</a>(); <span class="comment">// Destroying the Plug-in Instance</span></div>
+<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> Term(); <span class="comment">// Initializing and Terminating the Plug-in Instance</span></div>
+<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> Destroy(); <span class="comment">// Destroying the Plug-in Instance</span></div>
 <div class="line"> </div>
-<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">bool</span> <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a895acce7b436743e5519245529c97ecd.html#a895acce7b436743e5519245529c97ecd">ShowConfigDlg</a>(); <span class="comment">// Plug-in configuration</span></div>
-<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_ad7820c108e50155039c92223eff718f3.html#ad7820c108e50155039c92223eff718f3">GetOperationList</a>( OperationMenuType in_menuType, <span class="keyword">const</span> StringList&amp; in_rFilenameList, </div>
+<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">bool</span> ShowConfigDlg(); <span class="comment">// Plug-in configuration</span></div>
+<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> GetOperationList( OperationMenuType in_menuType, <span class="keyword">const</span> StringList&amp; in_rFilenameList, </div>
 <div class="line">        OperationList&amp; out_rOperationList ); <span class="comment">// Contextual Menu</span></div>
-<div class="line">    <span class="keyword">virtual</span> DWORD <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a1cb1c283baf8b61df030a862dd2dc880.html#a1cb1c283baf8b61df030a862dd2dc880">GetOperationEffect</a>(</div>
+<div class="line">    <span class="keyword">virtual</span> DWORD GetOperationEffect(</div>
 <div class="line">                DWORD in_dwOperationID ); <span class="comment">// Wwise needs to know the effect of an operation</span></div>
-<div class="line">    <span class="keyword">virtual</span> LPCWSTR <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a817835af7fd2e208f9ba202d6eb5a2eb.html#a817835af7fd2e208f9ba202d6eb5a2eb">GetOperationName</a>(</div>
+<div class="line">    <span class="keyword">virtual</span> LPCWSTR GetOperationName(</div>
 <div class="line">        DWORD in_dwOperationID ); <span class="comment">// Get operation name</span></div>
-<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_ad9ed25401176139c3185a5980b6d44d4.html#ad9ed25401176139c3185a5980b6d44d4">GetFileStatus</a>( </div>
+<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult GetFileStatus( </div>
 <div class="line">        <span class="keyword">const</span> StringList&amp; in_rFilenameList, </div>
 <div class="line">        FilenameToStatusMap&amp; out_rFileStatusMap ); <span class="comment">// File Manager Dialog</span></div>
-<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a177b1676aeffa151c86255a7b747fcdc.html#a177b1676aeffa151c86255a7b747fcdc">GetFileStatusIcons</a>( </div>
+<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult GetFileStatusIcons( </div>
 <div class="line">        <span class="keyword">const</span> StringList&amp; in_rFilenameList, </div>
 <div class="line">        FilenameToIconMap&amp; out_rFileIconsMap ); <span class="comment">// Project Explorer Icons Refresh</span></div>
-<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_acda8ef1d7727c6ba45d302f4c4ee339e.html#acda8ef1d7727c6ba45d302f4c4ee339e">GetMissingFilesInDirectories</a>( </div>
+<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult GetMissingFilesInDirectories( </div>
 <div class="line">        <span class="keyword">const</span> StringList&amp; in_rDirectoryList, StringList&amp; out_rFilenameList ); <span class="comment">// File Manager Dialog</span></div>
-<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a36789a297bc4a85ba0fffb9de9bc0a6f.html#a36789a297bc4a85ba0fffb9de9bc0a6f">DoOperation</a>( DWORD in_dwOperationID, <span class="keyword">const</span> StringList&amp; in_rFilenameList ); <span class="comment">// Execution of a </span></div>
+<div class="line">    <span class="keyword">virtual</span> <span class="keywordtype">void</span> DoOperation( DWORD in_dwOperationID, <span class="keyword">const</span> StringList&amp; in_rFilenameList ); <span class="comment">// Execution of a </span></div>
 <div class="line">        <span class="comment">// Source Control Operation</span></div>
-<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7.html#aba7d81dda40d38b6c8bb81d190b846f7">PreCreateOrModify</a>( </div>
+<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult PreCreateOrModify( </div>
 <div class="line">        <span class="keyword">const</span> StringList&amp; in_rFilenameList, </div>
 <div class="line">        <span class="keywordtype">bool</span>&amp; out_rContinue ); <span class="comment">// Creation or Modification of Files in Wwise</span></div>
-<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult <a class="code" href="class_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5.html#a9fb467f0d5dbcb386290f53a81bb8dc5">PostCreateOrModify</a>( </div>
+<div class="line">    <span class="keyword">virtual</span> AK::Wwise::ISourceControlUtilities::OperationResult PostCreateOrModify( </div>
 <div class="line">        <span class="keyword">const</span> StringList&amp; in_rFilenameList, </div>
 <div class="line">        <span class="keywordtype">bool</span>&amp; out_rContinue ); <span class="comment">// Creation or Modification of Files in Wwise</span></div>
 <div class="line">    </div>
 <div class="line"><span class="comment">// A static method to get the plug-in information class, refer to Source Control Plug-in Information Class </span></div>
 <div class="line"><span class="comment">// for more information about this method.</span></div>
-<div class="line">    <span class="keyword">static</span> <span class="keywordtype">void</span> GetPluginInfo( <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a69141ebf4159597c1e76aad07862c823.html#a69141ebf4159597c1e76aad07862c823">PluginInfo</a>&amp; out_rPluginInfo );</div>
+<div class="line">    <span class="keyword">static</span> <span class="keywordtype">void</span> GetPluginInfo( PluginInfo&amp; out_rPluginInfo );</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">private</span>:</div>
 <div class="line"> </div>
@@ -246,7 +246,7 @@ Sample Code</h2>
 </table>
 <h2><a class="anchor" id="source_control_dll_creation_object_information"></a>
 Establishing the Source Control Plug-in Information Class</h2>
-<p>When Wwise requires information about your plug-in, it calls the AkSourceControlGetPluginInfo function exported from your DLL. (For more information, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_exported">Establishing Exported Functions</a>. ) The <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info.html" title="Plug-in information structure. This structure gives a simple overview of the plug-in&#39;s capabilities.">AK::Wwise::ISourceControl::PluginInfo</a> class is composed of the following data:</p><ul>
+<p>When Wwise requires information about your plug-in, it calls the AkSourceControlGetPluginInfo function exported from your DLL. (For more information, refer to Establishing Exported Functions. ) The <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info.html" title="Plug-in information structure. This structure gives a simple overview of the plug-in&#39;s capabilities.">AK::Wwise::ISourceControl::PluginInfo</a> class is composed of the following data:</p><ul>
 <li>The name of the plug-in displayed to the user</li>
 <li>The version of the plug-in</li>
 <li>A Boolean value that notifies Wwise that source control icons for work unit nodes can be displayed in the Project Explorer</li>
@@ -256,9 +256,9 @@ Establishing the Source Control Plug-in Information Class</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> A simple way to obtain the plug-in information is to make the AkSourceControlGetPluginInfo (<a class="el" href="source_control_dll.html#source_control_dll_creation_exported">Establishing Exported Functions</a>) call a static method created inside your implementation of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a> interface.</p>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> A simple way to obtain the plug-in information is to make the AkSourceControlGetPluginInfo (Establishing Exported Functions) call a static method created inside your implementation of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK::Wwise::ISourceControl</a> interface.</p>
 <p class="intertd">A simple implementation of this static method is:</p>
-<div class="fragment"><div class="line"><span class="keywordtype">void</span> SamplePlugin::GetPluginInfo( <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a69141ebf4159597c1e76aad07862c823.html#a69141ebf4159597c1e76aad07862c823">PluginInfo</a>&amp; out_rPluginInfo )</div>
+<div class="fragment"><div class="line"><span class="keywordtype">void</span> SamplePlugin::GetPluginInfo( PluginInfo&amp; out_rPluginInfo )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Plug-in name and version</span></div>
 <div class="line">    out_rPluginInfo.m_bstrName = ::SysAllocString( L<span class="stringliteral">&quot;Sample Source Control Plug-in&quot;</span> );</div>
@@ -266,8 +266,8 @@ Establishing the Source Control Plug-in Information Class</h2>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Function availability</span></div>
 <div class="line">    out_rPluginInfo.m_bShowConfigDlgAvailable = <span class="keyword">false</span>;</div>
-<div class="line">    out_rPluginInfo.m_dwUpdateCommandID = <a class="code" href="class_a_k_1_1_wwise_1_1_source_control_constant_ab76ee63c449ed45e8e4f4cdf693dbbb5.html#ab76ee63c449ed45e8e4f4cdf693dbbb5">AK::Wwise::SourceControlConstant::s_dwInvalidOperationID</a>;<span class="comment">// Replace with your ID</span></div>
-<div class="line">    out_rPluginInfo.m_dwCommitCommandID = <a class="code" href="class_a_k_1_1_wwise_1_1_source_control_constant_ab76ee63c449ed45e8e4f4cdf693dbbb5.html#ab76ee63c449ed45e8e4f4cdf693dbbb5">AK::Wwise::SourceControlConstant::s_dwInvalidOperationID</a>;<span class="comment">// Replace with your ID</span></div>
+<div class="line">    out_rPluginInfo.m_dwUpdateCommandID = AK::Wwise::SourceControlConstant::s_dwInvalidOperationID;<span class="comment">// Replace with your ID</span></div>
+<div class="line">    out_rPluginInfo.m_dwCommitCommandID = AK::Wwise::SourceControlConstant::s_dwInvalidOperationID;<span class="comment">// Replace with your ID</span></div>
 <div class="line">    out_rPluginInfo.m_bStatusIconAvailable = <span class="keyword">false</span>;</div>
 <div class="line">}</div>
 </div><!-- fragment --> </td></tr>
@@ -278,27 +278,27 @@ Establishing the Source Control Plug-in Information Class</h2>
 </table>
 <h2><a class="anchor" id="source_control_dll_creation_object_init_term"></a>
 Initializing and Terminating the Plug-in Instance</h2>
-<p>When the plug-in instance is created, Wwise calls the AK::Wwise::ISourceControl::Init( ISourceControlUtilities* in_pUtilities ) method. The parameter of this function is a pointer to Wwise's implementation of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK::Wwise::ISourceControlUtilities</a> interface. You might want to copy this pointer to a member of your plug-in class to be able to create dialogs, show a progress dialog, display message boxes, or load and save plug-in configuration. For more information on this topic, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_utilities">Using the Source Control Utilities Interface</a>.</p>
-<p>A typical implementation of <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a965c84c993e7b9644a7d51dafcdeb113.html#a965c84c993e7b9644a7d51dafcdeb113" title="This function is called when the plug-in is initialized after its creation.">AK::Wwise::ISourceControl::Init()</a> is:</p>
-<div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">SamplePlugin::Init</a>( ISourceControlUtilities* in_pUtilities )</div>
+<p>When the plug-in instance is created, Wwise calls the AK::Wwise::ISourceControl::Init( ISourceControlUtilities* in_pUtilities ) method. The parameter of this function is a pointer to Wwise's implementation of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK::Wwise::ISourceControlUtilities</a> interface. You might want to copy this pointer to a member of your plug-in class to be able to create dialogs, show a progress dialog, display message boxes, or load and save plug-in configuration. For more information on this topic, refer to Using the Source Control Utilities Interface.</p>
+<p>A typical implementation of AK::Wwise::ISourceControl::Init() is:</p>
+<div class="fragment"><div class="line"><span class="keywordtype">void</span> SamplePlugin::Init( ISourceControlUtilities* in_pUtilities )</div>
 <div class="line">{</div>
 <div class="line">    m_pSourceControlUtilities = in_pUtilities;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Load the plug-in configuration from the registry</span></div>
 <div class="line">}</div>
-</div><!-- fragment --><p>Just before the plug-in instance is destroyed, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11.html#a488a4e256024111dc7c3eceef7970b11" title="This function is called when the plug-in is terminated before its destruction.">AK::Wwise::ISourceControl::Term()</a> method.</p>
-<p>A typical implementation of <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11.html#a488a4e256024111dc7c3eceef7970b11" title="This function is called when the plug-in is terminated before its destruction.">AK::Wwise::ISourceControl::Term()</a> is:</p>
-<div class="fragment"><div class="line"><span class="keywordtype">void</span> <a class="code" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">SamplePlugin::Term</a>()</div>
+</div><!-- fragment --><p>Just before the plug-in instance is destroyed, Wwise calls the AK::Wwise::ISourceControl::Term() method.</p>
+<p>A typical implementation of AK::Wwise::ISourceControl::Term() is:</p>
+<div class="fragment"><div class="line"><span class="keywordtype">void</span> SamplePlugin::Term()</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Save the plug-in configuration to the registry</span></div>
-<div class="line">    m_pSourceControlUtilities = <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>;</div>
+<div class="line">    m_pSourceControlUtilities = NULL;</div>
 <div class="line">}</div>
 </div><!-- fragment --><p>For more information about loading/saving plug-in configuration to the registry, refer to <a class="el" href="referencematerial_samplecode_source_control.html">Source Control Plug-in Sample Code</a>.</p>
-<p>For more information about when these functions are called, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_object_destroy">Destroying the Plug-in Instance</a>.</p>
+<p>For more information about when these functions are called, refer to Destroying the Plug-in Instance.</p>
 <h2><a class="anchor" id="source_control_dll_creation_object_destroy"></a>
 Destroying the Plug-in Instance</h2>
-<p>When Wwise needs to create an instance of your source control plug-in, it calls the AkSourceControlCreatePlugin() function in your DLL (<a class="el" href="source_control_dll.html#source_control_dll_creation_exported">Establishing Exported Functions</a>) to create the new instance. This function returns an interface to your source control plug-in. When the plug-in instance is no longer needed, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a7682bc6fd40d00c825703604ab79fc85.html#a7682bc6fd40d00c825703604ab79fc85" title="This function destroys the plug-in. The implementation is generally &#39;{ delete this; }&#39;.">AK::Wwise::ISourceControl::Destroy()</a> method on that particular instance. This method releases any memory or other resources the object consumes, and then deletes the object itself.</p>
-<p>If the instance was created with the operator New, a typical implementation of <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a7682bc6fd40d00c825703604ab79fc85.html#a7682bc6fd40d00c825703604ab79fc85" title="This function destroys the plug-in. The implementation is generally &#39;{ delete this; }&#39;.">AK::Wwise::ISourceControl::Destroy()</a> would be:</p>
+<p>When Wwise needs to create an instance of your source control plug-in, it calls the AkSourceControlCreatePlugin() function in your DLL (Establishing Exported Functions) to create the new instance. This function returns an interface to your source control plug-in. When the plug-in instance is no longer needed, Wwise calls the AK::Wwise::ISourceControl::Destroy() method on that particular instance. This method releases any memory or other resources the object consumes, and then deletes the object itself.</p>
+<p>If the instance was created with the operator New, a typical implementation of AK::Wwise::ISourceControl::Destroy() would be:</p>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> SamplePlugin::Destroy()</div>
 <div class="line">{</div>
 <div class="line">    <span class="keyword">delete</span> <span class="keyword">this</span>;</div>
@@ -313,25 +313,25 @@ Destroying the Plug-in Instance</h2>
 </ul>
 <h2><a class="anchor" id="source_control_dll_creation_utilities"></a>
 Using the Source Control Utilities Interface</h2>
-<p>This interface is given to the plug-in when the plug-in instance is initialized (see <a class="el" href="source_control_dll.html#source_control_dll_creation_object_init_term">Initializing and Terminating the Plug-in Instance</a>). Its functions help the plug-in create dialogs, display message boxes, show a progress dialog, and load and save the configuration, all with the Wwise UI look and feel.</p>
+<p>This interface is given to the plug-in when the plug-in instance is initialized (see Initializing and Terminating the Plug-in Instance). Its functions help the plug-in create dialogs, display message boxes, show a progress dialog, and load and save the configuration, all with the Wwise UI look and feel.</p>
 <p>This interface exposes the following methods:</p><ul>
 <li>AK::Wwise::ISourceControlUtilities::GetProgressDialog();</li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities_a736122aef2131361b82063d4a43b765e.html#a736122aef2131361b82063d4a43b765e">AK::Wwise::ISourceControlUtilities::MessageBox( HWND in_hWnd, LPCWSTR in_lpText, LPCWSTR in_lpCaption, UINT in_uiType )</a>;</li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities_a6e7f5369fce4769309e2ba6fe5ed72d1.html#a6e7f5369fce4769309e2ba6fe5ed72d1">AK::Wwise::ISourceControlUtilities::CreateModalCustomDialog( ISourceControlDialogBase* in_pDialog )</a>;</li>
+<li>AK::Wwise::ISourceControlUtilities::MessageBox( HWND in_hWnd, LPCWSTR in_lpText, LPCWSTR in_lpCaption, UINT in_uiType );</li>
+<li>AK::Wwise::ISourceControlUtilities::CreateModalCustomDialog( ISourceControlDialogBase* in_pDialog );</li>
 <li>AK::Wwise::ISourceControlUtilities::GetRegistryPath().</li>
 </ul>
 <h3><a class="anchor" id="source_control_dll_creation_utilities_progress"></a>
 Displaying Progress Dialogs</h3>
-<p>When performing source control operations, it can be useful to display a progress dialog with progress feedback messages. This can be done by calling the AK::Wwise::ISourceControlUtilities::GetProgressDialog() method. This method returns an AK::Wwise::ISourceControlOperationProgress interface. For more information on this interface, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_progress">Implementing the Source Control Operation Progress Interface</a>.</p>
+<p>When performing source control operations, it can be useful to display a progress dialog with progress feedback messages. This can be done by calling the AK::Wwise::ISourceControlUtilities::GetProgressDialog() method. This method returns an AK::Wwise::ISourceControlOperationProgress interface. For more information on this interface, refer to Implementing the Source Control Operation Progress Interface.</p>
 <h3><a class="anchor" id="source_control_dll_creation_utilities_message"></a>
 Displaying Message Dialogs</h3>
-<p>A simple way to display message boxes with the Wwise UI look and feel is to call the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities_a736122aef2131361b82063d4a43b765e.html#a736122aef2131361b82063d4a43b765e">AK::Wwise::ISourceControlUtilities::MessageBox()</a> method. Use it the same way as a standard <code>MessageBox</code> Windows function call. You should use this method rather than the standard <code>MessageBox</code> calls to give your plug-in the Wwise UI look and feel.</p>
+<p>A simple way to display message boxes with the Wwise UI look and feel is to call the AK::Wwise::ISourceControlUtilities::MessageBox() method. Use it the same way as a standard <code>MessageBox</code> Windows function call. You should use this method rather than the standard <code>MessageBox</code> calls to give your plug-in the Wwise UI look and feel.</p>
 <h3><a class="anchor" id="source_control_dll_creation_utilities_dialog"></a>
 Displaying Dialogs</h3>
-<p>To create dialogs that have the Wwise UI look and feel, you have to call the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities_a6e7f5369fce4769309e2ba6fe5ed72d1.html#a6e7f5369fce4769309e2ba6fe5ed72d1">AK::Wwise::ISourceControlUtilities::CreateModalCustomDialog( ISourceControlDialogBase* in_pDialog )</a> method. This method works in the same way as the CDialog::DoModal() method except that it accepts an <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> interface as input. For more information on this, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_dialog">Defining the Source Control Plug-in Dialog</a>.</p>
+<p>To create dialogs that have the Wwise UI look and feel, you have to call the AK::Wwise::ISourceControlUtilities::CreateModalCustomDialog( ISourceControlDialogBase* in_pDialog ) method. This method works in the same way as the CDialog::DoModal() method except that it accepts an <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> interface as input. For more information on this, refer to Defining the Source Control Plug-in Dialog.</p>
 <h3><a class="anchor" id="source_control_dll_creation_utilities_load"></a>
 Displaying Progress Dialogs</h3>
-<p><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK::Wwise::ISourceControlUtilities</a> offers a simple way to save or load the plug-in configuration in the registry. By calling the AK::Wwise::ISourceControlUtilities::GetRegistryPath() method, you obtain the path of a registry folder that is different for each project and each plug-in. To load or save the configuration, you should create a subfolder for the current version of the plug-in and create all plug-in keys there. You might want to load the configuration in the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a965c84c993e7b9644a7d51dafcdeb113.html#a965c84c993e7b9644a7d51dafcdeb113" title="This function is called when the plug-in is initialized after its creation.">AK::Wwise::ISourceControl::Init()</a> method and save the configuration in the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11.html#a488a4e256024111dc7c3eceef7970b11" title="This function is called when the plug-in is terminated before its destruction.">AK::Wwise::ISourceControl::Term()</a> method.</p>
+<p><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK::Wwise::ISourceControlUtilities</a> offers a simple way to save or load the plug-in configuration in the registry. By calling the AK::Wwise::ISourceControlUtilities::GetRegistryPath() method, you obtain the path of a registry folder that is different for each project and each plug-in. To load or save the configuration, you should create a subfolder for the current version of the plug-in and create all plug-in keys there. You might want to load the configuration in the AK::Wwise::ISourceControl::Init() method and save the configuration in the AK::Wwise::ISourceControl::Term() method.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> You must use the HKEY_CURRENT_USER registry key to access this path. The project registry folder is created using this key and the source control plug-in configuration must be user-independent. </td></tr>
@@ -365,16 +365,16 @@ Enabling the Cancel Button</h3>
 <h1><a class="anchor" id="source_control_dll_implementing_actions"></a>
 Implementing Source Control Actions</h1>
 <p>To integrate your source control plug-in into Wwise users' workflows, you must implement certain functionality as follows.</p><ul>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object_config">Enabling Plug-in Configuration</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object_workgroup">Enabling the File Manager Dialog</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object_contextual">Exposing your Plug-in in Contextual Menus</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object_execution">Exposing Source Control Operations in Contextual Menus</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object_icons">Allowing Wwise to Refresh Project Explorer Icons</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_object_creation">Allowing for the Creation and Modification of Files in Wwise</a></li>
+<li>Enabling Plug-in Configuration</li>
+<li>Enabling the File Manager Dialog</li>
+<li>Exposing your Plug-in in Contextual Menus</li>
+<li>Exposing Source Control Operations in Contextual Menus</li>
+<li>Allowing Wwise to Refresh Project Explorer Icons</li>
+<li>Allowing for the Creation and Modification of Files in Wwise</li>
 </ul>
 <h2><a class="anchor" id="source_control_dll_creation_object_config"></a>
 Enabling Plug-in Configuration</h2>
-<p>In the Project Settings dialog, the Wwise user can configure the plug-in by clicking the Config… button. This button is enabled only if the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info_a8bbaffdff539c62271eba2e5ae4b2712.html#a8bbaffdff539c62271eba2e5ae4b2712" title="Used to enable/disable the &#39;Config...&#39; button in the Project Settings.">AK::Wwise::ISourceControl::PluginInfo::m_bShowConfigDlgAvailable</a> has been set to True. When you click on this button, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a895acce7b436743e5519245529c97ecd.html#a895acce7b436743e5519245529c97ecd">AK::Wwise::ISourceControl::ShowConfigDlg()</a> method. The return value of this function is a Boolean value. The meaning of the value is as follows:</p><ul>
+<p>In the Project Settings dialog, the Wwise user can configure the plug-in by clicking the Configâ€¦ button. This button is enabled only if the AK::Wwise::ISourceControl::PluginInfo::m_bShowConfigDlgAvailable has been set to True. When you click on this button, Wwise calls the AK::Wwise::ISourceControl::ShowConfigDlg() method. The return value of this function is a Boolean value. The meaning of the value is as follows:</p><ul>
 <li>True indicates that you accepted the configuration changes, so the Project Explorer icons will be refreshed.</li>
 <li>False indicates that you rejected the configuration changes, so the Project Explorer icons will not be refreshed.</li>
 </ul>
@@ -386,26 +386,26 @@ Enabling Plug-in Configuration</h2>
 <div class="line">    <span class="comment">// return True if the user presses &#39;OK&#39;</span></div>
 <div class="line">    <span class="keywordflow">return</span> m_pSourceControlUtilities-&gt;CreateModalCustomDialog( &amp;configurationDialog ) == IDOK;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>In this code sample, the DlgConfiguration class is an implementation of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> interface. For more information, refer to the <a class="el" href="source_control_dll.html#source_control_dll_creation_dialog">Defining the Source Control Plug-in Dialog</a>.</p>
+</div><!-- fragment --><p>In this code sample, the DlgConfiguration class is an implementation of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> interface. For more information, refer to the Defining the Source Control Plug-in Dialog.</p>
 <h2><a class="anchor" id="source_control_dll_creation_object_workgroup"></a>
 Enabling the File Manager Dialog</h2>
 <p>When the File Manager is refreshed, two methods are called:</p><ul>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_acda8ef1d7727c6ba45d302f4c4ee339e.html#acda8ef1d7727c6ba45d302f4c4ee339e">AK::Wwise::ISourceControl::GetMissingFilesInDirectories( const StringList&amp; in_rDirectoryList, StringList&amp; out_rFilenameList )</a></li>
+<li>AK::Wwise::ISourceControl::GetMissingFilesInDirectories( const StringList&amp; in_rDirectoryList, StringList&amp; out_rFilenameList )</li>
 <li>AK::Wwise::ISourceControl::GetFileStatus( const StringList&amp; in_rFilenameList, FilenameToStatusMap&amp; out_rFileStatusMap )</li>
 </ul>
-<p>When the file list is populated, Wwise searches for files that are on the disk. On some source control systems, however, files are removed from the disk when they are deleted. Despite this, these files must still be identified to confirm the delete operation on the server. To retrieve the list of files that are in this state, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_acda8ef1d7727c6ba45d302f4c4ee339e.html#acda8ef1d7727c6ba45d302f4c4ee339e">AK::Wwise::ISourceControl::GetMissingFilesInDirectories()</a> method. The first parameter is the list of directories in which Wwise will look for such missing files, while the second parameter is a list of strings that will be overwritten with the names of the missing files.</p>
+<p>When the file list is populated, Wwise searches for files that are on the disk. On some source control systems, however, files are removed from the disk when they are deleted. Despite this, these files must still be identified to confirm the delete operation on the server. To retrieve the list of files that are in this state, Wwise calls the AK::Wwise::ISourceControl::GetMissingFilesInDirectories() method. The first parameter is the list of directories in which Wwise will look for such missing files, while the second parameter is a list of strings that will be overwritten with the names of the missing files.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> The plug-in must not include files located in subdirectories of the given directories. </td></tr>
 </table>
-<p>After Wwise has obtained the complete file list, the Status and Owner(s) columns must be refreshed. To do this, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_ad9ed25401176139c3185a5980b6d44d4.html#ad9ed25401176139c3185a5980b6d44d4">AK::Wwise::ISourceControl::GetFileStatus()</a> method. For each file, the plug-in needs to display the corresponding status and owner of the file. Wwise obtains the status of the files listed in the function's first parameter. The second parameter is the resulting map containing the text to be displayed in the Status and Owner(s) columns.</p>
+<p>After Wwise has obtained the complete file list, the Status and Owner(s) columns must be refreshed. To do this, Wwise calls the AK::Wwise::ISourceControl::GetFileStatus() method. For each file, the plug-in needs to display the corresponding status and owner of the file. Wwise obtains the status of the files listed in the function's first parameter. The second parameter is the resulting map containing the text to be displayed in the Status and Owner(s) columns.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> The memory of the string members of <a class="el" href="struct_a_k_1_1_wwise_1_1_i_source_control_1_1_filename_to_status_map_item.html">AK::Wwise::ISourceControl::FilenameToStatusMapItem</a> must be allocated using the SysAllocString function because Wwise is responsible for deleting this memory. Two strings must not share the same memory space because Wwise will try to destroy these two strings separately. </td></tr>
 </table>
 <h2><a class="anchor" id="source_control_dll_creation_object_contextual"></a>
 Exposing your Plug-in in Contextual Menus</h2>
-<p>When Wwise displays a contextual menu that includes source control operations, it needs the list of all operations that are available in a specific context. To get this list, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_ad7820c108e50155039c92223eff718f3.html#ad7820c108e50155039c92223eff718f3">AK::Wwise::ISourceControl::GetOperationList( OperationMenuType in_menuType, const StringList&amp; in_rFilenameList, OperationList&amp; out_rOperationList )</a> method. The first parameter is the context in which the operation list will be displayed. Depending on this context, some plug-ins could restrict the user to specific operations. The second parameter is the list of file names that the user has selected. This can be used to enable or disable some operations depending on the status of the files. The third parameter is the list of operations available in the current context. This list of operations must be filled by the plug-in. The information about the operations contained in this list is used to fill the contextual menu and to call back the plug-in with the ID of the operation. There are no restrictions on either IDs.</p>
+<p>When Wwise displays a contextual menu that includes source control operations, it needs the list of all operations that are available in a specific context. To get this list, Wwise calls the AK::Wwise::ISourceControl::GetOperationList( OperationMenuType in_menuType, const StringList&amp; in_rFilenameList, OperationList&amp; out_rOperationList ) method. The first parameter is the context in which the operation list will be displayed. Depending on this context, some plug-ins could restrict the user to specific operations. The second parameter is the list of file names that the user has selected. This can be used to enable or disable some operations depending on the status of the files. The third parameter is the list of operations available in the current context. This list of operations must be filled by the plug-in. The information about the operations contained in this list is used to fill the contextual menu and to call back the plug-in with the ID of the operation. There are no restrictions on either IDs.</p>
 <p>Wwise calls the virtual LPCWSTR GetOperationName( DWORD in_dwOperationID ) method to obtain the operation name for displaying in menus and dialogs.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -413,12 +413,12 @@ Exposing your Plug-in in Contextual Menus</h2>
 </table>
 <h2><a class="anchor" id="source_control_dll_creation_object_execution"></a>
 Exposing Source Control Operations in Contextual Menus</h2>
-<p>When Wwise users choose an operation from a contextual menu, Wwise first calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a1cb1c283baf8b61df030a862dd2dc880.html#a1cb1c283baf8b61df030a862dd2dc880" title="Gets the operation effect on the file(s) involved in the operation.">AK::Wwise::ISourceControl::GetOperationEffect( DWORD in_dwOperationID )</a> method. The parameter is the operation ID corresponding to the operation. The implementation of this method returns a mask made of one or many values of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a5a211138d467837ead81bfa7446aa31b.html#a5a211138d467837ead81bfa7446aa31b" title="The operation&#39;s effect on the file(s) involved.">AK::Wwise::ISourceControl::OperationEffect</a> enumeration. Wwise uses the return value to learn if it must ask users to save their projects before continuing with the source control operation. Operations such as update, rename, revert, and delete modify the contents of the local files. Operations such as commit and check-in modify the contents of the file on the server.</p>
+<p>When Wwise users choose an operation from a contextual menu, Wwise first calls the AK::Wwise::ISourceControl::GetOperationEffect( DWORD in_dwOperationID ) method. The parameter is the operation ID corresponding to the operation. The implementation of this method returns a mask made of one or many values of the AK::Wwise::ISourceControl::OperationEffect enumeration. Wwise uses the return value to learn if it must ask users to save their projects before continuing with the source control operation. Operations such as update, rename, revert, and delete modify the contents of the local files. Operations such as commit and check-in modify the contents of the file on the server.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> Not returning information about the effect of an operation on a file may lead to frustration for Wwise users. When a file changes on the hard drive during a source control operation, Wwise detects the change and asks the user to reload the project. If users had pending changes (that is, the project is dirty) and are asked to reload, their changes are lost. If users revert the changes to a file that is dirty, choose not to reload the project, and then save the changes, they may overwrite the newly-updated file. <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a1cb1c283baf8b61df030a862dd2dc880.html#a1cb1c283baf8b61df030a862dd2dc880" title="Gets the operation effect on the file(s) involved in the operation.">AK::Wwise::ISourceControl::GetOperationEffect</a> uses the information returned to avoid such situations by forcing users to save. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> Not returning information about the effect of an operation on a file may lead to frustration for Wwise users. When a file changes on the hard drive during a source control operation, Wwise detects the change and asks the user to reload the project. If users had pending changes (that is, the project is dirty) and are asked to reload, their changes are lost. If users revert the changes to a file that is dirty, choose not to reload the project, and then save the changes, they may overwrite the newly-updated file. AK::Wwise::ISourceControl::GetOperationEffect uses the information returned to avoid such situations by forcing users to save. </td></tr>
 </table>
-<p>After successfully calling the first method, Wwise calls the AK::Wwise::ISourceControl::DoOperation( DWORD in_dwOperationID, const StringList&amp; in_rFilenameList ) method. The first parameter is the operation ID corresponding to the operation. The second parameter is the list of selected files. The implementation of this method uses the AK::Wwise::ISourceControlOperationProgress interface to display a progress dialog. For more information, refer to <a class="el" href="source_control_dll.html#source_control_dll_creation_progress">Implementing the Source Control Operation Progress Interface</a>.</p>
+<p>After successfully calling the first method, Wwise calls the AK::Wwise::ISourceControl::DoOperation( DWORD in_dwOperationID, const StringList&amp; in_rFilenameList ) method. The first parameter is the operation ID corresponding to the operation. The second parameter is the list of selected files. The implementation of this method uses the AK::Wwise::ISourceControlOperationProgress interface to display a progress dialog. For more information, refer to Implementing the Source Control Operation Progress Interface.</p>
 <h2><a class="anchor" id="source_control_dll_creation_object_icons"></a>
 Allowing Wwise to Refresh Project Explorer Icons</h2>
 <p>Wwise needs to refresh icons in the following situations:</p><ul>
@@ -427,7 +427,7 @@ Allowing Wwise to Refresh Project Explorer Icons</h2>
 <li>The user refreshes the icons manually by clicking on the "Refresh" or "Refresh All" Project Explorer contextual menu item</li>
 <li>The File Manager dialog is closed.</li>
 </ul>
-<p>Using a pattern similar to that of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_ad9ed25401176139c3185a5980b6d44d4.html#ad9ed25401176139c3185a5980b6d44d4">AK::Wwise::ISourceControl::GetFileStatus()</a> method, AK::Wwise::ISourceControl::GetFileStatusIcons( const StringList&amp; in_rFilenameList, FilenameToIconMap&amp; out_rFileIconsMap ) must return a map containing icons and tool tip texts for files in the list. The first parameter is the list of names of the file for which Wwise needs to have icon maps. The second parameter is the resulting map containing the following components:</p><ul>
+<p>Using a pattern similar to that of the AK::Wwise::ISourceControl::GetFileStatus() method, AK::Wwise::ISourceControl::GetFileStatusIcons( const StringList&amp; in_rFilenameList, FilenameToIconMap&amp; out_rFileIconsMap ) must return a map containing icons and tool tip texts for files in the list. The first parameter is the list of names of the file for which Wwise needs to have icon maps. The second parameter is the resulting map containing the following components:</p><ul>
 <li>The icon to be displayed as an overlay on the work unit's original icon</li>
 <li>The tool tip text to be displayed when you move the mouse over the given icon.</li>
 </ul>
@@ -435,7 +435,7 @@ Allowing Wwise to Refresh Project Explorer Icons</h2>
 <tr>
 <td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> The memory of the string members of <a class="el" href="struct_a_k_1_1_wwise_1_1_i_source_control_1_1_filename_to_icon_map_item.html">AK::Wwise::ISourceControl::FilenameToIconMapItem</a> must be allocated using the SysAllocString function because Wwise is responsible for deleting this memory. Two strings must not share the same memory space because Wwise will try to destroy these two strings separately. </td></tr>
 </table>
-<p>The icons contained in the map can be any size, but they will be resized to a format of 15x15 pixels. Functions related to icons are only called if <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info_a4564f014cd3d12853ef34612e237b5a7.html#a4564f014cd3d12853ef34612e237b5a7" title="Indicates that the plug-in supports Project Explorer custom icons.">AK::Wwise::ISourceControl::PluginInfo::m_bStatusIconAvailable</a> is set to True.</p>
+<p>The icons contained in the map can be any size, but they will be resized to a format of 15x15 pixels. Functions related to icons are only called if AK::Wwise::ISourceControl::PluginInfo::m_bStatusIconAvailable is set to True.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> A set of icons you can use is installed with this SDK. </td></tr>
@@ -448,22 +448,22 @@ Allowing for the Creation and Modification of Files in Wwise</h2>
 <li>Saves the project</li>
 <li>Edits the audio source in an external editor.</li>
 </ul>
-<p>When any of these situations arises, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7.html#aba7d81dda40d38b6c8bb81d190b846f7">AK::Wwise::ISourceControl::PreCreateOrModify( const StringList&amp; in_rFilenameList, CreateOrModifyOperation in_eOperation, bool&amp; out_rContinue )</a> and <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5.html#a9fb467f0d5dbcb386290f53a81bb8dc5">AK::Wwise::ISourceControl::PostCreateOrModify( const StringList&amp; in_rFilenameList, CreateOrModifyOperation in_eOperation, bool&amp; out_rContinue )</a> methods. The first parameter is the list of names of the files that are to be created or modified. The second parameter is a flag defining the operation that will be performed. Since you can perform either operation on any of the files listed, you must use the bitwise AND operator to compare the second parameter with a predefined flag. For example, to know if some files were created, do the following:</p>
+<p>When any of these situations arises, Wwise calls the AK::Wwise::ISourceControl::PreCreateOrModify( const StringList&amp; in_rFilenameList, CreateOrModifyOperation in_eOperation, bool&amp; out_rContinue ) and AK::Wwise::ISourceControl::PostCreateOrModify( const StringList&amp; in_rFilenameList, CreateOrModifyOperation in_eOperation, bool&amp; out_rContinue ) methods. The first parameter is the list of names of the files that are to be created or modified. The second parameter is a flag defining the operation that will be performed. Since you can perform either operation on any of the files listed, you must use the bitwise AND operator to compare the second parameter with a predefined flag. For example, to know if some files were created, do the following:</p>
 <div class="fragment"><div class="line"><span class="keywordflow">if</span> ( in_eOperation &amp; CreateOrModifyOperation_Create )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Do operations</span></div>
 <div class="line">}</div>
-</div><!-- fragment --><p>The third parameter of the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7.html#aba7d81dda40d38b6c8bb81d190b846f7">AK::Wwise::ISourceControl::PreCreateOrModify()</a> and <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5.html#a9fb467f0d5dbcb386290f53a81bb8dc5">AK::Wwise::ISourceControl::PostCreateOrModify()</a> functions is set by the plug-in to inform Wwise to continue or stop the current operation. This parameter is mostly used by calls to the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7.html#aba7d81dda40d38b6c8bb81d190b846f7">AK::Wwise::ISourceControl::PreCreateOrModify()</a> method.</p>
+</div><!-- fragment --><p>The third parameter of the AK::Wwise::ISourceControl::PreCreateOrModify() and AK::Wwise::ISourceControl::PostCreateOrModify() functions is set by the plug-in to inform Wwise to continue or stop the current operation. This parameter is mostly used by calls to the AK::Wwise::ISourceControl::PreCreateOrModify() method.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> We recommend that these two methods be used to perform operations that are specific to your source control system. For example, you could use the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7.html#aba7d81dda40d38b6c8bb81d190b846f7">AK::Wwise::ISourceControl::PreCreateOrModify()</a> method to perform Perforce's <em>checkout</em> operation, or the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5.html#a9fb467f0d5dbcb386290f53a81bb8dc5">AK::Wwise::ISourceControl::PostCreateOrModify()</a> method to add files which are not on the server yet. The first method is always called before file creation or modification, and the second one is always called after such an operation. This feature can be used to implement a layer of security in your plug-in. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> We recommend that these two methods be used to perform operations that are specific to your source control system. For example, you could use the AK::Wwise::ISourceControl::PreCreateOrModify() method to perform Perforce's <em>checkout</em> operation, or the AK::Wwise::ISourceControl::PostCreateOrModify() method to add files which are not on the server yet. The first method is always called before file creation or modification, and the second one is always called after such an operation. This feature can be used to implement a layer of security in your plug-in. </td></tr>
 </table>
 <h1><a class="anchor" id="source_control_dll_creation_dialog"></a>
 Defining the Source Control Plug-in Dialog</h1>
 <p>If your DLL contains dialogs, you'll want them to have the Wwise UI look and feel. To do that, you need to follow the following steps:</p><ul>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_dialog_creation">Creating the Dialog Resource</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_dialog_implement">Enabling the Dialog</a></li>
-<li><a class="el" href="source_control_dll.html#source_control_dll_creation_dialog_display">Displaying the Dialog</a></li>
+<li>Creating the Dialog Resource</li>
+<li>Enabling the Dialog</li>
+<li>Displaying the Dialog</li>
 </ul>
 <h2><a class="anchor" id="source_control_dll_creation_dialog_creation"></a>
 Creating the Dialog Resource</h2>
@@ -502,29 +502,29 @@ The static control in your resources should be exactly 13 units high, and wide e
 <h2><a class="anchor" id="source_control_dll_creation_dialog_implement"></a>
 Enabling the Dialog</h2>
 <p>Before Wwise can display your dialog, you must implement the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> interface. This interface exposes the following methods:</p><ul>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_a32a21b3e259526ad996d00ac946ca30f.html#a32a21b3e259526ad996d00ac946ca30f">AK::Wwise::ISourceControlDialogBase::GetResourceHandle()</a></li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_ac2e9e65eb75db832fc7ced9a398b1f4c.html#ac2e9e65eb75db832fc7ced9a398b1f4c" title="This function is called by Wwise to get the plug-in dialog&#39;s ID.">AK::Wwise::ISourceControlDialogBase::GetDialog()</a></li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_a8efe7c9ea503058b2acbf848e680245f.html#a8efe7c9ea503058b2acbf848e680245f">AK::Wwise::ISourceControlDialogBase::HasHelp()</a></li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_a40fff8f04f4b6532f9a21c1b794a5106.html#a40fff8f04f4b6532f9a21c1b794a5106">AK::Wwise::ISourceControlDialogBase::Help()</a></li>
-<li><a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_afc8ab1f13cc6f3be3b423bb58597d4e3.html#afc8ab1f13cc6f3be3b423bb58597d4e3">AK::Wwise::ISourceControlDialogBase::WindowProc()</a></li>
+<li>AK::Wwise::ISourceControlDialogBase::GetResourceHandle()</li>
+<li>AK::Wwise::ISourceControlDialogBase::GetDialog()</li>
+<li>AK::Wwise::ISourceControlDialogBase::HasHelp()</li>
+<li>AK::Wwise::ISourceControlDialogBase::Help()</li>
+<li>AK::Wwise::ISourceControlDialogBase::WindowProc()</li>
 </ul>
-<p>Wwise needs to know in which context the resources can be found. Before creating the dialog, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_a32a21b3e259526ad996d00ac946ca30f.html#a32a21b3e259526ad996d00ac946ca30f">AK::Wwise::ISourceControlDialogBase::GetResourceHandle()</a> method. A typical implementation for this method is:</p>
+<p>Wwise needs to know in which context the resources can be found. Before creating the dialog, Wwise calls the AK::Wwise::ISourceControlDialogBase::GetResourceHandle() method. A typical implementation for this method is:</p>
 <div class="fragment"><div class="line">HINSTANCE DlgSimple::GetResourceHandle()<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    AFX_MANAGE_STATE( ::AfxGetStaticModuleState() );</div>
 <div class="line">    return ::AfxGetResourceHandle();</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>Wwise also needs the ID of the dialog in the resource to create the dialog. To retrieve it, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_ac2e9e65eb75db832fc7ced9a398b1f4c.html#ac2e9e65eb75db832fc7ced9a398b1f4c" title="This function is called by Wwise to get the plug-in dialog&#39;s ID.">AK::Wwise::ISourceControlDialogBase::GetDialog()</a> method. A typical implementation of this method is:</p>
+</div><!-- fragment --><p>Wwise also needs the ID of the dialog in the resource to create the dialog. To retrieve it, Wwise calls the AK::Wwise::ISourceControlDialogBase::GetDialog() method. A typical implementation of this method is:</p>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> DlgSimple::GetDialog( UINT &amp; out_uiDialogID )<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    out_uiDialogID = IDD_SIMPLEDIALOGID;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>To know if the "?" should be shown on the dialog title bar, Wwise calls <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_a8efe7c9ea503058b2acbf848e680245f.html#a8efe7c9ea503058b2acbf848e680245f">AK::Wwise::ISourceControlDialogBase::HasHelp()</a>. The plug-in must return True if there is a Help section associated with the dialog. If so, the "?" icon appears.</p>
+</div><!-- fragment --><p>To know if the "?" should be shown on the dialog title bar, Wwise calls AK::Wwise::ISourceControlDialogBase::HasHelp(). The plug-in must return True if there is a Help section associated with the dialog. If so, the "?" icon appears.</p>
 <div class="fragment"><div class="line"><span class="keywordtype">bool</span> DlgSimple::HasHelp()<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>When the Wwise user clicks the "?" button of the dialog, Wwise calls the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_a40fff8f04f4b6532f9a21c1b794a5106.html#a40fff8f04f4b6532f9a21c1b794a5106">AK::Wwise::ISourceControlDialogBase::Help()</a> method. The plug-in must return True when it manages the Help request and false when nothing is done. An implementation example of this method is:</p>
+</div><!-- fragment --><p>When the Wwise user clicks the "?" button of the dialog, Wwise calls the AK::Wwise::ISourceControlDialogBase::Help() method. The plug-in must return True when it manages the Help request and false when nothing is done. An implementation example of this method is:</p>
 <div class="fragment"><div class="line"><span class="keywordtype">bool</span> DlgSimple::Help( HWND in_hWnd )<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    AFX_MANAGE_STATE( ::AfxGetStaticModuleState() ) ;</div>
@@ -532,7 +532,7 @@ Enabling the Dialog</h2>
 <div class="line">    <span class="comment">// Note: Do NOT call AfxGetApp()-&gt;HtmlHelp() as it will launch the Help</span></div>
 <div class="line">    <span class="comment">// window from the wrong parent window which will make floating views</span></div>
 <div class="line">    <span class="comment">// behave unexpectedly.</span></div>
-<div class="line">    ::HtmlHelp( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, AfxGetApp()-&gt;m_pszHelpFilePath, HH_HELP_CONTEXT, ONLINEHELP::Simple_Dialog );</div>
+<div class="line">    ::HtmlHelp( NULL, AfxGetApp()-&gt;m_pszHelpFilePath, HH_HELP_CONTEXT, ONLINEHELP::Simple_Dialog );</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line">}</div>
@@ -540,7 +540,7 @@ Enabling the Dialog</h2>
 <tr>
 <td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> The Help() method should NOT call AfxGetApp()-&gt;HtmlHelp(). It will launch the Help window from the wrong parent window which will make floating views behave unexpectedly. Instead, use <code>HtmlHelp()</code> with a NULL window handle, as shown in the example above. </td></tr>
 </table>
-<p>The dialog cannot use the MFC methods to manage Windows messages. Instead, each time the dialog receives a Windows message, the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base_afc8ab1f13cc6f3be3b423bb58597d4e3.html#afc8ab1f13cc6f3be3b423bb58597d4e3">AK::Wwise::ISourceControlDialogBase::WindowProc()</a> is called. An implementation example of this method is:</p>
+<p>The dialog cannot use the MFC methods to manage Windows messages. Instead, each time the dialog receives a Windows message, the AK::Wwise::ISourceControlDialogBase::WindowProc() is called. An implementation example of this method is:</p>
 <div class="fragment"><div class="line"><span class="keywordtype">bool</span> DlgConfiguration::WindowProc( HWND in_hWnd, UINT in_message, WPARAM in_wParam, LPARAM in_lParam, </div>
 <div class="line">    LRESULT &amp; out_lResult )</div>
 <div class="line">{</div>
@@ -582,7 +582,7 @@ Enabling the Dialog</h2>
 <div class="fragment"><div class="line">PostMessage( in_hWnd, WM_CLOSE, 0, 0 );</div>
 </div><!-- fragment --><h2><a class="anchor" id="source_control_dll_creation_dialog_display"></a>
 Displaying the Dialog</h2>
-<p>To display the dialog, an instance of the corresponding <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> implementation must be created. Using the <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_utilities_a6e7f5369fce4769309e2ba6fe5ed72d1.html#a6e7f5369fce4769309e2ba6fe5ed72d1">AK::Wwise::ISourceControlUtilities::CreateModalCustomDialog()</a> method, the dialog will be displayed like a modal dialog. Here is an example that shows how to create and display the dialog:</p>
+<p>To display the dialog, an instance of the corresponding <a class="el" href="class_a_k_1_1_wwise_1_1_i_source_control_dialog_base.html">AK::Wwise::ISourceControlDialogBase</a> implementation must be created. Using the AK::Wwise::ISourceControlUtilities::CreateModalCustomDialog() method, the dialog will be displayed like a modal dialog. Here is an example that shows how to create and display the dialog:</p>
 <div class="fragment"><div class="line"><span class="keywordtype">bool</span> SamplePlugin::ShowConfigDlg()</div>
 <div class="line">{</div>
 <div class="line">    DlgConfiguration configurationDialog( m_pSourceControlUtilities );</div>
@@ -592,30 +592,31 @@ Displaying the Dialog</h2>
 <div class="line">}</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a177b1676aeffa151c86255a7b747fcdc_html_a177b1676aeffa151c86255a7b747fcdc"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a177b1676aeffa151c86255a7b747fcdc.html#a177b1676aeffa151c86255a7b747fcdc">AK.Wwise::ISourceControl::GetFileStatusIcons</a></div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetFileStatusIcons(const StringList &amp;in_rFilenameList, FilenameToIconMap &amp;out_rFileIconsMap, DWORD in_dwTimeoutMs=INFINITE)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list.html">AK.Wwise::SourceControlContainers::IAkList</a></div><div class="ttdef"><b>Definition:</b> <a href="_source_control_containers_8h_source.html#l00059">SourceControlContainers.h:60</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_acda8ef1d7727c6ba45d302f4c4ee339e_html_acda8ef1d7727c6ba45d302f4c4ee339e"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_acda8ef1d7727c6ba45d302f4c4ee339e.html#acda8ef1d7727c6ba45d302f4c4ee339e">AK.Wwise::ISourceControl::GetMissingFilesInDirectories</a></div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetMissingFilesInDirectories(const StringList &amp;in_rDirectoryList, StringList &amp;out_rFilenameList)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a1cb1c283baf8b61df030a862dd2dc880_html_a1cb1c283baf8b61df030a862dd2dc880"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a1cb1c283baf8b61df030a862dd2dc880.html#a1cb1c283baf8b61df030a862dd2dc880">AK.Wwise::ISourceControl::GetOperationEffect</a></div><div class="ttdeci">virtual DWORD GetOperationEffect(DWORD in_dwOperationID)=0</div><div class="ttdoc">Gets the operation effect on the file(s) involved in the operation.</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a965c84c993e7b9644a7d51dafcdeb113_html_a965c84c993e7b9644a7d51dafcdeb113"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a965c84c993e7b9644a7d51dafcdeb113.html#a965c84c993e7b9644a7d51dafcdeb113">AK.Wwise::ISourceControl::Init</a></div><div class="ttdeci">virtual void Init(AK::Wwise::ISourceControlUtilities *in_pUtilities, bool in_bAutoAccept)=0</div><div class="ttdoc">This function is called when the plug-in is initialized after its creation.</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_ad148966a617cb4164a43b3772bb4f321_html_ad148966a617cb4164a43b3772bb4f321"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_ad148966a617cb4164a43b3772bb4f321.html#ad148966a617cb4164a43b3772bb4f321">AK.Wwise::SourceControlContainers::IAkList::AddTail</a></div><div class="ttdeci">virtual void AddTail(Arg_Type in_newElement)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a7682bc6fd40d00c825703604ab79fc85_html_a7682bc6fd40d00c825703604ab79fc85"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a7682bc6fd40d00c825703604ab79fc85.html#a7682bc6fd40d00c825703604ab79fc85">AK.Wwise::ISourceControl::Destroy</a></div><div class="ttdeci">virtual void Destroy()=0</div><div class="ttdoc">This function destroys the plug-in. The implementation is generally '{ delete this; }'.</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_ad9ed25401176139c3185a5980b6d44d4_html_ad9ed25401176139c3185a5980b6d44d4"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_ad9ed25401176139c3185a5980b6d44d4.html#ad9ed25401176139c3185a5980b6d44d4">AK.Wwise::ISourceControl::GetFileStatus</a></div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetFileStatus(const StringList &amp;in_rFilenameList, FilenameToStatusMap &amp;out_rFileStatusMap, DWORD in_dwTimeoutMs=INFINITE)=0</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname"><a href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a36789a297bc4a85ba0fffb9de9bc0a6f_html_a36789a297bc4a85ba0fffb9de9bc0a6f"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a36789a297bc4a85ba0fffb9de9bc0a6f.html#a36789a297bc4a85ba0fffb9de9bc0a6f">AK.Wwise::ISourceControl::DoOperation</a></div><div class="ttdeci">virtual IOperationResult * DoOperation(DWORD in_dwOperationID, const StringList &amp;in_rFilenameList, const StringList *in_pTargetFilenameList=NULL)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7_html_aba7d81dda40d38b6c8bb81d190b846f7"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7.html#aba7d81dda40d38b6c8bb81d190b846f7">AK.Wwise::ISourceControl::PreCreateOrModify</a></div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult PreCreateOrModify(const StringList &amp;in_rFilenameList, CreateOrModifyOperation in_eOperation, bool &amp;out_rContinue)=0</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a69141ebf4159597c1e76aad07862c823_html_a69141ebf4159597c1e76aad07862c823"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a69141ebf4159597c1e76aad07862c823.html#a69141ebf4159597c1e76aad07862c823">AK.Wwise::Plugin::PluginInfo</a></div><div class="ttdeci">CPluginInfo PluginInfo</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00997">PluginDef.h:997</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f_html_a94e307d2974b89cc4fbc8ab0fef20d2f"><div class="ttname"><a href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">AK::Comm::Term</a></div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a817835af7fd2e208f9ba202d6eb5a2eb_html_a817835af7fd2e208f9ba202d6eb5a2eb"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a817835af7fd2e208f9ba202d6eb5a2eb.html#a817835af7fd2e208f9ba202d6eb5a2eb">AK.Wwise::ISourceControl::GetOperationName</a></div><div class="ttdeci">virtual LPCWSTR GetOperationName(DWORD in_dwOperationID)=0</div><div class="ttdoc">Gets the operation name to display in user interface.</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_utilities_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK.Wwise::ISourceControlUtilities</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_source_control_utilities_8h_source.html#l00048">ISourceControlUtilities.h:49</a></div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a177b1676aeffa151c86255a7b747fcdc_html_a177b1676aeffa151c86255a7b747fcdc"><div class="ttname">AK.Wwise::ISourceControl::GetFileStatusIcons</div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetFileStatusIcons(const StringList &amp;in_rFilenameList, FilenameToIconMap &amp;out_rFileIconsMap, DWORD in_dwTimeoutMs=INFINITE)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list.html">AK.Wwise::SourceControlContainers::IAkList</a></div><div class="ttdef"><b>Definition:</b> SourceControlContainers.h:60</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_acda8ef1d7727c6ba45d302f4c4ee339e_html_acda8ef1d7727c6ba45d302f4c4ee339e"><div class="ttname">AK.Wwise::ISourceControl::GetMissingFilesInDirectories</div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetMissingFilesInDirectories(const StringList &amp;in_rDirectoryList, StringList &amp;out_rFilenameList)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a1cb1c283baf8b61df030a862dd2dc880_html_a1cb1c283baf8b61df030a862dd2dc880"><div class="ttname">AK.Wwise::ISourceControl::GetOperationEffect</div><div class="ttdeci">virtual DWORD GetOperationEffect(DWORD in_dwOperationID)=0</div><div class="ttdoc">Gets the operation effect on the file(s) involved in the operation.</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a965c84c993e7b9644a7d51dafcdeb113_html_a965c84c993e7b9644a7d51dafcdeb113"><div class="ttname">AK.Wwise::ISourceControl::Init</div><div class="ttdeci">virtual void Init(AK::Wwise::ISourceControlUtilities *in_pUtilities, bool in_bAutoAccept)=0</div><div class="ttdoc">This function is called when the plug-in is initialized after its creation.</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_source_control_containers_1_1_i_ak_list_ad148966a617cb4164a43b3772bb4f321_html_ad148966a617cb4164a43b3772bb4f321"><div class="ttname">AK.Wwise::SourceControlContainers::IAkList::AddTail</div><div class="ttdeci">virtual void AddTail(Arg_Type in_newElement)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a7682bc6fd40d00c825703604ab79fc85_html_a7682bc6fd40d00c825703604ab79fc85"><div class="ttname">AK.Wwise::ISourceControl::Destroy</div><div class="ttdeci">virtual void Destroy()=0</div><div class="ttdoc">This function destroys the plug-in. The implementation is generally '{ delete this; }'.</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_ad9ed25401176139c3185a5980b6d44d4_html_ad9ed25401176139c3185a5980b6d44d4"><div class="ttname">AK.Wwise::ISourceControl::GetFileStatus</div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetFileStatus(const StringList &amp;in_rFilenameList, FilenameToStatusMap &amp;out_rFileStatusMap, DWORD in_dwTimeoutMs=INFINITE)=0</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname">AK::Comm::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a36789a297bc4a85ba0fffb9de9bc0a6f_html_a36789a297bc4a85ba0fffb9de9bc0a6f"><div class="ttname">AK.Wwise::ISourceControl::DoOperation</div><div class="ttdeci">virtual IOperationResult * DoOperation(DWORD in_dwOperationID, const StringList &amp;in_rFilenameList, const StringList *in_pTargetFilenameList=NULL)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_aba7d81dda40d38b6c8bb81d190b846f7_html_aba7d81dda40d38b6c8bb81d190b846f7"><div class="ttname">AK.Wwise::ISourceControl::PreCreateOrModify</div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult PreCreateOrModify(const StringList &amp;in_rFilenameList, CreateOrModifyOperation in_eOperation, bool &amp;out_rContinue)=0</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a69141ebf4159597c1e76aad07862c823_html_a69141ebf4159597c1e76aad07862c823"><div class="ttname">AK.Wwise::Plugin::PluginInfo</div><div class="ttdeci">CPluginInfo PluginInfo</div><div class="ttdef"><b>Definition:</b> PluginDef.h:997</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f_html_a94e307d2974b89cc4fbc8ab0fef20d2f"><div class="ttname">AK::Comm::Term</div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a817835af7fd2e208f9ba202d6eb5a2eb_html_a817835af7fd2e208f9ba202d6eb5a2eb"><div class="ttname">AK.Wwise::ISourceControl::GetOperationName</div><div class="ttdeci">virtual LPCWSTR GetOperationName(DWORD in_dwOperationID)=0</div><div class="ttdoc">Gets the operation name to display in user interface.</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_utilities_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_utilities.html">AK.Wwise::ISourceControlUtilities</a></div><div class="ttdef"><b>Definition:</b> ISourceControlUtilities.h:49</div></div>
 <div class="ttc" id="a_i_source_control_8h_html"><div class="ttname"><a href="_i_source_control_8h.html">ISourceControl.h</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_source_control_constant_ab76ee63c449ed45e8e4f4cdf693dbbb5_html_ab76ee63c449ed45e8e4f4cdf693dbbb5"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_source_control_constant_ab76ee63c449ed45e8e4f4cdf693dbbb5.html#ab76ee63c449ed45e8e4f4cdf693dbbb5">AK.Wwise::SourceControlConstant::s_dwInvalidOperationID</a></div><div class="ttdeci">static const DWORD s_dwInvalidOperationID</div><div class="ttdoc">Invalid operation ID (MUST NOT BE USED as an operation ID in OperationListItem)</div><div class="ttdef"><b>Definition:</b> <a href="_i_source_control_8h_source.html#l00054">ISourceControl.h:54</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5_html_a9fb467f0d5dbcb386290f53a81bb8dc5"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5.html#a9fb467f0d5dbcb386290f53a81bb8dc5">AK.Wwise::ISourceControl::PostCreateOrModify</a></div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult PostCreateOrModify(const StringList &amp;in_rFilenameList, CreateOrModifyOperation in_eOperation, bool &amp;out_rContinue)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info.html">AK.Wwise::ISourceControl::PluginInfo</a></div><div class="ttdoc">Plug-in information structure. This structure gives a simple overview of the plug-in's capabilities.</div><div class="ttdef"><b>Definition:</b> <a href="_i_source_control_8h_source.html#l00220">ISourceControl.h:221</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_ad7820c108e50155039c92223eff718f3_html_ad7820c108e50155039c92223eff718f3"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_ad7820c108e50155039c92223eff718f3.html#ad7820c108e50155039c92223eff718f3">AK.Wwise::ISourceControl::GetOperationList</a></div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetOperationList(OperationMenuType in_menuType, const StringList &amp;in_rFilenameList, OperationList &amp;out_rOperationList)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK.Wwise::ISourceControl</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_source_control_8h_source.html#l00064">ISourceControl.h:65</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11_html_a488a4e256024111dc7c3eceef7970b11"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11.html#a488a4e256024111dc7c3eceef7970b11">AK.Wwise::ISourceControl::Term</a></div><div class="ttdeci">virtual void Term()=0</div><div class="ttdoc">This function is called when the plug-in is terminated before its destruction.</div></div>
-<div class="ttc" id="astruct_g_u_i_d_html"><div class="ttname"><a href="struct_g_u_i_d.html">GUID</a></div><div class="ttdef"><b>Definition:</b> <a href="_plugin_helpers_8h_source.html#l00045">PluginHelpers.h:45</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a895acce7b436743e5519245529c97ecd_html_a895acce7b436743e5519245529c97ecd"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_a895acce7b436743e5519245529c97ecd.html#a895acce7b436743e5519245529c97ecd">AK.Wwise::ISourceControl::ShowConfigDlg</a></div><div class="ttdeci">virtual bool ShowConfigDlg()=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_source_control_constant_ab76ee63c449ed45e8e4f4cdf693dbbb5_html_ab76ee63c449ed45e8e4f4cdf693dbbb5"><div class="ttname">AK.Wwise::SourceControlConstant::s_dwInvalidOperationID</div><div class="ttdeci">static const DWORD s_dwInvalidOperationID</div><div class="ttdoc">Invalid operation ID (MUST NOT BE USED as an operation ID in OperationListItem)</div><div class="ttdef"><b>Definition:</b> ISourceControl.h:54</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a9fb467f0d5dbcb386290f53a81bb8dc5_html_a9fb467f0d5dbcb386290f53a81bb8dc5"><div class="ttname">AK.Wwise::ISourceControl::PostCreateOrModify</div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult PostCreateOrModify(const StringList &amp;in_rFilenameList, CreateOrModifyOperation in_eOperation, bool &amp;out_rContinue)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control_1_1_plugin_info.html">AK.Wwise::ISourceControl::PluginInfo</a></div><div class="ttdoc">Plug-in information structure. This structure gives a simple overview of the plug-in's capabilities.</div><div class="ttdef"><b>Definition:</b> ISourceControl.h:221</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_ad7820c108e50155039c92223eff718f3_html_ad7820c108e50155039c92223eff718f3"><div class="ttname">AK.Wwise::ISourceControl::GetOperationList</div><div class="ttdeci">virtual AK::Wwise::ISourceControl::OperationResult GetOperationList(OperationMenuType in_menuType, const StringList &amp;in_rFilenameList, OperationList &amp;out_rOperationList)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_i_source_control.html">AK.Wwise::ISourceControl</a></div><div class="ttdef"><b>Definition:</b> ISourceControl.h:65</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a488a4e256024111dc7c3eceef7970b11_html_a488a4e256024111dc7c3eceef7970b11"><div class="ttname">AK.Wwise::ISourceControl::Term</div><div class="ttdeci">virtual void Term()=0</div><div class="ttdoc">This function is called when the plug-in is terminated before its destruction.</div></div>
+<div class="ttc" id="astruct_g_u_i_d_html"><div class="ttname"><a href="struct_g_u_i_d.html">GUID</a></div><div class="ttdef"><b>Definition:</b> PluginHelpers.h:45</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_i_source_control_a895acce7b436743e5519245529c97ecd_html_a895acce7b436743e5519245529c97ecd"><div class="ttname">AK.Wwise::ISourceControl::ShowConfigDlg</div><div class="ttdeci">virtual bool ShowConfigDlg()=0</div></div>
 </body>
 </html>
+

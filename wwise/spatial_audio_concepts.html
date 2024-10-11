@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -34,10 +34,10 @@
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>The following paragraphs provide a quick overview of the fundamental acoustic concepts related to Spatial Audio:</p><ul>
-<li><a class="el" href="spatial_audio_concepts.html#spatial_audio_concepts_diffraction">Diffraction</a></li>
-<li><a class="el" href="spatial_audio_concepts.html#spatial_audio_concepts_transmission">Transmission</a></li>
-<li><a class="el" href="spatial_audio_concepts.html#spatial_audio_concepts_roomcoupling">Room Coupling</a></li>
-<li><a class="el" href="spatial_audio_concepts.html#spatial_audio_concepts_obsocc">Obstruction and Occlusion</a></li>
+<li>Diffraction</li>
+<li>Transmission</li>
+<li>Room Coupling</li>
+<li>Obstruction and Occlusion</li>
 </ul>
 <h1><a class="anchor" id="spatial_audio_concepts_diffraction"></a>
 Diffraction</h1>
@@ -45,7 +45,7 @@ Diffraction</h1>
 <div class="image">
 <img src="diffraction_field_plot.png" alt=""/>
 </div>
-<p>We see that the edge can be considered as a point source, with amplitude decreasing with distance. Also, the amplitude of higher frequencies decreases faster than that of lower frequencies, which means that it can be adequately modeled with a low-pass filter. Wwise Spatial Audio models diffraction via two of its APIs. Refer to Rooms and Portals' <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_diffraction">Diffraction</a> to understand how Rooms and Portals lets you model portal diffraction, and to <a class="el" href="spatial_audio_apigeometry_diffract.html">Using the Geometry API for Simulating Diffraction and Transmission</a> to understand how geometry may be used to model diffraction of emitters and their early reflections.</p>
+<p>We see that the edge can be considered as a point source, with amplitude decreasing with distance. Also, the amplitude of higher frequencies decreases faster than that of lower frequencies, which means that it can be adequately modeled with a low-pass filter. Wwise Spatial Audio models diffraction via two of its APIs. Refer to Rooms and Portals' Diffraction to understand how Rooms and Portals lets you model portal diffraction, and to <a class="el" href="spatial_audio_apigeometry_diffract.html">Using the Geometry API for Simulating Diffraction and Transmission</a> to understand how geometry may be used to model diffraction of emitters and their early reflections.</p>
 <h1><a class="anchor" id="spatial_audio_concepts_transmission"></a>
 Transmission</h1>
 <p>Sound transmission is another relevant acoustic phenomenon that is modeled within Wwise Spatial Audio. Transmission describes sound energy passing through an obstacle, and the term transmission loss describes the proportion of that energy that is dissipated by the obstacle. This is not to be confused with absorption, which describes the proportion of energy dissipated by a reflected sound wave. While the interactions that occur at the interface of two media can be quite complex, the ratio of reflected vs. absorbed energy can be thought of as being defined by the properties of the surface of a material, whereas transmitted energy vs. transmission loss are related to the size, shape and density of an obstacle.</p>
@@ -60,3 +60,4 @@ Obstruction and Occlusion</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

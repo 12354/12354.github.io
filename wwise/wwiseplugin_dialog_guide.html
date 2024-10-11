@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -36,14 +36,14 @@
 <div class="textblock"><p>A Windows DLL plug-in can contain resources for the dialog that is displayed in Wwise when the user edits the plug-in's properties. This is true both for source plug-ins and effect plug-ins.</p>
 <p>This page is dedicated to the details regarding those dialog resources such as the expected dimensions of the dialogs, how to include various types of controls in your dialog and how to bind those controls to your plug-in's properties.</p>
 <p>Refer to the following sections for details:</p><ul>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_creating">How to Create Dialog Resources for Your Plug-in</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_dimensions">Dialog Dimensions</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_getdialog">Letting Wwise Retrieve your Dialog Resources</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_controls_regular">How to Add Regular Controls to Your Dialogs</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_controls_wwise">How to Add Wwise Property Controls to Your Dialogs</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_example">Example</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_testing">Testing Your Plug-in's Dialogs</a></li>
-<li><a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_troubleshooting">Troubleshooting</a></li>
+<li>How to Create Dialog Resources for Your Plug-in</li>
+<li>Dialog Dimensions</li>
+<li>Letting Wwise Retrieve your Dialog Resources</li>
+<li>How to Add Regular Controls to Your Dialogs</li>
+<li>How to Add Wwise Property Controls to Your Dialogs</li>
+<li>Example</li>
+<li>Testing Your Plug-in's Dialogs</li>
+<li>Troubleshooting</li>
 </ul>
 <h1><a class="anchor" id="wwiseplugin_dialog_guide_creating"></a>
 How to Create Dialog Resources for Your Plug-in</h1>
@@ -54,7 +54,7 @@ Dialog Dimensions</h1>
 <p>The dialogs displayed in the Effect Editor and the Property Editor can be fairly large, while the ones displayed in the Contents Editor are restricted to a smaller form factor in order to fit nicely in that view.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> As explained in <a class="el" href="plugin_frontend_windows.html#wwiseplugin_dialogcode">Dialog Acquisition</a>, your implementations of <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a21b81136769b185c244ada93e6767f14.html#a21b81136769b185c244ada93e6767f14" title="Retrieves the plug-in dialog parameters.">AK::Wwise::Plugin::GUIWindows::GetDialog()</a> and <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a8ea33835cc026463f2f64b4327f89b17.html#a8ea33835cc026463f2f64b4327f89b17" title="Window message handler for dialogs.">AK::Wwise::Plugin::GUIWindows::WindowProc()</a> should check the AK::Wwise::Plugin::GUIWindows::eDialog parameter to know which dialog they are being called for. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> As explained in Dialog Acquisition, your implementations of AK::Wwise::Plugin::GUIWindows::GetDialog() and AK::Wwise::Plugin::GUIWindows::WindowProc() should check the AK::Wwise::Plugin::GUIWindows::eDialog parameter to know which dialog they are being called for. </td></tr>
 </table>
 <h2><a class="anchor" id="wwiseplugin_dialog_guide_dimensions_settings"></a>
 Dimensions for Dialogs in the Property Editor and the Effect Editor</h2>
@@ -86,38 +86,38 @@ Dimensions for Dialogs in the Content Editor</h2>
 </table>
 <h1><a class="anchor" id="wwiseplugin_dialog_guide_getdialog"></a>
 Letting Wwise Retrieve your Dialog Resources</h1>
-<p>Refer to <a class="el" href="plugin_frontend_windows.html#wwiseplugin_dialogcode">Dialog Acquisition</a> for information about <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a400dc71bed3f216d4c5afe2297474de1.html#a400dc71bed3f216d4c5afe2297474de1" title="Retrieves the plug-in&#39;s HINSTANCE used for loading resources.">AK::Wwise::Plugin::GUIWindows::GetResourceHandle()</a> and <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a21b81136769b185c244ada93e6767f14.html#a21b81136769b185c244ada93e6767f14" title="Retrieves the plug-in dialog parameters.">AK::Wwise::Plugin::GUIWindows::GetDialog()</a> which are functions you must implement for Wwise to find your dialog resources.</p>
+<p>Refer to Dialog Acquisition for information about AK::Wwise::Plugin::GUIWindows::GetResourceHandle() and AK::Wwise::Plugin::GUIWindows::GetDialog() which are functions you must implement for Wwise to find your dialog resources.</p>
 <h1><a class="anchor" id="wwiseplugin_dialog_guide_controls_regular"></a>
 How to Add Regular Controls to Your Dialogs</h1>
 <p>You can add regular controls such as static controls, edit controls, checkboxes, push buttons, radio buttons and group controls directly in the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment Dialog Editor using the corresponding tools in the Dialog Editor section of the Toolbox. These controls will be automatically subclassed by Wwise so they have the same look as similar controls elsewhere in the application.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> A notable exception is the dropdown/combobox control, which is not automatically subclassed. If you need a dropdown control in your dialog, use the <code>Combo</code> custom control instead. Refer to <a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_controls_wwise_class">"Class" Control Attribute</a> for more information. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> A notable exception is the dropdown/combobox control, which is not automatically subclassed. If you need a dropdown control in your dialog, use the <code>Combo</code> custom control instead. Refer to "Class" Control Attribute for more information. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> When a property supports RTPCs, the RTPC widget is automatically displayed with controls that are bound to that property. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_properties_tag">Properties Element</a> for more information regarding how to enable RTPCs on properties. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> When a property supports RTPCs, the RTPC widget is automatically displayed with controls that are bound to that property. Refer to Properties Element for more information regarding how to enable RTPCs on properties. </td></tr>
 </table>
 <h2><a class="anchor" id="wwiseplugin_dialog_guide_poptable"></a>
 How to Bind Regular Controls to Properties</h2>
 <p>Checkboxes and radio buttons can be associated to your plug-in's properties so these are updated when the user acts on the controls, and vice-versa, without extra code on your side.</p>
 <p>To do so, you must create a "populate table" using macros defined in <a class="el" href="_plugin_8h.html" title="Wwise Authoring Plug-ins - Main include file.">AK/Wwise/Plugin.h</a>:</p>
-<div class="fragment"><div class="line"><a class="code" href="_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8.html#ace7e697c1d8a310c9794cf05ce8ce1d8">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</a>(PropertyTable)</div>
-<div class="line">    <a class="code" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a>(IDC_CHECK_SWEEPFREQ, szSweepFreq)</div>
-<div class="line">    <a class="code" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a>(IDC_RADIO_FREQSWEEPLIN, szSweepFreqType)</div>
+<div class="fragment"><div class="line">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(PropertyTable)</div>
+<div class="line">    AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(IDC_CHECK_SWEEPFREQ, szSweepFreq)</div>
+<div class="line">    AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(IDC_RADIO_FREQSWEEPLIN, szSweepFreqType)</div>
 <div class="line">    (... insert other items here...)</div>
-<div class="line"><a class="code" href="_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76.html#a286a575e82a4a1b002ff737b186d4c76">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</a>()</div>
-</div><!-- fragment --><p>You start with the <a class="el" href="_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8.html#ace7e697c1d8a310c9794cf05ce8ce1d8" title="Starts a new property-control bindings table.">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE()</a> macro, which has a single parameter, an identifier for the table. It must be a valid C++ identifier, and must be unique within the scope where it is defined. This is the same identifier you will use when setting the populate table <em>out</em> parameter in your implementation of <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a21b81136769b185c244ada93e6767f14.html#a21b81136769b185c244ada93e6767f14" title="Retrieves the plug-in dialog parameters.">AK::Wwise::Plugin::GUIWindows::GetDialog()</a> (Refer to <a class="el" href="plugin_frontend_windows.html#wwiseplugin_dialogcode">Dialog Acquisition</a> for more information).</p>
-<p>You then use the <a class="el" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf" title="Declares an association between a control and a property within a property-control bindings table.">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM()</a> macro to associate controls to properties. Each control that must be bound to a property needs an <a class="el" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf" title="Declares an association between a control and a property within a property-control bindings table.">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM()</a> entry in the table. The first parameter of this macro is the ID of the control in your dialog. The second parameter is the name of the property, as defined in your plug-in's XML definition file. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_properties_tag">Properties Element</a> for more information on property names.</p>
+<div class="line">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div>
+</div><!-- fragment --><p>You start with the AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE() macro, which has a single parameter, an identifier for the table. It must be a valid C++ identifier, and must be unique within the scope where it is defined. This is the same identifier you will use when setting the populate table <em>out</em> parameter in your implementation of AK::Wwise::Plugin::GUIWindows::GetDialog() (Refer to Dialog Acquisition for more information).</p>
+<p>You then use the AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM() macro to associate controls to properties. Each control that must be bound to a property needs an AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM() entry in the table. The first parameter of this macro is the ID of the control in your dialog. The second parameter is the name of the property, as defined in your plug-in's XML definition file. Refer to Properties Element for more information on property names.</p>
 <p>Checkboxes can be associated to properties of type <code>bool</code>. Property value <code>true</code> corresponds to a checked control, while property value <code>false</code> corresponds to an unchecked control.</p>
 <p>Radio buttons can be associated to properties of type <code>int32</code>. Each radio button in a control group corresponds to a specific value. The first radio button in the group corresponds to value 0, the second to value 1, the third to value 2, and so on. Two things must be carefully set for the radio buttons to work as expected: The radio buttons' tab order, and control grouping.</p>
 <p>To view the tab order while editing your dialog in the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment Dialog Editor, open the Format menu, and choose Tab Order. Numbers corresponding to the tab order will appear near each control. To change that order, click on the control that should be first, then on the control that should be second, and so on, until all controls are ordered as needed. When you are done, return to the Format menu and choose Tab Order again to turn that option off.</p>
 <p>To group controls together, set the <em>Group</em> property of the first radio button to <em>True</em> in the Properties window of the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment. Set the <em>Group</em> property to <em>False</em> for the other radio buttons of the same group.</p>
 <p>Refer to the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment documentation for more information regarding tab order, control groups, and the Dialog Editor in general.</p>
-<p>Once all the <a class="el" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf" title="Declares an association between a control and a property within a property-control bindings table.">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM()</a> entries are defined, use the <a class="el" href="_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76.html#a286a575e82a4a1b002ff737b186d4c76" title="Ends the declaration of a property-control bindings table.">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</a> macro to end the declaration of your populate table.</p>
+<p>Once all the AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM() entries are defined, use the AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE() macro to end the declaration of your populate table.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> You can put this declaration in the same CPP file as your <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a21b81136769b185c244ada93e6767f14.html#a21b81136769b185c244ada93e6767f14" title="Retrieves the plug-in dialog parameters.">AK::Wwise::Plugin::GUIWindows::GetDialog()</a> implementation, since that's the only place you will need to access it. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> You can put this declaration in the same CPP file as your AK::Wwise::Plugin::GUIWindows::GetDialog() implementation, since that's the only place you will need to access it. </td></tr>
 </table>
 <h1><a class="anchor" id="wwiseplugin_dialog_guide_controls_wwise"></a>
 How to Add Wwise Property Controls to Your Dialogs</h1>
@@ -125,11 +125,11 @@ How to Add Wwise Property Controls to Your Dialogs</h1>
 <div class="fragment"><div class="line">Class=[Classname];Prop=[Propname];[Attribute1]=[Value1];[Attribute2]=[Value2];[...]</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> To make it easier to view the layout of the dialog controls, set <em>Border</em> to <em>True</em> in the Properties of the static placeholders in the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment Dialog Editor. Refer to <a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_example">Example</a> for an example. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> To make it easier to view the layout of the dialog controls, set <em>Border</em> to <em>True</em> in the Properties of the static placeholders in the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment Dialog Editor. Refer to Example for an example. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> When a property supports RTPCs, the RTPC widget is automatically displayed with controls that are bound to that property. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_properties_tag">Properties Element</a> for more information regarding how to enable RTPCs on properties. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> When a property supports RTPCs, the RTPC widget is automatically displayed with controls that are bound to that property. Refer to Properties Element for more information regarding how to enable RTPCs on properties. </td></tr>
 </table>
 <p>Let's look at these attributes in detail:</p>
 <h2><a class="anchor" id="wwiseplugin_dialog_guide_controls_wwise_class"></a>
@@ -183,13 +183,13 @@ The static control in your resources should be exactly 13 units high, and be wid
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> Each of these controls supports various optional attributes to adapt their behavior to the particular needs of each property. Refer to <a class="el" href="wwiseplugin_dialog_guide.html#wwiseplugin_dialog_guide_controls_wwise_attributes">Other Control Attributes</a> for more information. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> Each of these controls supports various optional attributes to adapt their behavior to the particular needs of each property. Refer to Other Control Attributes for more information. </td></tr>
 </table>
 <h2><a class="anchor" id="wwiseplugin_dialog_guide_controls_wwise_propname"></a>
 "Prop" Control Attribute</h2>
 <p>The <code>Prop</code> attribute lets you bind a control to one of your plug-in's properties. This attribute has the following format:</p>
 <div class="fragment"><div class="line">Prop=[Propname]</div>
-</div><!-- fragment --><p>where <em>[PropName]</em> specifies the name of the property the control should be bound to. That name is the same name that is specified in the plug-in's XML definition file (Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_properties_tag">Properties Element</a> for more information).</p>
+</div><!-- fragment --><p>where <em>[PropName]</em> specifies the name of the property the control should be bound to. That name is the same name that is specified in the plug-in's XML definition file (Refer to Properties Element for more information).</p>
 <p>This attribute is optional. If it is not specified, the control will still be created but it will not be bound to a property. For example you could use a <code>Caption</code> control to display some text you would set on the control using <code>SetWindowText()</code>.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -197,7 +197,7 @@ The static control in your resources should be exactly 13 units high, and be wid
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> When creating a control that is <em>not</em> bound to a property, be sure to leave the control's text intact until <em>after</em> the dialog is fully created. If you change the control's text too early, for example while handling the <code>WM_INITDIALOG</code> message in the <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a8ea33835cc026463f2f64b4327f89b17.html#a8ea33835cc026463f2f64b4327f89b17" title="Window message handler for dialogs.">AK::Wwise::Plugin::GUIWindows::WindowProc()</a> method, the <code>Class</code> attribute set in the resource text will not be available when required, and Wwise will not be able to create the appropriate control. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> When creating a control that is <em>not</em> bound to a property, be sure to leave the control's text intact until <em>after</em> the dialog is fully created. If you change the control's text too early, for example while handling the <code>WM_INITDIALOG</code> message in the AK::Wwise::Plugin::GUIWindows::WindowProc() method, the <code>Class</code> attribute set in the resource text will not be available when required, and Wwise will not be able to create the appropriate control. </td></tr>
 </table>
 <h2><a class="anchor" id="wwiseplugin_dialog_guide_controls_wwise_attributes"></a>
 Other Control Attributes</h2>
@@ -212,10 +212,10 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Decimals]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Decimals]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Min</b></p>
-<p>Format: </p><div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">Min</a>=[Number]</div>
+<p>Format: </p><div class="fragment"><div class="line">Min=[Number]</div>
 </div><!-- fragment --><p>where <em>[Number]</em> is the minimum value that can be entered in this control. This value can be an integer or decimal number, depending on the type of property the control is bound to.</p>
 <p>This attribute can be used on the following types of controls when they are bound to a numeric property:</p><ul>
 <li><code>Fader</code> </li>
@@ -223,10 +223,10 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/Restrictions/ValueRestriction/Range/Min. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/Restrictions/ValueRestriction/Range/Min. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Max</b></p>
-<p>Format: </p><div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">Max</a>=[Number]</div>
+<p>Format: </p><div class="fragment"><div class="line">Max=[Number]</div>
 </div><!-- fragment --><p>where <em>[Number]</em> is the maximum value that can be entered in this control. This value can be an integer or decimal number, depending on the type of property the control is bound to.</p>
 <p>This attribute can be used on the following types of controls when they are bound to a numeric property:</p><ul>
 <li><code>Fader</code> </li>
@@ -234,7 +234,7 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/Restrictions/ValueRestriction/Range/Max. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/Restrictions/ValueRestriction/Range/Max. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Mid</b></p>
 <p>Format: </p><div class="fragment"><div class="line">Mid=[Number]</div>
@@ -244,7 +244,7 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Mid]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Mid]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Step</b></p>
 <p>Format: </p><div class="fragment"><div class="line">Step=[Number]</div>
@@ -255,7 +255,7 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Step]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Step]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Fine</b></p>
 <p>Format: </p><div class="fragment"><div class="line">Fine=[Number]</div>
@@ -266,7 +266,7 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Fine]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[Fine]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>UIMin</b></p>
 <p>Format: </p><div class="fragment"><div class="line">UIMin=[Number]</div>
@@ -281,7 +281,7 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[UIMin]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[UIMin]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>UIMax</b></p>
 <p>Format: </p><div class="fragment"><div class="line">UIMax=[Number]</div>
@@ -296,7 +296,7 @@ Other Control Attributes</h2>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[UIMax]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[UIMax]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Options</b></p>
 <p>Format: </p><div class="fragment"><div class="line">Options=[Value1]:[Text1],[Value2]:[Text2],...,[ValueN]:[TextN]</div>
@@ -315,22 +315,22 @@ Other Control Attributes</h2>
 <p>It is used to define the contents of the dropdown list. Only the values that appear in the <code>Options</code> attribute can be set by the Wwise user with a <code>Combo</code> control.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The format of the <code>Options</code> attribute is the same as that of the <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_property_display_name_a2d1788ed6ead7d8d9d38b16ff0c868a9.html#a2d1788ed6ead7d8d9d38b16ff0c868a9" title="Get the user-friendly names of possible values for the specified property.">AK::Wwise::Plugin::PropertyDisplayName::DisplayNamesForPropValues()</a> method. Refer to <a class="el" href="plugin_backend_model.html#wwiseplugin_displaynames">Property Display Names and Values</a> for more information. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The format of the <code>Options</code> attribute is the same as that of the AK::Wwise::Plugin::PropertyDisplayName::DisplayNamesForPropValues() method. Refer to Property Display Names and Values for more information. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. The options must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/Restrictions/ValueRestriction/Enumeration/Value[DisplayName] for each of the values in the enumeration. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. The options must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/Restrictions/ValueRestriction/Enumeration/Value[DisplayName] for each of the values in the enumeration. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>SliderType</b></p>
 <p>Format: </p><div class="fragment"><div class="line">SliderType=[integer value]</div>
-</div><!-- fragment --><p>Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for the SliderType values</p>
+</div><!-- fragment --><p>Refer to UserInterface for the SliderType values</p>
 <p>This attribute can be used on the following types of controls when they are bound to a numeric property:</p><ul>
 <li><code>Fader</code> </li>
 <li><code>SuperRange</code> </li>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[SliderType]. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This attribute is deprecated. It must be defined in the plugin description XML at /PluginModule/{EffectPlugin or SourcePlugin}/Properties/Property/UserInterface[SliderType]. Refer to UserInterface for more information. </td></tr>
 </table>
 <p><b>Align</b></p>
 <p>Format: </p><div class="fragment"><div class="line">Align=[Left|Center|Right]</div>
@@ -360,7 +360,7 @@ Other Control Attributes</h2>
 <p>This attribute can be used on the following type of control when it is bound to a property of type <code>int32</code> that represents milliseconds:</p><ul>
 <li><code>Caption</code> </li>
 </ul>
-<p>Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_properties_tag">Properties Element</a> for more information on property types.</p>
+<p>Refer to Properties Element for more information on property types.</p>
 <h1><a class="anchor" id="wwiseplugin_dialog_guide_example"></a>
 Example</h1>
 <p>The following is a sample dialog resource for an effect plug-in, as viewed in the <a class="el" href="namespace_microsoft.html">Microsoft</a> Development Environment Dialog Editor:</p>
@@ -401,26 +401,26 @@ Example</h1>
 <div class="line">END</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> Some attributes in this code sample are deprecated: Decimals, Step, Fine, SliderType, Mid, UIMin, UIMax. Refer to <a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_userinterface">UserInterface</a> for more information. </td></tr>
+<td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> Some attributes in this code sample are deprecated: Decimals, Step, Fine, SliderType, Mid, UIMin, UIMax. Refer to UserInterface for more information. </td></tr>
 </table>
-<p>In this example, the <em>Enable Feedback</em> checkbox and the <em>Interpolation</em> radio buttons need to be bound to properties, so the .cpp file for the plug-in defines the following table, which is returned by the plug-in's implementation of <code><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_g_u_i_windows_a21b81136769b185c244ada93e6767f14.html#a21b81136769b185c244ada93e6767f14" title="Retrieves the plug-in dialog parameters.">AK::Wwise::Plugin::GUIWindows::GetDialog()</a></code>:</p>
+<p>In this example, the <em>Enable Feedback</em> checkbox and the <em>Interpolation</em> radio buttons need to be bound to properties, so the .cpp file for the plug-in defines the following table, which is returned by the plug-in's implementation of <code>AK::Wwise::Plugin::GUIWindows::GetDialog()</code>:</p>
 <div class="fragment"><div class="line">constexpr <span class="keyword">auto</span> szFeedbackEnabled = u8<span class="stringliteral">&quot;FeedbackEnabled&quot;</span>;</div>
 <div class="line">constexpr <span class="keyword">auto</span> szInterpolation = u8<span class="stringliteral">&quot;Interpolation&quot;</span>;</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Bind non static text UI controls to properties</span></div>
-<div class="line"><a class="code" href="_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8.html#ace7e697c1d8a310c9794cf05ce8ce1d8">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</a>(MyPopTable)</div>
-<div class="line">    <a class="code" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a>(IDC_CHECK_FEEDBACKENABLED, szFeedbackEnabled)</div>
-<div class="line">    <a class="code" href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a>(IDC_RADIO_LINEAR, szInterpolation)</div>
-<div class="line"><a class="code" href="_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76.html#a286a575e82a4a1b002ff737b186d4c76">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</a>()</div>
+<div class="line">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(MyPopTable)</div>
+<div class="line">    AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(IDC_CHECK_FEEDBACKENABLED, szFeedbackEnabled)</div>
+<div class="line">    AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(IDC_RADIO_LINEAR, szInterpolation)</div>
+<div class="line">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div>
 <div class="line"> </div>
 <div class="line">(...)</div>
 <div class="line"> </div>
 <div class="line"><span class="keywordtype">bool</span> MyPlugin::GetDialog(</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK::Wwise::Plugin::eDialog</a> in_eDialog,</div>
+<div class="line">    AK::Wwise::Plugin::eDialog in_eDialog,</div>
 <div class="line">    UINT&amp; out_uiDialogID,</div>
 <div class="line">    PopulateTableItem*&amp; out_pTable)<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
-<div class="line">    <span class="keywordflow">if</span> (in_eDialog == <a class="code" href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc">SettingsDialog</a>)</div>
+<div class="line">    <span class="keywordflow">if</span> (in_eDialog == SettingsDialog)</div>
 <div class="line">    {</div>
 <div class="line">        out_uiDialogID = IDD_DELAY_BIG;</div>
 <div class="line">        out_pTable = MyPopTable;</div>
@@ -465,21 +465,22 @@ Property Editor dialog (source plug-ins only)</h2>
 <h1><a class="anchor" id="wwiseplugin_dialog_guide_troubleshooting"></a>
 Troubleshooting</h1>
 <p>Help is available in <a class="el" href="plugin_troubleshooting.html">Wwise Source and Effect Plug-in Troubleshooting Guide</a> if you run into any problem.</p>
-<dl class="section see"><dt>See also</dt><dd><a class="el" href="plugin_frontend_windows.html#wwiseplugin_dialogcode">Dialog Acquisition</a> </dd>
+<dl class="section see"><dt>See also</dt><dd>Dialog Acquisition </dd>
 <dd>
-<a class="el" href="plugin_frontend_windows.html#wwise_plugin_frontend_windows_resource">Resource Handle</a> </dd>
+Resource Handle </dd>
 <dd>
-<a class="el" href="plugin_xml_properties.html#wwiseplugin_xml_properties_tag">Properties Element</a> </dd>
+Properties Element </dd>
 <dd>
-<a class="el" href="plugin_backend_model.html#wwiseplugin_displaynames">Property Display Names and Values</a> </dd></dl>
+Property Display Names and Values </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034d"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034d">AK.Wwise::Plugin::eDialog</a></div><div class="ttdeci">eDialog</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00136">PluginDef.h:137</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c_html_a5cf5edb6e0760f5bd0ef29d98c322d9c"><div class="ttname"><a href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c.html#a5cf5edb6e0760f5bd0ef29d98c322d9c">AK::SpeakerVolumes::Vector::Max</a></div><div class="ttdeci">AkForceInline void Max(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get max for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_volumes_8h_source.html#l00126">AkSpeakerVolumes.h:126</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc"><div class="ttname"><a href="namespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d.html#a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc">AK.Wwise::Plugin::SettingsDialog</a></div><div class="ttdeci">@ SettingsDialog</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_def_8h_source.html#l00140">PluginDef.h:138</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76_html_a286a575e82a4a1b002ff737b186d4c76"><div class="ttname"><a href="_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76.html#a286a575e82a4a1b002ff737b186d4c76">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</a></div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div><div class="ttdoc">Ends the declaration of a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00078">GUIWindows.h:78</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf_html_af6140142c9fe6ff132aee5ad0fde1caf"><div class="ttname"><a href="_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf.html#af6140142c9fe6ff132aee5ad0fde1caf">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</a></div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(theID, theProp)</div><div class="ttdoc">Declares an association between a control and a property within a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00068">GUIWindows.h:68</a></div></div>
-<div class="ttc" id="a_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8_html_ace7e697c1d8a310c9794cf05ce8ce1d8"><div class="ttname"><a href="_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8.html#ace7e697c1d8a310c9794cf05ce8ce1d8">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</a></div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(theName)</div><div class="ttdoc">Starts a new property-control bindings table.</div><div class="ttdef"><b>Definition:</b> <a href="_g_u_i_windows_8h_source.html#l00054">GUIWindows.h:54</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2_html_a8661f38fe4c56e23ffd967dc427bcde2"><div class="ttname"><a href="namespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2.html#a8661f38fe4c56e23ffd967dc427bcde2">AK::SpeakerVolumes::Vector::Min</a></div><div class="ttdeci">AkForceInline void Min(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get min for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_speaker_volumes_8h_source.html#l00136">AkSpeakerVolumes.h:136</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034d"><div class="ttname">AK.Wwise::Plugin::eDialog</div><div class="ttdeci">eDialog</div><div class="ttdef"><b>Definition:</b> PluginDef.h:137</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a5cf5edb6e0760f5bd0ef29d98c322d9c_html_a5cf5edb6e0760f5bd0ef29d98c322d9c"><div class="ttname">AK::SpeakerVolumes::Vector::Max</div><div class="ttdeci">AkForceInline void Max(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get max for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> AkSpeakerVolumes.h:126</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_wwise_1_1_plugin_a5a9328b141630d1de228c92e81e9034d_html_a5a9328b141630d1de228c92e81e9034da70f74e61c5e7bef5d95559c73c9978cc"><div class="ttname">AK.Wwise::Plugin::SettingsDialog</div><div class="ttdeci">@ SettingsDialog</div><div class="ttdef"><b>Definition:</b> PluginDef.h:138</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_a286a575e82a4a1b002ff737b186d4c76_html_a286a575e82a4a1b002ff737b186d4c76"><div class="ttname">AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE</div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_END_POPULATE_TABLE()</div><div class="ttdoc">Ends the declaration of a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:78</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_af6140142c9fe6ff132aee5ad0fde1caf_html_af6140142c9fe6ff132aee5ad0fde1caf"><div class="ttname">AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM</div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_POP_ITEM(theID, theProp)</div><div class="ttdoc">Declares an association between a control and a property within a property-control bindings table.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:68</div></div>
+<div class="ttc" id="a_g_u_i_windows_8h_ace7e697c1d8a310c9794cf05ce8ce1d8_html_ace7e697c1d8a310c9794cf05ce8ce1d8"><div class="ttname">AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE</div><div class="ttdeci">#define AK_WWISE_PLUGIN_GUI_WINDOWS_BEGIN_POPULATE_TABLE(theName)</div><div class="ttdoc">Starts a new property-control bindings table.</div><div class="ttdef"><b>Definition:</b> GUIWindows.h:54</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_speaker_volumes_1_1_vector_a8661f38fe4c56e23ffd967dc427bcde2_html_a8661f38fe4c56e23ffd967dc427bcde2"><div class="ttname">AK::SpeakerVolumes::Vector::Min</div><div class="ttdeci">AkForceInline void Min(AkReal32 *in_pVolumesDst, const AkReal32 *in_pVolumesSrc, AkUInt32 in_uNumChannels)</div><div class="ttdoc">Get min for all elements of two volume vectors, independently.</div><div class="ttdef"><b>Definition:</b> AkSpeakerVolumes.h:136</div></div>
 </body>
 </html>
+

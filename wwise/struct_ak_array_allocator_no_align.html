@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -61,13 +61,13 @@ Inheritance diagram for AkArrayAllocatorNoAlign&lt; T_MEMID &gt;:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a572d7f65fd546fce3dd949c48f2ba568"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="_platforms_2_windows_2_ak_types_8h_a3b6f41972bf6fa55e80b687ca50fbd12.html#a3b6f41972bf6fa55e80b687ca50fbd12">AkForceInline</a> void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_array_allocator_no_align_a572d7f65fd546fce3dd949c48f2ba568.html#a572d7f65fd546fce3dd949c48f2ba568">Alloc</a> (size_t in_uSize)</td></tr>
+<tr class="memitem:a572d7f65fd546fce3dd949c48f2ba568"><td class="memItemLeft" align="right" valign="top">static AkForceInline void *&#160;</td><td class="memItemRight" valign="bottom">Alloc (size_t in_uSize)</td></tr>
 <tr class="separator:a572d7f65fd546fce3dd949c48f2ba568"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aac15f21c37c5da42bfa1db7060d2f30c"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="_platforms_2_windows_2_ak_types_8h_a3b6f41972bf6fa55e80b687ca50fbd12.html#a3b6f41972bf6fa55e80b687ca50fbd12">AkForceInline</a> void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_array_allocator_no_align_aac15f21c37c5da42bfa1db7060d2f30c.html#aac15f21c37c5da42bfa1db7060d2f30c">ReAlloc</a> (void *in_pCurrent, size_t in_uOldSize, size_t in_uNewSize)</td></tr>
+<tr class="memitem:aac15f21c37c5da42bfa1db7060d2f30c"><td class="memItemLeft" align="right" valign="top">static AkForceInline void *&#160;</td><td class="memItemRight" valign="bottom">ReAlloc (void *in_pCurrent, size_t in_uOldSize, size_t in_uNewSize)</td></tr>
 <tr class="separator:aac15f21c37c5da42bfa1db7060d2f30c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a090f613bd8846bc436d4e9e562d5d8cc"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="_platforms_2_windows_2_ak_types_8h_a3b6f41972bf6fa55e80b687ca50fbd12.html#a3b6f41972bf6fa55e80b687ca50fbd12">AkForceInline</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_array_allocator_no_align_a090f613bd8846bc436d4e9e562d5d8cc.html#a090f613bd8846bc436d4e9e562d5d8cc">Free</a> (void *in_pAddress)</td></tr>
+<tr class="memitem:a090f613bd8846bc436d4e9e562d5d8cc"><td class="memItemLeft" align="right" valign="top">static AkForceInline void&#160;</td><td class="memItemRight" valign="bottom">Free (void *in_pAddress)</td></tr>
 <tr class="separator:a090f613bd8846bc436d4e9e562d5d8cc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7dd951bf506402f04e0ea453da9bd8a0"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="_platforms_2_windows_2_ak_types_8h_a3b6f41972bf6fa55e80b687ca50fbd12.html#a3b6f41972bf6fa55e80b687ca50fbd12">AkForceInline</a> void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_array_allocator_no_align_a7dd951bf506402f04e0ea453da9bd8a0.html#a7dd951bf506402f04e0ea453da9bd8a0">TransferMem</a> (void *&amp;io_pDest, <a class="el" href="struct_ak_array_allocator_no_align.html">AkArrayAllocatorNoAlign</a>&lt; T_MEMID &gt; in_srcAlloc, void *in_pSrc)</td></tr>
+<tr class="memitem:a7dd951bf506402f04e0ea453da9bd8a0"><td class="memItemLeft" align="right" valign="top">static AkForceInline void&#160;</td><td class="memItemRight" valign="bottom">TransferMem (void *&amp;io_pDest, <a class="el" href="struct_ak_array_allocator_no_align.html">AkArrayAllocatorNoAlign</a>&lt; T_MEMID &gt; in_srcAlloc, void *in_pSrc)</td></tr>
 <tr class="separator:a7dd951bf506402f04e0ea453da9bd8a0"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
@@ -75,7 +75,8 @@ Static Public Member Functions</h2></td></tr>
 struct AkArrayAllocatorNoAlign&lt; T_MEMID &gt;</h3>
 
 
-<p class="definition">Definition at line <a class="el" href="_ak_array_8h_source.html#l00037">37</a> of file <a class="el" href="_ak_array_8h_source.html">AkArray.h</a>.</p>
+<p class="definition">Definition at line 37 of file <a class="el" href="_ak_array_8h_source.html">AkArray.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+

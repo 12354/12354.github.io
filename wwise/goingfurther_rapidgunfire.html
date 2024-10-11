@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -38,14 +38,15 @@
 <p>A MIDI-based solution requires the following:</p>
 <ul>
 <li>Use one of the following options to manage audio rendering:<ul>
-<li>Use the Global callback to post bullet events within that callback. Register the Global callback with <a href="https://www.audiokinetic.com/library/edge/?source=SDK&amp;id=namespace_a_k_1_1_sound_engine_ade293d3ed101fe494ead6dffb1c682fb.html#ade293d3ed101fe494ead6dffb1c682fb">Ak::SoundEngine::RegisterGlobalCallback</a>.</li>
-<li>Manage the call to <code><a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio()</a></code> yourself to place Play and Stop actions on the desired frame. Refer to the Audio Rendering Thread section in <a class="el" href="goingfurther_eventmgrthread.html">Optimizing CPU usage</a> for details.</li>
+<li>Use the Global callback to post bullet events within that callback. Register the Global callback with Ak::SoundEngine::RegisterGlobalCallback.</li>
+<li>Manage the call to <code>AK::SoundEngine::RenderAudio()</code> yourself to place Play and Stop actions on the desired frame. Refer to the Audio Rendering Thread section in <a class="el" href="goingfurther_eventmgrthread.html">Optimizing CPU usage</a> for details.</li>
 </ul>
 </li>
 <li>The Integration Demo contains a sample MIDI implementation that uses a metronome sound. You can apply the same principles to rapid gunfire. The relevant file is available at <code> &lt;WwiseInstallationFolder&gt;\SDK\samples\IntegrationDemo\DemoMIDIMetronome.cpp</code> and the corresponding documentation is available at <a class="el" href="soundengine_integration_samplecode.html">Integration Demo Sample</a> (see the MIDI API section).</li>
-<li>The relevant APIs are <a href="https://www.audiokinetic.com/library/edge/?source=SDK&amp;id=namespace_a_k_1_1_sound_engine_ab24b5dc8bd4d1adbdc6aa5c98d94d946.html">PostMIDIOnEvent()</a> and <a href="https://www.audiokinetic.com/library/edge/?source=SDK&amp;id=namespace_a_k_1_1_sound_engine_acce4adb3c2bbd018ef375c85379949e3.html">StopMIDIOnEvent()</a>. </li>
+<li>The relevant APIs are PostMIDIOnEvent() and StopMIDIOnEvent(). </li>
 </ul>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

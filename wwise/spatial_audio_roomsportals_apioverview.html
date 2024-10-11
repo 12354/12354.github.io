@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -35,17 +35,17 @@
 <div class="contents">
 <div class="textblock"><p>Here is the outline of this page:</p>
 <ul>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_summary">Summary of Sound Propagation Features</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms">Modeling Sound Propagation from Other Rooms</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_diffraction">Diffraction</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_wet_diffraction">Wet Path Diffraction</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_aboutgameobjects_emitters">Virtual Positioning and Diffraction Through Portals</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_transmission">Transmission</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_coupling">Room Coupling</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_multiplerooms">Multiple Room Traversal</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_aboutgameobjects_roomsandportals">Room Game Object Behavior</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_roomtones">Room Tones</a></li>
-<li><a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_spread">Portal Spread and Aperture</a></li>
+<li>Summary of Sound Propagation Features</li>
+<li>Modeling Sound Propagation from Other Rooms</li>
+<li>Diffraction</li>
+<li>Wet Path Diffraction</li>
+<li>Virtual Positioning and Diffraction Through Portals</li>
+<li>Transmission</li>
+<li>Room Coupling</li>
+<li>Multiple Room Traversal</li>
+<li>Room Game Object Behavior</li>
+<li>Room Tones</li>
+<li>Portal Spread and Aperture</li>
 </ul>
 <h1><a class="anchor" id="spatial_audio_roomsportals_summary"></a>
 Summary of Sound Propagation Features</h1>
@@ -111,7 +111,7 @@ Modeling Sound Propagation from Other Rooms</h1>
 <p>With Spatial Audio Rooms and Portals, sound propagation in Rooms other than that of the listener is managed by the Rooms and Portals abstraction. An emitter in another Room reaches the listener via Portals, and their associated diffraction, and via transmission through rooms' "walls". Ensure that the <b>Enable Diffraction and Transmission</b> box is checked in the Positioning tab of each sound that need to be propagated.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_diffraction"></a>
 Diffraction</h1>
-<p>For each emitter in adjacent Rooms, Spatial Audio computes a diffraction angle from the Shadow Boundary, from the closest edge of the connecting Portal. For more information, see <a class="el" href="spatial_audio_concepts.html#spatial_audio_concepts_diffraction">Diffraction</a>. This diffraction angle, which may go to up to 180 degrees, is then mapped to a coefficient between 0 and 100%, and given to the Wwise user for driving corresponding audio transformations, by one of two means. It can set the diffraction value on the emitter game object or set the value of the Diffraction built-in game parameter.</p>
+<p>For each emitter in adjacent Rooms, Spatial Audio computes a diffraction angle from the Shadow Boundary, from the closest edge of the connecting Portal. For more information, see Diffraction. This diffraction angle, which may go to up to 180 degrees, is then mapped to a coefficient between 0 and 100%, and given to the Wwise user for driving corresponding audio transformations, by one of two means. It can set the diffraction value on the emitter game object or set the value of the Diffraction built-in game parameter.</p>
 <p>The diffraction value on the emitter game object is used to drive curves in the Authoring. By default, the project obstruction curves are used. They can be authored in the Project Settings' Obstruction/Occlusion tab and will impact Volume, LPF, and HPF to emulate volume and frequency-dependent behaviors. Project obstruction curves impact all the sounds in a project, which makes them less flexible. However, custom Diffraction curves can be created in an Attenuation ShareSet applied to the sound.</p>
 <p>Alternatively, the Diffraction built-in parameter can be used. To do so, create a game parameter and set its <b>Bind to Built-in Parameter</b> drop-down menu to <b>Diffraction</b>. Values pushed to this game parameter are scoped by game object, so they are unique for each emitter. You may then use it with an RTPC to control any property of your Actor-Mixer. Output Bus Volume and LPF are privileged over the base Volume and LPF because they should apply to the direct signal path only, and not to the auxiliary send to the Room's reverb.</p>
 <table border="0" cellspacing="0" cellpadding="2">
@@ -146,7 +146,7 @@ Wet Path Diffraction</h1>
 <p>Finally, the wet diffraction value can never exceed the dry diffraction value. It is clamped if the calculation above results in a value greater than the dry diffraction value.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_aboutgameobjects_emitters"></a>
 Virtual Positioning and Diffraction Through Portals</h1>
-<p>When the Spatial Audio's initialization setting <code><a class="el" href="struct_ak_spatial_audio_init_settings_a7b44a84de6c25d0abe4004c1c264aa13.html#a7b44a84de6c25d0abe4004c1c264aa13" title="An emitter that is diffracted through a portal or around geometry will have its apparent or virtual p...">AkSpatialAudioInitSettings::bCalcEmitterVirtualPosition</a></code> is set, the position of the emitters located in Rooms that are adjacent to the listener is modified such that they seem to appear from the diffracted angle, if applicable. In the screenshot of the 3D Game Object Profiler, below, the listener (<em>Listener L</em>) is on the right of the Portal and the "real" emitter is on the lower left (<em>Emitter E</em>, without orientation vectors). Spatial Audio thus repositions the emitter to the upper left, so that the apparent position seems to come from the corner, all while respecting the traveled distance. The listener is about 45 degrees into the shadow zone of the Portal edge, resulting in a diffraction factor of 27%, as written at the junction between the two line segments.</p>
+<p>When the Spatial Audio's initialization setting <code>AkSpatialAudioInitSettings::bCalcEmitterVirtualPosition</code> is set, the position of the emitters located in Rooms that are adjacent to the listener is modified such that they seem to appear from the diffracted angle, if applicable. In the screenshot of the 3D Game Object Profiler, below, the listener (<em>Listener L</em>) is on the right of the Portal and the "real" emitter is on the lower left (<em>Emitter E</em>, without orientation vectors). Spatial Audio thus repositions the emitter to the upper left, so that the apparent position seems to come from the corner, all while respecting the traveled distance. The listener is about 45 degrees into the shadow zone of the Portal edge, resulting in a diffraction factor of 27%, as written at the junction between the two line segments.</p>
 <div class="image">
 <img src="objects_position.png" alt=""/>
 </div>
@@ -154,8 +154,8 @@ Virtual Positioning and Diffraction Through Portals</h1>
 <h1><a class="anchor" id="spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_transmission"></a>
 Transmission</h1>
 <p>When an emitter is in a different room than the listener, and has no direct line of sight through a portal, Spatial Audio models sound transmission through walls by applying a transmission loss factor to the Game Object.</p>
-<p>Spatial Audio models sound transmission between Rooms differently depending on whether or not geometry is available. Refer to <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_transmission_geometry">Modeling Transmission Between Rooms with Geometry</a> and <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_transmission_no_geometry">Modeling Transmission Between Rooms without Geometry</a>.</p>
-<p>Regardless of how the transmission loss coefficient is derived, it is applied on the Room send connection, between the emitter and each Room, and is converted using the curves defined in the attenuation settings to map transmission loss to volume attenuation and filtering. Refer to <a class="el" href="spatial_audio_apigeometry_diffract.html#spatial_audio_apigeometry_diffract_direct_api">Setting up a Sound for Diffraction and Transmission</a>.</p>
+<p>Spatial Audio models sound transmission between Rooms differently depending on whether or not geometry is available. Refer to Modeling Transmission Between Rooms with Geometry and Modeling Transmission Between Rooms without Geometry.</p>
+<p>Regardless of how the transmission loss coefficient is derived, it is applied on the Room send connection, between the emitter and each Room, and is converted using the curves defined in the attenuation settings to map transmission loss to volume attenuation and filtering. Refer to Setting up a Sound for Diffraction and Transmission.</p>
 <p>By default, the project occlusion curves are used for transmission. They can be authored in the Project Settings' Obstruction/Occlusion tab and will impact Volume, LPF, and HPF to emulate volume and frequency-dependent behaviors. Project occlusion curves impact all the sounds in a project, which makes them less flexible. However, custom Transmission curves can be created in an Attenuation ShareSet applied to the sound.</p>
 <p>It is also possible to map transmission loss to any other Wwise parameter with an RTPC bound to the Transmission Loss built-in parameter. However it is difficult to use the Transmission Loss built-in parameter effectively because the transmission path is typically one of many sound paths between and emitter and listener, and RTPCs are applied at the Game Object scope.</p>
 <table border="0" cellspacing="0" cellpadding="2">
@@ -164,14 +164,14 @@ Transmission</h1>
 </table>
 <h2><a class="anchor" id="spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_transmission_geometry"></a>
 Modeling Transmission Between Rooms with Geometry</h2>
-<p>When geometry is available, sound transmission is modeled using <code>AkAcousticSurface::TransmissionLoss</code>. Spatial Audio Geometry allows for detailed sound transmission modeling because you can, if desired, assign different transmission loss coefficients to each individual triangle. Spatial Audio also uses room geometry to compute a spread value for the transmission path. When a sound emitter is blocked by one or more geometric surfaces, then the transmission loss factor of the geometry (as defined by <a class="el" href="struct_ak_acoustic_surface_ab0ec8a6eee25b28b4f8b9e91dbff17da.html#ab0ec8a6eee25b28b4f8b9e91dbff17da">AkAcousticSurface::transmissionLoss</a>) is applied. If there is more than one surface between the emitter and listener, then the maximum transmission loss factor is taken. Refer to <a class="el" href="spatial_audio_apigeometry_diffract.html#spatial_audio_apigeometry_diffract_geometry_settings_transmission">Setting Up Geometry for Transmission</a> for more details.</p>
+<p>When geometry is available, sound transmission is modeled using <code>AkAcousticSurface::TransmissionLoss</code>. Spatial Audio Geometry allows for detailed sound transmission modeling because you can, if desired, assign different transmission loss coefficients to each individual triangle. Spatial Audio also uses room geometry to compute a spread value for the transmission path. When a sound emitter is blocked by one or more geometric surfaces, then the transmission loss factor of the geometry (as defined by AkAcousticSurface::transmissionLoss) is applied. If there is more than one surface between the emitter and listener, then the maximum transmission loss factor is taken. Refer to Setting Up Geometry for Transmission for more details.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> For accurate room transmission, it is necessary to define a shape for the Room so that the Room has a source and an extent. The Room shape is calculated from the bounding box surrounding the geometry associated with the Room. To set up Room transmission via the API, refer to <a class="el" href="spatial_audio_roomsportals_apiconfig.html#spatial_audio_roomsportals_apiconfigroomgeometry">Setting up Room Geometry</a>. If you do not want to use the geometry for diffraction and reflection calculation, set the <code><a class="el" href="struct_ak_geometry_instance_params_a30ef95f856b020642d4a45d43c3df86d.html#a30ef95f856b020642d4a45d43c3df86d">AkGeometryInstanceParams::UseForReflectionAndDiffraction</a></code> to false on the Room's <code>AkGeometryInstance</code>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> For accurate room transmission, it is necessary to define a shape for the Room so that the Room has a source and an extent. The Room shape is calculated from the bounding box surrounding the geometry associated with the Room. To set up Room transmission via the API, refer to Setting up Room Geometry. If you do not want to use the geometry for diffraction and reflection calculation, set the <code>AkGeometryInstanceParams::UseForReflectionAndDiffraction</code> to false on the Room's <code>AkGeometryInstance</code>. </td></tr>
 </table>
 <h2><a class="anchor" id="spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_transmission_no_geometry"></a>
 Modeling Transmission Between Rooms without Geometry</h2>
-<p>If geometry is not available to Spatial Audio, the transmission loss value is approximated from each Room's <code>AkRoomParams::transmissionLoss</code> value. Transmission loss between rooms is calculated from the Room settings' <code><a class="el" href="struct_ak_room_params_a9ab66218e7be0c8bf5d60060bded14a0.html#a9ab66218e7be0c8bf5d60060bded14a0">AkRoomParams::TransmissionLoss</a></code> parameter, by taking the maximum value between the listener's Room and the emitter's Room. A bounding box for the Room is approximated by fitting a bounding box around all Portals. This bounding box is used to calculate the spread value of the transmission path.</p>
+<p>If geometry is not available to Spatial Audio, the transmission loss value is approximated from each Room's <code>AkRoomParams::transmissionLoss</code> value. Transmission loss between rooms is calculated from the Room settings' <code>AkRoomParams::TransmissionLoss</code> parameter, by taking the maximum value between the listener's Room and the emitter's Room. A bounding box for the Room is approximated by fitting a bounding box around all Portals. This bounding box is used to calculate the spread value of the transmission path.</p>
 <h2><a class="anchor" id="spatial_audio_roomsportals_modelingsoundpropagationfromotherrooms_roomtransmission"></a>
 Transmission of Room Tones and a Room's Diffuse Field</h2>
 <p>In addition to sound transmission of individual emitters within a Room, Spatial Audio models sound transmission of the Room itself and this includes the contribution of the diffuse reverb field, as well as any Room tones that are playing inside a Room, transmitting through walls.</p>
@@ -182,7 +182,7 @@ Room Coupling</h1>
 <p>The diffuse energy of adjacent rooms penetrating into the listener's room through Portals can be seen as sources located at these Portals and, as such, they should also contribute to exciting the listener's room. In other words, they should send to the Auxiliary Bus of the listener's Room. As written earlier, you can do this by checking the <b>Enable Game-Defined Sends</b> check box on the adjacent Room's auxiliary bus. You may tweak the amount that is sent to other rooms' reverb with the Game-Defined Send Offset.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_multiplerooms"></a>
 Multiple Room Traversal</h1>
-<p>Sound propagation also works across multiple rooms. The Room tree is searched within SpatialAudio when looking for propagation paths. Circular connections are avoided by stopping the search when Rooms have already been visited. The search depth may be limited by Spatial Audio's initialization setting <code><a class="el" href="struct_ak_spatial_audio_init_settings_a4d07df03b41fed0b33c61b84c692c22e.html#a4d07df03b41fed0b33c61b84c692c22e" title="Maximum number of portals that sound can propagate through; must be less than or equal to AK_MAX_SOUN...">AkSpatialAudioInitSettings::uMaxSoundPropagationDepth</a></code> (default is 8).</p>
+<p>Sound propagation also works across multiple rooms. The Room tree is searched within SpatialAudio when looking for propagation paths. Circular connections are avoided by stopping the search when Rooms have already been visited. The search depth may be limited by Spatial Audio's initialization setting <code>AkSpatialAudioInitSettings::uMaxSoundPropagationDepth</code> (default is 8).</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_aboutgameobjects_roomsandportals"></a>
 Room Game Object Behavior</h1>
 <p>Spatial Audio registers one game object to Wwise per Room, under the hood.</p>
@@ -190,13 +190,13 @@ Room Game Object Behavior</h1>
 <tr>
 <td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> This game object's position and aux send values should not be manipulated directly.</td></tr>
 </table>
-<p>When the listener is in a Room, the Room's game object is moved such that it follows the listener. Thus, the distance between the Room and the Listener object is approximately 0. However, its orientation is maintained to that which is specified in the Room settings (<code><a class="el" href="struct_ak_room_params.html" title="Parameters passed to SetRoom.">AkRoomParams</a></code>). See <a class="el" href="spatial_audio_roomsportals_wwisesetup.html#spatial_audio_roomsportals_using3dreverbs">Setting Up a Room Auxiliary Bus in Wwise</a> for a discussion on the orientation of 3D busses.</p>
-<p>When the listener is outside of a Room, that Room's game object adopts the position(s) of its Portal(s). More precisely, it is placed in the back of the Portals, at the location of the projection of the listener to the Portals' tangent, clamped to the Portals' extent. This can be verified by looking at the Room's game object, as seen in the screenshot of the 3D Game Object Profiler, above, in section <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_aboutgameobjects_emitters">Virtual Positioning and Diffraction Through Portals</a>.</p>
+<p>When the listener is in a Room, the Room's game object is moved such that it follows the listener. Thus, the distance between the Room and the Listener object is approximately 0. However, its orientation is maintained to that which is specified in the Room settings (<code><a class="el" href="struct_ak_room_params.html" title="Parameters passed to SetRoom.">AkRoomParams</a></code>). See Setting Up a Room Auxiliary Bus in Wwise for a discussion on the orientation of 3D busses.</p>
+<p>When the listener is outside of a Room, that Room's game object adopts the position(s) of its Portal(s). More precisely, it is placed in the back of the Portals, at the location of the projection of the listener to the Portals' tangent, clamped to the Portals' extent. This can be verified by looking at the Room's game object, as seen in the screenshot of the 3D Game Object Profiler, above, in section Virtual Positioning and Diffraction Through Portals.</p>
 <p>For multiple Portals, a Room's game object is assigned multiple positions, in <code>MultiPosition_MultiDirection</code> mode, for the same reason as with emitters.</p>
 <p>When transitioning inside a Portal, the "in-Room" and "Portal" behaviors are interpolated smoothly.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_roomtones"></a>
 Room Tones</h1>
-<p>The Room Game Object's primary purpose is to spatialize reverb (the emitter's "wet path"), however it is possible to leverage the spatialization behavior of Rooms and Portals (described in <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_aboutgameobjects_roomsandportals">Room Game Object Behavior</a>) and post events directly on the Room Game Object to implement room tones. For setting up room tones in Wwise, refer to <a class="el" href="spatial_audio_roomsportals_wwisesetup.html#spatial_audio_roomsportals_roomtonesinwwise">Setting Up a Room Tone in Wwise</a>. For posting events refer to <a class="el" href="spatial_audio_roomsportals_apiconfig.html#spatial_audio_roomsportals_apiconfigroomtones">Posting Events on Room Game Objects</a>.</p>
+<p>The Room Game Object's primary purpose is to spatialize reverb (the emitter's "wet path"), however it is possible to leverage the spatialization behavior of Rooms and Portals (described in Room Game Object Behavior) and post events directly on the Room Game Object to implement room tones. For setting up room tones in Wwise, refer to Setting Up a Room Tone in Wwise. For posting events refer to Posting Events on Room Game Objects.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_spread"></a>
 Portal Spread and Aperture</h1>
 <p>The spread of a sound in Wwise determines the width of the sound field that is constructed when a 3D sound is panned onto an Audio Bus. For most sounds, spread is defined in Wwise by a curve in the attenuation settings of the sound. However, for sounds played on Room Game Objects (i.e. room tones) and for the reverb sent to a Room Auxiliary bus, it is not necessary to define such a curve, because Spatial Audio calculates the spread automatically.</p>
@@ -208,11 +208,11 @@ Portal Spread and Aperture</h1>
 <p>The Game Object Spread and portal Aperture values can also be viewed in the Obs/Occ tab of the Advanced Profiler.</p>
 <h2><a class="anchor" id="spatial_audio_roomsportals_spreadgameobjectspread"></a>
 Game Object Spread</h2>
-<p>A game object may have a Spread value that is calculated by Spatial Audio from a determined volumetric extent for the sound. In the case of emitter Game Objects, this volumetric extent is defined by the <code><a class="el" href="namespace_a_k_1_1_spatial_audio_a8c2e8f50769b6ae29dcbcb636e9c33f2.html#a8c2e8f50769b6ae29dcbcb636e9c33f2">AK::SpatialAudio::SetGameObjectRadius</a></code> API, otherwise taken as a point source if the function is not called.</p>
+<p>A game object may have a Spread value that is calculated by Spatial Audio from a determined volumetric extent for the sound. In the case of emitter Game Objects, this volumetric extent is defined by the <code>AK::SpatialAudio::SetGameObjectRadius</code> API, otherwise taken as a point source if the function is not called.</p>
 <p>For Room Game Objects, the Spread value is the same as the Aperture value, and it is calculated by approximating the solid angle that each portal subtends on the listener. Note that a Room Game Object has a unique spread value per portal (recall each portal is rendered as a unique sound position).</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> In the case that a Game Object has a spread curve defined in an Attenuation ShareSet, the spread curve takes precedence over the Game Object's radial extent passed into <code><a class="el" href="namespace_a_k_1_1_spatial_audio_a8c2e8f50769b6ae29dcbcb636e9c33f2.html#a8c2e8f50769b6ae29dcbcb636e9c33f2">AK::SpatialAudio::SetGameObjectRadius</a></code>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> In the case that a Game Object has a spread curve defined in an Attenuation ShareSet, the spread curve takes precedence over the Game Object's radial extent passed into <code>AK::SpatialAudio::SetGameObjectRadius</code>. </td></tr>
 </table>
 <h2><a class="anchor" id="spatial_audio_roomsportals_spreadgameobjectaperture"></a>
 Portal Aperture</h2>
@@ -221,7 +221,7 @@ Portal Aperture</h2>
 Spread Calculation Summary</h2>
 <p>For a given sound position and listener pair, the final spread value is calculated as follows:</p><ul>
 <li>The sound's spread curve is evaluated at the distance between the sound position and the listener.</li>
-<li>If no spread curve exists, the spread value is determined by the game object's radius (see <code><a class="el" href="namespace_a_k_1_1_spatial_audio_a8c2e8f50769b6ae29dcbcb636e9c33f2.html#a8c2e8f50769b6ae29dcbcb636e9c33f2">AK::SpatialAudio::SetGameObjectRadius</a></code>). If no radius is given, and no spread curve is defined, the spread is take as 0%.</li>
+<li>If no spread curve exists, the spread value is determined by the game object's radius (see <code>AK::SpatialAudio::SetGameObjectRadius</code>). If no radius is given, and no spread curve is defined, the spread is take as 0%.</li>
 <li>The sound's Aperture value is calculated from all portals in the sound position's path. Multiple portals' Apertures are combined by taking the minimum value.</li>
 <li>The sound's spread (originating from the spread curve or the Game Object's Spread) and Aperture are combined by taking the lesser of the two. This is the final spread value passed to the panner in the Sound Engine. </li>
 </ul>
@@ -229,3 +229,4 @@ Spread Calculation Summary</h2>
 </div><!-- PageDoc -->
 </body>
 </html>
+

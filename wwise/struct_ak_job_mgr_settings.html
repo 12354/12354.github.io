@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -39,38 +39,39 @@
 <div class="contents">
 
 <p>Settings for the Sound Engine's internal job manager.  
- <a href="struct_ak_job_mgr_settings.html#details">More...</a></p>
+ More...</p>
 
 <p><code>#include &lt;<a class="el" href="_ak_sound_engine_8h_source.html">AkSoundEngine.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:a425f817f8a59747148d5dd1b502daefe"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_job_mgr_settings_a425f817f8a59747148d5dd1b502daefe.html#a425f817f8a59747148d5dd1b502daefe">FuncRequestJobWorker</a>) (<a class="el" href="_ak_sound_engine_8h_a8edd5fddd3dfdf6cc9b17f63ad23915c.html#a8edd5fddd3dfdf6cc9b17f63ad23915c">AkJobWorkerFunc</a> in_fnJobWorker, <a class="el" href="_common_2_ak_types_8h_a1cc301d7b3b1af3e3051df12fb484e68.html#a1cc301d7b3b1af3e3051df12fb484e68">AkJobType</a> in_jobType, <a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_uNumWorkers, void *in_pClientData)</td></tr>
-<tr class="memdesc:a425f817f8a59747148d5dd1b502daefe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function prototype definition used for handling requests from JobMgr for new workers to perform work.  <a href="struct_ak_job_mgr_settings_a425f817f8a59747148d5dd1b502daefe.html#a425f817f8a59747148d5dd1b502daefe">More...</a><br /></td></tr>
+<tr class="memitem:a425f817f8a59747148d5dd1b502daefe"><td class="memItemLeft" align="right" valign="top">typedef void(*&#160;</td><td class="memItemRight" valign="bottom">FuncRequestJobWorker) (AkJobWorkerFunc in_fnJobWorker, AkJobType in_jobType, AkUInt32 in_uNumWorkers, void *in_pClientData)</td></tr>
+<tr class="memdesc:a425f817f8a59747148d5dd1b502daefe"><td class="mdescLeft">&#160;</td><td class="mdescRight">Callback function prototype definition used for handling requests from JobMgr for new workers to perform work.  More...<br /></td></tr>
 <tr class="separator:a425f817f8a59747148d5dd1b502daefe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a9a6278f869a1a10e613da6e77f343303"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_ak_job_mgr_settings_a425f817f8a59747148d5dd1b502daefe.html#a425f817f8a59747148d5dd1b502daefe">FuncRequestJobWorker</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_job_mgr_settings_a9a6278f869a1a10e613da6e77f343303.html#a9a6278f869a1a10e613da6e77f343303">fnRequestJobWorker</a></td></tr>
-<tr class="memdesc:a9a6278f869a1a10e613da6e77f343303"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function called by the job manager when a new worker needs to be requested. When null, all jobs will be executed on the same thread that calls <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a>.  <a href="struct_ak_job_mgr_settings_a9a6278f869a1a10e613da6e77f343303.html#a9a6278f869a1a10e613da6e77f343303">More...</a><br /></td></tr>
+<tr class="memitem:a9a6278f869a1a10e613da6e77f343303"><td class="memItemLeft" align="right" valign="top">FuncRequestJobWorker&#160;</td><td class="memItemRight" valign="bottom">fnRequestJobWorker</td></tr>
+<tr class="memdesc:a9a6278f869a1a10e613da6e77f343303"><td class="mdescLeft">&#160;</td><td class="mdescRight">Function called by the job manager when a new worker needs to be requested. When null, all jobs will be executed on the same thread that calls RenderAudio().  More...<br /></td></tr>
 <tr class="separator:a9a6278f869a1a10e613da6e77f343303"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a5e216a01552c2d93d25eba4d4eff3350"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_job_mgr_settings_a5e216a01552c2d93d25eba4d4eff3350.html#a5e216a01552c2d93d25eba4d4eff3350">uMaxActiveWorkers</a> [<a class="el" href="_common_2_ak_types_8h_a1b007bf841a40aacc6f7d533a940f32c.html#a1b007bf841a40aacc6f7d533a940f32c">AK_NUM_JOB_TYPES</a>]</td></tr>
-<tr class="memdesc:a5e216a01552c2d93d25eba4d4eff3350"><td class="mdescLeft">&#160;</td><td class="mdescRight">The maximum number of concurrent workers that will be requested. Must be &gt;= 1 for each jobType.  <a href="struct_ak_job_mgr_settings_a5e216a01552c2d93d25eba4d4eff3350.html#a5e216a01552c2d93d25eba4d4eff3350">More...</a><br /></td></tr>
+<tr class="memitem:a5e216a01552c2d93d25eba4d4eff3350"><td class="memItemLeft" align="right" valign="top">AkUInt32&#160;</td><td class="memItemRight" valign="bottom">uMaxActiveWorkers [AK_NUM_JOB_TYPES]</td></tr>
+<tr class="memdesc:a5e216a01552c2d93d25eba4d4eff3350"><td class="mdescLeft">&#160;</td><td class="mdescRight">The maximum number of concurrent workers that will be requested. Must be &gt;= 1 for each jobType.  More...<br /></td></tr>
 <tr class="separator:a5e216a01552c2d93d25eba4d4eff3350"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a857e4ffe8a85fc4d9a15e2a56dbf4bd1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_job_mgr_settings_a857e4ffe8a85fc4d9a15e2a56dbf4bd1.html#a857e4ffe8a85fc4d9a15e2a56dbf4bd1">uNumMemorySlabs</a></td></tr>
-<tr class="memdesc:a857e4ffe8a85fc4d9a15e2a56dbf4bd1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of memory slabs to pre-allocate for job manager memory. At least one slab per worker thread should be pre-allocated. Default is 1.  <a href="struct_ak_job_mgr_settings_a857e4ffe8a85fc4d9a15e2a56dbf4bd1.html#a857e4ffe8a85fc4d9a15e2a56dbf4bd1">More...</a><br /></td></tr>
+<tr class="memitem:a857e4ffe8a85fc4d9a15e2a56dbf4bd1"><td class="memItemLeft" align="right" valign="top">AkUInt32&#160;</td><td class="memItemRight" valign="bottom">uNumMemorySlabs</td></tr>
+<tr class="memdesc:a857e4ffe8a85fc4d9a15e2a56dbf4bd1"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of memory slabs to pre-allocate for job manager memory. At least one slab per worker thread should be pre-allocated. Default is 1.  More...<br /></td></tr>
 <tr class="separator:a857e4ffe8a85fc4d9a15e2a56dbf4bd1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab2a8def39da063c40396d44186a67bf8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_job_mgr_settings_ab2a8def39da063c40396d44186a67bf8.html#ab2a8def39da063c40396d44186a67bf8">uMemorySlabSize</a></td></tr>
-<tr class="memdesc:ab2a8def39da063c40396d44186a67bf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of each memory slab used for job manager memory. Must be a power of two. Default is 8K.  <a href="struct_ak_job_mgr_settings_ab2a8def39da063c40396d44186a67bf8.html#ab2a8def39da063c40396d44186a67bf8">More...</a><br /></td></tr>
+<tr class="memitem:ab2a8def39da063c40396d44186a67bf8"><td class="memItemLeft" align="right" valign="top">AkUInt32&#160;</td><td class="memItemRight" valign="bottom">uMemorySlabSize</td></tr>
+<tr class="memdesc:ab2a8def39da063c40396d44186a67bf8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Size of each memory slab used for job manager memory. Must be a power of two. Default is 8K.  More...<br /></td></tr>
 <tr class="separator:ab2a8def39da063c40396d44186a67bf8"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa2b675afe703cb11ef7e884baeb401b6"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_job_mgr_settings_aa2b675afe703cb11ef7e884baeb401b6.html#aa2b675afe703cb11ef7e884baeb401b6">pClientData</a></td></tr>
-<tr class="memdesc:aa2b675afe703cb11ef7e884baeb401b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Arbitrary data that will be passed back to the client when calling FuncRequestJobWorker.  <a href="struct_ak_job_mgr_settings_aa2b675afe703cb11ef7e884baeb401b6.html#aa2b675afe703cb11ef7e884baeb401b6">More...</a><br /></td></tr>
+<tr class="memitem:aa2b675afe703cb11ef7e884baeb401b6"><td class="memItemLeft" align="right" valign="top">void *&#160;</td><td class="memItemRight" valign="bottom">pClientData</td></tr>
+<tr class="memdesc:aa2b675afe703cb11ef7e884baeb401b6"><td class="mdescLeft">&#160;</td><td class="mdescRight">Arbitrary data that will be passed back to the client when calling FuncRequestJobWorker.  More...<br /></td></tr>
 <tr class="separator:aa2b675afe703cb11ef7e884baeb401b6"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Settings for the Sound Engine's internal job manager. </p>
 
-<p class="definition">Definition at line <a class="el" href="_ak_sound_engine_8h_source.html#l00170">170</a> of file <a class="el" href="_ak_sound_engine_8h_source.html">AkSoundEngine.h</a>.</p>
+<p class="definition">Definition at line 170 of file <a class="el" href="_ak_sound_engine_8h_source.html">AkSoundEngine.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -95,7 +95,7 @@ Coding (3rd-Party)</h2>
 <li>
 <b>Declare supported channel configurations</b>: The Sound Engine part of your plugin should return AK_UnsupportedChannelConfig for channel configurations that it does not support. </li>
 <li>
-<b>Plugin performance</b>: The run-time performance of your plugin should be reasonably constant across all calls to <a class="el" href="class_a_k_1_1_i_ak_in_place_effect_plugin_a4da7d07eeefbcc0dda9321f94ae99d99.html#a4da7d07eeefbcc0dda9321f94ae99d99">AK::IAkInPlaceEffectPlugin::Execute()</a> (or equivalent) during its lifetime. <ul>
+<b>Plugin performance</b>: The run-time performance of your plugin should be reasonably constant across all calls to AK::IAkInPlaceEffectPlugin::Execute() (or equivalent) during its lifetime. <ul>
 <li>
 Initialization, termination, and all other functions of the Sound Engine plugins API should also not take significantly longer than Execute().  </li>
 <li>
@@ -117,7 +117,7 @@ This macro is defined in AudioPlugin.h, and ensures that the Sound Engine part o
 </ul>
 <h1><a class="anchor" id="plugin_tests_Game_Engines"></a>
 Unity 3D and Unreal4</h1>
-<p>Both official Wwise integration into these game engines are using dynamic libraries for the effects. If you intend to distribute your plugin to a wide audience, you should provide dynamic libraries for all platforms you support. Please read more about plug-ins' dynamic libraries in <a class="el" href="soundengine_plugins.html#soundengine_plugins_binaries">Creating Dynamic Libraries</a>.</p>
+<p>Both official Wwise integration into these game engines are using dynamic libraries for the effects. If you intend to distribute your plugin to a wide audience, you should provide dynamic libraries for all platforms you support. Please read more about plug-ins' dynamic libraries in Creating Dynamic Libraries.</p>
 <h1><a class="anchor" id="plugin_tests_tests"></a>
 Tests</h1>
 <h2><a class="anchor" id="plugin_tests_tests_new_instance_source"></a>
@@ -541,3 +541,4 @@ Troubleshooting</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

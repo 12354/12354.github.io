@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -51,34 +51,35 @@ Bank Integration Example</h1>
 <div class="line"><span class="comment">// Setup banks path</span></div>
 <div class="line"><span class="comment">//</span></div>
 <div class="line"> </div>
-<div class="line">g_lowLevelIO.SetBasePath( <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab37c4500d1c5377b3f54077b8222dde7.html#ab37c4500d1c5377b3f54077b8222dde7">AKTEXT</a>(<span class="stringliteral">&quot;../../../samples/IntegrationDemo/WwiseProject/GeneratedSoundBanks/Windows/&quot;</span>) );</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_stream_mgr_ae4820886baae734dd90177a49a2be1eb.html#ae4820886baae734dd90177a49a2be1eb">AK::StreamMgr::SetCurrentLanguage</a>( <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab37c4500d1c5377b3f54077b8222dde7.html#ab37c4500d1c5377b3f54077b8222dde7">AKTEXT</a>(<span class="stringliteral">&quot;English(US)&quot;</span>) );</div>
+<div class="line">g_lowLevelIO.SetBasePath( AKTEXT(<span class="stringliteral">&quot;../../../samples/IntegrationDemo/WwiseProject/GeneratedSoundBanks/Windows/&quot;</span>) );</div>
+<div class="line">AK::StreamMgr::SetCurrentLanguage( AKTEXT(<span class="stringliteral">&quot;English(US)&quot;</span>) );</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">//</span></div>
 <div class="line"><span class="comment">// Load banks synchronously (from file name).</span></div>
 <div class="line"><span class="comment">//</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> bankID; <span class="comment">// Not used. These banks can be unloaded with their file name.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a>( BANKNAME_INIT, bankID );</div>
-<div class="line">assert( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> );</div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a>( BANKNAME_CAR, bankID );</div>
-<div class="line">assert( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> );</div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a>( BANKNAME_HUMAN, bankID );</div>
-<div class="line">assert( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> );</div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a>( BANKNAME_MARKERTEST, bankID );</div>
-<div class="line">assert( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> );</div>
-</div><!-- fragment --><p>Refer to <a class="el" href="soundengine_banks.html">Integration Details - Banks</a> for more information regarding Banks in the sound engine, and <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_location">File Location Resolving</a> for information on localization.</p>
+<div class="line">AkBankID bankID; <span class="comment">// Not used. These banks can be unloaded with their file name.</span></div>
+<div class="line">AKRESULT eResult = AK::SoundEngine::LoadBank( BANKNAME_INIT, bankID );</div>
+<div class="line">assert( eResult == AK_Success );</div>
+<div class="line">eResult = AK::SoundEngine::LoadBank( BANKNAME_CAR, bankID );</div>
+<div class="line">assert( eResult == AK_Success );</div>
+<div class="line">eResult = AK::SoundEngine::LoadBank( BANKNAME_HUMAN, bankID );</div>
+<div class="line">assert( eResult == AK_Success );</div>
+<div class="line">eResult = AK::SoundEngine::LoadBank( BANKNAME_MARKERTEST, bankID );</div>
+<div class="line">assert( eResult == AK_Success );</div>
+</div><!-- fragment --><p>Refer to <a class="el" href="soundengine_banks.html">Integration Details - Banks</a> for more information regarding Banks in the sound engine, and File Location Resolving for information on localization.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> This sample code comes from the Sound Engine Integration Sample Project available in the <a class="el" href="samplecode.html">Samples</a> section. Refer to <a class="el" href="soundengine_integration_samplecode.html">Integration Demo Sample</a> for more information. </td></tr>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_ae4820886baae734dd90177a49a2be1eb_html_ae4820886baae734dd90177a49a2be1eb"><div class="ttname"><a href="namespace_a_k_1_1_stream_mgr_ae4820886baae734dd90177a49a2be1eb.html#ae4820886baae734dd90177a49a2be1eb">AK::StreamMgr::SetCurrentLanguage</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetCurrentLanguage(const AkOSChar *in_pszLanguageName)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349_html_a472a3d18cbb0c4f081b3b619e4a2f349"><div class="ttname"><a href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a></div><div class="ttdeci">AkUInt32 AkBankID</div><div class="ttdoc">Run time bank ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00157">AkTypes.h:157</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a></div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00212">AkTypes.h:213</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13_html_a95f8f6841a618ec3d5e51a30a1614e13"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBank(const char *in_pszString, AkBankID &amp;out_bankID, AkBankType in_bankType=AkBankType_User)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a></div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00215">AkTypes.h:215</a></div></div>
-<div class="ttc" id="a_platforms_2_windows_2_ak_types_8h_ab37c4500d1c5377b3f54077b8222dde7_html_ab37c4500d1c5377b3f54077b8222dde7"><div class="ttname"><a href="_platforms_2_windows_2_ak_types_8h_ab37c4500d1c5377b3f54077b8222dde7.html#ab37c4500d1c5377b3f54077b8222dde7">AKTEXT</a></div><div class="ttdeci">#define AKTEXT(x)</div><div class="ttdef"><b>Definition:</b> <a href="_platforms_2_windows_2_ak_types_8h_source.html#l00145">AkTypes.h:145</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_ae4820886baae734dd90177a49a2be1eb_html_ae4820886baae734dd90177a49a2be1eb"><div class="ttname">AK::StreamMgr::SetCurrentLanguage</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetCurrentLanguage(const AkOSChar *in_pszLanguageName)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349_html_a472a3d18cbb0c4f081b3b619e4a2f349"><div class="ttname">AkBankID</div><div class="ttdeci">AkUInt32 AkBankID</div><div class="ttdoc">Run time bank ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:157</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname">AKRESULT</div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:213</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13_html_a95f8f6841a618ec3d5e51a30a1614e13"><div class="ttname">AK::SoundEngine::LoadBank</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBank(const char *in_pszString, AkBankID &amp;out_bankID, AkBankType in_bankType=AkBankType_User)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname">AK_Success</div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:215</div></div>
+<div class="ttc" id="a_platforms_2_windows_2_ak_types_8h_ab37c4500d1c5377b3f54077b8222dde7_html_ab37c4500d1c5377b3f54077b8222dde7"><div class="ttname">AKTEXT</div><div class="ttdeci">#define AKTEXT(x)</div><div class="ttdef"><b>Definition:</b> AkTypes.h:145</div></div>
 </body>
 </html>
+

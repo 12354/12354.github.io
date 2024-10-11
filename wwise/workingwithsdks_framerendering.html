@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -42,16 +42,17 @@ Introduction</h1>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="framerendering_soundengine"></a>
 Sound Engine Processing</h1>
-<p>We call <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio()</a> so the sound engine processes all pending bank load/unload requests, events, position changes, states, switches, RTPCs, etc. If communications are enabled, they are also processed within <a class="el" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">RenderAudio()</a>.</p>
+<p>We call AK::SoundEngine::RenderAudio() so the sound engine processes all pending bank load/unload requests, events, position changes, states, switches, RTPCs, etc. If communications are enabled, they are also processed within RenderAudio().</p>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> ProcessAudio()</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Process bank requests, events, positions, RTPC, etc.</span></div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a>();</div>
+<div class="line">    AK::SoundEngine::RenderAudio();</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>Refer to <a class="el" href="soundengine_events.html#soundengine_events_integrating">Integrating Events in Your Game</a> for more information.</p>
+</div><!-- fragment --><p>Refer to Integrating Events in Your Game for more information.</p>
 <p>You have now set up the frame rendering for your game. To continue, refer to <a class="el" href="workingwithsdks_termination.html">Terminate the Different Modules of the Sound Engine</a>. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1_html_afe54af0f5be38be061e8a3c7d7642bb1"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1.html#afe54af0f5be38be061e8a3c7d7642bb1">AK::SoundEngine::RenderAudio</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RenderAudio(bool in_bAllowSyncRender=true)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_afe54af0f5be38be061e8a3c7d7642bb1_html_afe54af0f5be38be061e8a3c7d7642bb1"><div class="ttname">AK::SoundEngine::RenderAudio</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RenderAudio(bool in_bAllowSyncRender=true)</div></div>
 </body>
 </html>
+

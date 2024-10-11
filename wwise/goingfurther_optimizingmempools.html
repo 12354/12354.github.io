@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -42,10 +42,10 @@
 Fixed-size allocations</h1>
 <p>Some of the fixed-size allocations can be controlled via initialization parameters. Here is a list of init-time memory allocation controls:</p>
 <ul>
-<li><a class="el" href="struct_ak_init_settings_aa8137dca0d7b55c06900371c17ce6c8e.html#aa8137dca0d7b55c06900371c17ce6c8e" title="Maximum number of paths for positioning.">AkInitSettings::uMaxNumPaths</a></li>
-<li><a class="el" href="struct_ak_init_settings_afd6ada0769c6316e7950961c38cc09d0.html#afd6ada0769c6316e7950961c38cc09d0" title="Size of the command queue, in bytes.">AkInitSettings::uCommandQueueSize</a></li>
-<li><a class="el" href="struct_ak_init_settings_acdb64f2cf024ac17b7db878eb135c523.html#acdb64f2cf024ac17b7db878eb135c523" title="Size of the monitoring queue, in bytes. This parameter is not used in Release build.">AkInitSettings::uMonitorQueuePoolSize</a> (Debug/Profile only)</li>
-<li><a class="el" href="struct_ak_device_settings_a75893592924a59881fe2cbca4e4ddd04.html#a75893592924a59881fe2cbca4e4ddd04" title="Size of memory for I/O (for automatic streams). It is passed directly to AK::MemoryMgr::Malign(),...">AkDeviceSettings::uIOMemorySize</a></li>
+<li>AkInitSettings::uMaxNumPaths</li>
+<li>AkInitSettings::uCommandQueueSize</li>
+<li>AkInitSettings::uMonitorQueuePoolSize (Debug/Profile only)</li>
+<li>AkDeviceSettings::uIOMemorySize</li>
 </ul>
 <p>Of these, uIOMemorySize is the most significant. This streaming buffer size should be set based on the maximum number of concurrently played streamed sounds, the bitrate of the sounds, and the safety timeline of the streaming sounds. The default value of 8 MB may be seen as a waste of memory for some games, but it is best to start out large and trim down as your memory usage becomes clearer. For more information on streaming buffer memory, refer to <a class="el" href="streamingmanager_settings.html">Audiokinetic Stream Manager Initialization Settings</a>.</p>
 <h1><a class="anchor" id="dynamic_allocs"></a>
@@ -57,7 +57,7 @@ Dynamic allocations</h1>
 </table>
 <h1><a class="anchor" id="soundengine_initialization_advanced_soundengine_pool_memory_mising"></a>
 Running out of Memory</h1>
-<p>Total memory allocation by the sound engine can be controlled via the <a class="el" href="struct_ak_mem_settings_ab95afe86b5ae21cf432d6ca030703055.html#ab95afe86b5ae21cf432d6ca030703055" title="When non-zero, limits the total amount of virtual and device memory allocated by AK::MemoryMgr.">AkMemSettings::uMemAllocationSizeLimit</a> initialization parameter. With a limit set, the sound engine reacts differently to out-of-memory conditions depending on when the condition occurs. For example, here is what happens when memory is missing in the following scenarios:</p>
+<p>Total memory allocation by the sound engine can be controlled via the AkMemSettings::uMemAllocationSizeLimit initialization parameter. With a limit set, the sound engine reacts differently to out-of-memory conditions depending on when the condition occurs. For example, here is what happens when memory is missing in the following scenarios:</p>
 <ul>
 <li>Sound engine initialization: The initialization fails.</li>
 <li>Loading a bank: The bank load fails.</li>
@@ -81,7 +81,7 @@ Causes of High Memory Usage</h1>
 <td valign="top"><img src="images/Warning.gif" alt="" class="inline"/></td><td><b>Warning:</b> When performing tests to check peak memory usage, you must ensure that the current speaker setup configuration used by the game is set to its maximum configuration (for example, 7.1 on PC when using the system audio output device). This is necessary because the sound engine performs some optimizations when the speaker setup is stereo, and therefore will use less memory than in multi-channel configurations. </td></tr>
 </table>
 <p>More details are available in the following sections:</p><ul>
-<li><a class="el" href="workingwithsdks_initialization.html#initialization_memorymgr">Initializing the Memory Manager</a></li>
+<li>Initializing the Memory Manager</li>
 <li><a class="el" href="memorymanager.html">Memory Manager</a></li>
 </ul>
 <dl class="section see"><dt>See also</dt><dd><ul>
@@ -92,3 +92,4 @@ Causes of High Memory Usage</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

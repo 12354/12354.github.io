@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -61,7 +61,7 @@ Using wchar_t</h2>
 <p class="intertd">Pay special attention to the <b>AkOSChar</b> type, which has a typedef of <b>wchar_t</b> on some platforms. This type is used with methods that involve disk I/O. More specifically, it is used by the Stream Manager (<a class="el" href="class_a_k_1_1_i_ak_stream_mgr.html">AK::IAkStreamMgr</a>) and Low-Level I/O (<a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook.html">AK::StreamMgr::IAkLowLevelIOHook</a>) interfaces.</p>
 <p class="intertd">If Audiokinetic's default Stream Manager is used as your I/O manager throughout your game, you must enable the "Treat wchar_t as Built-in Type" setting on platforms where <b>AkOSChar</b> have a typedef of <b>wchar_t</b>. Typically, though, the Wwise sound engine is the only client of the Stream Manager. In such a case it is not necessary to enable the "Treat wchar_t as Built-in Type" setting in your project.</p>
 <p class="intertd">The "Treat wchar_t as Built-in Type" setting does not cause problems with the Low-Level I/O API because you don't typically <em>call</em> it, but <em>implement</em> it instead.</p>
-<p class="intertd">Note that the File Package Low-Level I/O sample (see <a class="el" href="samplecode.html#samplecode_integration_filepackagelowlevelio">File Package Low-Level I/O Implementation</a>) calls some methods of the sound engine that use the <b>wchar_t</b> type when <b>AkOSChar</b> has a typedef of <b>wchar_t</b>. If you want to use this sample in your project without enabling the "Treat wchar_t as Built-in Type" setting, you must modify some parts of it to convert <b>wchar_t</b> strings into <b>char</b> strings wherever it is necessary. You can use the <a class="el" href="namespace_a_k_p_l_a_t_f_o_r_m_a79c12f8f0710c4772f99b341006af233.html#a79c12f8f0710c4772f99b341006af233" title="String conversion helper. If io_pszAnsiString is null, the function returns the required size.">AKPLATFORM::AkWideCharToChar()</a> helper to do so. It is defined in <a class="el" href="_common_2_ak_platform_funcs_8h.html">AK/Tools/Common/AkPlatformFuncs.h</a>.</p>
+<p class="intertd">Note that the File Package Low-Level I/O sample (see File Package Low-Level I/O Implementation) calls some methods of the sound engine that use the <b>wchar_t</b> type when <b>AkOSChar</b> has a typedef of <b>wchar_t</b>. If you want to use this sample in your project without enabling the "Treat wchar_t as Built-in Type" setting, you must modify some parts of it to convert <b>wchar_t</b> strings into <b>char</b> strings wherever it is necessary. You can use the AKPLATFORM::AkWideCharToChar() helper to do so. It is defined in <a class="el" href="_common_2_ak_platform_funcs_8h.html">AK/Tools/Common/AkPlatformFuncs.h</a>.</p>
 <p class="endtd">For more information on how to integrate Wwise I/O, refer to <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a>. </p>
 </td></tr>
 </table>
@@ -71,7 +71,7 @@ Single DLL Requirements</h2>
 <p>Projects that link statically with the Wwise sound engine's libraries must not define AKSOUNDENGINE_DLL.</p>
 <h2><a class="anchor" id="soundengine_integration_cppprojectsettings_various_aksoundenginedll"></a>
 AkSoundEngineDLL Sample Project</h2>
-<p>This Sound Engine Integration Walkthrough guides you through a basic integration, step by step, involving the initialization and handling of several modules individually. If you prefer to work with a sample DLL project, one is included in the SDK. The AkSoundEngineDLL project wraps some of the integration tasks into high-level calls, like "Initialize" and "Terminate". It is not used in this example so you can view each step individually, but you can use the DLL, or a modified version of it, in your own game. Refer to the <a class="el" href="samplecode.html#samplecode_integration_akcube">AkCube Sound Engine Integration Sample Project</a> for an example of how to use that DLL.</p>
+<p>This Sound Engine Integration Walkthrough guides you through a basic integration, step by step, involving the initialization and handling of several modules individually. If you prefer to work with a sample DLL project, one is included in the SDK. The AkSoundEngineDLL project wraps some of the integration tasks into high-level calls, like "Initialize" and "Terminate". It is not used in this example so you can view each step individually, but you can use the DLL, or a modified version of it, in your own game. Refer to the AkCube Sound Engine Integration Sample Project for an example of how to use that DLL.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> It is necessary to install the Visual Studio 2017 package in order to use AkSoundEngineDLL on Windows. </td></tr>
@@ -83,3 +83,4 @@ AkSoundEngineDLL Sample Project</h2>
 </div><!-- PageDoc -->
 </body>
 </html>
+

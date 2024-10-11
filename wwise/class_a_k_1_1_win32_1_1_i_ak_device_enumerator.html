@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -42,31 +42,32 @@
 <div class="contents">
 
 <p>Interface to access the IMMDevice cache. This avoids driver accesses.  
- <a href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator.html#details">More...</a></p>
+ More...</p>
 
 <p><code>#include &lt;<a class="el" href="_ak_m_m_device_8h_source.html">AkMMDevice.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a9b7278f8a2a09c316f6cd5b81ada4729"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a9b7278f8a2a09c316f6cd5b81ada4729.html#a9b7278f8a2a09c316f6cd5b81ada4729">Count</a> ()=0</td></tr>
+<tr class="memitem:a9b7278f8a2a09c316f6cd5b81ada4729"><td class="memItemLeft" align="right" valign="top">virtual AkUInt32&#160;</td><td class="memItemRight" valign="bottom">Count ()=0</td></tr>
 <tr class="separator:a9b7278f8a2a09c316f6cd5b81ada4729"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a6a443d52805294631082cd2665b9c5ce"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="class_a_k_1_1_win32_1_1_device.html">Device</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a6a443d52805294631082cd2665b9c5ce.html#a6a443d52805294631082cd2665b9c5ce">Item</a> (<a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_idx)=0</td></tr>
-<tr class="memdesc:a6a443d52805294631082cd2665b9c5ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of devices. This function can block.  <a href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a6a443d52805294631082cd2665b9c5ce.html#a6a443d52805294631082cd2665b9c5ce">More...</a><br /></td></tr>
+<tr class="memitem:a6a443d52805294631082cd2665b9c5ce"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="class_a_k_1_1_win32_1_1_device.html">Device</a>&#160;</td><td class="memItemRight" valign="bottom">Item (AkUInt32 in_idx)=0</td></tr>
+<tr class="memdesc:a6a443d52805294631082cd2665b9c5ce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns the number of devices. This function can block.  More...<br /></td></tr>
 <tr class="separator:a6a443d52805294631082cd2665b9c5ce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a146f625398ae22a3537b46d2a483ba49"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a146f625398ae22a3537b46d2a483ba49.html#a146f625398ae22a3537b46d2a483ba49">Lock</a> ()=0</td></tr>
-<tr class="memdesc:a146f625398ae22a3537b46d2a483ba49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets item in_idx from the cache. Must be smaller than <a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a9b7278f8a2a09c316f6cd5b81ada4729.html#a9b7278f8a2a09c316f6cd5b81ada4729">Count()</a>. This function can block.  <a href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a146f625398ae22a3537b46d2a483ba49.html#a146f625398ae22a3537b46d2a483ba49">More...</a><br /></td></tr>
+<tr class="memitem:a146f625398ae22a3537b46d2a483ba49"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom">Lock ()=0</td></tr>
+<tr class="memdesc:a146f625398ae22a3537b46d2a483ba49"><td class="mdescLeft">&#160;</td><td class="mdescRight">Gets item in_idx from the cache. Must be smaller than Count(). This function can block.  More...<br /></td></tr>
 <tr class="separator:a146f625398ae22a3537b46d2a483ba49"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab3a1ff037874797d19317cbc721b4b54"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_ab3a1ff037874797d19317cbc721b4b54.html#ab3a1ff037874797d19317cbc721b4b54">Unlock</a> ()=0</td></tr>
-<tr class="memdesc:ab3a1ff037874797d19317cbc721b4b54"><td class="mdescLeft">&#160;</td><td class="mdescRight">For thread safety. If you iterate through all the devices, lock the enumerator to avoid changes. However, if only accessing one single item, <a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a6a443d52805294631082cd2665b9c5ce.html#a6a443d52805294631082cd2665b9c5ce" title="Returns the number of devices. This function can block.">Item()</a> is thread safe in itself.  <a href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_ab3a1ff037874797d19317cbc721b4b54.html#ab3a1ff037874797d19317cbc721b4b54">More...</a><br /></td></tr>
+<tr class="memitem:ab3a1ff037874797d19317cbc721b4b54"><td class="memItemLeft" align="right" valign="top">virtual void&#160;</td><td class="memItemRight" valign="bottom">Unlock ()=0</td></tr>
+<tr class="memdesc:ab3a1ff037874797d19317cbc721b4b54"><td class="mdescLeft">&#160;</td><td class="mdescRight">For thread safety. If you iterate through all the devices, lock the enumerator to avoid changes. However, if only accessing one single item, Item() is thread safe in itself.  More...<br /></td></tr>
 <tr class="separator:ab3a1ff037874797d19317cbc721b4b54"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aa032b287d13fa630155d686c01c2f82e"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="class_a_k_1_1_win32_1_1_device.html">Device</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_aa032b287d13fa630155d686c01c2f82e.html#aa032b287d13fa630155d686c01c2f82e">FindDevice</a> (<a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_id)=0</td></tr>
-<tr class="memdesc:aa032b287d13fa630155d686c01c2f82e"><td class="mdescLeft">&#160;</td><td class="mdescRight">For thread safety. See <a class="el" href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_a146f625398ae22a3537b46d2a483ba49.html#a146f625398ae22a3537b46d2a483ba49">Lock()</a>  <a href="class_a_k_1_1_win32_1_1_i_ak_device_enumerator_aa032b287d13fa630155d686c01c2f82e.html#aa032b287d13fa630155d686c01c2f82e">More...</a><br /></td></tr>
+<tr class="memitem:aa032b287d13fa630155d686c01c2f82e"><td class="memItemLeft" align="right" valign="top">virtual <a class="el" href="class_a_k_1_1_win32_1_1_device.html">Device</a>&#160;</td><td class="memItemRight" valign="bottom">FindDevice (AkUInt32 in_id)=0</td></tr>
+<tr class="memdesc:aa032b287d13fa630155d686c01c2f82e"><td class="mdescLeft">&#160;</td><td class="mdescRight">For thread safety. See Lock()  More...<br /></td></tr>
 <tr class="separator:aa032b287d13fa630155d686c01c2f82e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Interface to access the IMMDevice cache. This avoids driver accesses. </p>
 
-<p class="definition">Definition at line <a class="el" href="_ak_m_m_device_8h_source.html#l00476">476</a> of file <a class="el" href="_ak_m_m_device_8h_source.html">AkMMDevice.h</a>.</p>
+<p class="definition">Definition at line 476 of file <a class="el" href="_ak_m_m_device_8h_source.html">AkMMDevice.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+

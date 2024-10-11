@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -50,7 +50,7 @@ Terminating Communication Module</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// Terminate Communication Services</span></div>
 <div class="line">    <span class="comment">//</span></div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">AK::Comm::Term</a>();</div>
+<div class="line">    AK::Comm::Term();</div>
 <div class="line"><span class="preprocessor">#endif // AK_OPTIMIZED</span></div>
 <div class="line"> </div>
 <div class="line">    (...)</div>
@@ -70,7 +70,7 @@ Terminating Spatial Audio</h1>
 <div class="line">    <span class="comment">// Terminate Spatial Audio</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    </div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">AK::SpatialAudio::Term</a>();</div>
+<div class="line">    AK::SpatialAudio::Term();</div>
 <div class="line">    </div>
 <div class="line">    (...)</div>
 <div class="line">}</div>
@@ -85,7 +85,7 @@ Terminating the Music Engine</h1>
 <div class="line">    <span class="comment">// Terminate the music engine</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    </div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_music_engine_a4abb7df883aaea7c92695cb6c0d322ef.html#a4abb7df883aaea7c92695cb6c0d322ef">AK::MusicEngine::Term</a>();</div>
+<div class="line">    AK::MusicEngine::Term();</div>
 <div class="line">    </div>
 <div class="line">    (...)</div>
 <div class="line">}</div>
@@ -100,7 +100,7 @@ Terminating the Sound Engine</h1>
 <div class="line">    <span class="comment">// Terminate the sound engine</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    </div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_a90f8c91937038615480db2b57ce2279e.html#a90f8c91937038615480db2b57ce2279e">AK::SoundEngine::Term</a>();</div>
+<div class="line">    AK::SoundEngine::Term();</div>
 <div class="line">    </div>
 <div class="line">    (...)</div>
 <div class="line">}</div>
@@ -117,8 +117,8 @@ Terminating the Streaming Manager</h1>
 <div class="line">    <span class="comment">// that lives in the Stream Manager, and unregisters itself as the File Location Resolver.</span></div>
 <div class="line">    g_lowLevelIO.Term();</div>
 <div class="line">    </div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a>() )</div>
-<div class="line">        <a class="code" href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a>()-&gt;<a class="code" href="class_a_k_1_1_i_ak_stream_mgr_ab846904b7ad95752193cf0e9a288ea8a.html#ab846904b7ad95752193cf0e9a288ea8a">Destroy</a>();</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::IAkStreamMgr::Get() )</div>
+<div class="line">        AK::IAkStreamMgr::Get()-&gt;Destroy();</div>
 <div class="line">    </div>
 <div class="line">    (...)</div>
 <div class="line">}</div>
@@ -130,16 +130,17 @@ Terminating the Memory Manager</h1>
 <div class="line">    (...)</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// Terminate the Memory Manager</span></div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_memory_mgr_a3ec018c61b5dc7428cf51f35f290739e.html#a3ec018c61b5dc7428cf51f35f290739e">AK::MemoryMgr::Term</a>();</div>
+<div class="line">    AK::MemoryMgr::Term();</div>
 <div class="line">}</div>
 </div><!-- fragment --><p>Everything related to the sound engine has now been cleaned-up, and we are ready to exit the program. Next, you should move on to <a class="el" href="workingwithsdks_integratingelements.html">Integrate Wwise Elements into Your Game</a>. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e_html_ac650db9915bd06d5eebc1852e0d0cd6e"><div class="ttname"><a href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a></div><div class="ttdeci">static IAkStreamMgr * Get()</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00735">IAkStreamMgr.h:735</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_memory_mgr_a3ec018c61b5dc7428cf51f35f290739e_html_a3ec018c61b5dc7428cf51f35f290739e"><div class="ttname"><a href="namespace_a_k_1_1_memory_mgr_a3ec018c61b5dc7428cf51f35f290739e.html#a3ec018c61b5dc7428cf51f35f290739e">AK::MemoryMgr::Term</a></div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f_html_a94e307d2974b89cc4fbc8ab0fef20d2f"><div class="ttname"><a href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">AK::Comm::Term</a></div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_ab846904b7ad95752193cf0e9a288ea8a_html_ab846904b7ad95752193cf0e9a288ea8a"><div class="ttname"><a href="class_a_k_1_1_i_ak_stream_mgr_ab846904b7ad95752193cf0e9a288ea8a.html#ab846904b7ad95752193cf0e9a288ea8a">AK::IAkStreamMgr::Destroy</a></div><div class="ttdeci">virtual void Destroy()=0</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a90f8c91937038615480db2b57ce2279e_html_a90f8c91937038615480db2b57ce2279e"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a90f8c91937038615480db2b57ce2279e.html#a90f8c91937038615480db2b57ce2279e">AK::SoundEngine::Term</a></div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_music_engine_a4abb7df883aaea7c92695cb6c0d322ef_html_a4abb7df883aaea7c92695cb6c0d322ef"><div class="ttname"><a href="namespace_a_k_1_1_music_engine_a4abb7df883aaea7c92695cb6c0d322ef.html#a4abb7df883aaea7c92695cb6c0d322ef">AK::MusicEngine::Term</a></div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e_html_ac650db9915bd06d5eebc1852e0d0cd6e"><div class="ttname">AK::IAkStreamMgr::Get</div><div class="ttdeci">static IAkStreamMgr * Get()</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:735</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_memory_mgr_a3ec018c61b5dc7428cf51f35f290739e_html_a3ec018c61b5dc7428cf51f35f290739e"><div class="ttname">AK::MemoryMgr::Term</div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f_html_a94e307d2974b89cc4fbc8ab0fef20d2f"><div class="ttname">AK::Comm::Term</div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_ab846904b7ad95752193cf0e9a288ea8a_html_ab846904b7ad95752193cf0e9a288ea8a"><div class="ttname">AK::IAkStreamMgr::Destroy</div><div class="ttdeci">virtual void Destroy()=0</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a90f8c91937038615480db2b57ce2279e_html_a90f8c91937038615480db2b57ce2279e"><div class="ttname">AK::SoundEngine::Term</div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_music_engine_a4abb7df883aaea7c92695cb6c0d322ef_html_a4abb7df883aaea7c92695cb6c0d322ef"><div class="ttname">AK::MusicEngine::Term</div><div class="ttdeci">AKSOUNDENGINE_API void Term()</div></div>
 </body>
 </html>
+

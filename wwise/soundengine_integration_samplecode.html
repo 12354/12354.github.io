@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -44,7 +44,7 @@ The Wwise Project</h1>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> The Wwise project for this program uses various audio file conversion formats, some of which may not be available depending on which platforms are supported by your Wwise installation. After opening the project in Wwise, you may see warnings such as:</p>
-<pre><code>\Actor-Mixer Hierarchy\Dialogues\Captain_A\UNA-BM-AL_01\UNA-BM-AL_01</code> uses the conversion plugin 'XMA', which is not installed.</pre><p class="endtd">You can remove these messages by changing the conversion format for all unavailable platforms to PCM. Refer to the following topic in the Wwise User Guide for more information: <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=authoring_across_platforms_converting_audio_files" target="_blank">Converting Audio Files</a>. </p>
+<pre><code>\Actor-Mixer Hierarchy\Dialogues\Captain_A\UNA-BM-AL_01\UNA-BM-AL_01</code> uses the conversion plugin 'XMA', which is not installed.</pre><p class="endtd">You can remove these messages by changing the conversion format for all unavailable platforms to PCM. Refer to the following topic in the Wwise User Guide for more information: Converting Audio Files. </p>
 </td></tr>
 </table>
 <p>SoundBanks for this project are also installed with the SDK in the <code>samples\IntegrationDemo\WwiseProject\GeneratedSoundBanks</code> folder.</p>
@@ -217,7 +217,7 @@ Reflect Demo</h3>
 <p>This demo showcases the Wwise Reflect plug-in using the Geometry API to simulate early reflection. There is a room and a separate wall, defined by Spatial Audio Geometry, and visible reflection paths. Spatial Audio is set up with a reflection order displayed in the lower-left corner. Additionally, Spatial Audio allows reflection paths to diffract. The room Geometry in this demo can change texture and be scaled in size demonstrating the adaptability of the Geometry API.</p>
 <dl class="section see"><dt>See also</dt><dd><ul>
 <li><a class="el" href="spatial_audio_apigeometry_er.html">Using the Geometry API for Simulating Early Reflections</a></li>
-<li><a class="el" href="spatial_audio_apigeometry_diffract.html#spatial_audio_apigeometry_diffract_er">Geometric Diffraction of Early Reflections</a></li>
+<li>Geometric Diffraction of Early Reflections</li>
 </ul>
 </dd></dl>
 <h3><a class="anchor" id="integrationdemo_demos_spatialaudio_portalandreflect"></a>
@@ -243,10 +243,10 @@ External Sources Demo</h3>
 <li><a class="el" href="integrating_external_sources.html">Integrating External Sources</a></li>
 </ul>
 </dd></dl>
-<p>Additionally, the external sources are packaged in the File Packager and loaded when opening the demo page. Refer to the <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=managing_file_packages_overview" target="_blank">Wwise Help</a> for more information on the File Packager, and to the <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a> chapter for more details on the run-time aspect of file packages.</p>
+<p>Additionally, the external sources are packaged in the File Packager and loaded when opening the demo page. Refer to the Wwise Help for more information on the File Packager, and to the <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a> chapter for more details on the run-time aspect of file packages.</p>
 <h3><a class="anchor" id="integration_demos_autobanks"></a>
 Autobanks Demo</h3>
-<p>This demo demonstrates the pros and cons of automatic event bank generation. When this option is selected in the Project Settings, Wwise generates individual banks for any events that are not contained in manually created banks. However, these auto-banks do not contain any media, only structure and event data. To load media associated with these events, the game must call either <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">AK::SoundEngine::PrepareEvent</a> or <a class="el" href="namespace_a_k_1_1_sound_engine_ae93bba30404755a4d2e592c3bfbf340c.html#ae93bba30404755a4d2e592c3bfbf340c">AK::SoundEngine::SetMedia</a>.</p>
+<p>This demo demonstrates the pros and cons of automatic event bank generation. When this option is selected in the Project Settings, Wwise generates individual banks for any events that are not contained in manually created banks. However, these auto-banks do not contain any media, only structure and event data. To load media associated with these events, the game must call either AK::SoundEngine::PrepareEvent or AK::SoundEngine::SetMedia.</p>
 <h2><a class="anchor" id="integrationdemo_demos_micro"></a>
 Microphone/AudioInput Demo</h2>
 <p>This demo shows how to record audio from a microphone and input it in the Wwise sound engine. In the Integration Demo, select the <b>Microphone Demo</b> and speak into the microphone to hear your voice played back by the Wwise sound engine. Toggle the <b>Enable Delay</b> to hear an example of how audio data fed to the Audio Input plug-in can be processed like any other sound created in Wwise.</p>
@@ -278,7 +278,7 @@ Motion Demo</h2>
 Options Page</h2>
 <p>This page allows viewing of several initialization settings for the Sound Engine. You can also choose the audio output for the whole application. The sample code shows how to initialize &amp; terminate the Sound Engine and also how to select different physical audio outputs. Please refer to the specific sections below for more details on the Sound Engine initialization.</p>
 <dl class="section see"><dt>See also</dt><dd><ul>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a></li>
+<li>AK::SoundEngine::Init</li>
 <li><a class="el" href="struct_ak_init_settings.html">AkInitSettings</a></li>
 <li><a class="el" href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a></li>
 <li><a class="el" href="struct_ak_mem_settings.html">AkMemSettings</a></li>
@@ -288,8 +288,9 @@ Options Page</h2>
 </dd></dl>
 <h1><a class="anchor" id="integrationdemo_more"></a>
 More Sample Code</h1>
-<p>The Integration Demo as well as its Wwise Project are kept very simple in order to demonstrate the basics of sound engine integration. For a more realistic integration project, refer to the <a class="el" href="samplecode.html#samplecode_integration_akcube">AkCube Sound Engine Integration Sample Project</a>. </p>
+<p>The Integration Demo as well as its Wwise Project are kept very simple in order to demonstrate the basics of sound engine integration. For a more realistic integration project, refer to the AkCube Sound Engine Integration Sample Project. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -45,7 +45,7 @@ Network Security</h1>
 <p>Since WAAPI allows you to control Wwise remotely, it must be used in a secure environment in order to prevent other people from gaining control of your computer. If it is not configured correctly, it could present a security risk.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If you are connecting to WAAPI through a browser, <b>both</b> the IP address and origin of the web server must be added for the connection to be allowed. Refer to <a class="el" href="waapi_prepare.html#waapi_security_origin">Preventing Cross-Site Scripting</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If you are connecting to WAAPI through a browser, <b>both</b> the IP address and origin of the web server must be added for the connection to be allowed. Refer to Preventing Cross-Site Scripting. </td></tr>
 </table>
 <h2><a class="anchor" id="waapi_security_ports"></a>
 Blocking access to WAAPI ports</h2>
@@ -73,8 +73,8 @@ Preventing Cross-Site Scripting</h2>
 <p>Using WAAPI in a webpage loaded from another host will fail, unless you add the host in the User Preferences. To add a host as a valid origin for WAAPI:</p><ul>
 <li>Click <em>Project</em> &gt; <em>User Preferences</em>, from the main Wwise menu.</li>
 <li>Add your host URI to the <b>Allow browser connections from origins</b> field. For example:<ul>
-<li><em><a href="http://www.myhost.com">http://www.myhost.com</a></em>, assuming port 80; or</li>
-<li><em><a href="http://www.myhost.com:1234">http://www.myhost.com:1234</a></em>, assuming not the default 80, but 1234.</li>
+<li><em>http://www.myhost.com</em>, assuming port 80; or</li>
+<li><em>http://www.myhost.com:1234</em>, assuming not the default 80, but 1234.</li>
 </ul>
 </li>
 <li>Click <b>OK</b>.</li>
@@ -109,3 +109,4 @@ Next Steps</h2>
 </div><!-- PageDoc -->
 </body>
 </html>
+

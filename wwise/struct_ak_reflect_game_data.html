@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -40,38 +40,39 @@
 <div class="contents">
 
 <p>Data structure sent by the game to an instance of the Reflect plug-in.  
- <a href="struct_ak_reflect_game_data.html#details">More...</a></p>
+ More...</p>
 
 <p><code>#include &lt;<a class="el" href="_ak_reflect_game_data_8h_source.html">AkReflectGameData.h</a>&gt;</code></p>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a44db375c81f806cd1c93a91ba2da885a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_reflect_game_data_a44db375c81f806cd1c93a91ba2da885a.html#a44db375c81f806cd1c93a91ba2da885a">AkReflectGameData</a> ()</td></tr>
-<tr class="memdesc:a44db375c81f806cd1c93a91ba2da885a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  <a href="struct_ak_reflect_game_data_a44db375c81f806cd1c93a91ba2da885a.html#a44db375c81f806cd1c93a91ba2da885a">More...</a><br /></td></tr>
+<tr class="memitem:a44db375c81f806cd1c93a91ba2da885a"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom">AkReflectGameData ()</td></tr>
+<tr class="memdesc:a44db375c81f806cd1c93a91ba2da885a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Default constructor.  More...<br /></td></tr>
 <tr class="separator:a44db375c81f806cd1c93a91ba2da885a"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-static-methods"></a>
 Static Public Member Functions</h2></td></tr>
-<tr class="memitem:a9092162fa11340914f05afa50bcc11b4"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_reflect_game_data_a9092162fa11340914f05afa50bcc11b4.html#a9092162fa11340914f05afa50bcc11b4">GetSize</a> (<a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_uNumSources)</td></tr>
-<tr class="memdesc:a9092162fa11340914f05afa50bcc11b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for computing the size required to allocate the <a class="el" href="struct_ak_reflect_game_data.html" title="Data structure sent by the game to an instance of the Reflect plug-in.">AkReflectGameData</a> structure.  <a href="struct_ak_reflect_game_data_a9092162fa11340914f05afa50bcc11b4.html#a9092162fa11340914f05afa50bcc11b4">More...</a><br /></td></tr>
+<tr class="memitem:a9092162fa11340914f05afa50bcc11b4"><td class="memItemLeft" align="right" valign="top">static AkUInt32&#160;</td><td class="memItemRight" valign="bottom">GetSize (AkUInt32 in_uNumSources)</td></tr>
+<tr class="memdesc:a9092162fa11340914f05afa50bcc11b4"><td class="mdescLeft">&#160;</td><td class="mdescRight">Helper function for computing the size required to allocate the <a class="el" href="struct_ak_reflect_game_data.html" title="Data structure sent by the game to an instance of the Reflect plug-in.">AkReflectGameData</a> structure.  More...<br /></td></tr>
 <tr class="separator:a9092162fa11340914f05afa50bcc11b4"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:ad4f628915a1e7854375a7311a5981ee1"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_reflect_game_data_ad4f628915a1e7854375a7311a5981ee1.html#ad4f628915a1e7854375a7311a5981ee1">listenerID</a></td></tr>
-<tr class="memdesc:ad4f628915a1e7854375a7311a5981ee1"><td class="mdescLeft">&#160;</td><td class="mdescRight">ID of the listener used to compute spatialization and distance evaluation from within the targeted Reflect plug-in instance. It needs to be one of the listeners that are listening to the game object associated with the targeted plug-in instance. See <a class="el" href="namespace_a_k_1_1_sound_engine_a2f85a55c38afa2e0dbc6172a7bec91d1.html#a2f85a55c38afa2e0dbc6172a7bec91d1">AK::SoundEngine::SetListeners</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_af960fca0239e219b9d08c2659fe9e5d4.html#af960fca0239e219b9d08c2659fe9e5d4">AK::SoundEngine::SetGameObjectAuxSendValues</a>.  <a href="struct_ak_reflect_game_data_ad4f628915a1e7854375a7311a5981ee1.html#ad4f628915a1e7854375a7311a5981ee1">More...</a><br /></td></tr>
+<tr class="memitem:ad4f628915a1e7854375a7311a5981ee1"><td class="memItemLeft" align="right" valign="top">AkGameObjectID&#160;</td><td class="memItemRight" valign="bottom">listenerID</td></tr>
+<tr class="memdesc:ad4f628915a1e7854375a7311a5981ee1"><td class="mdescLeft">&#160;</td><td class="mdescRight">ID of the listener used to compute spatialization and distance evaluation from within the targeted Reflect plug-in instance. It needs to be one of the listeners that are listening to the game object associated with the targeted plug-in instance. See AK::SoundEngine::SetListeners and AK::SoundEngine::SetGameObjectAuxSendValues.  More...<br /></td></tr>
 <tr class="separator:ad4f628915a1e7854375a7311a5981ee1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4863372f7461accb18feb4df34dc19b2"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_reflect_game_data_a4863372f7461accb18feb4df34dc19b2.html#a4863372f7461accb18feb4df34dc19b2">uNumImageSources</a></td></tr>
-<tr class="memdesc:a4863372f7461accb18feb4df34dc19b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of image sources passed in the variable array, below.  <a href="struct_ak_reflect_game_data_a4863372f7461accb18feb4df34dc19b2.html#a4863372f7461accb18feb4df34dc19b2">More...</a><br /></td></tr>
+<tr class="memitem:a4863372f7461accb18feb4df34dc19b2"><td class="memItemLeft" align="right" valign="top">AkUInt32&#160;</td><td class="memItemRight" valign="bottom">uNumImageSources</td></tr>
+<tr class="memdesc:a4863372f7461accb18feb4df34dc19b2"><td class="mdescLeft">&#160;</td><td class="mdescRight">Number of image sources passed in the variable array, below.  More...<br /></td></tr>
 <tr class="separator:a4863372f7461accb18feb4df34dc19b2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1f0f7292d2c7d392a57f42ed06b8376e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_ak_reflect_image_source.html">AkReflectImageSource</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_reflect_game_data_a1f0f7292d2c7d392a57f42ed06b8376e.html#a1f0f7292d2c7d392a57f42ed06b8376e">arSources</a> [1]</td></tr>
-<tr class="memdesc:a1f0f7292d2c7d392a57f42ed06b8376e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Variable array of image sources. You should allocate storage for the structure by calling <a class="el" href="struct_ak_reflect_game_data_a9092162fa11340914f05afa50bcc11b4.html#a9092162fa11340914f05afa50bcc11b4" title="Helper function for computing the size required to allocate the AkReflectGameData structure.">AkReflectGameData::GetSize()</a> with the desired number of sources.  <a href="struct_ak_reflect_game_data_a1f0f7292d2c7d392a57f42ed06b8376e.html#a1f0f7292d2c7d392a57f42ed06b8376e">More...</a><br /></td></tr>
+<tr class="memitem:a1f0f7292d2c7d392a57f42ed06b8376e"><td class="memItemLeft" align="right" valign="top"><a class="el" href="struct_ak_reflect_image_source.html">AkReflectImageSource</a>&#160;</td><td class="memItemRight" valign="bottom">arSources [1]</td></tr>
+<tr class="memdesc:a1f0f7292d2c7d392a57f42ed06b8376e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Variable array of image sources. You should allocate storage for the structure by calling AkReflectGameData::GetSize() with the desired number of sources.  More...<br /></td></tr>
 <tr class="separator:a1f0f7292d2c7d392a57f42ed06b8376e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Data structure sent by the game to an instance of the Reflect plug-in. </p>
 
-<p class="definition">Definition at line <a class="el" href="_ak_reflect_game_data_8h_source.html#l00133">133</a> of file <a class="el" href="_ak_reflect_game_data_8h_source.html">AkReflectGameData.h</a>.</p>
+<p class="definition">Definition at line 133 of file <a class="el" href="_ak_reflect_game_data_8h_source.html">AkReflectGameData.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+

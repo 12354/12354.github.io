@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -34,34 +34,35 @@
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>Game objects are entities to which such elements as interfaces, sounds, and triggers can be attached.</p>
-<p>A game object is defined as an <code>AkGameObjectID</code> (an unsigned 64-bit field). You can choose any ID ranging from 0 to 0x‭FFFFFFFFFFFFFFDF‬ (which is -33 as a signed integer). The game object ID range 0x‭FFFFFFFFFFFFFFE0‬ (-32) to 0x‭FFFFFFFFFFFFFFFF‬ (-1) is reserved for internal use. The transport game object, which is registered by the authoring tool, now uses game object ID 0x‭FFFFFFFFFFFFFFFE‬ (-2).</p>
+<p>A game object is defined as an <code>AkGameObjectID</code> (an unsigned 64-bit field). You can choose any ID ranging from 0 to 0xâ€­FFFFFFFFFFFFFFDFâ€¬ (which is -33 as a signed integer). The game object ID range 0xâ€­FFFFFFFFFFFFFFE0â€¬ (-32) to 0xâ€­FFFFFFFFFFFFFFFFâ€¬ (-1) is reserved for internal use. The transport game object, which is registered by the authoring tool, now uses game object ID 0xâ€­FFFFFFFFFFFFFFFEâ€¬ (-2).</p>
 <h1><a class="anchor" id="soundengine_gameobj_assoc"></a>
 Game Object Associations</h1>
-<p>Every Event triggered in the sound engine is associated to a game object. All Event Actions will be associated with the game object passed as a parameter of the <code><a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent()</a></code> function, if they target a specific game object. If Event Actions do not target a game object, they will ignore the game object specified. If an Action should affect a single game object, but the game object specified in <code><a class="el" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent()</a></code> is not valid, the Action will not be executed.</p>
+<p>Every Event triggered in the sound engine is associated to a game object. All Event Actions will be associated with the game object passed as a parameter of the <code>AK::SoundEngine::PostEvent()</code> function, if they target a specific game object. If Event Actions do not target a game object, they will ignore the game object specified. If an Action should affect a single game object, but the game object specified in <code>AK::SoundEngine::PostEvent()</code> is not valid, the Action will not be executed.</p>
 <p>For every game object, there may be an associated 3D position, a Switch for every existing Switch Group, an RTPC value for each RTPC, and multiple values (for example a volume) that would have been set on a specific item (Sound SFX, Actor-Mixer, bus, and so on) for a specific game object. The sound engine stores this information until the game object associated with these values is unregistered.</p>
 <h1><a class="anchor" id="soundengine_gameobj_reg"></a>
 Registering Game Objects</h1>
 <p>Before you can use game objects, you need to register them. When you no longer need the game objects, you should unregister them. While leaving them registered will not create an error, memory is wasted storing this information (3DPosition, RTPCs, Switches, and so on).</p>
-<p>Two versions of the <code><a class="el" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj()</a></code> function exist:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>( <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> in_gameObjectID );</div>
+<p>Two versions of the <code>AK::SoundEngine::RegisterGameObj()</code> function exist:</p>
+<div class="fragment"><div class="line">AK::SoundEngine::RegisterGameObj( AkGameObjectID in_gameObjectID );</div>
 </div><!-- fragment --><p>and</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>( <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> in_gameObjectID, <span class="keyword">const</span> <span class="keywordtype">char</span> * in_pszObjName );</div>
+<div class="fragment"><div class="line">AK::SoundEngine::RegisterGameObj( AkGameObjectID in_gameObjectID, <span class="keyword">const</span> <span class="keywordtype">char</span> * in_pszObjName );</div>
 </div><!-- fragment --><p>The second version of the function is for monitoring purposes. Using it directs Wwise to display the real name associated with objects that are playing. In <code>AK_OPTIMIZED</code> mode, the second version ignores the object name.</p>
 <p>Two functions allow game objects to be unregistered:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_af53445c959103c84ea50c17d665f254a.html#af53445c959103c84ea50c17d665f254a">AK::SoundEngine::UnregisterGameObj</a>( <a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> in_gameObjectID );</div>
+<div class="fragment"><div class="line">AK::SoundEngine::UnregisterGameObj( AkGameObjectID in_gameObjectID );</div>
 </div><!-- fragment --><p>and</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a60be51486f9221e38962232911ef190a.html#a60be51486f9221e38962232911ef190a">AK::SoundEngine::UnregisterAllGameObj</a>();</div>
-</div><!-- fragment --><p><code><a class="el" href="namespace_a_k_1_1_sound_engine_a60be51486f9221e38962232911ef190a.html#a60be51486f9221e38962232911ef190a">AK::SoundEngine::UnregisterAllGameObj()</a></code> performs a complete clean-up of all the parameters currently set for every game object and removes all game object associations. <code><a class="el" href="namespace_a_k_1_1_sound_engine_af53445c959103c84ea50c17d665f254a.html#af53445c959103c84ea50c17d665f254a">UnregisterGameObj()</a></code> does the same thing but for one single game object. Once a game object is unregistered, you must re-register it before you can use it again.</p>
-<p>For an example of integrating game objects, refer to <a class="el" href="quickstart_sample_integration_gameobjects.html#soundengine_integration_gameobj">Game Object Example</a>.</p>
+<div class="fragment"><div class="line">AK::SoundEngine::UnregisterAllGameObj();</div>
+</div><!-- fragment --><p><code>AK::SoundEngine::UnregisterAllGameObj()</code> performs a complete clean-up of all the parameters currently set for every game object and removes all game object associations. <code>UnregisterGameObj()</code> does the same thing but for one single game object. Once a game object is unregistered, you must re-register it before you can use it again.</p>
+<p>For an example of integrating game objects, refer to Game Object Example.</p>
 <dl class="section see"><dt>See also</dt><dd><ul>
-<li><a class="el" href="soundengine_3dpositions.html#soundengine_3dpositions_realworld">Setting a Game Object's Position</a> </li>
+<li>Setting a Game Object's Position </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a60be51486f9221e38962232911ef190a_html_a60be51486f9221e38962232911ef190a"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a60be51486f9221e38962232911ef190a.html#a60be51486f9221e38962232911ef190a">AK::SoundEngine::UnregisterAllGameObj</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT UnregisterAllGameObj()</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname"><a href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a></div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00142">AkTypes.h:142</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_af53445c959103c84ea50c17d665f254a_html_af53445c959103c84ea50c17d665f254a"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_af53445c959103c84ea50c17d665f254a.html#af53445c959103c84ea50c17d665f254a">AK::SoundEngine::UnregisterGameObj</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT UnregisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a60be51486f9221e38962232911ef190a_html_a60be51486f9221e38962232911ef190a"><div class="ttname">AK::SoundEngine::UnregisterAllGameObj</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT UnregisterAllGameObj()</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname">AkGameObjectID</div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:142</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname">AK::SoundEngine::RegisterGameObj</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_af53445c959103c84ea50c17d665f254a_html_af53445c959103c84ea50c17d665f254a"><div class="ttname">AK::SoundEngine::UnregisterGameObj</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT UnregisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
 </body>
 </html>
+

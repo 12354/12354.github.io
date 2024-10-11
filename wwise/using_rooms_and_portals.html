@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -38,7 +38,7 @@
 <p>A Spatial Audio Room is a symbolic representation of a distinct acoustic environment within the simulation. Outdoor spaces, for example, are also considered Rooms. Rooms are connected to one another using Portals, which define small, rectangular apertures through which sound can propagate.</p>
 <p>Spatial Audio automatically handles various complex interactions between Emitter and Listener Game Objects and Rooms. Spatial Audio assigns each Room to a Game Object, and manages auxiliary send connections between Emitter and Room Game Object. Because each Room is assigned to a separate Game Object from the Emitter and Listener, Room reverb and ambience can be rendered with distinct 3D panning and spatialization parameters, and the Room can also be shared by all sound emitters inside. The reverb of a Room that is adjacent to the listener is rendered as if it were propagating through nearby openings, defined as Portals. Spatial Audio does so by creating sound positions, located at portal openings, to spatialize the reverb. The adjacent Room has an auxiliary send to the listener's room, forming a chain of coupled Rooms. The Room that contains the listener inside is rendered as a 3D sound field that envelops the listener. The orientation of the Room Game Object is distinct from that of the listener. The Room's sound field is rotated relative to the listener's orientation, which anchors the sound in the world instead of being fixed to the listener's head.</p>
 <p>If rectangular Portals do not sufficiently describe the interface between Rooms, Reverb Zones can be used to model complex coupling between acoustic environments. Refer to <a class="el" href="spatial_audio_roomsportals_reverbzones.html">Using Reverb Zones</a>. With the exception of Reverb Zones, which require geometry to define transition regions, Rooms do not require geometry to be sent to Wwise. However, providing geometry in combination with Rooms and Portals provides a more detailed simulation, and permits diffraction around obstacles as well as diffraction through portals. Refer to <a class="el" href="spatial_audio_apigeometry_diffract.html">Using the Geometry API for Simulating Diffraction and Transmission</a>.</p>
-<p>Spatial Audio uses the Rooms and Portals network to modulate the distance traveled by the sound, the apparent incident position, and the diffraction angle. The diffraction angle is mapped to a diffraction percentage value on the emitter game object and/or to a <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=binding_game_parameter_to_built_in_parameter" target="_blank">built-in game parameter called Diffraction</a>, which designers can bind to properties (such as volume and low-pass filtering) using RTPCs.</p>
+<p>Spatial Audio uses the Rooms and Portals network to modulate the distance traveled by the sound, the apparent incident position, and the diffraction angle. The diffraction angle is mapped to a diffraction percentage value on the emitter game object and/or to a built-in game parameter called Diffraction, which designers can bind to properties (such as volume and low-pass filtering) using RTPCs.</p>
 <ul>
 <li><a class="el" href="spatial_audio_roomsportals_apioverview.html">Rooms and Portals Overview</a></li>
 <li><a class="el" href="spatial_audio_roomsportals_wwisesetup.html">Rooms and Portals Setup in Wwise</a></li>
@@ -54,3 +54,4 @@
 </div><!-- PageDoc -->
 </body>
 </html>
+

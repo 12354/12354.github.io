@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -35,13 +35,14 @@
 <div class="contents">
 <div class="textblock"><h1><a class="anchor" id="soundengine_integration_triggers"></a>
 Trigger Example</h1>
-<p>You can launch a trigger with the <a class="el" href="namespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a.html#a1cd4b83f1a684a70e009cc9d81bbe57a">AK::SoundEngine::PostTrigger()</a> function:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a.html#a1cd4b83f1a684a70e009cc9d81bbe57a">AK::SoundEngine::PostTrigger</a>( AK::TRIGGERS::PUZZLE_SOLVED, GAME_OBJECT_ID_HUMAN );</div>
-</div><!-- fragment --><p>The <a class="el" href="namespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a.html#a1cd4b83f1a684a70e009cc9d81bbe57a">AK::SoundEngine::PostTrigger()</a> method also accepts strings (Unicode or Ansi) instead of IDs. In this case you would specify the name of the trigger, as defined by the Wwise user:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a.html#a1cd4b83f1a684a70e009cc9d81bbe57a">AK::SoundEngine::PostTrigger</a>( L<span class="stringliteral">&quot;Puzzle_Solved&quot;</span>, GAME_OBJECT_ID_HUMAN );</div>
+<p>You can launch a trigger with the AK::SoundEngine::PostTrigger() function:</p>
+<div class="fragment"><div class="line">AK::SoundEngine::PostTrigger( AK::TRIGGERS::PUZZLE_SOLVED, GAME_OBJECT_ID_HUMAN );</div>
+</div><!-- fragment --><p>The AK::SoundEngine::PostTrigger() method also accepts strings (Unicode or Ansi) instead of IDs. In this case you would specify the name of the trigger, as defined by the Wwise user:</p>
+<div class="fragment"><div class="line">AK::SoundEngine::PostTrigger( L<span class="stringliteral">&quot;Puzzle_Solved&quot;</span>, GAME_OBJECT_ID_HUMAN );</div>
 </div><!-- fragment --><p>Refer to <a class="el" href="soundengine_triggers.html">Integration Details - Triggers</a> for more details. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a_html_a1cd4b83f1a684a70e009cc9d81bbe57a"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a.html#a1cd4b83f1a684a70e009cc9d81bbe57a">AK::SoundEngine::PostTrigger</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT PostTrigger(AkTriggerID in_triggerID, AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a1cd4b83f1a684a70e009cc9d81bbe57a_html_a1cd4b83f1a684a70e009cc9d81bbe57a"><div class="ttname">AK::SoundEngine::PostTrigger</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT PostTrigger(AkTriggerID in_triggerID, AkGameObjectID in_gameObjectID)</div></div>
 </body>
 </html>
+

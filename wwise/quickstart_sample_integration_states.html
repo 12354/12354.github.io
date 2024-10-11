@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -36,9 +36,9 @@
 <div class="textblock"><h1><a class="anchor" id="soundengine_integration_states"></a>
 State Example</h1>
 <p>The following code shows how you can set the current state for a given state group:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState</a>( AK::STATES::PLAYERHEALTH::GROUP, AK::STATES::PLAYERHEALTH::STATE::NORMAL );</div>
-</div><!-- fragment --><p>The <a class="el" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState()</a> method also accepts strings (Unicode or Ansi) instead of IDs. In this case, you would specify the names of the State Group and State, as defined by the Wwise user:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState</a>( L<span class="stringliteral">&quot;PlayerHealth&quot;</span>, L<span class="stringliteral">&quot;Normal&quot;</span> );</div>
+<div class="fragment"><div class="line">AK::SoundEngine::SetState( AK::STATES::PLAYERHEALTH::GROUP, AK::STATES::PLAYERHEALTH::STATE::NORMAL );</div>
+</div><!-- fragment --><p>The AK::SoundEngine::SetState() method also accepts strings (Unicode or Ansi) instead of IDs. In this case, you would specify the names of the State Group and State, as defined by the Wwise user:</p>
+<div class="fragment"><div class="line">AK::SoundEngine::SetState( L<span class="stringliteral">&quot;PlayerHealth&quot;</span>, L<span class="stringliteral">&quot;Normal&quot;</span> );</div>
 </div><!-- fragment --><p>In the sample application, you can change the current state for the <code>PlayerHealth</code> state group by using the corresponding dropdown list in the General section of the dialog.</p>
 <p>Refer to <a class="el" href="soundengine_states.html">Integration Details - States</a> for more information.</p>
 <table border="0" cellspacing="0" cellpadding="2">
@@ -47,6 +47,7 @@ State Example</h1>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5_html_a68dc9be195962c671b82fbb354b68cc5"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5.html#a68dc9be195962c671b82fbb354b68cc5">AK::SoundEngine::SetState</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetState(AkStateGroupID in_stateGroup, AkStateID in_state)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a68dc9be195962c671b82fbb354b68cc5_html_a68dc9be195962c671b82fbb354b68cc5"><div class="ttname">AK::SoundEngine::SetState</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetState(AkStateGroupID in_stateGroup, AkStateID in_state)</div></div>
 </body>
 </html>
+

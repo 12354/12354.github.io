@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -53,9 +53,9 @@ Initializing the Memory Manager</h1>
 <div class="line"><span class="keywordtype">bool</span> InitSoundEngine()</div>
 <div class="line">{</div>
 <div class="line">    <a class="code" href="struct_ak_mem_settings.html">AkMemSettings</a> memSettings;</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_memory_mgr_ada3c244e4c16e6863cec97eef039319b.html#ada3c244e4c16e6863cec97eef039319b">AK::MemoryMgr::GetDefaultSettings</a>(memSettings);</div>
+<div class="line">    AK::MemoryMgr::GetDefaultSettings(memSettings);</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_memory_mgr_a570a4ed4f667c187d21a821d846f4567.html#a570a4ed4f667c187d21a821d846f4567">AK::MemoryMgr::Init</a>( &amp;memSettings ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::MemoryMgr::Init( &amp;memSettings ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not create the memory manager.&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -65,7 +65,7 @@ Initializing the Memory Manager</h1>
 <div class="line">}</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> You can override the Memory Manager, in which case the code presented above must be adapted as needed. Refer to <a class="el" href="memorymanager.html#overridememorymanager">Overriding the memory manager</a> for more information. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> You can override the Memory Manager, in which case the code presented above must be adapted as needed. Refer to Overriding the memory manager for more information. </td></tr>
 </table>
 <p>Refer to <a class="el" href="memorymanager.html">Memory Manager</a> for more details regarding the Memory Manager.</p>
 <h1><a class="anchor" id="initialization_streamingmgr"></a>
@@ -73,7 +73,7 @@ Initializing the Streaming Manager</h1>
 <p>Once the Memory Manager has been initialized, we can move on to the Streaming Manager.</p>
 <p>The following code initializes the default Streaming Manager. It requires an instance of <code><a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_file_location_resolver.html">AK::StreamMgr::IAkFileLocationResolver</a></code>, and creates a streaming device. This requires an instance of <code><a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook.html">AK::StreamMgr::IAkLowLevelIOHook</a></code>. This interface is defined in <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a>, which contains all definitions that are specific to the default Stream Manager implementation provided with the SDK.</p>
 <p>The recommended way of integrating the sound engine with regards to disk I/O is to use the default Stream Manager implementation, and implement the interfaces defined in <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a>. These interfaces constitute the Low-Level I/O submodule. Refer to <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a> for more information.</p>
-<p>This example uses the sample CAkFilePackageLowLevelIODeferred as is. This class implements both <a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_file_location_resolver.html">AK::StreamMgr::IAkFileLocationResolver</a> and <a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook.html">AK::StreamMgr::IAkLowLevelIOHook</a> interfaces, and is able to load file packages generated with the File Packager utility (refer to <a class="el" href="samplecode.html#samplecode_integration_filepackagelowlevelio">File Package Low-Level I/O Implementation</a> and <a class="el" href="samplecode.html#samplecode_integration_filepackager">File Packager Utility</a> for more information about the File Packager and how it works in the Low-Level I/O).</p>
+<p>This example uses the sample CAkFilePackageLowLevelIODeferred as is. This class implements both <a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_file_location_resolver.html">AK::StreamMgr::IAkFileLocationResolver</a> and <a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook.html">AK::StreamMgr::IAkLowLevelIOHook</a> interfaces, and is able to load file packages generated with the File Packager utility (refer to File Package Low-Level I/O Implementation and File Packager Utility for more information about the File Packager and how it works in the Low-Level I/O).</p>
 <p>Refer to <a class="el" href="streamingmanager_lowlevel.html">Low-Level I/O</a> for more information about the Low-Level I/O.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="_i_ak_stream_mgr_8h.html">AK/SoundEngine/Common/IAkStreamMgr.h</a>&gt;</span>                 <span class="comment">// Streaming Manager</span></div>
 <div class="line"><span class="preprocessor">#include &lt;<a class="code" href="_common_2_ak_platform_funcs_8h.html">AK/Tools/Common/AkPlatformFuncs.h</a>&gt;</span>                    <span class="comment">// Thread defines</span></div>
@@ -97,11 +97,11 @@ Initializing the Streaming Manager</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line"> </div>
 <div class="line">    <a class="code" href="struct_ak_stream_mgr_settings.html">AkStreamMgrSettings</a> stmSettings;</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_stream_mgr_a50fe8111fcb883651390fab6e9dc5ebc.html#a50fe8111fcb883651390fab6e9dc5ebc">AK::StreamMgr::GetDefaultSettings</a>( stmSettings );</div>
+<div class="line">    AK::StreamMgr::GetDefaultSettings( stmSettings );</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// Customize the Stream Manager settings here.</span></div>
 <div class="line">    </div>
-<div class="line">    <span class="keywordflow">if</span> ( !<a class="code" href="namespace_a_k_1_1_stream_mgr_af9d67dd0e502e5603a2921099916e2ab.html#af9d67dd0e502e5603a2921099916e2ab">AK::StreamMgr::Create</a>( stmSettings ) )</div>
+<div class="line">    <span class="keywordflow">if</span> ( !AK::StreamMgr::Create( stmSettings ) )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not create the Streaming Manager&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -112,13 +112,13 @@ Initializing the Streaming Manager</h1>
 <div class="line">    <span class="comment">// Note that you can override the default low-level I/O module with your own. </span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <a class="code" href="struct_ak_device_settings.html">AkDeviceSettings</a> deviceSettings;</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_stream_mgr_a7d01e09a9bb6b6d34c2bb8f4c8995214.html#a7d01e09a9bb6b6d34c2bb8f4c8995214">AK::StreamMgr::GetDefaultDeviceSettings</a>( deviceSettings );</div>
+<div class="line">    AK::StreamMgr::GetDefaultDeviceSettings( deviceSettings );</div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// Customize the streaming device settings here.</span></div>
 <div class="line">    </div>
 <div class="line">    <span class="comment">// CAkFilePackageLowLevelIODeferred::Init() creates a streaming device</span></div>
 <div class="line">    <span class="comment">// in the Stream Manager, and registers itself as the File Location Resolver.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( g_lowLevelIO.Init( deviceSettings ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( g_lowLevelIO.Init( deviceSettings ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not create the streaming device and Low-Level I/O system&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -150,10 +150,10 @@ Initializing the sound engine</h1>
 <div class="line">    </div>
 <div class="line">    <a class="code" href="struct_ak_init_settings.html">AkInitSettings</a> initSettings;</div>
 <div class="line">    <a class="code" href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a> platformInitSettings;</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e.html#a03381fc17e1b0ee16c2ab501c647ab9e">AK::SoundEngine::GetDefaultInitSettings</a>( initSettings );</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d.html#aecdb9cd8f2d7f461ef1a58f5f5f5725d">AK::SoundEngine::GetDefaultPlatformInitSettings</a>( platformInitSettings );</div>
+<div class="line">    AK::SoundEngine::GetDefaultInitSettings( initSettings );</div>
+<div class="line">    AK::SoundEngine::GetDefaultPlatformInitSettings( platformInitSettings );</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a>( &amp;initSettings, &amp;platformInitSettings ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::SoundEngine::Init( &amp;initSettings, &amp;platformInitSettings ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not initialize the Sound Engine.&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -179,9 +179,9 @@ Initializing the music engine</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    </div>
 <div class="line">    <a class="code" href="struct_ak_music_settings.html">AkMusicSettings</a> musicInit;</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_music_engine_a31b36d28cc268c9ee2593304ce4451bb.html#a31b36d28cc268c9ee2593304ce4451bb">AK::MusicEngine::GetDefaultInitSettings</a>( musicInit );</div>
+<div class="line">    AK::MusicEngine::GetDefaultInitSettings( musicInit );</div>
 <div class="line">        </div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_music_engine_ac8c7f440e316f5502a3ed786864011f2.html#ac8c7f440e316f5502a3ed786864011f2">AK::MusicEngine::Init</a>( &amp;musicInit ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::MusicEngine::Init( &amp;musicInit ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not initialize the Music Engine.&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -191,7 +191,7 @@ Initializing the music engine</h1>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="initialization_spatialaudio"></a>
 Initializing Spatial Audio</h1>
-<p>If your project uses Wwise Spatial Audio, the Spatial Audio library must also be initialized after the sound engine. For general information regarding how to use Spatial Audio, refer to <a class="el" href="spatial_audio.html#spatial_audio_api">API Setup</a>. Refer to <a class="el" href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a> to see the various parameters that are available to configure Spatial Audio.</p>
+<p>If your project uses Wwise Spatial Audio, the Spatial Audio library must also be initialized after the sound engine. For general information regarding how to use Spatial Audio, refer to API Setup. Refer to <a class="el" href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a> to see the various parameters that are available to configure Spatial Audio.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> To use Spatial Audio, you need to link with the Spatial Audio module. </td></tr>
@@ -210,7 +210,7 @@ Initializing Spatial Audio</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line"> </div>
 <div class="line">    <a class="code" href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a> settings; <span class="comment">// The constructor fills AkSpatialAudioInitSettings with the recommended default settings. </span></div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_spatial_audio_a389709f9aaee2b3bdfbbe5cb352522ee.html#a389709f9aaee2b3bdfbbe5cb352522ee">AK::SpatialAudio::Init</a>( &amp;settings ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::SpatialAudio::Init( &amp;settings ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not initialize the Spatial Audio.&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -245,8 +245,8 @@ Initializing communications</h1>
 <div class="line">    <span class="comment">// Initialize communications (not in release build!)</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <a class="code" href="struct_ak_comm_settings.html">AkCommSettings</a> commSettings;</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_comm_a3280f8b7ad6261d8b2a4bdf39c234fa7.html#a3280f8b7ad6261d8b2a4bdf39c234fa7">AK::Comm::GetDefaultInitSettings</a>( commSettings );</div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init</a>( commSettings ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    AK::Comm::GetDefaultInitSettings( commSettings );</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::Comm::Init( commSettings ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not initialize communication.&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -255,43 +255,43 @@ Initializing communications</h1>
 <div class="line"> </div>
 <div class="line">    (...)</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>You have now initialized all of the sound engine's modules. You should then register the plug-ins (see <a class="el" href="quickstart_sample_integration_plugins.html#soundengine_integration_effects">Plug-in Example</a>). Refer to <a class="el" href="workingwithsdks_framerendering.html">Create Recurring Calls to Perform Audio Processing</a> for details on the calls you must make in your game loop to process the audio.</p>
+</div><!-- fragment --><p>You have now initialized all of the sound engine's modules. You should then register the plug-ins (see Plug-in Example). Refer to <a class="el" href="workingwithsdks_framerendering.html">Create Recurring Calls to Perform Audio Processing</a> for details on the calls you must make in your game loop to process the audio.</p>
 <h2><a class="anchor" id="initialization_comm_console_lib"></a>
 Console specific communication library</h2>
-<p>Some console communication libraries don't balance the initialization/termination calls properly; therefore, calling <a class="el" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">AK::Comm::Term</a> will terminate the underlying low-level communication library for the console. This effectively closes all TCP/IP communication for the game. If your game needs to keep the communication libraries enabled after termination, <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> (used with Ak::Comm:Init) has a parameter to initialize the system library or not. If you choose to initialize the communication library yourself, check the code used by the Wwise sound engine below. The game should do something similar.</p>
+<p>Some console communication libraries don't balance the initialization/termination calls properly; therefore, calling AK::Comm::Term will terminate the underlying low-level communication library for the console. This effectively closes all TCP/IP communication for the game. If your game needs to keep the communication libraries enabled after termination, <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> (used with Ak::Comm:Init) has a parameter to initialize the system library or not. If you choose to initialize the communication library yourself, check the code used by the Wwise sound engine below. The game should do something similar.</p>
 <div platform="Windows" open="1"></div><p> Windows sockets initialization: <br  />
  </p><div class="fragment"><div class="line">WSAData wsaData = { 0 };</div>
 <div class="line">::WSAStartup( MAKEWORD( 2, 2 ), &amp;wsaData )  </div>
 </div><!-- fragment --><p>Termination: </p><div class="fragment"><div class="line">::WSACleanup();</div>
 </div><!-- fragment --> <div platform="Windows" open="0"></div><h2><a class="anchor" id="initialization_comm_ports"></a>
 Communication ports</h2>
-<p>The <a class="el" href="struct_ak_comm_settings_a270a524ba5f6bad393b4de9b64a3981c.html#a270a524ba5f6bad393b4de9b64a3981c">AkCommSettings::ports</a> member of the <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> structure represents network ports used for communication between the Wwise authoring application and the sound engine. All of these ports are opened in the game when Wwise communication is enabled.</p>
+<p>The AkCommSettings::ports member of the <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> structure represents network ports used for communication between the Wwise authoring application and the sound engine. All of these ports are opened in the game when Wwise communication is enabled.</p>
 <h3><a class="anchor" id="initialization_comm_ports_discovery_broadcast"></a>
 One Fixed Port: Discovery Broadcast</h3>
-<p>One of the ports, <a class="el" href="struct_ak_comm_settings_1_1_ports_ac18f3080b45b5eba2634527d5d27e75c.html#ac18f3080b45b5eba2634527d5d27e75c">AkCommSettings::Ports::uDiscoveryBroadcast</a>, cannot be dynamic (cannot be set to 0). The authoring application needs to be aware of it in order to discover games on the network. Furthermore, the value specified here must be the same value specified in the Network tab of the Project Settings within the authoring application.</p>
+<p>One of the ports, AkCommSettings::Ports::uDiscoveryBroadcast, cannot be dynamic (cannot be set to 0). The authoring application needs to be aware of it in order to discover games on the network. Furthermore, the value specified here must be the same value specified in the Network tab of the Project Settings within the authoring application.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> If your team is working on multiple games using Wwise, you might want to use different Discovery Broadcast ports for each game. That way when you open the Remote Connections window in the Wwise authoring application, only games corresponding to the currently opened Wwise project will be listed. When changing this port, be sure to change it both in the Project Settings within the authoring application <em>and</em> in the <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> structure you pass to <a class="el" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init()</a> in the game. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> If your team is working on multiple games using Wwise, you might want to use different Discovery Broadcast ports for each game. That way when you open the Remote Connections window in the Wwise authoring application, only games corresponding to the currently opened Wwise project will be listed. When changing this port, be sure to change it both in the Project Settings within the authoring application <em>and</em> in the <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> structure you pass to AK::Comm::Init() in the game. </td></tr>
 </table>
 <h3><a class="anchor" id="initialization_comm_ports_dynamic"></a>
 One Dynamic Port</h3>
 <p>The other port in the structure can be dynamic (or "ephemeral"). This means that instead of using a fixed port, one is automatically picked by the operating system:</p>
 <ul>
-<li><a class="el" href="struct_ak_comm_settings_1_1_ports_a2980cfef40f976dd403f8f48c0789265.html#a2980cfef40f976dd403f8f48c0789265">AkCommSettings::Ports::uCommand</a></li>
+<li>AkCommSettings::Ports::uCommand</li>
 </ul>
 <p>This ports is dynamic by default. It is recommended to keep it dynamic in order to minimize chances of conflicts with other applications.</p>
-<p>If it conflicts with ports used by other components of your game, change it in the <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> structure before calling <a class="el" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init()</a>.</p>
+<p>If it conflicts with ports used by other components of your game, change it in the <a class="el" href="struct_ak_comm_settings.html">AkCommSettings</a> structure before calling AK::Comm::Init().</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> In a multi-platform game, it is valid to use different ports on different platforms for <a class="el" href="struct_ak_comm_settings_1_1_ports_a2980cfef40f976dd403f8f48c0789265.html#a2980cfef40f976dd403f8f48c0789265">AkCommSettings::Ports::uCommand</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> In a multi-platform game, it is valid to use different ports on different platforms for AkCommSettings::Ports::uCommand. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> For more information on dynamic/ephemeral ports, consult these articles:</p>
 <ul>
-<li><a href="http://www.iana.org/assignments/port-numbers" target="_blank">Service Name and Transport Protocol Port Number Registry</a></li>
-<li><a href="http://en.wikipedia.org/wiki/Ephemeral_port" target="_blank">Ephemeral port</a></li>
-<li><a href="https://support.microsoft.com/en-us/help/929851/the-default-dynamic-port-range-for-tcp-ip-has-changed-in-windows-vista" target="_blank">The default dynamic port range for TCP/IP has changed since Windows Vista and in Windows Server 2008</a> </li>
+<li>Service Name and Transport Protocol Port Number Registry</li>
+<li>Ephemeral port</li>
+<li>The default dynamic port range for TCP/IP has changed since Windows Vista and in Windows Server 2008 </li>
 </ul>
 </td></tr>
 </table>
@@ -303,33 +303,34 @@ One More Port (Authoring Application Only)</h3>
 </div><!-- PageDoc -->
 <div class="ttc" id="a_ak_communication_8h_html"><div class="ttname"><a href="_ak_communication_8h.html">AkCommunication.h</a></div></div>
 <div class="ttc" id="a_ak_sound_engine_8h_html"><div class="ttname"><a href="_ak_sound_engine_8h.html">AkSoundEngine.h</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f_html_a9a26da64092b97243844df77cbcdbf5f"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkInitSettings *in_pSettings, AkPlatformInitSettings *in_pPlatformSettings)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_spatial_audio_a389709f9aaee2b3bdfbbe5cb352522ee_html_a389709f9aaee2b3bdfbbe5cb352522ee"><div class="ttname"><a href="namespace_a_k_1_1_spatial_audio_a389709f9aaee2b3bdfbbe5cb352522ee.html#a389709f9aaee2b3bdfbbe5cb352522ee">AK::SpatialAudio::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkSpatialAudioInitSettings &amp;in_initSettings)</div><div class="ttdoc">Initialize the SpatialAudio API.</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_memory_mgr_a570a4ed4f667c187d21a821d846f4567_html_a570a4ed4f667c187d21a821d846f4567"><div class="ttname"><a href="namespace_a_k_1_1_memory_mgr_a570a4ed4f667c187d21a821d846f4567.html#a570a4ed4f667c187d21a821d846f4567">AK::MemoryMgr::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkMemSettings *in_pSettings)</div></div>
-<div class="ttc" id="astruct_ak_platform_init_settings_html"><div class="ttname"><a href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_win_sound_engine_8h_source.html#l00044">AkWinSoundEngine.h:45</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_a50fe8111fcb883651390fab6e9dc5ebc_html_a50fe8111fcb883651390fab6e9dc5ebc"><div class="ttname"><a href="namespace_a_k_1_1_stream_mgr_a50fe8111fcb883651390fab6e9dc5ebc.html#a50fe8111fcb883651390fab6e9dc5ebc">AK::StreamMgr::GetDefaultSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultSettings(AkStreamMgrSettings &amp;out_settings)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname"><a href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
-<div class="ttc" id="astruct_ak_device_settings_html"><div class="ttname"><a href="struct_ak_device_settings.html">AkDeviceSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_stream_mgr_module_8h_source.html#l00058">AkStreamMgrModule.h:59</a></div></div>
-<div class="ttc" id="astruct_ak_music_settings_html"><div class="ttname"><a href="struct_ak_music_settings.html">AkMusicSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_music_engine_8h_source.html#l00044">AkMusicEngine.h:45</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_music_engine_a31b36d28cc268c9ee2593304ce4451bb_html_a31b36d28cc268c9ee2593304ce4451bb"><div class="ttname"><a href="namespace_a_k_1_1_music_engine_a31b36d28cc268c9ee2593304ce4451bb.html#a31b36d28cc268c9ee2593304ce4451bb">AK::MusicEngine::GetDefaultInitSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkMusicSettings &amp;out_settings)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a></div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00215">AkTypes.h:215</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e_html_a03381fc17e1b0ee16c2ab501c647ab9e"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e.html#a03381fc17e1b0ee16c2ab501c647ab9e">AK::SoundEngine::GetDefaultInitSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkInitSettings &amp;out_settings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f_html_a9a26da64092b97243844df77cbcdbf5f"><div class="ttname">AK::SoundEngine::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkInitSettings *in_pSettings, AkPlatformInitSettings *in_pPlatformSettings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_spatial_audio_a389709f9aaee2b3bdfbbe5cb352522ee_html_a389709f9aaee2b3bdfbbe5cb352522ee"><div class="ttname">AK::SpatialAudio::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkSpatialAudioInitSettings &amp;in_initSettings)</div><div class="ttdoc">Initialize the SpatialAudio API.</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_memory_mgr_a570a4ed4f667c187d21a821d846f4567_html_a570a4ed4f667c187d21a821d846f4567"><div class="ttname">AK::MemoryMgr::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkMemSettings *in_pSettings)</div></div>
+<div class="ttc" id="astruct_ak_platform_init_settings_html"><div class="ttname"><a href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a></div><div class="ttdef"><b>Definition:</b> AkWinSoundEngine.h:45</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_a50fe8111fcb883651390fab6e9dc5ebc_html_a50fe8111fcb883651390fab6e9dc5ebc"><div class="ttname">AK::StreamMgr::GetDefaultSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultSettings(AkStreamMgrSettings &amp;out_settings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname">AK::Comm::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
+<div class="ttc" id="astruct_ak_device_settings_html"><div class="ttname"><a href="struct_ak_device_settings.html">AkDeviceSettings</a></div><div class="ttdef"><b>Definition:</b> AkStreamMgrModule.h:59</div></div>
+<div class="ttc" id="astruct_ak_music_settings_html"><div class="ttname"><a href="struct_ak_music_settings.html">AkMusicSettings</a></div><div class="ttdef"><b>Definition:</b> AkMusicEngine.h:45</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_music_engine_a31b36d28cc268c9ee2593304ce4451bb_html_a31b36d28cc268c9ee2593304ce4451bb"><div class="ttname">AK::MusicEngine::GetDefaultInitSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkMusicSettings &amp;out_settings)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname">AK_Success</div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:215</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e_html_a03381fc17e1b0ee16c2ab501c647ab9e"><div class="ttname">AK::SoundEngine::GetDefaultInitSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkInitSettings &amp;out_settings)</div></div>
 <div class="ttc" id="a_i_ak_stream_mgr_8h_html"><div class="ttname"><a href="_i_ak_stream_mgr_8h.html">IAkStreamMgr.h</a></div></div>
 <div class="ttc" id="a_ak_module_8h_html"><div class="ttname"><a href="_ak_module_8h.html">AkModule.h</a></div></div>
-<div class="ttc" id="astruct_ak_mem_settings_html"><div class="ttname"><a href="struct_ak_mem_settings.html">AkMemSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_module_8h_source.html#l00140">AkModule.h:141</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_memory_mgr_ada3c244e4c16e6863cec97eef039319b_html_ada3c244e4c16e6863cec97eef039319b"><div class="ttname"><a href="namespace_a_k_1_1_memory_mgr_ada3c244e4c16e6863cec97eef039319b.html#ada3c244e4c16e6863cec97eef039319b">AK::MemoryMgr::GetDefaultSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultSettings(AkMemSettings &amp;out_pMemSettings)</div><div class="ttdoc">Obtain the default initialization settings for the default implementation of the Memory Manager.</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a3280f8b7ad6261d8b2a4bdf39c234fa7_html_a3280f8b7ad6261d8b2a4bdf39c234fa7"><div class="ttname"><a href="namespace_a_k_1_1_comm_a3280f8b7ad6261d8b2a4bdf39c234fa7.html#a3280f8b7ad6261d8b2a4bdf39c234fa7">AK::Comm::GetDefaultInitSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkCommSettings &amp;out_settings)</div></div>
-<div class="ttc" id="astruct_ak_spatial_audio_init_settings_html"><div class="ttname"><a href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a></div><div class="ttdoc">Initialization settings of the spatial audio module.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_spatial_audio_8h_source.html#l00038">AkSpatialAudio.h:39</a></div></div>
+<div class="ttc" id="astruct_ak_mem_settings_html"><div class="ttname"><a href="struct_ak_mem_settings.html">AkMemSettings</a></div><div class="ttdef"><b>Definition:</b> AkModule.h:141</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_memory_mgr_ada3c244e4c16e6863cec97eef039319b_html_ada3c244e4c16e6863cec97eef039319b"><div class="ttname">AK::MemoryMgr::GetDefaultSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultSettings(AkMemSettings &amp;out_pMemSettings)</div><div class="ttdoc">Obtain the default initialization settings for the default implementation of the Memory Manager.</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a3280f8b7ad6261d8b2a4bdf39c234fa7_html_a3280f8b7ad6261d8b2a4bdf39c234fa7"><div class="ttname">AK::Comm::GetDefaultInitSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkCommSettings &amp;out_settings)</div></div>
+<div class="ttc" id="astruct_ak_spatial_audio_init_settings_html"><div class="ttname"><a href="struct_ak_spatial_audio_init_settings.html">AkSpatialAudioInitSettings</a></div><div class="ttdoc">Initialization settings of the spatial audio module.</div><div class="ttdef"><b>Definition:</b> AkSpatialAudio.h:39</div></div>
 <div class="ttc" id="a_ak_memory_mgr_8h_html"><div class="ttname"><a href="_ak_memory_mgr_8h.html">AkMemoryMgr.h</a></div></div>
 <div class="ttc" id="a_common_2_ak_platform_funcs_8h_html"><div class="ttname"><a href="_common_2_ak_platform_funcs_8h.html">AkPlatformFuncs.h</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d_html_aecdb9cd8f2d7f461ef1a58f5f5f5725d"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d.html#aecdb9cd8f2d7f461ef1a58f5f5f5725d">AK::SoundEngine::GetDefaultPlatformInitSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultPlatformInitSettings(AkPlatformInitSettings &amp;out_platformSettings)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_af9d67dd0e502e5603a2921099916e2ab_html_af9d67dd0e502e5603a2921099916e2ab"><div class="ttname"><a href="namespace_a_k_1_1_stream_mgr_af9d67dd0e502e5603a2921099916e2ab.html#af9d67dd0e502e5603a2921099916e2ab">AK::StreamMgr::Create</a></div><div class="ttdeci">AKSOUNDENGINE_API IAkStreamMgr * Create(const AkStreamMgrSettings &amp;in_settings)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_a7d01e09a9bb6b6d34c2bb8f4c8995214_html_a7d01e09a9bb6b6d34c2bb8f4c8995214"><div class="ttname"><a href="namespace_a_k_1_1_stream_mgr_a7d01e09a9bb6b6d34c2bb8f4c8995214.html#a7d01e09a9bb6b6d34c2bb8f4c8995214">AK::StreamMgr::GetDefaultDeviceSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultDeviceSettings(AkDeviceSettings &amp;out_settings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d_html_aecdb9cd8f2d7f461ef1a58f5f5f5725d"><div class="ttname">AK::SoundEngine::GetDefaultPlatformInitSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultPlatformInitSettings(AkPlatformInitSettings &amp;out_platformSettings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_af9d67dd0e502e5603a2921099916e2ab_html_af9d67dd0e502e5603a2921099916e2ab"><div class="ttname">AK::StreamMgr::Create</div><div class="ttdeci">AKSOUNDENGINE_API IAkStreamMgr * Create(const AkStreamMgrSettings &amp;in_settings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_stream_mgr_a7d01e09a9bb6b6d34c2bb8f4c8995214_html_a7d01e09a9bb6b6d34c2bb8f4c8995214"><div class="ttname">AK::StreamMgr::GetDefaultDeviceSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultDeviceSettings(AkDeviceSettings &amp;out_settings)</div></div>
 <div class="ttc" id="a_ak_music_engine_8h_html"><div class="ttname"><a href="_ak_music_engine_8h.html">AkMusicEngine.h</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_music_engine_ac8c7f440e316f5502a3ed786864011f2_html_ac8c7f440e316f5502a3ed786864011f2"><div class="ttname"><a href="namespace_a_k_1_1_music_engine_ac8c7f440e316f5502a3ed786864011f2.html#ac8c7f440e316f5502a3ed786864011f2">AK::MusicEngine::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkMusicSettings *in_pSettings)</div></div>
-<div class="ttc" id="astruct_ak_init_settings_html"><div class="ttname"><a href="struct_ak_init_settings.html">AkInitSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_sound_engine_8h_source.html#l00214">AkSoundEngine.h:215</a></div></div>
-<div class="ttc" id="astruct_ak_stream_mgr_settings_html"><div class="ttname"><a href="struct_ak_stream_mgr_settings.html">AkStreamMgrSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_stream_mgr_module_8h_source.html#l00049">AkStreamMgrModule.h:50</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_music_engine_ac8c7f440e316f5502a3ed786864011f2_html_ac8c7f440e316f5502a3ed786864011f2"><div class="ttname">AK::MusicEngine::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkMusicSettings *in_pSettings)</div></div>
+<div class="ttc" id="astruct_ak_init_settings_html"><div class="ttname"><a href="struct_ak_init_settings.html">AkInitSettings</a></div><div class="ttdef"><b>Definition:</b> AkSoundEngine.h:215</div></div>
+<div class="ttc" id="astruct_ak_stream_mgr_settings_html"><div class="ttname"><a href="struct_ak_stream_mgr_settings.html">AkStreamMgrSettings</a></div><div class="ttdef"><b>Definition:</b> AkStreamMgrModule.h:50</div></div>
 <div class="ttc" id="a_ak_spatial_audio_8h_html"><div class="ttname"><a href="_ak_spatial_audio_8h.html">AkSpatialAudio.h</a></div></div>
-<div class="ttc" id="astruct_ak_comm_settings_html"><div class="ttname"><a href="struct_ak_comm_settings.html">AkCommSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_communication_8h_source.html#l00048">AkCommunication.h:49</a></div></div>
+<div class="ttc" id="astruct_ak_comm_settings_html"><div class="ttname"><a href="struct_ak_comm_settings.html">AkCommSettings</a></div><div class="ttdef"><b>Definition:</b> AkCommunication.h:49</div></div>
 </body>
 </html>
+

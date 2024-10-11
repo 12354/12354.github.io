@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -64,11 +64,11 @@ Setting Obstruction and Occlusion</h1>
 <div class="caption">
 Customizing the Project Obstruction and Occlusion Curves in Wwise</div></div>
 <p>Using the curve of this snapshot, setting an obstruction value of 1.0f (100%) will produce a volume change of -50 dB on the source object.</p>
-<p>For more information on customizing the project obstruction and occlusion curves with Wwise, refer to the <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=defining_obstruction_and_occlusion_curves_for_project" target="_blank">Wwise Help</a>.</p>
-<p>Obstruction and Occlusion can also be disabled, enabled, and set per sound with the help of the Obstruction and Occlusion curves of the Attenuation ShareSet. For more information, refer to the <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=applying_distance_based_attenuation" target="_blank">Applying Attenuation</a> section of the Wwise Help.</p>
+<p>For more information on customizing the project obstruction and occlusion curves with Wwise, refer to the Wwise Help.</p>
+<p>Obstruction and Occlusion can also be disabled, enabled, and set per sound with the help of the Obstruction and Occlusion curves of the Attenuation ShareSet. For more information, refer to the Applying Attenuation section of the Wwise Help.</p>
 <p>Game designers must calculate the obstruction and occlusion for each game object affecting each listener and pass down the values to the sound engine using the following call:</p>
 <ul>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba.html#a1b3e18a25b405e55ba82de9b70cd11ba">AK::SoundEngine::SetObjectObstructionAndOcclusion()</a></li>
+<li>AK::SoundEngine::SetObjectObstructionAndOcclusion()</li>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
@@ -86,9 +86,9 @@ Example: Setting Obstruction and Occlusion</h2>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">for</span>( <span class="keywordtype">int</span> iGameObject = 0; iGameObject &lt; nbObjects; iGameObject++ )</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> fCalculatedObs, fCalculatedOcc;</div>
+<div class="line">        AkReal32 fCalculatedObs, fCalculatedOcc;</div>
 <div class="line">        pGeometryModule-&gt;GetObsAndOccForGameObject( iGameObject, MAIN_LISTENER, &amp;fCalculatedObs, &amp;fCalculatedOcc );</div>
-<div class="line">        <a class="code" href="namespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba.html#a1b3e18a25b405e55ba82de9b70cd11ba">AK::SoundEngine::SetObjectObstructionAndOcclusion</a>( iGameObject, MAIN_LISTENER, fCalculatedObs, fCalculatedOcc );</div>
+<div class="line">        AK::SoundEngine::SetObjectObstructionAndOcclusion( iGameObject, MAIN_LISTENER, fCalculatedObs, fCalculatedOcc );</div>
 <div class="line">    }</div>
 <div class="line">    </div>
 <div class="line">    (...)</div>
@@ -96,12 +96,13 @@ Example: Setting Obstruction and Occlusion</h2>
 </div><!-- fragment --><dl class="section see"><dt>See also</dt><dd><ul>
 <li><a class="el" href="concept_environments.html">Concept: Environments and game-defined auxiliary sends</a></li>
 <li><a class="el" href="soundengine_environments.html">Integration Details - Environments and Game-defined Auxiliary Sends</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba.html#a1b3e18a25b405e55ba82de9b70cd11ba">AK::SoundEngine::SetObjectObstructionAndOcclusion()</a> </li>
+<li>AK::SoundEngine::SetObjectObstructionAndOcclusion() </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="a_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98_html_afc38459f26e2b23defe588026e886a98"><div class="ttname"><a href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a></div><div class="ttdeci">float AkReal32</div><div class="ttdoc">32-bit floating point</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00046">AkNumeralTypes.h:46</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba_html_a1b3e18a25b405e55ba82de9b70cd11ba"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba.html#a1b3e18a25b405e55ba82de9b70cd11ba">AK::SoundEngine::SetObjectObstructionAndOcclusion</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetObjectObstructionAndOcclusion(AkGameObjectID in_EmitterID, AkGameObjectID in_ListenerID, AkReal32 in_fObstructionLevel, AkReal32 in_fOcclusionLevel)</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98_html_afc38459f26e2b23defe588026e886a98"><div class="ttname">AkReal32</div><div class="ttdeci">float AkReal32</div><div class="ttdoc">32-bit floating point</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:46</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a1b3e18a25b405e55ba82de9b70cd11ba_html_a1b3e18a25b405e55ba82de9b70cd11ba"><div class="ttname">AK::SoundEngine::SetObjectObstructionAndOcclusion</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetObjectObstructionAndOcclusion(AkGameObjectID in_EmitterID, AkGameObjectID in_ListenerID, AkReal32 in_fObstructionLevel, AkReal32 in_fOcclusionLevel)</div></div>
 </body>
 </html>
+

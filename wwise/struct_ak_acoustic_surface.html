@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -42,24 +42,25 @@
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:a0eb9ec2455e04c3541f7caf58fd3bd7e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_acoustic_surface_a0eb9ec2455e04c3541f7caf58fd3bd7e.html#a0eb9ec2455e04c3541f7caf58fd3bd7e">AkAcousticSurface</a> ()</td></tr>
-<tr class="memdesc:a0eb9ec2455e04c3541f7caf58fd3bd7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  <a href="struct_ak_acoustic_surface_a0eb9ec2455e04c3541f7caf58fd3bd7e.html#a0eb9ec2455e04c3541f7caf58fd3bd7e">More...</a><br /></td></tr>
+<tr class="memitem:a0eb9ec2455e04c3541f7caf58fd3bd7e"><td class="memItemLeft" align="right" valign="top">&#160;</td><td class="memItemRight" valign="bottom">AkAcousticSurface ()</td></tr>
+<tr class="memdesc:a0eb9ec2455e04c3541f7caf58fd3bd7e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Constructor.  More...<br /></td></tr>
 <tr class="separator:a0eb9ec2455e04c3541f7caf58fd3bd7e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a875e008bcff3807257f5bfeec8207e66"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_acoustic_surface_a875e008bcff3807257f5bfeec8207e66.html#a875e008bcff3807257f5bfeec8207e66">textureID</a></td></tr>
+<tr class="memitem:a875e008bcff3807257f5bfeec8207e66"><td class="memItemLeft" align="right" valign="top">AkUInt32&#160;</td><td class="memItemRight" valign="bottom">textureID</td></tr>
 <tr class="separator:a875e008bcff3807257f5bfeec8207e66"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab0ec8a6eee25b28b4f8b9e91dbff17da"><td class="memItemLeft" align="right" valign="top"><a class="el" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_acoustic_surface_ab0ec8a6eee25b28b4f8b9e91dbff17da.html#ab0ec8a6eee25b28b4f8b9e91dbff17da">transmissionLoss</a></td></tr>
+<tr class="memitem:ab0ec8a6eee25b28b4f8b9e91dbff17da"><td class="memItemLeft" align="right" valign="top">AkReal32&#160;</td><td class="memItemRight" valign="bottom">transmissionLoss</td></tr>
 <tr class="separator:ab0ec8a6eee25b28b4f8b9e91dbff17da"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a05d4856b1c911d231702254f41d94fab"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="struct_ak_acoustic_surface_a05d4856b1c911d231702254f41d94fab.html#a05d4856b1c911d231702254f41d94fab">strName</a></td></tr>
-<tr class="memdesc:a05d4856b1c911d231702254f41d94fab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name to describe this surface.  <a href="struct_ak_acoustic_surface_a05d4856b1c911d231702254f41d94fab.html#a05d4856b1c911d231702254f41d94fab">More...</a><br /></td></tr>
+<tr class="memitem:a05d4856b1c911d231702254f41d94fab"><td class="memItemLeft" align="right" valign="top">const char *&#160;</td><td class="memItemRight" valign="bottom">strName</td></tr>
+<tr class="memdesc:a05d4856b1c911d231702254f41d94fab"><td class="mdescLeft">&#160;</td><td class="mdescRight">Name to describe this surface.  More...<br /></td></tr>
 <tr class="separator:a05d4856b1c911d231702254f41d94fab"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
-<div class="textblock"><p>Describes the acoustic surface properties of one or more triangles. An single acoustic surface may describe any number of triangles, depending on the granularity desired. For example, if desired for debugging, one could create a unique <code><a class="el" href="struct_ak_acoustic_surface.html">AkAcousticSurface</a></code> struct for each triangle, and define a unique name for each. Alternatively, a single <code><a class="el" href="struct_ak_acoustic_surface.html">AkAcousticSurface</a></code> could be used to describe all triangles. In fact it is not necessary to define any acoustic surfaces at all. If the <code><a class="el" href="struct_ak_triangle_aefb228938046af58e01307605f391171.html#aefb228938046af58e01307605f391171">AkTriangle::surface</a></code> field is left as <code>AK_INVALID_SURFACE</code>, then a default-constructed <code><a class="el" href="struct_ak_acoustic_surface.html">AkAcousticSurface</a></code> is used. </p>
+<div class="textblock"><p>Describes the acoustic surface properties of one or more triangles. An single acoustic surface may describe any number of triangles, depending on the granularity desired. For example, if desired for debugging, one could create a unique <code><a class="el" href="struct_ak_acoustic_surface.html">AkAcousticSurface</a></code> struct for each triangle, and define a unique name for each. Alternatively, a single <code><a class="el" href="struct_ak_acoustic_surface.html">AkAcousticSurface</a></code> could be used to describe all triangles. In fact it is not necessary to define any acoustic surfaces at all. If the <code>AkTriangle::surface</code> field is left as <code>AK_INVALID_SURFACE</code>, then a default-constructed <code><a class="el" href="struct_ak_acoustic_surface.html">AkAcousticSurface</a></code> is used. </p>
 
-<p class="definition">Definition at line <a class="el" href="_ak_spatial_audio_8h_source.html#l00184">184</a> of file <a class="el" href="_ak_spatial_audio_8h_source.html">AkSpatialAudio.h</a>.</p>
+<p class="definition">Definition at line 184 of file <a class="el" href="_ak_spatial_audio_8h_source.html">AkSpatialAudio.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+

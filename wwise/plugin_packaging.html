@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -35,13 +35,13 @@
 <div class="contents">
 <div class="textblock"><p>This page is intended for plug-in authors. It seeks to inform them of the requirements related to publishing a Wwise plug-in that is compatible with both the Audiokinetic Launcher and the Wwise plug-ins Store. For more details on plug-in creation itself, please consult <a class="el" href="goingfurther_newplugins.html">Developing Community Plug-ins</a>.</p>
 <p>The following sections take you through the necessary steps to publishing a fully compatible Wwise plug-in:</p><ul>
-<li><a class="el" href="plugin_packaging.html#plugin_packaging_body">Plug-in packaging</a><ul>
-<li><a class="el" href="plugin_packaging.html#plugin_packaging_defs">Definitions</a></li>
-<li><a class="el" href="plugin_packaging.html#plugin_packaging_bundle_dir_struct">Bundle directory structure</a></li>
-<li><a class="el" href="plugin_packaging.html#plugin_packaging_bundle_metadata">Bundle metadata</a></li>
+<li>Plug-in packaging<ul>
+<li>Definitions</li>
+<li>Bundle directory structure</li>
+<li>Bundle metadata</li>
 </ul>
 </li>
-<li><a class="el" href="plugin_packaging.html#plugin_packaging_version_man">Version Management</a></li>
+<li>Version Management</li>
 </ul>
 <h1><a class="anchor" id="plugin_packaging_body"></a>
 Plug-in packaging</h1>
@@ -118,37 +118,37 @@ Bundle directory structure</h2>
 </table>
 <p>The folder structure inside of these archives must respect the following format. Please note that we only support 64-bit plug-ins in Wwise Authoring. We removed 32-bit support with Wwise 2017.2.</p>
 <div class="fragment"><div class="line">PluginName/</div>
-<div class="line">├── bundle.json</div>
-<div class="line">│  </div>
-<div class="line">├── Authoring.tar.xz</div>
-<div class="line">│   └── Authoring</div>
-<div class="line">│       ├── Help</div>
-<div class="line">│       ├── Data</div>
-<div class="line">│       |   └── Factory Assets</div>
-<div class="line">│       |       └── PluginName</div>
-<div class="line">│       └── x64</div>
-<div class="line">│           └── Release</div>
-<div class="line">│               └── bin</div>
-<div class="line">│                   └── plugins</div>
-<div class="line">│</div>
-<div class="line">├── SDK.tar.xz</div>
-<div class="line">│   └── SDK</div>
-<div class="line">│       └── include</div>
-<div class="line">│           └── <a class="code" href="namespace_a_k.html">AK</a></div>
-<div class="line">|               └── Plugin</div>
-<div class="line">│  </div>
-<div class="line">└── SDK_&lt;DeploymentPlatforms&gt;.tar.xz</div>
-<div class="line">    └── SDK</div>
-<div class="line">        └── &lt;SDKPlatforms&gt;</div>
-<div class="line">            ├── Release</div>
-<div class="line">            |   ├── bin</div>
-<div class="line">            |   └── lib</div>
-<div class="line">            ├── Debug</div>
-<div class="line">            |   ├── bin</div>
-<div class="line">            |   └── lib</div>
-<div class="line">            └── Profile</div>
-<div class="line">                ├── bin</div>
-<div class="line">                └── lib</div>
+<div class="line">â”œâ”€â”€ bundle.json</div>
+<div class="line">â”‚  </div>
+<div class="line">â”œâ”€â”€ Authoring.tar.xz</div>
+<div class="line">â”‚   â””â”€â”€ Authoring</div>
+<div class="line">â”‚       â”œâ”€â”€ Help</div>
+<div class="line">â”‚       â”œâ”€â”€ Data</div>
+<div class="line">â”‚       |   â””â”€â”€ Factory Assets</div>
+<div class="line">â”‚       |       â””â”€â”€ PluginName</div>
+<div class="line">â”‚       â””â”€â”€ x64</div>
+<div class="line">â”‚           â””â”€â”€ Release</div>
+<div class="line">â”‚               â””â”€â”€ bin</div>
+<div class="line">â”‚                   â””â”€â”€ plugins</div>
+<div class="line">â”‚</div>
+<div class="line">â”œâ”€â”€ SDK.tar.xz</div>
+<div class="line">â”‚   â””â”€â”€ SDK</div>
+<div class="line">â”‚       â””â”€â”€ include</div>
+<div class="line">â”‚           â””â”€â”€ <a class="code" href="namespace_a_k.html">AK</a></div>
+<div class="line">|               â””â”€â”€ Plugin</div>
+<div class="line">â”‚  </div>
+<div class="line">â””â”€â”€ SDK_&lt;DeploymentPlatforms&gt;.tar.xz</div>
+<div class="line">    â””â”€â”€ SDK</div>
+<div class="line">        â””â”€â”€ &lt;SDKPlatforms&gt;</div>
+<div class="line">            â”œâ”€â”€ Release</div>
+<div class="line">            |   â”œâ”€â”€ bin</div>
+<div class="line">            |   â””â”€â”€ lib</div>
+<div class="line">            â”œâ”€â”€ Debug</div>
+<div class="line">            |   â”œâ”€â”€ bin</div>
+<div class="line">            |   â””â”€â”€ lib</div>
+<div class="line">            â””â”€â”€ Profile</div>
+<div class="line">                â”œâ”€â”€ bin</div>
+<div class="line">                â””â”€â”€ lib</div>
 </div><!-- fragment --><table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> <b>Legal Notice</b> <br  />
@@ -158,65 +158,65 @@ Bundle directory structure</h2>
 Example</h3>
 <p>Here is an example of a plug-in bundle supporting the Wwise Authoring as well as the Linux_x32 and Linux_x64 Wwise SDK platforms.</p>
 <div class="fragment"><div class="line">PluginName/</div>
-<div class="line">├── bundle.json</div>
-<div class="line">│  </div>
-<div class="line">├── Authoring.tar.xz</div>
-<div class="line">│   └── Authoring</div>
-<div class="line">│       ├── Help</div>
-<div class="line">│       |   └── PluginName_UserGuide.pdf</div>
-<div class="line">│       ├── Data</div>
-<div class="line">│       |   └── Factory Assets</div>
-<div class="line">│       |       └── PluginName</div>
-<div class="line">│       |           ├── Manifest.xml</div>
-<div class="line">│       |           └── ...</div>
-<div class="line">│       └── x64</div>
-<div class="line">│           └── Release</div>
-<div class="line">│               └── bin</div>
-<div class="line">│                   └── plugins</div>
-<div class="line">│                       ├── PluginName.dll</div>
-<div class="line">│                       ├── PluginName.xml</div>
-<div class="line">│                       └── PluginName.txt</div>
-<div class="line">├── SDK.tar.xz</div>
-<div class="line">│   └── SDK</div>
-<div class="line">│       └── include</div>
-<div class="line">│           └── <a class="code" href="namespace_a_k.html">AK</a></div>
-<div class="line">|               └── Plugin</div>
-<div class="line">|                   └──  PluginName.h</div>
-<div class="line">│  </div>
-<div class="line">└── SDK_Linux.tar.xz</div>
-<div class="line">    └── SDK</div>
-<div class="line">        ├── Linux_x32</div>
-<div class="line">        |    ├── Release</div>
-<div class="line">        |    |   ├── bin</div>
-<div class="line">        |    |   |   └──  libPluginName.so</div>
-<div class="line">        |    |   └── lib</div>
-<div class="line">        |    |       └──  libPluginNameFX.a</div>
-<div class="line">        |    ├── Debug</div>
-<div class="line">        |    |   ├── bin</div>
-<div class="line">        |    |   |   └──  libPluginName.so</div>
-<div class="line">        |    |   └── lib</div>
-<div class="line">        |    |   |   └──  libPluginNameFX.a</div>
-<div class="line">        |    └── Profile</div>
-<div class="line">        |        ├── bin</div>
-<div class="line">        |        |   └──  libPluginName.so</div>
-<div class="line">        |        └── lib</div>
-<div class="line">        |            └──  libPluginNameFX.a</div>
-<div class="line">        └── Linux_x64</div>
-<div class="line">            ├── Release</div>
-<div class="line">            |   ├── bin</div>
-<div class="line">            |   |   └──  libPluginName.so</div>
-<div class="line">            |   └── lib</div>
-<div class="line">            |       └──  libPluginNameFX.a</div>
-<div class="line">            ├── Debug</div>
-<div class="line">            |   ├── bin</div>
-<div class="line">            |   |   └──  libPluginName.so</div>
-<div class="line">            |   └── lib</div>
-<div class="line">            |       └──  libPluginNameFX.a</div>
-<div class="line">            └── Profile</div>
-<div class="line">                ├── bin</div>
-<div class="line">                |   └──  libPluginName.so</div>
-<div class="line">                └── lib</div>
-<div class="line">                    └──  libPluginNameFX.a</div>
+<div class="line">â”œâ”€â”€ bundle.json</div>
+<div class="line">â”‚  </div>
+<div class="line">â”œâ”€â”€ Authoring.tar.xz</div>
+<div class="line">â”‚   â””â”€â”€ Authoring</div>
+<div class="line">â”‚       â”œâ”€â”€ Help</div>
+<div class="line">â”‚       |   â””â”€â”€ PluginName_UserGuide.pdf</div>
+<div class="line">â”‚       â”œâ”€â”€ Data</div>
+<div class="line">â”‚       |   â””â”€â”€ Factory Assets</div>
+<div class="line">â”‚       |       â””â”€â”€ PluginName</div>
+<div class="line">â”‚       |           â”œâ”€â”€ Manifest.xml</div>
+<div class="line">â”‚       |           â””â”€â”€ ...</div>
+<div class="line">â”‚       â””â”€â”€ x64</div>
+<div class="line">â”‚           â””â”€â”€ Release</div>
+<div class="line">â”‚               â””â”€â”€ bin</div>
+<div class="line">â”‚                   â””â”€â”€ plugins</div>
+<div class="line">â”‚                       â”œâ”€â”€ PluginName.dll</div>
+<div class="line">â”‚                       â”œâ”€â”€ PluginName.xml</div>
+<div class="line">â”‚                       â””â”€â”€ PluginName.txt</div>
+<div class="line">â”œâ”€â”€ SDK.tar.xz</div>
+<div class="line">â”‚   â””â”€â”€ SDK</div>
+<div class="line">â”‚       â””â”€â”€ include</div>
+<div class="line">â”‚           â””â”€â”€ <a class="code" href="namespace_a_k.html">AK</a></div>
+<div class="line">|               â””â”€â”€ Plugin</div>
+<div class="line">|                   â””â”€â”€  PluginName.h</div>
+<div class="line">â”‚  </div>
+<div class="line">â””â”€â”€ SDK_Linux.tar.xz</div>
+<div class="line">    â””â”€â”€ SDK</div>
+<div class="line">        â”œâ”€â”€ Linux_x32</div>
+<div class="line">        |    â”œâ”€â”€ Release</div>
+<div class="line">        |    |   â”œâ”€â”€ bin</div>
+<div class="line">        |    |   |   â””â”€â”€  libPluginName.so</div>
+<div class="line">        |    |   â””â”€â”€ lib</div>
+<div class="line">        |    |       â””â”€â”€  libPluginNameFX.a</div>
+<div class="line">        |    â”œâ”€â”€ Debug</div>
+<div class="line">        |    |   â”œâ”€â”€ bin</div>
+<div class="line">        |    |   |   â””â”€â”€  libPluginName.so</div>
+<div class="line">        |    |   â””â”€â”€ lib</div>
+<div class="line">        |    |   |   â””â”€â”€  libPluginNameFX.a</div>
+<div class="line">        |    â””â”€â”€ Profile</div>
+<div class="line">        |        â”œâ”€â”€ bin</div>
+<div class="line">        |        |   â””â”€â”€  libPluginName.so</div>
+<div class="line">        |        â””â”€â”€ lib</div>
+<div class="line">        |            â””â”€â”€  libPluginNameFX.a</div>
+<div class="line">        â””â”€â”€ Linux_x64</div>
+<div class="line">            â”œâ”€â”€ Release</div>
+<div class="line">            |   â”œâ”€â”€ bin</div>
+<div class="line">            |   |   â””â”€â”€  libPluginName.so</div>
+<div class="line">            |   â””â”€â”€ lib</div>
+<div class="line">            |       â””â”€â”€  libPluginNameFX.a</div>
+<div class="line">            â”œâ”€â”€ Debug</div>
+<div class="line">            |   â”œâ”€â”€ bin</div>
+<div class="line">            |   |   â””â”€â”€  libPluginName.so</div>
+<div class="line">            |   â””â”€â”€ lib</div>
+<div class="line">            |       â””â”€â”€  libPluginNameFX.a</div>
+<div class="line">            â””â”€â”€ Profile</div>
+<div class="line">                â”œâ”€â”€ bin</div>
+<div class="line">                |   â””â”€â”€  libPluginName.so</div>
+<div class="line">                â””â”€â”€ lib</div>
+<div class="line">                    â””â”€â”€  libPluginNameFX.a</div>
 </div><!-- fragment --><h2><a class="anchor" id="plugin_packaging_bundle_metadata"></a>
 Bundle metadata</h2>
 <p>The bundle.json file contained in the bundle should be structured as follows (all fields are mandatory unless specified).</p>
@@ -339,7 +339,7 @@ Bundle groups</h3>
 <p class="endtd"></p>
 </td></tr>
 <tr>
-<td>DeploymentPlatforms </td><td><p class="starttd">(<em>Please refer to the DeploymentPlatforms column in <a class="el" href="plugin_packaging.html#plugin_packaging_defs">Definitions</a></em>.) </p>
+<td>DeploymentPlatforms </td><td><p class="starttd">(<em>Please refer to the DeploymentPlatforms column in Definitions</em>.) </p>
 <p class="endtd"></p>
 </td></tr>
 </table>
@@ -445,6 +445,7 @@ Version Management</h1>
 <p>Each time we break compatibility, the plug-in vendor needs to release a new version of the bundle. Installing an incompatible version of a plug-in through the Launcher will be prevented. Plug-in bundles registered and hosted on audiokinetic.com will automatically appear as options during Wwise Installation, if they are compatible. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_html"><div class="ttname"><a href="namespace_a_k.html">AK</a></div><div class="ttdoc">Audiokinetic namespace.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_wwise_s_d_k_version_8cs_source.html#l00030">AkWwiseSDKVersion.cs:31</a></div></div>
+<div class="ttc" id="anamespace_a_k_html"><div class="ttname"><a href="namespace_a_k.html">AK</a></div><div class="ttdoc">Audiokinetic namespace.</div><div class="ttdef"><b>Definition:</b> AkWwiseSDKVersion.cs:31</div></div>
 </body>
 </html>
+

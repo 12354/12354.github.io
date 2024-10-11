@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -36,32 +36,33 @@
 <div class="textblock"><p>This page contains information that is specific to using the Wwise SDK for the Windows platform.</p>
 <h1><a class="anchor" id="Windows_Enabling_3DAudio"></a>
 Enabling 3D Audio</h1>
-<p>3D audio support is implemented using <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound. As such, 3D audio is only available when the user has enabled Spatial Sound on the endpoint (i.e., the audio device in Windows). Refer to <a href="https://docs.microsoft.com/en-us/windows/win32/coreaudio/spatial-sound" target="_blank">Microsoft Spatial Sound</a> for further details, including how to enable Spatial Sound on various platforms.</p>
+<p>3D audio support is implemented using <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound. As such, 3D audio is only available when the user has enabled Spatial Sound on the endpoint (i.e., the audio device in Windows). Refer to Microsoft Spatial Sound for further details, including how to enable Spatial Sound on various platforms.</p>
 <p>When Spatial Sound is enabled, the Main Mix is sent to <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound static objects (i.e., the channel bed) and the default channel configuration is 7.1.4. System Audio Objects are mapped to <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound dynamic objects. During initialization of the System Audio Device, Wwise detects if the endpoint is configured to output for headphones or home theater. Wwise uses the endpoint output configuration to determine which speaker configuration of the System Audio Device ShareSet to assign to the Main Mix.</p>
 <p>A passthrough mix is also created and sent out to a WASAPI stream if the endpoint is configured for headphones. If a passthrough mix is not created, then any signals intended for the passthrough mix are automatically directed to the main mix. For example, busses configured as <b>Same as passthrough mix</b> will instead have their mixing behaviour match the Main Mix for the device, as if they were configured for <b>Same as main mix</b>.</p>
 <p>The endpoint is configured to output for headphones if the endpoint is a 2-channel output. If the endpoint is <b>not</b> detected as a 2-channel output, then the endpoint is assumed to be a home theater setup.</p>
-<p>Because <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound dynamic object positions are expressed in meters, Wwise relies on the <code><a class="el" href="struct_ak_init_settings_acbb4594e7634edbe91adec361e2cf111.html#acbb4594e7634edbe91adec361e2cf111">AkInitSettings::fGameUnitsToMeters</a></code> setting to convert the units. If your project uses Game Units that are not in meters, make sure to properly initialize <code><a class="el" href="struct_ak_init_settings_acbb4594e7634edbe91adec361e2cf111.html#acbb4594e7634edbe91adec361e2cf111">AkInitSettings::fGameUnitsToMeters</a></code> with the correct conversion factor. Otherwise, some discrete objects might sound strange at close distances during binauralization.</p>
+<p>Because <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound dynamic object positions are expressed in meters, Wwise relies on the <code>AkInitSettings::fGameUnitsToMeters</code> setting to convert the units. If your project uses Game Units that are not in meters, make sure to properly initialize <code>AkInitSettings::fGameUnitsToMeters</code> with the correct conversion factor. Otherwise, some discrete objects might sound strange at close distances during binauralization.</p>
 <p>When Spatial Sound is disabled, 3D Audio support is disabled, and the Main Mix is simply sent to a WASAPI stream.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> Depending on which Spatial Sound engine is enabled on the endpoint, the number of available dynamic objects can vary. Most engines have less than 30 dynamic objects available, while the default value of the System Minimum Object Requirement property of the System Audio Device in Wwise is 32. With this default setting, audio objects are effectively disabled for most engines. To enable System Audio Objects, you must reduce the value of the System Minimum Object Requirement to a number below 30. A value of 16 is recommended. </td></tr>
 </table>
-<p>Refer to the <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound Runtime Resource Implications section on the <a href="https://docs.microsoft.com/en-us/windows/win32/coreaudio/spatial-sound" target="_blank">Microsoft Spatial Sound</a> page for details on the static and dynamic object limits for each platform combination.</p>
+<p>Refer to the <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound Runtime Resource Implications section on the Microsoft Spatial Sound page for details on the static and dynamic object limits for each platform combination.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> On desktop platforms, there is a limited number of <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound dynamic objects that all processes must share. This means that if one process reserves them all, other processes will not be able to use them until they have been released.</p>
 <p class="endtd">If Spatial Sound is enabled on the endpoint and System Audio Objects are allowed in Wwise, the Wwise sound engine will attempt to reserve all objects for itself. For this reason, the use of System Audio Objects is disabled by default on desktop platforms using the platform setting AkPlatformInitSettings::bEnableSystemAudioObjects. </p>
 </td></tr>
 </table>
-<p>To enable this option for the Wwise Authoring Tool’s internal sound engine, from the Wwise menubar, click <b>Audio</b> &gt; <b>Authoring Audio Preferences</b>. The Audio Preferences dialog box opens. Select the <b>Allow System Audio Objects</b> check box and click OK.</p>
+<p>To enable this option for the Wwise Authoring Toolâ€™s internal sound engine, from the Wwise menubar, click <b>Audio</b> &gt; <b>Authoring Audio Preferences</b>. The Audio Preferences dialog box opens. Select the <b>Allow System Audio Objects</b> check box and click OK.</p>
 <h1><a class="anchor" id="windows_ms_spatial"></a>
 Microsoft Spatial Sound Platform Output [deprecated]</h1>
 <p>This audio output device plug-in sends a 7.1.4 mix to the <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound platform.</p>
 <p>This functionality is now integrated into the System Audio Device, where the Main Mix is output to <a class="el" href="namespace_microsoft.html">Microsoft</a> Spatial Sound when <b>Allow 3D Audio</b> is selected and Spatial Sound is enabled in the operating system.</p>
 <p>In conjunction with the MS Spatial output, it was possible to use the System output to exclude a portion of the mix from binaural rendering. This is now explicitly done via the Passthrough Mix in the new System Audio Device.</p>
-<p><a class="el" href="windows_releasenotes.html">Windows Release Notes</a> <br  />
+<p>Windows Release Notes <br  />
  </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

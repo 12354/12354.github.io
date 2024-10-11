@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -43,20 +43,20 @@ Explicit Versus Implicit Media Loading</h1>
 <p>You can load a SoundBank either implicitly or explicitly. Both approaches, detailed below, offer different option with implicit advantages and disadvantages that need to be evaluated for your particular scenario.</p>
 <h2><a class="anchor" id="soundengine_banks_loading_explicit_vs_implicit_explicit"></a>
 Explicit Bank Loading</h2>
-<p>You can load a SoundBank explicitly by using one of the <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank()</a> methods of the sound engine API. After a SoundBank is loaded, all the objects within it are ready to be used.</p>
-<p>In the following example, the SoundBank BANK_01 is loaded explicitly. It is identified by an ID, which is defined in the Wwise_IDs.h header file. For a discussion on identifying SoundBanks using strings (Unicode or ANSI) or IDs, refer to <a class="el" href="soundengine_banks_general.html#soundengine_banks_general_identification">Identifying Banks</a> ). It contains the Event PLAY_SOUND_01, along with its associated sound structures and media (consult the <a href="https://www.audiokinetic.com/library/?source=Help&amp;id=managing_soundbanks" target="_blank">Wwise Help</a> for more information on generating SoundBanks with Wwise). When it is loaded, the Event is posted to the sound engine.</p>
+<p>You can load a SoundBank explicitly by using one of the AK::SoundEngine::LoadBank() methods of the sound engine API. After a SoundBank is loaded, all the objects within it are ready to be used.</p>
+<p>In the following example, the SoundBank BANK_01 is loaded explicitly. It is identified by an ID, which is defined in the Wwise_IDs.h header file. For a discussion on identifying SoundBanks using strings (Unicode or ANSI) or IDs, refer to Identifying Banks ). It contains the Event PLAY_SOUND_01, along with its associated sound structures and media (consult the Wwise Help for more information on generating SoundBanks with Wwise). When it is loaded, the Event is posted to the sound engine.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;Wwise_IDs.h&quot;</span></div>
 <div class="line"><span class="comment">// ...</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> gameObj = 3;</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>( gameObj );</div>
+<div class="line">AkGameObjectID gameObj = 3;</div>
+<div class="line">AK::SoundEngine::RegisterGameObj( gameObj );</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Load a bank synchronously, using its ID.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> returnedBankID;</div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank</a>(</div>
+<div class="line">AkBankID returnedBankID;</div>
+<div class="line">AKRESULT eResult = LoadBank(</div>
 <div class="line">    AK::BANKS::BANK_01,         <span class="comment">// Identifier of the bank to be loaded.</span></div>
 <div class="line">    returnedBankID              <span class="comment">// Returned bank ID.</span></div>
 <div class="line">    );</div>
-<div class="line"><span class="keywordflow">if</span>( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line"><span class="keywordflow">if</span>( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed loading bank.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
@@ -67,27 +67,27 @@ Explicit Bank Loading</h2>
 <div class="line"> </div>
 <div class="line"><span class="comment">// For example, if the bank contained the event PLAY_SOUND_01, along with its</span></div>
 <div class="line"><span class="comment">// associated sound structures and media.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a>(</div>
+<div class="line">AK::SoundEngine::PostEvent(</div>
 <div class="line">    AK::EVENTS::PLAY_SOUND_01,      <span class="comment">// Unique ID of the event</span></div>
 <div class="line">    gameObj                         <span class="comment">// Associated game object ID</span></div>
 <div class="line">    );</div>
 </div><!-- fragment --><h2><a class="anchor" id="soundengine_banks_loading_explicit_vs_implicit_implicit"></a>
 Implicit Media Loading</h2>
-<p>The PrepareEvent/PrepareGameSync API allows for implicit loading of media that is not included in a SoundBank. In order to do this, you must first explicitly load a SoundBank that contains the definition of the Events and/or Game Syncs, through <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a>. Typically, these SoundBanks will contain only Events and structures, but no media, and thus be very lightweight. Refer to the Wwise Help to know how you can define a SoundBank that has no media data. When the referenced media is not included in the SoundBank, then it must be available as loose media files in the file system. After the definitions of Events and Game Syncs are loaded, you must then "prepare" them in order to use them (<a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">AK::SoundEngine::PrepareEvent()</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_a76c611710ef7ffdd2d59f34e35b67cdc.html#a76c611710ef7ffdd2d59f34e35b67cdc">AK::SoundEngine::PrepareGameSyncs()</a>). When events or game syncs are prepared, then the sound engine will implicitly fetch the referenced media files from the file system. It is possible to include sound structures in a different SoundBank than the event definitions. The Event SoundBank will then contain a reference to the banks that contain the structures data, and the structures from the referenced SoundBank will be implicitly loaded along with the media when the Event is prepared. All contained structures will be loaded from the linked SoundBank and not just the ones that are referenced by the Event, and for this reason it is usually more practical to bundle the Events and structures in the same SoundBank.</p>
+<p>The PrepareEvent/PrepareGameSync API allows for implicit loading of media that is not included in a SoundBank. In order to do this, you must first explicitly load a SoundBank that contains the definition of the Events and/or Game Syncs, through LoadBank(). Typically, these SoundBanks will contain only Events and structures, but no media, and thus be very lightweight. Refer to the Wwise Help to know how you can define a SoundBank that has no media data. When the referenced media is not included in the SoundBank, then it must be available as loose media files in the file system. After the definitions of Events and Game Syncs are loaded, you must then "prepare" them in order to use them (AK::SoundEngine::PrepareEvent() and AK::SoundEngine::PrepareGameSyncs()). When events or game syncs are prepared, then the sound engine will implicitly fetch the referenced media files from the file system. It is possible to include sound structures in a different SoundBank than the event definitions. The Event SoundBank will then contain a reference to the banks that contain the structures data, and the structures from the referenced SoundBank will be implicitly loaded along with the media when the Event is prepared. All contained structures will be loaded from the linked SoundBank and not just the ones that are referenced by the Event, and for this reason it is usually more practical to bundle the Events and structures in the same SoundBank.</p>
 <p>In the following example, the bank BANK_02 is loaded explicitly and its referenced media is loaded implicitly. It contains the definition of the event PLAY_SOUND_02 and the related sound structures. Since it does not contain the event's associated media, posting the event will fail unless it is prepared first. Therefore, after loading the bank successfully, the event is prepared prior to posting. When an event is prepared, the sound engine will automatically load all the media required to post the event successfully.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &quot;Wwise_IDs.h&quot;</span></div>
 <div class="line"><span class="comment">// ...</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a> gameObj = 3;</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a>( gameObj );</div>
+<div class="line">AkGameObjectID gameObj = 3;</div>
+<div class="line">AK::SoundEngine::RegisterGameObj( gameObj );</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Load a bank synchronously, using its ID.</span></div>
 <div class="line"><span class="comment">// This bank may contain only the definition of the events you wish to use.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> returnedBankID;</div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank</a>(</div>
+<div class="line">AkBankID returnedBankID;</div>
+<div class="line">AKRESULT eResult = LoadBank(</div>
 <div class="line">    AK::BANKS::BANK_02,         <span class="comment">// Identifier of the bank to load.</span></div>
 <div class="line">    returnedBankID              <span class="comment">// Returned bank ID.</span></div>
 <div class="line">    );</div>
-<div class="line"><span class="keywordflow">if</span>( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line"><span class="keywordflow">if</span>( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed loading bank.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
@@ -96,13 +96,13 @@ Implicit Media Loading</h2>
 <div class="line"><span class="comment">// Load succeeded. The definition of the event PLAY_SOUND_02 and its related structures are loaded.</span></div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// In order to post the event, it needs to be prepared (here, synchronously).</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc.html#a8341fa4d01d2fa852c3cc410401b04dc">AkUniqueID</a> eventToPrepare = AK::EVENTS::PLAY_SOUND_02;</div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent</a>( </div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b.html#a21e0dbb1f9aebfc22fdd88634dc1067ba7bb39cc6dfafe005cddfbf12c0d62ad0">Preparation_Load</a>,       <span class="comment">// Preparation type: load.</span></div>
+<div class="line">AkUniqueID eventToPrepare = AK::EVENTS::PLAY_SOUND_02;</div>
+<div class="line">eResult = PrepareEvent( </div>
+<div class="line">    Preparation_Load,       <span class="comment">// Preparation type: load.</span></div>
 <div class="line">    &amp;eventToPrepare,        <span class="comment">// Array of event IDs.</span></div>
 <div class="line">    1                       <span class="comment">// Number of event IDs in the array.</span></div>
 <div class="line">    );</div>
-<div class="line"><span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line"><span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed preparing event.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
@@ -113,31 +113,31 @@ Implicit Media Loading</h2>
 <div class="line"><span class="comment">// necessary media under the hood.</span></div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Post the event.</span></div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a>(</div>
+<div class="line">AK::SoundEngine::PostEvent(</div>
 <div class="line">    AK::EVENTS::PLAY_SOUND_02,      <span class="comment">// Unique ID of the event</span></div>
 <div class="line">    gameObj                         <span class="comment">// Associated game object ID</span></div>
 <div class="line">    );</div>
-</div><!-- fragment --><p>To get a more complete example on how to use <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">AK::SoundEngine::PrepareEvent</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_a76c611710ef7ffdd2d59f34e35b67cdc.html#a76c611710ef7ffdd2d59f34e35b67cdc">AK::SoundEngine::PrepareGameSyncs</a>, refer to sections:</p><ul>
-<li><a class="el" href="sdk_bank_training.html#sdk_bank_training_Method_4">Preparing Action Events</a></li>
-<li><a class="el" href="sdk_bank_training.html#sdk_bank_training_Method_5">Preparing Events and Game Syncs (Switches and States)</a></li>
+</div><!-- fragment --><p>To get a more complete example on how to use AK::SoundEngine::PrepareEvent and AK::SoundEngine::PrepareGameSyncs, refer to sections:</p><ul>
+<li>Preparing Action Events</li>
+<li>Preparing Events and Game Syncs (Switches and States)</li>
 </ul>
 <h1><a class="anchor" id="soundengine_banks_loading_sync_vs_async"></a>
 Synchronous Versus Asynchronous Loading</h1>
-<p>Bank loading is performed in a separate thread of the sound engine. All <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a>, <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_a76c611710ef7ffdd2d59f34e35b67cdc.html#a76c611710ef7ffdd2d59f34e35b67cdc">PrepareGameSyncs()</a> functions of the main API are available through synchronous and asynchronous loading schemes.</p>
+<p>Bank loading is performed in a separate thread of the sound engine. All LoadBank(), PrepareEvent() and PrepareGameSyncs() functions of the main API are available through synchronous and asynchronous loading schemes.</p>
 <h2><a class="anchor" id="soundengine_banks_loading_sync"></a>
 Synchronous Bank Loading</h2>
-<p>Synchronous <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank()</a> functions are blocking functions. They return either when the bank is loaded, or if an error occurs.</p>
+<p>Synchronous AK::SoundEngine::LoadBank() functions are blocking functions. They return either when the bank is loaded, or if an error occurs.</p>
 <h2><a class="anchor" id="soundengine_banks_loading_async"></a>
 Asynchronous Bank Loading</h2>
-<p>Asynchronous <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank()</a> functions return immediately and the callback function is called after the requested action is completed, with a cookie as a parameter. When a call is asynchronous, error handling must be performed in the callback function.</p>
+<p>Asynchronous AK::SoundEngine::LoadBank() functions return immediately and the callback function is called after the requested action is completed, with a cookie as a parameter. When a call is asynchronous, error handling must be performed in the callback function.</p>
 <p>The cookie parameter is optional and is available for your convenience. If you are not using it, just pass NULL. The sound engine will not use this pointer; it will simply return it with the callback function.</p>
 <h2><a class="anchor" id="soundengine_banks_loading_callback"></a>
 Bank Callback Prototype</h2>
-<p>Callback functions used with asynchronous versions of <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a>, <a class="el" href="namespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64.html#ac91406bc2fe061e4248cb448207b5a64">UnloadBank()</a>, <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_a76c611710ef7ffdd2d59f34e35b67cdc.html#a76c611710ef7ffdd2d59f34e35b67cdc">PrepareGameSyncs()</a> must follow this prototype:</p>
-<div class="fragment"><div class="line"><span class="keyword">typedef</span> void( *<a class="code" href="_ak_callback_8h_a67b14fac605177de15900de12ad43021.html#a67b14fac605177de15900de12ad43021">AkBankCallbackFunc</a> )(</div>
-<div class="line">    <a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a>        in_bankID,</div>
+<p>Callback functions used with asynchronous versions of LoadBank(), UnloadBank(), PrepareEvent() and PrepareGameSyncs() must follow this prototype:</p>
+<div class="fragment"><div class="line"><span class="keyword">typedef</span> void( *AkBankCallbackFunc )(</div>
+<div class="line">    AkBankID        in_bankID,</div>
 <div class="line">    <span class="keywordtype">void</span> *          in_pInMemoryBankPtr,</div>
-<div class="line">    <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a>        in_eLoadResult,</div>
+<div class="line">    AKRESULT        in_eLoadResult,</div>
 <div class="line">    <span class="keywordtype">void</span> *          in_pCookie</div>
 <div class="line">    );</div>
 </div><!-- fragment --><p>You are responsible for implementing the callback function and, therefore, you must guarantee its validity.</p>
@@ -145,79 +145,79 @@ Bank Callback Prototype</h2>
 <p>Refer to AkBankCallbackFunc for definitions of the parameters that are passed to the callback function.</p>
 <h1><a class="anchor" id="soundengine_banks_loading_mem_vs_io"></a>
 Loading Banks From Memory Or Through File I/O</h1>
-<p>As said previously in <a class="el" href="soundengine_banks_general.html#soundengine_banks_general_identification">Identifying Banks</a>, you can either load banks from file on your side, then provide the appropriate overload of <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a> with a pointer and a size, or you specify a bank identifier (ID or string, see discussion above), and let the sound engine load the bank file through the Stream Manager.</p>
+<p>As said previously in Identifying Banks, you can either load banks from file on your side, then provide the appropriate overload of LoadBank() with a pointer and a size, or you specify a bank identifier (ID or string, see discussion above), and let the sound engine load the bank file through the Stream Manager.</p>
 <h2><a class="anchor" id="soundengine_banks_loading_mem_vs_io_mem"></a>
 Loading From Memory</h2>
-<p>Use one of these prototypes of <a class="el" href="namespace_a_k_1_1_sound_engine_a7e8069027779f518a2049dffbb8ecbcb.html#a7e8069027779f518a2049dffbb8ecbcb">LoadBankMemoryView()</a> to load a bank that's already in memory at its final location:</p>
+<p>Use one of these prototypes of LoadBankMemoryView() to load a bank that's already in memory at its final location:</p>
 <div class="fragment"><div class="line"><span class="comment">// Synchronous, in-place.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_sound_engine_a7e8069027779f518a2049dffbb8ecbcb.html#a7e8069027779f518a2049dffbb8ecbcb">LoadBankMemoryView</a>(</div>
+<div class="line">AKRESULT LoadBankMemoryView(</div>
 <div class="line">    <span class="keywordtype">void</span> *              in_pInMemoryBankPtr,    <span class="comment">///&lt; Pointer to the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
+<div class="line"><span class="comment"></span>    AkUInt32            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
+<div class="line"><span class="comment"></span>    AkBankID &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
 <div class="line"><span class="comment"></span>    );</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Asynchronous, in-place.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_sound_engine_a7e8069027779f518a2049dffbb8ecbcb.html#a7e8069027779f518a2049dffbb8ecbcb">LoadBankMemoryView</a>(</div>
+<div class="line">AKRESULT LoadBankMemoryView(</div>
 <div class="line">    <span class="keywordtype">void</span> *              in_pInMemoryBankPtr,    <span class="comment">///&lt; Pointer to the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_callback_8h_a67b14fac605177de15900de12ad43021.html#a67b14fac605177de15900de12ad43021">AkBankCallbackFunc</a>  in_pfnBankCallback,     <span class="comment">///&lt; Callback function</span></div>
+<div class="line"><span class="comment"></span>    AkUInt32            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
+<div class="line"><span class="comment"></span>    AkBankCallbackFunc  in_pfnBankCallback,     <span class="comment">///&lt; Callback function</span></div>
 <div class="line"><span class="comment"></span>    <span class="keywordtype">void</span> *              in_pCookie,             <span class="comment">///&lt; Callback cookie</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
+<div class="line"><span class="comment"></span>    AkBankID &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
 <div class="line"><span class="comment"></span>    );</div>
 </div><!-- fragment --><p>The memory is not copied inside the sound engine, therefore you must ensure that it remains valid until the bank is unloaded. Some alignment restrictions may apply based on the platform of the provided memory pointer to which the bank is loaded. On all platforms, the memory must be aligned on AK_BANK_PLATFORM_DATA_ALIGNMENT bytes. Some platforms may have different requirements, so you should check the platform specific SDK documentation.</p>
-<p>Alternatively, use one of these prototypes of <a class="el" href="namespace_a_k_1_1_sound_engine_ac16591355aef3ffaf2f8e9ac7a5b95ad.html#ac16591355aef3ffaf2f8e9ac7a5b95ad">LoadBankMemoryCopy()</a> to load a bank that's in memory in a temporary location:</p>
+<p>Alternatively, use one of these prototypes of LoadBankMemoryCopy() to load a bank that's in memory in a temporary location:</p>
 <div class="fragment"><div class="line"><span class="comment">// Synchronous, out-of-place.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_sound_engine_ac16591355aef3ffaf2f8e9ac7a5b95ad.html#ac16591355aef3ffaf2f8e9ac7a5b95ad">LoadBankMemoryCopy</a>(</div>
+<div class="line">AKRESULT LoadBankMemoryCopy(</div>
 <div class="line">    <span class="keywordtype">void</span> *              in_pInMemoryBankPtr,    <span class="comment">///&lt; Pointer to the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
+<div class="line"><span class="comment"></span>    AkUInt32            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
+<div class="line"><span class="comment"></span>    AkBankID &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
 <div class="line"><span class="comment"></span>    );</div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Asynchronous, out-of-place.</span></div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_sound_engine_ac16591355aef3ffaf2f8e9ac7a5b95ad.html#ac16591355aef3ffaf2f8e9ac7a5b95ad">LoadBankMemoryCopy</a>(</div>
+<div class="line">AKRESULT LoadBankMemoryCopy(</div>
 <div class="line">    <span class="keywordtype">void</span> *              in_pInMemoryBankPtr,    <span class="comment">///&lt; Pointer to the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_ak_callback_8h_a67b14fac605177de15900de12ad43021.html#a67b14fac605177de15900de12ad43021">AkBankCallbackFunc</a>  in_pfnBankCallback,     <span class="comment">///&lt; Callback function</span></div>
+<div class="line"><span class="comment"></span>    AkUInt32            in_uInMemoryBankSize,   <span class="comment">///&lt; Size of the in-memory bank to load</span></div>
+<div class="line"><span class="comment"></span>    AkBankCallbackFunc  in_pfnBankCallback,     <span class="comment">///&lt; Callback function</span></div>
 <div class="line"><span class="comment"></span>    <span class="keywordtype">void</span> *              in_pCookie,             <span class="comment">///&lt; Callback cookie</span></div>
-<div class="line"><span class="comment"></span>    <a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
+<div class="line"><span class="comment"></span>    AkBankID &amp;          out_bankID              <span class="comment">///&lt; Returned bank ID</span></div>
 <div class="line"><span class="comment"></span>    );</div>
 </div><!-- fragment --><p>The bank will be copied into a new allocation made inside the sound engine, and the passed pointer can be freed immediately after the load operation is finished.</p>
-<p><a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a> parses the bank ID stored in the first few bytes of the pointer that is provided, and returns it. Keep the bank ID to unload the bank later.</p>
+<p>LoadBank() parses the bank ID stored in the first few bytes of the pointer that is provided, and returns it. Keep the bank ID to unload the bank later.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If you choose to perform file I/O on your side, and feed the sound engine with pointers, then you must use explicit bank loading. Implicit bank loading can be unpredictable. Following a PrepareXXXX command, you can never be sure how many banks will be loaded or the memory requirements of these banks. This is why there are no in-memory versions of PrepareEvent and PrepareGameSyncs. </td></tr>
 </table>
 <h2><a class="anchor" id="soundengine_banks_loading_mem_vs_io_io"></a>
 Loading Through File I/O</h2>
-<p>The sound engine uses the Stream Manager whenever it needs to read from files. Refer to <a class="el" href="soundengine_banks_general.html#soundengine_banks_general_identification">Identifying Banks</a> for a discussion on bank identification and I/O.</p>
-<p>You can use the <a class="el" href="namespace_a_k_1_1_sound_engine_ab8f05d2ee628529bb2bde9dab2d56047.html#ab8f05d2ee628529bb2bde9dab2d56047">AK::SoundEngine::SetBankLoadIOSettings()</a> function to tweak the behavior of the sound engine's bank loader in regard to the Stream Manager. For more information on I/O, refer to the section <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a>.</p>
+<p>The sound engine uses the Stream Manager whenever it needs to read from files. Refer to Identifying Banks for a discussion on bank identification and I/O.</p>
+<p>You can use the AK::SoundEngine::SetBankLoadIOSettings() function to tweak the behavior of the sound engine's bank loader in regard to the Stream Manager. For more information on I/O, refer to the section <a class="el" href="streamingdevicemanager.html">Streaming / Stream Manager</a>.</p>
 <h2><a class="anchor" id="soundengine_banks_loading_mem_vs_io_custompool"></a>
 Memory Usage</h2>
 <p>The sound engine parses banks' metadata and creates its objects in the sound engine's default pool.</p>
-<p>In explicit <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a> functions that involve I/O, the media is read from disk and copied to memory. During I/O, the banks are read in chunks with a size specified by one of the sound engine initialization settings, <a class="el" href="struct_ak_init_settings_ae4c40fd9bab28527705d43b2247bbe21.html#ae4c40fd9bab28527705d43b2247bbe21" title="The number of bytes read by the BankReader when new data needs to be loaded from disk during serializ...">AkInitSettings::uBankReadBufferSize</a>. Larger values will issue fewer reads, or fewer sets of reads, at the cost of more memory during bank I/O.</p>
+<p>In explicit LoadBank() functions that involve I/O, the media is read from disk and copied to memory. During I/O, the banks are read in chunks with a size specified by one of the sound engine initialization settings, AkInitSettings::uBankReadBufferSize. Larger values will issue fewer reads, or fewer sets of reads, at the cost of more memory during bank I/O.</p>
 <h1><a class="anchor" id="soundengine_banks_loading_unloading"></a>
 Unloading Banks</h1>
-<p>There are many overloads of <a class="el" href="namespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64.html#ac91406bc2fe061e4248cb448207b5a64">UnloadBank()</a> to explicitly unload a bank:</p>
+<p>There are many overloads of UnloadBank() to explicitly unload a bank:</p>
 <ul>
 <li>Using ID identification</li>
 <li>Using string identification (Unicode or ANSI)</li>
 <li>Synchronously</li>
 <li>Asynchronously</li>
 </ul>
-<p>Likewise, use <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> function with the Preparation_Unload flag to decrement the reference count of structures and media associated with these events. When the reference count of all objects within a bank that was loaded implicitly drops to 0, it is automatically unloaded.</p>
-<p>Also, use <a class="el" href="namespace_a_k_1_1_sound_engine_a76c611710ef7ffdd2d59f34e35b67cdc.html#a76c611710ef7ffdd2d59f34e35b67cdc">PrepareGameSyncs()</a> function with the Preparation_Unload flag to unload media that was loaded for prepared events that can play only when the specified game sync is selected. Note that the game syncs do not have a reference count and calling it once with the Preparation_Unload flag will immediately unload the unreferenced media.</p>
+<p>Likewise, use PrepareEvent() function with the Preparation_Unload flag to decrement the reference count of structures and media associated with these events. When the reference count of all objects within a bank that was loaded implicitly drops to 0, it is automatically unloaded.</p>
+<p>Also, use PrepareGameSyncs() function with the Preparation_Unload flag to unload media that was loaded for prepared events that can play only when the specified game sync is selected. Note that the game syncs do not have a reference count and calling it once with the Preparation_Unload flag will immediately unload the unreferenced media.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If a sound referenced by a bank is playing when that bank is unloaded, it will always stop if the bank contains its sound structure. There are chances that the sound will stop if the bank contained only the media, but other loaded banks have the media and sound structure. It will depend on whether the media was played from the data of the former or the latter. Refer to <a class="el" href="soundengine_banks_loading.html#soundengine_banks_dup_contents">Duplicating Bank Contents</a>. </td></tr>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If a sound referenced by a bank is playing when that bank is unloaded, it will always stop if the bank contains its sound structure. There are chances that the sound will stop if the bank contained only the media, but other loaded banks have the media and sound structure. It will depend on whether the media was played from the data of the former or the latter. Refer to Duplicating Bank Contents. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> If events have been used to modify the parameters of this sound (such as a SetVolume event), this information will be removed. If a parameter has been changed using RTPCs, states, or switches, the parameter will be kept in memory and will be automatically applied if the SoundBank is reloaded. </td></tr>
 </table>
-<p>The following code loads and unloads a bank synchronously, using Unicode string identifiers and the default bank memory allocation. It also loads and unloads banks implicitly through <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a>.</p>
-<div class="fragment"><div class="line"><a class="code" href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a> bankID;</div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a>( L<span class="stringliteral">&quot;Bank1.bnk&quot;</span>, bankID );</div>
-<div class="line"><span class="keywordflow">if</span>( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<p>The following code loads and unloads a bank synchronously, using Unicode string identifiers and the default bank memory allocation. It also loads and unloads banks implicitly through PrepareEvent().</p>
+<div class="fragment"><div class="line">AkBankID bankID;</div>
+<div class="line">AKRESULT eResult = AK::SoundEngine::LoadBank( L<span class="stringliteral">&quot;Bank1.bnk&quot;</span>, bankID );</div>
+<div class="line"><span class="keywordflow">if</span>( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed loading bank.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
@@ -227,8 +227,8 @@ Unloading Banks</h1>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Prepare an event.</span></div>
 <div class="line"><span class="keyword">const</span> <span class="keywordtype">char</span> * pszEvent = <span class="stringliteral">&quot;Event1&quot;</span>;</div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent</a>( <a class="code" href="namespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b.html#a21e0dbb1f9aebfc22fdd88634dc1067ba7bb39cc6dfafe005cddfbf12c0d62ad0">Preparation_Load</a>, &amp;pszEvent, 1 );</div>
-<div class="line"><span class="keywordflow">if</span>( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">eResult = PrepareEvent( Preparation_Load, &amp;pszEvent, 1 );</div>
+<div class="line"><span class="keywordflow">if</span>( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed preparing event.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
@@ -237,8 +237,8 @@ Unloading Banks</h1>
 <div class="line"><span class="comment">// Use the event and bank data...</span></div>
 <div class="line"> </div>
 <div class="line"><span class="comment">// Then, unprepare the event.</span></div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent</a>( <a class="code" href="namespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b.html#a21e0dbb1f9aebfc22fdd88634dc1067ba37375e4d359e99b67d0a69f4a5714b92">Preparation_Unload</a>, &amp;pszEvent, 1 );</div>
-<div class="line"><span class="keywordflow">if</span>( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">eResult = PrepareEvent( Preparation_Unload, &amp;pszEvent, 1 );</div>
+<div class="line"><span class="keywordflow">if</span>( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed unpreparing event.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
@@ -248,15 +248,15 @@ Unloading Banks</h1>
 <div class="line"><span class="comment">// Note: The bank is unloaded using the bank ID returned by LoadBank(). The call</span></div>
 <div class="line"><span class="comment">// AK::SoundEngine::UnloadBank( L&quot;Bank1.bnk&quot;, NULL );</span></div>
 <div class="line"><span class="comment">// works too: the sound engine internally converts the &quot;Bank1.bnk&quot; string into the bank ID.</span></div>
-<div class="line">eResult = <a class="code" href="namespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64.html#ac91406bc2fe061e4248cb448207b5a64">AK::SoundEngine::UnloadBank</a>( bankID, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> );</div>
-<div class="line"><span class="keywordflow">if</span>( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">eResult = AK::SoundEngine::UnloadBank( bankID, NULL );</div>
+<div class="line"><span class="keywordflow">if</span>( eResult != AK_Success )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Failed unloading bank.</span></div>
 <div class="line">    <span class="comment">// Handle error...</span></div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="soundengine_banks_preparingbanks"></a>
 Preparing Banks</h1>
-<p>In addition to the <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> functions, it is also possible to prepare banks. You can prepare banks using either of the following methods:</p>
+<p>In addition to the LoadBank() and PrepareEvent() functions, it is also possible to prepare banks. You can prepare banks using either of the following methods:</p>
 <ul>
 <li>AkBankContent_All</li>
 <li>AkBankContent_StructureOnly</li>
@@ -264,16 +264,16 @@ Preparing Banks</h1>
 <p>Both of these methods use the same PrepareBank mechanism with a slightly different implementation, however AkBankContent_All is used in the most common scenarios. .</p>
 <h2><a class="anchor" id="soundengine_banks_AkBankContent_All"></a>
 AkBankContent_All</h2>
-<p>Preparing a bank using <code>AkBankContent_All</code> allows you to overcome some of the drawbacks of the <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a> mechanism, while taking advantage of the benefits of the <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> mechanism. When using this method, the SoundBanks may still include all content types (events, structure data, and media files), but instead of loading the media files outright, this method loads all media into memory by using a mechanism similar to the prepare event mechanism. When loading media with <a class="el" href="namespace_a_k_1_1_sound_engine_a7d92b3c386cd60e76be54ca69f051c09.html#a7d92b3c386cd60e76be54ca69f051c09">PrepareBank()</a>, Wwise first checks to see if a media file already exists in memory before loading it. This keeps memory usage at a minimum by avoiding any duplication of media files in memory.</p>
-<p>AkBankContent_All is the default loading mechanism for <a class="el" href="namespace_a_k_1_1_sound_engine_a7d92b3c386cd60e76be54ca69f051c09.html#a7d92b3c386cd60e76be54ca69f051c09">PrepareBank()</a> and will check the bank for media items to load. If media for a particular event does not exist in the bank, it can be loaded later from a loose file with a call to <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a>.</p>
+<p>Preparing a bank using <code>AkBankContent_All</code> allows you to overcome some of the drawbacks of the LoadBank() mechanism, while taking advantage of the benefits of the PrepareEvent() mechanism. When using this method, the SoundBanks may still include all content types (events, structure data, and media files), but instead of loading the media files outright, this method loads all media into memory by using a mechanism similar to the prepare event mechanism. When loading media with PrepareBank(), Wwise first checks to see if a media file already exists in memory before loading it. This keeps memory usage at a minimum by avoiding any duplication of media files in memory.</p>
+<p>AkBankContent_All is the default loading mechanism for PrepareBank() and will check the bank for media items to load. If media for a particular event does not exist in the bank, it can be loaded later from a loose file with a call to PrepareEvent().</p>
 <h2><a class="anchor" id="soundengine_banks_AkBankContent_StructureOnly"></a>
 AkBankContent_StructureOnly</h2>
-<p>When using <a class="el" href="namespace_a_k_1_1_sound_engine_a7d92b3c386cd60e76be54ca69f051c09.html#a7d92b3c386cd60e76be54ca69f051c09">PrepareBank()</a> with <code>AkBankContent_StructureOnly</code>, the events and structure metadata are loaded from a SoundBank, but the media items contained in the bank are ignored. Because <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> must access media as loose files off disk and is unable to read files contained within a SoundBank, <code>AkBankContent_StructureOnly</code> is only useful if you also plan on loading the SoundBank using some other loading mechanism at some other time. In most scenarios where media will be loaded individually with <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a>, the media should not be included in the bank and the <code>AkBankContent_StructureOnly</code> flag will produce the same result as <code>AkBankContent_All</code>.</p>
-<p>One example where the <code>AkBankContent_StructureOnly</code> flag may be useful is to implement multiple loading configurations. A game may have a "tool mode" that uses <a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">PrepareEvent()</a> to load loose files on-demand and a "game mode" that uses <a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">LoadBank()</a> to load the same bank in its entirety.</p>
-<p><a class="el" href="namespace_a_k_1_1_sound_engine_a7d92b3c386cd60e76be54ca69f051c09.html#a7d92b3c386cd60e76be54ca69f051c09">PrepareBank()</a> can be called synchronously or asynchronously from the API, as desired. However, it is not advised to use both <code>AkBankContent_All</code> and <code>AkBankContent_StructureOnly</code> on the same bank because, once the media is loaded using <code>AkBankContent_All</code>, an unload will release everything - events, structure, and media.</p>
+<p>When using PrepareBank() with <code>AkBankContent_StructureOnly</code>, the events and structure metadata are loaded from a SoundBank, but the media items contained in the bank are ignored. Because PrepareEvent() must access media as loose files off disk and is unable to read files contained within a SoundBank, <code>AkBankContent_StructureOnly</code> is only useful if you also plan on loading the SoundBank using some other loading mechanism at some other time. In most scenarios where media will be loaded individually with PrepareEvent(), the media should not be included in the bank and the <code>AkBankContent_StructureOnly</code> flag will produce the same result as <code>AkBankContent_All</code>.</p>
+<p>One example where the <code>AkBankContent_StructureOnly</code> flag may be useful is to implement multiple loading configurations. A game may have a "tool mode" that uses PrepareEvent() to load loose files on-demand and a "game mode" that uses LoadBank() to load the same bank in its entirety.</p>
+<p>PrepareBank() can be called synchronously or asynchronously from the API, as desired. However, it is not advised to use both <code>AkBankContent_All</code> and <code>AkBankContent_StructureOnly</code> on the same bank because, once the media is loaded using <code>AkBankContent_All</code>, an unload will release everything - events, structure, and media.</p>
 <h1><a class="anchor" id="soundengine_banks_clearing"></a>
 Clearing Banks</h1>
-<p>Calling the <code><a class="el" href="namespace_a_k_1_1_sound_engine_ab934f98a6622976d24e0a096911eb0c8.html#ab934f98a6622976d24e0a096911eb0c8">AK::SoundEngine::ClearBanks()</a></code> function is useful when you want to reset the content of the sound engine. Note that you do not have to call <code><a class="el" href="namespace_a_k_1_1_sound_engine_ab934f98a6622976d24e0a096911eb0c8.html#ab934f98a6622976d24e0a096911eb0c8">ClearBanks()</a></code> before calling <code><a class="el" href="namespace_a_k_1_1_comm_a94e307d2974b89cc4fbc8ab0fef20d2f.html#a94e307d2974b89cc4fbc8ab0fef20d2f">SoundEngine::Term()</a></code>. <code>ClearBanks</code> internally calls <code><a class="el" href="namespace_a_k_1_1_sound_engine_af9648460be2ed1a0093ff09b42ef36f5.html#af9648460be2ed1a0093ff09b42ef36f5">AK::SoundEngine::ClearPreparedEvents</a></code>.</p>
+<p>Calling the <code>AK::SoundEngine::ClearBanks()</code> function is useful when you want to reset the content of the sound engine. Note that you do not have to call <code>ClearBanks()</code> before calling <code>SoundEngine::Term()</code>. <code>ClearBanks</code> internally calls <code>AK::SoundEngine::ClearPreparedEvents</code>.</p>
 <p>After this function is called:</p><ul>
 <li>All sounds stop playing.</li>
 <li>All banks are unloaded, including the initialization bank.</li>
@@ -281,7 +281,7 @@ Clearing Banks</h1>
 </ul>
 <h1><a class="anchor" id="soundengine_banks_clearing_prepared_events"></a>
 Clearing Prepared Events</h1>
-<p>Calling the <a class="el" href="namespace_a_k_1_1_sound_engine_af9648460be2ed1a0093ff09b42ef36f5.html#af9648460be2ed1a0093ff09b42ef36f5">AK::SoundEngine::ClearPreparedEvents()</a> function will unprepare all Events that were prepared up to now, no matter how many times a single event has been prepared. <code><a class="el" href="namespace_a_k_1_1_sound_engine_af9648460be2ed1a0093ff09b42ef36f5.html#af9648460be2ed1a0093ff09b42ef36f5">AK::SoundEngine::ClearPreparedEvents()</a></code> is internally called when calling <code><a class="el" href="namespace_a_k_1_1_sound_engine_ab934f98a6622976d24e0a096911eb0c8.html#ab934f98a6622976d24e0a096911eb0c8">AK::SoundEngine::ClearBanks()</a></code>.</p>
+<p>Calling the AK::SoundEngine::ClearPreparedEvents() function will unprepare all Events that were prepared up to now, no matter how many times a single event has been prepared. <code>AK::SoundEngine::ClearPreparedEvents()</code> is internally called when calling <code>AK::SoundEngine::ClearBanks()</code>.</p>
 <h1><a class="anchor" id="soundengine_banks_dup_contents"></a>
 Duplicating Bank Contents</h1>
 <p>Each bank can be loaded only once. If you try to explicitly load a bank a second time, it will result in a bank load error.</p>
@@ -296,32 +296,33 @@ Duplicating Bank Contents</h1>
 <li><a class="el" href="soundengine_banks.html">Integration Details - Banks</a></li>
 <li><a class="el" href="soundengine_banks_general.html">General Information</a></li>
 <li><a class="el" href="sdk_bank_training.html">SoundBank Integration Samples</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64.html#ac91406bc2fe061e4248cb448207b5a64">AK::SoundEngine::UnloadBank()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_ab934f98a6622976d24e0a096911eb0c8.html#ab934f98a6622976d24e0a096911eb0c8">AK::SoundEngine::ClearBanks()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">AK::SoundEngine::PrepareEvent()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_a76c611710ef7ffdd2d59f34e35b67cdc.html#a76c611710ef7ffdd2d59f34e35b67cdc">AK::SoundEngine::PrepareGameSyncs()</a></li>
-<li><a class="el" href="namespace_a_k_1_1_sound_engine_af9648460be2ed1a0093ff09b42ef36f5.html#af9648460be2ed1a0093ff09b42ef36f5">AK::SoundEngine::ClearPreparedEvents()</a> </li>
+<li>AK::SoundEngine::LoadBank()</li>
+<li>AK::SoundEngine::UnloadBank()</li>
+<li>AK::SoundEngine::ClearBanks()</li>
+<li>AK::SoundEngine::PrepareEvent()</li>
+<li>AK::SoundEngine::PrepareGameSyncs()</li>
+<li>AK::SoundEngine::ClearPreparedEvents() </li>
 </ul>
 </dd></dl>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238_html_a2e6ebb779470b43d78984c27f6a0c238"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238.html#a2e6ebb779470b43d78984c27f6a0c238">AK::SoundEngine::PrepareEvent</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT PrepareEvent(PreparationType in_PreparationType, const char **in_ppszString, AkUInt32 in_uNumEvent)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a7e8069027779f518a2049dffbb8ecbcb_html_a7e8069027779f518a2049dffbb8ecbcb"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a7e8069027779f518a2049dffbb8ecbcb.html#a7e8069027779f518a2049dffbb8ecbcb">AK::SoundEngine::LoadBankMemoryView</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBankMemoryView(const void *in_pInMemoryBankPtr, AkUInt32 in_uInMemoryBankSize, AkBankID &amp;out_bankID)</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname"><a href="_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560.html#a352a1eb6955fa208062e40a9ccdd2560">AkGameObjectID</a></div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00142">AkTypes.h:142</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349_html_a472a3d18cbb0c4f081b3b619e4a2f349"><div class="ttname"><a href="_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349.html#a472a3d18cbb0c4f081b3b619e4a2f349">AkBankID</a></div><div class="ttdeci">AkUInt32 AkBankID</div><div class="ttdoc">Run time bank ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00157">AkTypes.h:157</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a></div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00212">AkTypes.h:213</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c.html#a895ed0f83a0dea8fc284491c0ee0152c">AK::SoundEngine::RegisterGameObj</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13_html_a95f8f6841a618ec3d5e51a30a1614e13"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13.html#a95f8f6841a618ec3d5e51a30a1614e13">AK::SoundEngine::LoadBank</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBank(const char *in_pszString, AkBankID &amp;out_bankID, AkBankType in_bankType=AkBankType_User)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b_html_a21e0dbb1f9aebfc22fdd88634dc1067ba37375e4d359e99b67d0a69f4a5714b92"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b.html#a21e0dbb1f9aebfc22fdd88634dc1067ba37375e4d359e99b67d0a69f4a5714b92">AK::SoundEngine::Preparation_Unload</a></div><div class="ttdeci">@ Preparation_Unload</div><div class="ttdoc">PrepareEvent() will unload required information to play the specified event.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_sound_engine_8h_source.html#l02642">AkSoundEngine.h:2642</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a></div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00215">AkTypes.h:215</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc_html_a8341fa4d01d2fa852c3cc410401b04dc"><div class="ttname"><a href="_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc.html#a8341fa4d01d2fa852c3cc410401b04dc">AkUniqueID</a></div><div class="ttdeci">AkUInt32 AkUniqueID</div><div class="ttdoc">Unique 32-bit ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00134">AkTypes.h:134</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b_html_a21e0dbb1f9aebfc22fdd88634dc1067ba7bb39cc6dfafe005cddfbf12c0d62ad0"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b.html#a21e0dbb1f9aebfc22fdd88634dc1067ba7bb39cc6dfafe005cddfbf12c0d62ad0">AK::SoundEngine::Preparation_Load</a></div><div class="ttdeci">@ Preparation_Load</div><div class="ttdoc">PrepareEvent() will load required information to play the specified event.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_sound_engine_8h_source.html#l02641">AkSoundEngine.h:2641</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64_html_ac91406bc2fe061e4248cb448207b5a64"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64.html#ac91406bc2fe061e4248cb448207b5a64">AK::SoundEngine::UnloadBank</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT UnloadBank(const char *in_pszString, const void *in_pInMemoryBankPtr, AkBankType in_bankType=AkBankType_User)</div></div>
-<div class="ttc" id="a_ak_callback_8h_a67b14fac605177de15900de12ad43021_html_a67b14fac605177de15900de12ad43021"><div class="ttname"><a href="_ak_callback_8h_a67b14fac605177de15900de12ad43021.html#a67b14fac605177de15900de12ad43021">AkBankCallbackFunc</a></div><div class="ttdeci">void(* AkBankCallbackFunc)(AkUInt32 in_bankID, const void *in_pInMemoryBankPtr, AKRESULT in_eLoadResult, void *in_pCookie)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_callback_8h_source.html#l00326">AkCallback.h:326</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_ac16591355aef3ffaf2f8e9ac7a5b95ad_html_ac16591355aef3ffaf2f8e9ac7a5b95ad"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_ac16591355aef3ffaf2f8e9ac7a5b95ad.html#ac16591355aef3ffaf2f8e9ac7a5b95ad">AK::SoundEngine::LoadBankMemoryCopy</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBankMemoryCopy(const void *in_pInMemoryBankPtr, AkUInt32 in_uInMemoryBankSize, AkBankID &amp;out_bankID)</div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname"><a href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a></div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00038">AkNumeralTypes.h:38</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e_html_a41e9ef8d42951871fe4a8ae58a29a68e"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e.html#a41e9ef8d42951871fe4a8ae58a29a68e">AK::SoundEngine::PostEvent</a></div><div class="ttdeci">AKSOUNDENGINE_API AkPlayingID PostEvent(AkUniqueID in_eventID, AkGameObjectID in_gameObjectID, AkUInt32 in_uFlags=0, AkCallbackFunc in_pfnCallback=NULL, void *in_pCookie=NULL, AkUInt32 in_cExternals=0, AkExternalSourceInfo *in_pExternalSources=NULL, AkPlayingID in_PlayingID=AK_INVALID_PLAYING_ID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a2e6ebb779470b43d78984c27f6a0c238_html_a2e6ebb779470b43d78984c27f6a0c238"><div class="ttname">AK::SoundEngine::PrepareEvent</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT PrepareEvent(PreparationType in_PreparationType, const char **in_ppszString, AkUInt32 in_uNumEvent)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a7e8069027779f518a2049dffbb8ecbcb_html_a7e8069027779f518a2049dffbb8ecbcb"><div class="ttname">AK::SoundEngine::LoadBankMemoryView</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBankMemoryView(const void *in_pInMemoryBankPtr, AkUInt32 in_uInMemoryBankSize, AkBankID &amp;out_bankID)</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a352a1eb6955fa208062e40a9ccdd2560_html_a352a1eb6955fa208062e40a9ccdd2560"><div class="ttname">AkGameObjectID</div><div class="ttdeci">AkUInt64 AkGameObjectID</div><div class="ttdoc">Game object ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:142</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a472a3d18cbb0c4f081b3b619e4a2f349_html_a472a3d18cbb0c4f081b3b619e4a2f349"><div class="ttname">AkBankID</div><div class="ttdeci">AkUInt32 AkBankID</div><div class="ttdoc">Run time bank ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:157</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname">AKRESULT</div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:213</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a895ed0f83a0dea8fc284491c0ee0152c_html_a895ed0f83a0dea8fc284491c0ee0152c"><div class="ttname">AK::SoundEngine::RegisterGameObj</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT RegisterGameObj(AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a95f8f6841a618ec3d5e51a30a1614e13_html_a95f8f6841a618ec3d5e51a30a1614e13"><div class="ttname">AK::SoundEngine::LoadBank</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBank(const char *in_pszString, AkBankID &amp;out_bankID, AkBankType in_bankType=AkBankType_User)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b_html_a21e0dbb1f9aebfc22fdd88634dc1067ba37375e4d359e99b67d0a69f4a5714b92"><div class="ttname">AK::SoundEngine::Preparation_Unload</div><div class="ttdeci">@ Preparation_Unload</div><div class="ttdoc">PrepareEvent() will unload required information to play the specified event.</div><div class="ttdef"><b>Definition:</b> AkSoundEngine.h:2642</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname">AK_Success</div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:215</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a8341fa4d01d2fa852c3cc410401b04dc_html_a8341fa4d01d2fa852c3cc410401b04dc"><div class="ttname">AkUniqueID</div><div class="ttdeci">AkUInt32 AkUniqueID</div><div class="ttdoc">Unique 32-bit ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:134</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a21e0dbb1f9aebfc22fdd88634dc1067b_html_a21e0dbb1f9aebfc22fdd88634dc1067ba7bb39cc6dfafe005cddfbf12c0d62ad0"><div class="ttname">AK::SoundEngine::Preparation_Load</div><div class="ttdeci">@ Preparation_Load</div><div class="ttdoc">PrepareEvent() will load required information to play the specified event.</div><div class="ttdef"><b>Definition:</b> AkSoundEngine.h:2641</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_ac91406bc2fe061e4248cb448207b5a64_html_ac91406bc2fe061e4248cb448207b5a64"><div class="ttname">AK::SoundEngine::UnloadBank</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT UnloadBank(const char *in_pszString, const void *in_pInMemoryBankPtr, AkBankType in_bankType=AkBankType_User)</div></div>
+<div class="ttc" id="a_ak_callback_8h_a67b14fac605177de15900de12ad43021_html_a67b14fac605177de15900de12ad43021"><div class="ttname">AkBankCallbackFunc</div><div class="ttdeci">void(* AkBankCallbackFunc)(AkUInt32 in_bankID, const void *in_pInMemoryBankPtr, AKRESULT in_eLoadResult, void *in_pCookie)</div><div class="ttdef"><b>Definition:</b> AkCallback.h:326</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_ac16591355aef3ffaf2f8e9ac7a5b95ad_html_ac16591355aef3ffaf2f8e9ac7a5b95ad"><div class="ttname">AK::SoundEngine::LoadBankMemoryCopy</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT LoadBankMemoryCopy(const void *in_pInMemoryBankPtr, AkUInt32 in_uInMemoryBankSize, AkBankID &amp;out_bankID)</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname">AkUInt32</div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:38</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a41e9ef8d42951871fe4a8ae58a29a68e_html_a41e9ef8d42951871fe4a8ae58a29a68e"><div class="ttname">AK::SoundEngine::PostEvent</div><div class="ttdeci">AKSOUNDENGINE_API AkPlayingID PostEvent(AkUniqueID in_eventID, AkGameObjectID in_gameObjectID, AkUInt32 in_uFlags=0, AkCallbackFunc in_pfnCallback=NULL, void *in_pCookie=NULL, AkUInt32 in_cExternals=0, AkExternalSourceInfo *in_pExternalSources=NULL, AkPlayingID in_PlayingID=AK_INVALID_PLAYING_ID)</div></div>
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -35,10 +35,10 @@
 <div class="contents">
 <div class="textblock"><h1><a class="anchor" id="soundengine_integration_switches"></a>
 Switch Example</h1>
-<p>Setting switches is very similar to setting states, except that you do it with the <a class="el" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">AK::SoundEngine::SetSwitch()</a> function:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">AK::SoundEngine::SetSwitch</a>( AK::SWITCHES::GROUND::GROUP, AK::SWITCHES::GROUND::SWITCH::GRAVEL, GAME_OBJECT_ID_HUMAN );</div>
-</div><!-- fragment --><p>The <a class="el" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">AK::SoundEngine::SetSwitch()</a> method also accepts strings (Unicode or Ansi) instead of IDs. In this case you would specify the names of the Switch Group and Switch, as defined by the Wwise user:</p>
-<div class="fragment"><div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">AK::SoundEngine::SetSwitch</a>( L<span class="stringliteral">&quot;Ground&quot;</span>, L<span class="stringliteral">&quot;Gravel&quot;</span>, GAME_OBJECT_ID_HUMAN );</div>
+<p>Setting switches is very similar to setting states, except that you do it with the AK::SoundEngine::SetSwitch() function:</p>
+<div class="fragment"><div class="line">AK::SoundEngine::SetSwitch( AK::SWITCHES::GROUND::GROUP, AK::SWITCHES::GROUND::SWITCH::GRAVEL, GAME_OBJECT_ID_HUMAN );</div>
+</div><!-- fragment --><p>The AK::SoundEngine::SetSwitch() method also accepts strings (Unicode or Ansi) instead of IDs. In this case you would specify the names of the Switch Group and Switch, as defined by the Wwise user:</p>
+<div class="fragment"><div class="line">AK::SoundEngine::SetSwitch( L<span class="stringliteral">&quot;Ground&quot;</span>, L<span class="stringliteral">&quot;Gravel&quot;</span>, GAME_OBJECT_ID_HUMAN );</div>
 </div><!-- fragment --><p>In the sample program you can experiment with switches by clicking on the Start Walking button (to start triggerring <code>Play_FootStep</code> events every half second) and then changing the ground material with the "Ground switch" dropdown list.</p>
 <p>Refer to <a class="el" href="soundengine_switch.html">Integration Details - Switches</a> for more details.</p>
 <table border="0" cellspacing="0" cellpadding="2">
@@ -47,6 +47,7 @@ Switch Example</h1>
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264_html_a9c9d57ba7b3af2b896e26297a7657264"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264.html#a9c9d57ba7b3af2b896e26297a7657264">AK::SoundEngine::SetSwitch</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetSwitch(AkSwitchGroupID in_switchGroup, AkSwitchStateID in_switchState, AkGameObjectID in_gameObjectID)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9c9d57ba7b3af2b896e26297a7657264_html_a9c9d57ba7b3af2b896e26297a7657264"><div class="ttname">AK::SoundEngine::SetSwitch</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetSwitch(AkSwitchGroupID in_switchGroup, AkSwitchStateID in_switchState, AkGameObjectID in_gameObjectID)</div></div>
 </body>
 </html>
+

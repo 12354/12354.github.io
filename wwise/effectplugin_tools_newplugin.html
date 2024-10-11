@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -53,32 +53,32 @@
 <div class="line">Generating project structure for MyNewFX</div>
 </div><!-- fragment --><p>This will create a directory that is named after your plug-in's current working directory. The directory contains a skeleton for the type of plug-in to create.</p>
 <pre class="fragment">MyNewFX/
-├── FactoryAssets
-│   └── Manifest.xml
-├── Help
-├── MyNewFXConfig.h
-├── PremakePlugin.lua
-├── SoundEnginePlugin
-│   ├── MyNewFXFX.cpp
-│   ├── MyNewFXFX.h
-│   ├── MyNewFXFXFactory.h
-│   ├── MyNewFXFXParams.cpp
-│   ├── MyNewFXFXParams.h
-│   └── MyNewFXFXShared.cpp
-├── WwisePlugin
-│   ├── MyNewFX.def
-│   ├── MyNewFX.xml
-│   ├── MyNewFXPlugin.cpp
-│   ├── MyNewFXPlugin.h
-│   └── Win32
-│       ├── MyNewFXPluginGUI.cpp
-│       └── MyNewFXPluginGUI.h
-│   └── res
-│       └── Md
-│           └── en
-│               └── Placeholder.md
-├── additional_artifacts.json  
-└── bundle_template.json
+â”œâ”€â”€ FactoryAssets
+â”‚Â Â  â””â”€â”€ Manifest.xml
+â”œâ”€â”€ Help
+â”œâ”€â”€ MyNewFXConfig.h
+â”œâ”€â”€ PremakePlugin.lua
+â”œâ”€â”€ SoundEnginePlugin
+â”‚Â Â  â”œâ”€â”€ MyNewFXFX.cpp
+â”‚Â Â  â”œâ”€â”€ MyNewFXFX.h
+â”‚Â Â  â”œâ”€â”€ MyNewFXFXFactory.h
+â”‚Â Â  â”œâ”€â”€ MyNewFXFXParams.cpp
+â”‚Â Â  â”œâ”€â”€ MyNewFXFXParams.h
+â”‚Â Â  â””â”€â”€ MyNewFXFXShared.cpp
+â”œâ”€â”€ WwisePlugin
+â”‚Â Â  â”œâ”€â”€ MyNewFX.def
+â”‚Â Â  â”œâ”€â”€ MyNewFX.xml
+â”‚Â Â  â”œâ”€â”€ MyNewFXPlugin.cpp
+â”‚Â Â  â”œâ”€â”€ MyNewFXPlugin.h
+â”‚Â Â  â””â”€â”€ Win32
+â”‚Â Â      â”œâ”€â”€ MyNewFXPluginGUI.cpp
+â”‚Â Â      â””â”€â”€ MyNewFXPluginGUI.h
+â”‚Â Â  â””â”€â”€ res
+â”‚Â Â      â””â”€â”€ Md
+â”‚Â Â          â””â”€â”€ en
+â”‚Â Â              â””â”€â”€ Placeholder.md
+â”œâ”€â”€ additional_artifacts.json  
+â””â”€â”€ bundle_template.json
 </pre><p>The purpose of these files and directories is as follows:</p><ul>
 <li><b>PremakePlugin.lua</b> -&gt; Premake file used to generate platform-specific solutions for a plug-in.</li>
 <li><b>ProjectNameConfig.h</b> -&gt; Header file containing global identification variables for a plug-in. This is where the Company ID and Plugin ID can be modified.</li>
@@ -92,7 +92,7 @@
 </li>
 <li><b>SoundEnginePlugin</b> -&gt; The directory containing the sound engine part of your plug-in. It is used in your game by the sound engine and can be built as a static library or a shared library.<ul>
 <li><b>PluginNameFactory.h</b> -&gt; Factory header containing the registration macro for the plug-in.</li>
-<li><b>PluginNameParams.h/.cpp</b> -&gt; The plug-in parameter interface. For more details, see <a class="el" href="soundengine_plugins.html#shared_parameter_interface">Parameter Node Interface Implementation</a>.</li>
+<li><b>PluginNameParams.h/.cpp</b> -&gt; The plug-in parameter interface. For more details, see Parameter Node Interface Implementation.</li>
 <li><b>PluginNameShared.cpp</b> -&gt; Defines the plug-in's dynamic library export symbol.</li>
 <li><b>PluginName.h/.cpp</b> -&gt; Class that implements the sound engine part of the plug-in. See <a class="el" href="effectpluginsoundengine.html">Writing the Sound Engine Part of an Audio Plug-in</a> for details.</li>
 </ul>
@@ -120,3 +120,4 @@
 </div><!-- PageDoc -->
 </body>
 </html>
+

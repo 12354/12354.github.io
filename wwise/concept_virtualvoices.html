@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -33,7 +33,7 @@
 <div class="title">Concept: Virtual Voices </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>To maintain an optimal level of performance when many sounds are playing simultaneously, sounds below a certain volume level should not take up valuable processing power and memory. Instead of playing these inaudible sounds, the sound engine can queue them in the virtual voice list. Wwise continues to manage and monitor these sounds, but once inside the virtual voice list, they are no longer processed by the sound engine and won’t take up one of the hardware’s physical voices.</p>
+<div class="textblock"><p>To maintain an optimal level of performance when many sounds are playing simultaneously, sounds below a certain volume level should not take up valuable processing power and memory. Instead of playing these inaudible sounds, the sound engine can queue them in the virtual voice list. Wwise continues to manage and monitor these sounds, but once inside the virtual voice list, they are no longer processed by the sound engine and wonâ€™t take up one of the hardwareâ€™s physical voices.</p>
 <p>When you select the virtual voices feature, sounds move back and forth between the physical and the virtual voice based on their volume levels when they are under threshold or the fact that the playback limit was exceeded and sounds were allowed to go virtual in this situation. As the volume reaches the threshold set by the Wwise user in Project Settings, they are added to the virtual voice list and sound processing stops. As volume levels increase, as is the case when sounds move within the max distance radius, the sounds will move from the virtual voice list to the physical voice where they will be processed by the sound engine again.</p>
 <p>You have a choice of three different playback behaviors for sounds as they change from virtual to physical. Each behavior has its own performance characteristics, as demonstrated in the following table:</p>
 <table border="1" cellspacing="0">
@@ -60,3 +60,4 @@
 </div><!-- PageDoc -->
 </body>
 </html>
+

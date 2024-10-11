@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -33,7 +33,7 @@
 <div class="title">Plug-in First Time Creation Notice </div>  </div>
 </div><!--header-->
 <div class="contents">
-<div class="textblock"><p>Upon first use in a given project, a plug-in can optionally display a notice in a message box. This feature is provided as a separate class that can be added to the plug-in container (refer to <a class="el" href="plugin_dll.html#wwiseplugin_container">Library Plug-in Container</a> for more details on the plug-in container).</p>
+<div class="textblock"><p>Upon first use in a given project, a plug-in can optionally display a notice in a message box. This feature is provided as a separate class that can be added to the plug-in container (refer to Library Plug-in Container for more details on the plug-in container).</p>
 <p>Here is a sample class that defines a message and adds the class to the plug-in container <code>MyPlugin</code>:</p>
 <div class="fragment"><div class="line"><span class="keyword">class </span>MyCreationMessagePlugin</div>
 <div class="line">:   <span class="keyword">public</span> <a class="code" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message.html">AK::Wwise::Plugin::FirstTimeCreationMessage</a></div>
@@ -41,28 +41,29 @@
 <div class="line"><span class="keyword">public</span>:</div>
 <div class="line">    MyCreationMessagePlugin(<a class="code" href="structak__wwise__plugin__info.html">AK::Wwise::Plugin::PluginInfo</a>* in_pluginInfo) {}</div>
 <div class="line"> </div>
-<div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a8315ef166cad4835421751a9bc3b9b31.html#a8315ef166cad4835421751a9bc3b9b31">GetKey</a>()<span class="keyword"> const override</span></div>
+<div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span>* GetKey()<span class="keyword"> const override</span></div>
 <div class="line"><span class="keyword">    </span>{</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="stringliteral">&quot;Company.MyCreationMessagePlugin&quot;</span>;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span>* <a class="code" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a939b1764d2278241a55c3348dc663270.html#a939b1764d2278241a55c3348dc663270">GetCreationMessage</a>()<span class="keyword"> const override</span></div>
+<div class="line">    <span class="keyword">const</span> <span class="keywordtype">char</span>* GetCreationMessage()<span class="keyword"> const override</span></div>
 <div class="line"><span class="keyword">    </span>{</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="stringliteral">&quot;Copyright Notice&quot;</span>;</div>
 <div class="line">    }</div>
 <div class="line">};</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_plugin_info_generator_8h_ae72bc9efe38504b8f47686c01f5882f8.html#ae72bc9efe38504b8f47686c01f5882f8">AK_ADD_PLUGIN_CLASS_TO_CONTAINER</a>(</div>
+<div class="line">AK_ADD_PLUGIN_CLASS_TO_CONTAINER(</div>
 <div class="line">    MyPlugin,                <span class="comment">// Add to container &quot;MyPlugin&quot;</span></div>
 <div class="line">    MyCreationMessagePlugin, <span class="comment">// Class to add to the container</span></div>
 <div class="line">    SoundEngineSourcePlugin  <span class="comment">// Sound engine plug-in to which this plug-in corresponds</span></div>
 <div class="line">);</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message.html">AK.Wwise::Plugin::V1::FirstTimeCreationMessage</a></div><div class="ttdef"><b>Definition:</b> <a href="_first_time_creation_message_8h_source.html#l00095">FirstTimeCreationMessage.h:96</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a8315ef166cad4835421751a9bc3b9b31_html_a8315ef166cad4835421751a9bc3b9b31"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a8315ef166cad4835421751a9bc3b9b31.html#a8315ef166cad4835421751a9bc3b9b31">AK.Wwise::Plugin::V1::FirstTimeCreationMessage::GetKey</a></div><div class="ttdeci">virtual const char * GetKey() const =0</div><div class="ttdoc">Returns a unique key used in the .wproj to indicate whether the licensing message was shown.</div></div>
-<div class="ttc" id="a_plugin_info_generator_8h_ae72bc9efe38504b8f47686c01f5882f8_html_ae72bc9efe38504b8f47686c01f5882f8"><div class="ttname"><a href="_plugin_info_generator_8h_ae72bc9efe38504b8f47686c01f5882f8.html#ae72bc9efe38504b8f47686c01f5882f8">AK_ADD_PLUGIN_CLASS_TO_CONTAINER</a></div><div class="ttdeci">#define AK_ADD_PLUGIN_CLASS_TO_CONTAINER(ContainerName, WwiseClassName, AudioEngineRegisteredName)</div><div class="ttdoc">(C++) Adds a Wwise Authoring plug-in and a Sound Engine plug-in to a plug-in container.</div><div class="ttdef"><b>Definition:</b> <a href="_plugin_info_generator_8h_source.html#l00882">PluginInfoGenerator.h:882</a></div></div>
-<div class="ttc" id="astructak__wwise__plugin__info_html"><div class="ttname"><a href="structak__wwise__plugin__info.html">ak_wwise_plugin_info</a></div><div class="ttdef"><b>Definition:</b> <a href="_plugin_info_8h_source.html#l00037">PluginInfo.h:38</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a939b1764d2278241a55c3348dc663270_html_a939b1764d2278241a55c3348dc663270"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a939b1764d2278241a55c3348dc663270.html#a939b1764d2278241a55c3348dc663270">AK.Wwise::Plugin::V1::FirstTimeCreationMessage::GetCreationMessage</a></div><div class="ttdeci">virtual const char * GetCreationMessage() const =0</div><div class="ttdoc">Returns a unique creation message shown to the user.</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message.html">AK.Wwise::Plugin::V1::FirstTimeCreationMessage</a></div><div class="ttdef"><b>Definition:</b> FirstTimeCreationMessage.h:96</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a8315ef166cad4835421751a9bc3b9b31_html_a8315ef166cad4835421751a9bc3b9b31"><div class="ttname">AK.Wwise::Plugin::V1::FirstTimeCreationMessage::GetKey</div><div class="ttdeci">virtual const char * GetKey() const =0</div><div class="ttdoc">Returns a unique key used in the .wproj to indicate whether the licensing message was shown.</div></div>
+<div class="ttc" id="a_plugin_info_generator_8h_ae72bc9efe38504b8f47686c01f5882f8_html_ae72bc9efe38504b8f47686c01f5882f8"><div class="ttname">AK_ADD_PLUGIN_CLASS_TO_CONTAINER</div><div class="ttdeci">#define AK_ADD_PLUGIN_CLASS_TO_CONTAINER(ContainerName, WwiseClassName, AudioEngineRegisteredName)</div><div class="ttdoc">(C++) Adds a Wwise Authoring plug-in and a Sound Engine plug-in to a plug-in container.</div><div class="ttdef"><b>Definition:</b> PluginInfoGenerator.h:882</div></div>
+<div class="ttc" id="astructak__wwise__plugin__info_html"><div class="ttname"><a href="structak__wwise__plugin__info.html">ak_wwise_plugin_info</a></div><div class="ttdef"><b>Definition:</b> PluginInfo.h:38</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_first_time_creation_message_a939b1764d2278241a55c3348dc663270_html_a939b1764d2278241a55c3348dc663270"><div class="ttname">AK.Wwise::Plugin::V1::FirstTimeCreationMessage::GetCreationMessage</div><div class="ttdeci">virtual const char * GetCreationMessage() const =0</div><div class="ttdoc">Returns a unique creation message shown to the user.</div></div>
 </body>
 </html>
+

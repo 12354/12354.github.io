@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -34,14 +34,15 @@
 </div><!--header-->
 <div class="contents">
 <div class="textblock"><p>In some cases, it may not be possible or desirable to use the geometry API for simulating early reflections. In the case that a game does not require a high degree of realism, does not have a sufficient CPU budget, or employs a new creative technique, it is possible to pass images sources directly to the Reflect plugin to render early reflections. Image sources may be provided to Reflect by game engines that already implement this functionality, via ray-casting or their own image-source algorithm, for example.</p>
-<p>While <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=wwise_reflect_plug_in_effect" target="_blank">Reflect</a> may be used and controlled by the game directly using <code><a class="el" href="namespace_a_k_1_1_sound_engine_aa1d99f0095ab128c8d9e8052dd2f3931.html#aa1d99f0095ab128c8d9e8052dd2f3931">AK::SoundEngine::SendPluginCustomGameData</a></code>, Spatial Audio makes its use easier by providing convenient per-emitter bookkeeping, as well as packaging of image sources. Also, it lets you mix and match "raw" image sources with surface reflectors (potentially on the same target bus/plug-in).</p>
+<p>While Reflect may be used and controlled by the game directly using <code>AK::SoundEngine::SendPluginCustomGameData</code>, Spatial Audio makes its use easier by providing convenient per-emitter bookkeeping, as well as packaging of image sources. Also, it lets you mix and match "raw" image sources with surface reflectors (potentially on the same target bus/plug-in).</p>
 <h1><a class="anchor" id="spatial_audio_gamesidesetup_rawimage"></a>
 Game side setup</h1>
-<p>Call <code><a class="el" href="namespace_a_k_1_1_spatial_audio_aab4d85317c62724c00d25ba8913fb503.html#aab4d85317c62724c00d25ba8913fb503">AK::SpatialAudio::SetImageSource</a></code> for each image source. At minimum, include a unique (per game object, per auxiliary bus) image source ID, and the desired <code><a class="el" href="struct_ak_image_source_settings.html" title="Settings for individual image sources.">AkImageSourceSettings</a></code>. The most straight forward approach is to leave the auxiliary bus and the game object ID empty. The image source will then be used for every registered game object that has an early reflection auxiliary send defined in the authoring tool. Optionally, a target bus ID and game object ID can be specified (note that the game object ID may also be a listener or the main listener). Refer to <code><a class="el" href="struct_ak_reflect_image_source.html">AkReflectImageSource</a></code> for more details on how to describe an image source.</p>
+<p>Call <code>AK::SpatialAudio::SetImageSource</code> for each image source. At minimum, include a unique (per game object, per auxiliary bus) image source ID, and the desired <code><a class="el" href="struct_ak_image_source_settings.html" title="Settings for individual image sources.">AkImageSourceSettings</a></code>. The most straight forward approach is to leave the auxiliary bus and the game object ID empty. The image source will then be used for every registered game object that has an early reflection auxiliary send defined in the authoring tool. Optionally, a target bus ID and game object ID can be specified (note that the game object ID may also be a listener or the main listener). Refer to <code><a class="el" href="struct_ak_reflect_image_source.html">AkReflectImageSource</a></code> for more details on how to describe an image source.</p>
 <h1><a class="anchor" id="spatial_audio_wwiseprojectsetup_rawimage"></a>
 Wwise project setup</h1>
-<p>See the <a class="el" href="spatial_audio_apigeometry_er.html#spatial_audio_wwiseprojectsetup">Wwise project setup</a> above for the <a class="el" href="spatial_audio_apigeometry_er.html">Using the Geometry API for Simulating Early Reflections</a> - which is the same. You can also refer to the <a href="https://www.audiokinetic.com/library/edge/?source=Help&amp;id=wwise_reflect_plug_in_effect" target="_blank">Reflect</a> documentation in the Wwise Help for an example design of Reflect on FPS sound. </p>
+<p>See the Wwise project setup above for the <a class="el" href="spatial_audio_apigeometry_er.html">Using the Geometry API for Simulating Early Reflections</a> - which is the same. You can also refer to the Reflect documentation in the Wwise Help for an example design of Reflect on FPS sound. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 </body>
 </html>
+

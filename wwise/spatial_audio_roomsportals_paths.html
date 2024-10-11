@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -37,7 +37,7 @@
 <p>It helps to understand how Spatial Audio controls the voice and bus graph, and how it does so in relation to the sound propagation model. This sections explains the signal flow in the light of the sound propagation model.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_paths_connections"></a>
 Paths and Connections</h1>
-<p>At runtime, voices and busses are connected to other busses, as can be seen in the Voice Graph or the Voice Inspector views of the Wwise Profiler. The "wires" between these Wwise Objects are referred to as Connections. An emitter-listener pair is created whenever a voice or bus associated to a game object (an emitter or a room) is connected to a different game object (another room, or the top-level listener). Emitter-listener pairs, which we will refer to as paths for the rest of this discussion, are used to compute attenuation curves, amongst other things. There can be zero, one, or many paths within one connection. For example, when the game sets multiple positions to a game object using <a class="el" href="namespace_a_k_1_1_sound_engine_a79fc25a0656b560e0e601a558be26e31.html#a79fc25a0656b560e0e601a558be26e31">AK::SoundEngine::SetMultiplePositions</a>, multiple paths are created. Spatial Audio uses paths extensively. In the following discussion, we will examine the paths within each connection in the simple scenario where an emitter is located in a room, adjacent to that of the listener, as illustrated by the signal graph below.</p>
+<p>At runtime, voices and busses are connected to other busses, as can be seen in the Voice Graph or the Voice Inspector views of the Wwise Profiler. The "wires" between these Wwise Objects are referred to as Connections. An emitter-listener pair is created whenever a voice or bus associated to a game object (an emitter or a room) is connected to a different game object (another room, or the top-level listener). Emitter-listener pairs, which we will refer to as paths for the rest of this discussion, are used to compute attenuation curves, amongst other things. There can be zero, one, or many paths within one connection. For example, when the game sets multiple positions to a game object using AK::SoundEngine::SetMultiplePositions, multiple paths are created. Spatial Audio uses paths extensively. In the following discussion, we will examine the paths within each connection in the simple scenario where an emitter is located in a room, adjacent to that of the listener, as illustrated by the signal graph below.</p>
 <div class="image">
 <img src="voicegraph.png" alt=""/>
 </div>
@@ -60,7 +60,7 @@ Emitter-Listener (Direct) Connection</h1>
 <li>
 <b>Transmission Loss</b>: Maximum of Room's Transmission Loss and transmission loss of occluding geometry </li>
 <li>
-<b>Spread</b>: Emitter's (from the sound's Attenuation, or from the game object radius - see <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_spreadgameobjectspread">Game Object Spread</a>) </li>
+<b>Spread</b>: Emitter's (from the sound's Attenuation, or from the game object radius - see Game Object Spread) </li>
 </ul>
 </td></tr>
 <tr>
@@ -70,7 +70,7 @@ Emitter-Listener (Direct) Connection</h1>
 <li>
 <b>Diffraction</b>: Sum of Portal Diffraction and diffraction on geometry edges  </li>
 <li>
-<b>Spread</b>: Emitter's (from the sound's Attenuation, or from the game object radius - see <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_spreadgameobjectspread">Game Object Spread</a>), further clamped by the portal's aperture </li>
+<b>Spread</b>: Emitter's (from the sound's Attenuation, or from the game object radius - see Game Object Spread), further clamped by the portal's aperture </li>
 </ul>
 </td></tr>
 </table>
@@ -104,7 +104,7 @@ Emitter-Room Connection</h1>
 <p>The path associated with this connection has zero distance, and no transmission loss or diffraction. This means that the model assumes that the distance attenuation due to the average distance traveled from sources within that room to its walls, and then all the further distances traveled from wall to wall, are entirely conveyed by the impulse response of the reverb Effect on the room's bus. It also assumes that the geometry inside the room does not significantly obstruct the sound from the walls.</p>
 <h1><a class="anchor" id="spatial_audio_roomsportals_paths_rl"></a>
 Room-Listener Connection</h1>
-<p>The connection between the room's bus and the listener represents the room's diffuse energy, simulated by the reverb Effect, propagating to the listener. It reaches the listener through the room's walls, and via its portals. Similar to the Direct Connection, this connection embeds a single transmission path and one diffraction path per portal that is visible to the listener. The transmission path is attenuated by the room's transmission loss, and its Spread is computed from the room's estimated extent (see <a class="el" href="spatial_audio_roomsportals_apiconfig.html#spatial_audio_roomsportals_apiconfigroomgeometry">Setting up Room Geometry</a>). Diffraction paths assume that the diffuse energy exits the room on trajectories perpendicular to the portals' opening, so diffraction angles are computed from portals' normal vectors. Diffraction paths' Spread is computed based on the listener's position and angle relative to the portals' extents.</p>
+<p>The connection between the room's bus and the listener represents the room's diffuse energy, simulated by the reverb Effect, propagating to the listener. It reaches the listener through the room's walls, and via its portals. Similar to the Direct Connection, this connection embeds a single transmission path and one diffraction path per portal that is visible to the listener. The transmission path is attenuated by the room's transmission loss, and its Spread is computed from the room's estimated extent (see Setting up Room Geometry). Diffraction paths assume that the diffuse energy exits the room on trajectories perpendicular to the portals' opening, so diffraction angles are computed from portals' normal vectors. Diffraction paths' Spread is computed based on the listener's position and angle relative to the portals' extents.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The model does not take into account further obstruction due to geometry outside the room. The effect of this geometry is assumed to be negligible. </td></tr>
@@ -154,7 +154,7 @@ Emitter-Room and Room-Listener Connections, Revisited</h1>
 <li>
 <b>Transmission Loss</b>: Maximum of Room's Transmission Loss and transmission loss of occluding geometry </li>
 <li>
-<b>Spread</b>: Based on the room's extent (see <a class="el" href="spatial_audio_roomsportals_apiconfig.html#spatial_audio_roomsportals_apiconfigroomgeometry">Setting up Room Geometry</a>) </li>
+<b>Spread</b>: Based on the room's extent (see Setting up Room Geometry) </li>
 </ul>
 </td></tr>
 <tr>
@@ -164,7 +164,7 @@ Emitter-Room and Room-Listener Connections, Revisited</h1>
 <li>
 <b>Diffraction</b>: Sum of Portal Diffraction and diffraction on geometry edges  </li>
 <li>
-<b>Spread</b>: Emitter's (from the sound's Attenuation, or from the game object radius (see <a class="el" href="spatial_audio_roomsportals_apioverview.html#spatial_audio_roomsportals_spreadgameobjectspread">Game Object Spread</a>), further clamped by the portal's aperture </li>
+<b>Spread</b>: Emitter's (from the sound's Attenuation, or from the game object radius (see Game Object Spread), further clamped by the portal's aperture </li>
 </ul>
 </td></tr>
 </table>
@@ -196,7 +196,7 @@ Coupling Between Rooms</h1>
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> The model assumes that geometry in the receiving room does not interfere with the transfer of energy from the emitting room. </td></tr>
 </table>
-<p>These propagation paths should also be subject to distance attenuation, but this attenuation has already been accounted for since it has been distributed to the Emitter-Room connection (see the discussion in <a class="el" href="spatial_audio_roomsportals_paths.html#spatial_audio_roomsportals_paths_wetdistance">Distance-Based Attenuation of the Wet Signal</a>).</p>
+<p>These propagation paths should also be subject to distance attenuation, but this attenuation has already been accounted for since it has been distributed to the Emitter-Room connection (see the discussion in Distance-Based Attenuation of the Wet Signal).</p>
 <p>The following table describes the paths of the Emitter's Room to Listener's Room connection.</p>
 <table border="1" cellspacing="0" cellpadding="1" width="800px">
 <tr>
@@ -233,3 +233,4 @@ Connection Between Listener's Room and the Listener</h1>
 </div><!-- PageDoc -->
 </body>
 </html>
+

@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -56,7 +56,7 @@ Implementing the Filtering Process</h1>
 <div class="line"><span class="keyword">private</span>:</div>
 <div class="line"><span class="comment">//...</span></div>
 <div class="line"> </div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> m_coeff;</div>
+<div class="line">    AkReal32 m_coeff;</div>
 <div class="line">    std::vector&lt;AkReal32&gt; m_previousOutput;</div>
 </div><!-- fragment --><p>The variable <code>m_coeff</code> is our filter coefficient as a floating-point value, it will be used for all sound channels. The vector <code>m_previousOutput</code> will hold the last output value of all channels, mandatory to compute the next values of the filter.</p>
 <p>To implement the filtering effect, all we have to do is to initialize the coefficient variable, adjust the size of the vector according to the number of channels and then process every sample with the previous formula.</p>
@@ -67,7 +67,7 @@ Implementing the Filtering Process</h1>
 <div class="line"> </div>
 <div class="line"><span class="comment">//...</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> LowpassFX::<a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">Init</a>(<a class="code" href="namespace_a_k.html">AK</a>::IAkPluginMemAlloc* in_pAllocator, <a class="code" href="namespace_a_k.html">AK</a>::IAkEffectPluginContext* in_pContext, <a class="code" href="namespace_a_k.html">AK</a>::IAkPluginParam* in_pParams, <a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a>&amp; in_rFormat)</div>
+<div class="line">AKRESULT LowpassFX::Init(<a class="code" href="namespace_a_k.html">AK</a>::IAkPluginMemAlloc* in_pAllocator, <a class="code" href="namespace_a_k.html">AK</a>::IAkEffectPluginContext* in_pContext, <a class="code" href="namespace_a_k.html">AK</a>::IAkPluginParam* in_pParams, <a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a>&amp; in_rFormat)</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">    m_previousOutput.resize(in_rFormat.GetNumChannels(), 0.0f);</div>
@@ -75,12 +75,12 @@ Implementing the Filtering Process</h1>
 <div class="line">}</div>
 <div class="line"><span class="keywordtype">void</span> LowpassFX::Execute(<a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a>* io_pBuffer)</div>
 <div class="line">{</div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uNumChannels = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f">NumChannels</a>();</div>
+<div class="line">    <span class="keyword">const</span> AkUInt32 uNumChannels = io_pBuffer-&gt;NumChannels();</div>
 <div class="line"> </div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219.html#a7100a9b0a3b01df7639c1dc512678219">AkUInt16</a> uFramesProcessed;</div>
-<div class="line">    <span class="keywordflow">for</span> (<a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> i = 0; i &lt; uNumChannels; ++i)</div>
+<div class="line">    AkUInt16 uFramesProcessed;</div>
+<div class="line">    <span class="keywordflow">for</span> (AkUInt32 i = 0; i &lt; uNumChannels; ++i)</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a> pBuf = (<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a>)io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">GetChannel</a>(i);</div>
+<div class="line">        AkReal32* AK_RESTRICT pBuf = (AkReal32* AK_RESTRICT)io_pBuffer-&gt;GetChannel(i);</div>
 <div class="line"> </div>
 <div class="line">        uFramesProcessed = 0;</div>
 <div class="line">        <span class="keywordflow">while</span> (uFramesProcessed &lt; io_pBuffer-&gt;uValidFrames)</div>
@@ -111,14 +111,14 @@ Using an RTPC Parameter to Control the Filter's Frequency</h1>
 <div class="line">&lt;/<span class="keywordtype">Property</span>&gt;</div>
 </div><!-- fragment --><p>Second, we need to update <code>LowpassFXParams.h</code> and <code>LowpassFXParams.cpp</code> in the SoundEnginePlugin folder to reflect our property changes.</p>
 <p>In <code>LowpassFXParams.h</code>, update the parameter IDs and the name of the parameter in the <code>LowpassRTPCParams</code> structure.</p>
-<div class="fragment"><div class="line"><span class="keyword">static</span> <span class="keyword">const</span> <a class="code" href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a> PARAM_FREQUENCY_ID = 0;</div>
+<div class="fragment"><div class="line"><span class="keyword">static</span> <span class="keyword">const</span> AkPluginParamID PARAM_FREQUENCY_ID = 0;</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">struct </span>LowpassRTPCParams</div>
 <div class="line">{</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> fFrequency;</div>
+<div class="line">    AkReal32 fFrequency;</div>
 <div class="line">};</div>
 </div><!-- fragment --><p>Update <code>LowpassFXParams.cpp</code> as well:</p>
-<div class="fragment"><div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">LowpassFXParams::Init</a>(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a>* in_pAllocator, <span class="keyword">const</span> <span class="keywordtype">void</span>* in_pParamsBlock, <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_ulBlockSize)</div>
+<div class="fragment"><div class="line">AKRESULT LowpassFXParams::Init(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a>* in_pAllocator, <span class="keyword">const</span> <span class="keywordtype">void</span>* in_pParamsBlock, AkUInt32 in_ulBlockSize)</div>
 <div class="line">{</div>
 <div class="line">    <span class="keywordflow">if</span> (in_ulBlockSize == 0)</div>
 <div class="line">    {</div>
@@ -129,20 +129,20 @@ Using an RTPC Parameter to Control the Filter's Frequency</h1>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> LowpassFXParams::SetParamsBlock(<span class="keyword">const</span> <span class="keywordtype">void</span>* in_pParamsBlock, <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_ulBlockSize)</div>
+<div class="line">AKRESULT LowpassFXParams::SetParamsBlock(<span class="keyword">const</span> <span class="keywordtype">void</span>* in_pParamsBlock, AkUInt32 in_ulBlockSize)</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">    <span class="comment">// Read bank data here</span></div>
-<div class="line">    RTPC.fFrequency = <a class="code" href="_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5.html#a18513ab855bc8316634d74b9a17138c5">READBANKDATA</a>(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>, pParamsBlock, in_ulBlockSize);</div>
+<div class="line">    RTPC.fFrequency = READBANKDATA(AkReal32, pParamsBlock, in_ulBlockSize);</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> LowpassFXParams::SetParam(<a class="code" href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a> in_paramID, <span class="keyword">const</span> <span class="keywordtype">void</span>* in_pValue, <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_ulParamSize)</div>
+<div class="line">AKRESULT LowpassFXParams::SetParam(AkPluginParamID in_paramID, <span class="keyword">const</span> <span class="keywordtype">void</span>* in_pValue, AkUInt32 in_ulParamSize)</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">    <span class="comment">// Handle parameter change here</span></div>
 <div class="line">    <span class="keywordflow">case</span> PARAM_FREQUENCY_ID:</div>
-<div class="line">        RTPC.fFrequency = *((<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>*)in_pValue);</div>
+<div class="line">        RTPC.fFrequency = *((AkReal32*)in_pValue);</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
@@ -150,7 +150,7 @@ Using an RTPC Parameter to Control the Filter's Frequency</h1>
 <div class="fragment"><div class="line"><span class="keywordtype">bool</span> LowpassPlugin::GetBankParameters(<span class="keyword">const</span> <a class="code" href="struct_g_u_i_d.html">GUID</a> &amp; in_guidPlatform, <a class="code" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer.html">AK::Wwise::Plugin::DataWriter</a>* in_pDataWriter)<span class="keyword"> const</span></div>
 <div class="line"><span class="keyword"></span>{</div>
 <div class="line">    <span class="comment">// Write bank data here</span></div>
-<div class="line">    in_pDataWriter-&gt;<a class="code" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer_a8d9b58e2ecba7f95721d4b89b7f9630f.html#a8d9b58e2ecba7f95721d4b89b7f9630f">WriteReal32</a>(m_propertySet.GetReal32(in_guidPlatform, <span class="stringliteral">&quot;Frequency&quot;</span>));</div>
+<div class="line">    in_pDataWriter-&gt;WriteReal32(m_propertySet.GetReal32(in_guidPlatform, <span class="stringliteral">&quot;Frequency&quot;</span>));</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line">}</div>
@@ -161,13 +161,13 @@ Using an RTPC Parameter to Control the Filter's Frequency</h1>
 <div class="line"> </div>
 <div class="line"><span class="keyword">private</span>:</div>
 <div class="line">    <span class="comment">//...</span></div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> m_sampleRate;</div>
+<div class="line">    AkUInt32 m_sampleRate;</div>
 </div><!-- fragment --><div class="fragment"><div class="line"><span class="comment">// LowpassFX.cpp</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">LowpassFX::Init</a>(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a>* in_pAllocator, <a class="code" href="class_a_k_1_1_i_ak_effect_plugin_context.html">AK::IAkEffectPluginContext</a>* in_pContext, <a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a>* in_pParams, <a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a>&amp; in_rFormat)</div>
+<div class="line">AKRESULT LowpassFX::Init(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a>* in_pAllocator, <a class="code" href="class_a_k_1_1_i_ak_effect_plugin_context.html">AK::IAkEffectPluginContext</a>* in_pContext, <a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a>* in_pParams, <a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a>&amp; in_rFormat)</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">//...</span></div>
-<div class="line">    m_sampleRate = in_rFormat.<a class="code" href="struct_ak_audio_format_ad94d7b21266cb1d8a9aa5557f875d0fa.html#ad94d7b21266cb1d8a9aa5557f875d0fa">uSampleRate</a>;</div>
+<div class="line">    m_sampleRate = in_rFormat.uSampleRate;</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
 </div><!-- fragment --><p>include some math symbols:</p>
@@ -184,7 +184,7 @@ Using an RTPC Parameter to Control the Filter's Frequency</h1>
 <div class="fragment"><div class="line"><span class="comment">// LowpassFX.cpp</span></div>
 <div class="line"><span class="keywordtype">void</span> LowpassFX::Execute(<a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a>* io_pBuffer)</div>
 <div class="line">{</div>
-<div class="line">    m_coeff = <span class="keyword">static_cast&lt;</span><a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a><span class="keyword">&gt;</span>(exp(-2.0 * M_PI * m_pParams-&gt;RTPC.fFrequency / m_sampleRate));</div>
+<div class="line">    m_coeff = <span class="keyword">static_cast&lt;</span>AkReal32<span class="keyword">&gt;</span>(exp(-2.0 * M_PI * m_pParams-&gt;RTPC.fFrequency / m_sampleRate));</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
 </div><!-- fragment --><h1><a class="anchor" id="effectplugin_runthrough_interp_param"></a>
@@ -198,11 +198,11 @@ Interpolating Parameter Values</h1>
 </table>
 <div class="fragment"><div class="line"><span class="keywordtype">void</span> LowpassFX::Execute(<a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a>* io_pBuffer)</div>
 <div class="line">{</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> coeffBegin = m_coeff, coeffEnd = 0.0f, coeffStep = 0.0f;</div>
+<div class="line">    AkReal32 coeffBegin = m_coeff, coeffEnd = 0.0f, coeffStep = 0.0f;</div>
 <div class="line">    <span class="keywordflow">if</span> (m_pParams-&gt;m_paramChangeHandler.HasChanged(PARAM_FREQUENCY_ID))</div>
 <div class="line">    {</div>
-<div class="line">        coeffEnd = <span class="keyword">static_cast&lt;</span><a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a><span class="keyword">&gt;</span>(exp(-2.0 * M_PI * m_pParams-&gt;RTPC.fFrequency / m_sampleRate));</div>
-<div class="line">        coeffStep = (coeffEnd - coeffBegin) / io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ab7f90fd99119b56e92e4cbf3559f98cd.html#ab7f90fd99119b56e92e4cbf3559f98cd">uValidFrames</a>;</div>
+<div class="line">        coeffEnd = <span class="keyword">static_cast&lt;</span>AkReal32<span class="keyword">&gt;</span>(exp(-2.0 * M_PI * m_pParams-&gt;RTPC.fFrequency / m_sampleRate));</div>
+<div class="line">        coeffStep = (coeffEnd - coeffBegin) / io_pBuffer-&gt;uValidFrames;</div>
 <div class="line">    }</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
@@ -211,9 +211,9 @@ Interpolating Parameter Values</h1>
 <div class="line">{</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">for</span> (<a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> i = 0; i &lt; uNumChannels; ++i)</div>
+<div class="line">    <span class="keywordflow">for</span> (AkUInt32 i = 0; i &lt; uNumChannels; ++i)</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a> pBuf = (<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a>)io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">GetChannel</a>(i);</div>
+<div class="line">        AkReal32* AK_RESTRICT pBuf = (AkReal32* AK_RESTRICT)io_pBuffer-&gt;GetChannel(i);</div>
 <div class="line"> </div>
 <div class="line">        coeffBegin = m_coeff; <span class="comment">// restart the ramp.</span></div>
 <div class="line">        uFramesProcessed = 0;</div>
@@ -249,15 +249,15 @@ Encapsulating the Processing</h1>
 <div class="line">    FirstOrderLowpass();</div>
 <div class="line">    ~FirstOrderLowpass();</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordtype">void</span> Setup(<a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_sampleRate);</div>
-<div class="line">    <span class="keywordtype">void</span> SetFrequency(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> in_newFrequency);</div>
-<div class="line">    <span class="keywordtype">void</span> Execute(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* io_pBuffer, <a class="code" href="_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219.html#a7100a9b0a3b01df7639c1dc512678219">AkUInt16</a> in_uValidFrames);</div>
+<div class="line">    <span class="keywordtype">void</span> Setup(AkUInt32 in_sampleRate);</div>
+<div class="line">    <span class="keywordtype">void</span> SetFrequency(AkReal32 in_newFrequency);</div>
+<div class="line">    <span class="keywordtype">void</span> Execute(AkReal32* io_pBuffer, AkUInt16 in_uValidFrames);</div>
 <div class="line"> </div>
 <div class="line"><span class="keyword">private</span>:</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> m_sampleRate;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> m_frequency;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> m_coeff;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> m_previousOutput;</div>
+<div class="line">    AkUInt32 m_sampleRate;</div>
+<div class="line">    AkReal32 m_frequency;</div>
+<div class="line">    AkReal32 m_coeff;</div>
+<div class="line">    AkReal32 m_previousOutput;</div>
 <div class="line">    <span class="keywordtype">bool</span> m_frequencyChanged;</div>
 <div class="line">};</div>
 </div><!-- fragment --><p>And add the implementation in a file called <code>FirstOrderLowpass.cpp:</code> </p>
@@ -282,12 +282,12 @@ Encapsulating the Processing</h1>
 <div class="line"> </div>
 <div class="line">FirstOrderLowpass::~FirstOrderLowpass() {}</div>
 <div class="line"> </div>
-<div class="line"><span class="keywordtype">void</span> FirstOrderLowpass::Setup(<a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> in_sampleRate) </div>
+<div class="line"><span class="keywordtype">void</span> FirstOrderLowpass::Setup(AkUInt32 in_sampleRate) </div>
 <div class="line">{</div>
 <div class="line">    m_sampleRate = in_sampleRate;</div>
 <div class="line">}</div>
 <div class="line"> </div>
-<div class="line"><span class="keywordtype">void</span> FirstOrderLowpass::SetFrequency(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> in_newFrequency)</div>
+<div class="line"><span class="keywordtype">void</span> FirstOrderLowpass::SetFrequency(AkReal32 in_newFrequency)</div>
 <div class="line">{</div>
 <div class="line">    <span class="keywordflow">if</span> (m_sampleRate &gt; 0)</div>
 <div class="line">    {</div>
@@ -296,17 +296,17 @@ Encapsulating the Processing</h1>
 <div class="line">    }</div>
 <div class="line">}</div>
 <div class="line"> </div>
-<div class="line"><span class="keywordtype">void</span> FirstOrderLowpass::Execute(<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* io_pBuffer, <a class="code" href="_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219.html#a7100a9b0a3b01df7639c1dc512678219">AkUInt16</a> in_uValidFrames)</div>
+<div class="line"><span class="keywordtype">void</span> FirstOrderLowpass::Execute(AkReal32* io_pBuffer, AkUInt16 in_uValidFrames)</div>
 <div class="line">{</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a> coeffBegin = m_coeff, coeffEnd = 0.0f, coeffStep = 0.0f;</div>
+<div class="line">    AkReal32 coeffBegin = m_coeff, coeffEnd = 0.0f, coeffStep = 0.0f;</div>
 <div class="line">    <span class="keywordflow">if</span> (m_frequencyChanged)</div>
 <div class="line">    {</div>
-<div class="line">        coeffEnd = <span class="keyword">static_cast&lt;</span><a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a><span class="keyword">&gt;</span>(exp(-2.0 * M_PI * m_frequency / m_sampleRate));</div>
+<div class="line">        coeffEnd = <span class="keyword">static_cast&lt;</span>AkReal32<span class="keyword">&gt;</span>(exp(-2.0 * M_PI * m_frequency / m_sampleRate));</div>
 <div class="line">        coeffStep = (coeffEnd - coeffBegin) / in_uValidFrames;</div>
 <div class="line">        m_frequencyChanged = <span class="keyword">false</span>;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219.html#a7100a9b0a3b01df7639c1dc512678219">AkUInt16</a> uFramesProcessed = 0;</div>
+<div class="line">    AkUInt16 uFramesProcessed = 0;</div>
 <div class="line">    <span class="keywordflow">while</span> (uFramesProcessed &lt; in_uValidFrames)</div>
 <div class="line">    {</div>
 <div class="line">        m_previousOutput = io_pBuffer[uFramesProcessed] = </div>
@@ -328,11 +328,11 @@ Encapsulating the Processing</h1>
 <div class="line">    std::vector&lt;FirstOrderLowpass&gt; m_filter;</div>
 </div><!-- fragment --><div class="fragment"><div class="line"><span class="comment">// LowpassFX.cpp</span></div>
 <div class="line"> </div>
-<div class="line"><a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> <a class="code" href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">LowpassFX::Init</a>(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a>* in_pAllocator, <a class="code" href="class_a_k_1_1_i_ak_effect_plugin_context.html">AK::IAkEffectPluginContext</a>* in_pContext, <a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a>* in_pParams, <a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a>&amp; in_rFormat)</div>
+<div class="line">AKRESULT LowpassFX::Init(<a class="code" href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a>* in_pAllocator, <a class="code" href="class_a_k_1_1_i_ak_effect_plugin_context.html">AK::IAkEffectPluginContext</a>* in_pContext, <a class="code" href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a>* in_pParams, <a class="code" href="struct_ak_audio_format.html">AkAudioFormat</a>&amp; in_rFormat)</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">//...</span></div>
-<div class="line">    m_filter.resize(in_rFormat.<a class="code" href="struct_ak_audio_format_a4fbe6f5b2d3e04945c6c1444f14c2118.html#a4fbe6f5b2d3e04945c6c1444f14c2118">GetNumChannels</a>());</div>
-<div class="line">    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp; filterChannel : m_filter) { filterChannel.Setup(in_rFormat.<a class="code" href="struct_ak_audio_format_ad94d7b21266cb1d8a9aa5557f875d0fa.html#ad94d7b21266cb1d8a9aa5557f875d0fa">uSampleRate</a>); }</div>
+<div class="line">    m_filter.resize(in_rFormat.GetNumChannels());</div>
+<div class="line">    <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp; filterChannel : m_filter) { filterChannel.Setup(in_rFormat.uSampleRate); }</div>
 <div class="line">    <span class="comment">//...</span></div>
 <div class="line">}</div>
 <div class="line"><span class="keywordtype">void</span> LowpassFX::Execute(<a class="code" href="class_ak_audio_buffer.html">AkAudioBuffer</a>* io_pBuffer)</div>
@@ -342,38 +342,39 @@ Encapsulating the Processing</h1>
 <div class="line">        <span class="keywordflow">for</span> (<span class="keyword">auto</span> &amp; filterChannel : m_filter) { filterChannel.SetFrequency(m_pParams-&gt;RTPC.fFrequency); }</div>
 <div class="line">    }</div>
 <div class="line"> </div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uNumChannels = io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f">NumChannels</a>();</div>
+<div class="line">    <span class="keyword">const</span> AkUInt32 uNumChannels = io_pBuffer-&gt;NumChannels();</div>
 <div class="line"> </div>
-<div class="line">    <span class="keywordflow">for</span> (<a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> i = 0; i &lt; uNumChannels; ++i)</div>
+<div class="line">    <span class="keywordflow">for</span> (AkUInt32 i = 0; i &lt; uNumChannels; ++i)</div>
 <div class="line">    {</div>
-<div class="line">        <a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a> pBuf = (<a class="code" href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a>* <a class="code" href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a>)io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">GetChannel</a>(i);</div>
-<div class="line">        m_filter[i].Execute(pBuf, io_pBuffer-&gt;<a class="code" href="class_ak_audio_buffer_ab7f90fd99119b56e92e4cbf3559f98cd.html#ab7f90fd99119b56e92e4cbf3559f98cd">uValidFrames</a>);</div>
+<div class="line">        AkReal32* AK_RESTRICT pBuf = (AkReal32* AK_RESTRICT)io_pBuffer-&gt;GetChannel(i);</div>
+<div class="line">        m_filter[i].Execute(pBuf, io_pBuffer-&gt;uValidFrames);</div>
 <div class="line">    }</div>
 <div class="line">}</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="aclass_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c_html_ad2bc3b8ddd61eaa0c111798d5f9e8c9c"><div class="ttname"><a href="class_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c.html#ad2bc3b8ddd61eaa0c111798d5f9e8c9c">AkAudioBuffer::GetChannel</a></div><div class="ttdeci">AkSampleType * GetChannel(AkUInt32 in_uIndex)</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00574">AkCommonDefs.h:574</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219_html_a7100a9b0a3b01df7639c1dc512678219"><div class="ttname"><a href="_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219.html#a7100a9b0a3b01df7639c1dc512678219">AkUInt16</a></div><div class="ttdeci">uint16_t AkUInt16</div><div class="ttdoc">Unsigned 16-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00037">AkNumeralTypes.h:37</a></div></div>
-<div class="ttc" id="anamespace_a_k_html"><div class="ttname"><a href="namespace_a_k.html">AK</a></div><div class="ttdoc">Audiokinetic namespace.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_wwise_s_d_k_version_8cs_source.html#l00030">AkWwiseSDKVersion.cs:31</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer.html">AK.Wwise::Plugin::V1::DataWriter</a></div><div class="ttdoc">Interface used to write data during sound bank generation.</div><div class="ttdef"><b>Definition:</b> <a href="_host_data_writer_8h_source.html#l00244">HostDataWriter.h:245</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_param_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00619">IAkPlugin.h:620</a></div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f_html_a4523322478ec9a0f9de0c7c72e65df2f"><div class="ttname"><a href="class_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f.html#a4523322478ec9a0f9de0c7c72e65df2f">AkAudioBuffer::NumChannels</a></div><div class="ttdeci">AkForceInline AkUInt32 NumChannels() const</div><div class="ttdoc">Get the number of channels.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00490">AkCommonDefs.h:490</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a></div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00212">AkTypes.h:213</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname"><a href="namespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8.html#a596691b552b507c26b4df958ee1c6de8">AK::Comm::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
-<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer_a8d9b58e2ecba7f95721d4b89b7f9630f_html_a8d9b58e2ecba7f95721d4b89b7f9630f"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer_a8d9b58e2ecba7f95721d4b89b7f9630f.html#a8d9b58e2ecba7f95721d4b89b7f9630f">AK.Wwise::Plugin::V1::DataWriter::WriteReal32</a></div><div class="ttdeci">bool WriteReal32(float in_value)</div><div class="ttdoc">Writes a 32-bit, single-precision floating point value.</div><div class="ttdef"><b>Definition:</b> <a href="_host_data_writer_8h_source.html#l00427">HostDataWriter.h:427</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98_html_afc38459f26e2b23defe588026e886a98"><div class="ttname"><a href="_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98.html#afc38459f26e2b23defe588026e886a98">AkReal32</a></div><div class="ttdeci">float AkReal32</div><div class="ttdoc">32-bit floating point</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00046">AkNumeralTypes.h:46</a></div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_ab7f90fd99119b56e92e4cbf3559f98cd_html_ab7f90fd99119b56e92e4cbf3559f98cd"><div class="ttname"><a href="class_ak_audio_buffer_ab7f90fd99119b56e92e4cbf3559f98cd.html#ab7f90fd99119b56e92e4cbf3559f98cd">AkAudioBuffer::uValidFrames</a></div><div class="ttdeci">AkUInt16 uValidFrames</div><div class="ttdoc">Number of valid sample frames in the audio buffer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00655">AkCommonDefs.h:655</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_mem_alloc_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_mem_alloc_8h_source.html#l00042">IAkPluginMemAlloc.h:43</a></div></div>
-<div class="ttc" id="a_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5_html_a18513ab855bc8316634d74b9a17138c5"><div class="ttname"><a href="_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5.html#a18513ab855bc8316634d74b9a17138c5">READBANKDATA</a></div><div class="ttdeci">#define READBANKDATA(_Type, _Ptr, _Size)</div><div class="ttdoc">Read and return bank data of a given type, incrementing running pointer and decrementing block size f...</div><div class="ttdef"><b>Definition:</b> <a href="_ak_bank_read_helpers_8h_source.html#l00225">AkBankReadHelpers.h:225</a></div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_ad2bc3b8ddd61eaa0c111798d5f9e8c9c_html_ad2bc3b8ddd61eaa0c111798d5f9e8c9c"><div class="ttname">AkAudioBuffer::GetChannel</div><div class="ttdeci">AkSampleType * GetChannel(AkUInt32 in_uIndex)</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:574</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a7100a9b0a3b01df7639c1dc512678219_html_a7100a9b0a3b01df7639c1dc512678219"><div class="ttname">AkUInt16</div><div class="ttdeci">uint16_t AkUInt16</div><div class="ttdoc">Unsigned 16-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:37</div></div>
+<div class="ttc" id="anamespace_a_k_html"><div class="ttname"><a href="namespace_a_k.html">AK</a></div><div class="ttdoc">Audiokinetic namespace.</div><div class="ttdef"><b>Definition:</b> AkWwiseSDKVersion.cs:31</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer_html"><div class="ttname"><a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer.html">AK.Wwise::Plugin::V1::DataWriter</a></div><div class="ttdoc">Interface used to write data during sound bank generation.</div><div class="ttdef"><b>Definition:</b> HostDataWriter.h:245</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_param_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_param.html">AK::IAkPluginParam</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:620</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_a4523322478ec9a0f9de0c7c72e65df2f_html_a4523322478ec9a0f9de0c7c72e65df2f"><div class="ttname">AkAudioBuffer::NumChannels</div><div class="ttdeci">AkForceInline AkUInt32 NumChannels() const</div><div class="ttdoc">Get the number of channels.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:490</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname">AKRESULT</div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:213</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_comm_a596691b552b507c26b4df958ee1c6de8_html_a596691b552b507c26b4df958ee1c6de8"><div class="ttname">AK::Comm::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(const AkCommSettings &amp;in_settings)</div></div>
+<div class="ttc" id="aclass_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_data_writer_a8d9b58e2ecba7f95721d4b89b7f9630f_html_a8d9b58e2ecba7f95721d4b89b7f9630f"><div class="ttname">AK.Wwise::Plugin::V1::DataWriter::WriteReal32</div><div class="ttdeci">bool WriteReal32(float in_value)</div><div class="ttdoc">Writes a 32-bit, single-precision floating point value.</div><div class="ttdef"><b>Definition:</b> HostDataWriter.h:427</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_afc38459f26e2b23defe588026e886a98_html_afc38459f26e2b23defe588026e886a98"><div class="ttname">AkReal32</div><div class="ttdeci">float AkReal32</div><div class="ttdoc">32-bit floating point</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:46</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_ab7f90fd99119b56e92e4cbf3559f98cd_html_ab7f90fd99119b56e92e4cbf3559f98cd"><div class="ttname">AkAudioBuffer::uValidFrames</div><div class="ttdeci">AkUInt16 uValidFrames</div><div class="ttdoc">Number of valid sample frames in the audio buffer.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:655</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_plugin_mem_alloc_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_plugin_mem_alloc.html">AK::IAkPluginMemAlloc</a></div><div class="ttdef"><b>Definition:</b> IAkPluginMemAlloc.h:43</div></div>
+<div class="ttc" id="a_ak_bank_read_helpers_8h_a18513ab855bc8316634d74b9a17138c5_html_a18513ab855bc8316634d74b9a17138c5"><div class="ttname">READBANKDATA</div><div class="ttdeci">#define READBANKDATA(_Type, _Ptr, _Size)</div><div class="ttdoc">Read and return bank data of a given type, incrementing running pointer and decrementing block size f...</div><div class="ttdef"><b>Definition:</b> AkBankReadHelpers.h:225</div></div>
 <div class="ttc" id="a_ak_common_defs_8h_html"><div class="ttname"><a href="_ak_common_defs_8h.html">AkCommonDefs.h</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname"><a href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a></div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00038">AkNumeralTypes.h:38</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926_html_a4cb8ff0b7014efdaa21697f4ef928926"><div class="ttname"><a href="_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926.html#a4cb8ff0b7014efdaa21697f4ef928926">AkPluginParamID</a></div><div class="ttdeci">AkInt16 AkPluginParamID</div><div class="ttdoc">Source or effect plug-in parameter ID.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00148">AkTypes.h:148</a></div></div>
-<div class="ttc" id="aclass_ak_audio_buffer_html"><div class="ttname"><a href="class_ak_audio_buffer.html">AkAudioBuffer</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00462">AkCommonDefs.h:463</a></div></div>
-<div class="ttc" id="astruct_ak_audio_format_a4fbe6f5b2d3e04945c6c1444f14c2118_html_a4fbe6f5b2d3e04945c6c1444f14c2118"><div class="ttname"><a href="struct_ak_audio_format_a4fbe6f5b2d3e04945c6c1444f14c2118.html#a4fbe6f5b2d3e04945c6c1444f14c2118">AkAudioFormat::GetNumChannels</a></div><div class="ttdeci">AkForceInline AkUInt32 GetNumChannels() const</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00074">AkCommonDefs.h:74</a></div></div>
-<div class="ttc" id="a_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf_html_ab66f3fb84361798a69b92a110f8a14cf"><div class="ttname"><a href="_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf.html#ab66f3fb84361798a69b92a110f8a14cf">AK_RESTRICT</a></div><div class="ttdeci">#define AK_RESTRICT</div><div class="ttdoc">Refers to the __restrict compilation flag available on some platforms.</div><div class="ttdef"><b>Definition:</b> <a href="_platforms_2_windows_2_ak_types_8h_source.html#l00080">AkTypes.h:80</a></div></div>
-<div class="ttc" id="astruct_ak_audio_format_html"><div class="ttname"><a href="struct_ak_audio_format.html">AkAudioFormat</a></div><div class="ttdoc">Defines the parameters of an audio buffer format.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00061">AkCommonDefs.h:62</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_effect_plugin_context_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_effect_plugin_context.html">AK::IAkEffectPluginContext</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_plugin_8h_source.html#l00357">IAkPlugin.h:358</a></div></div>
-<div class="ttc" id="astruct_ak_audio_format_ad94d7b21266cb1d8a9aa5557f875d0fa_html_ad94d7b21266cb1d8a9aa5557f875d0fa"><div class="ttname"><a href="struct_ak_audio_format_ad94d7b21266cb1d8a9aa5557f875d0fa.html#ad94d7b21266cb1d8a9aa5557f875d0fa">AkAudioFormat::uSampleRate</a></div><div class="ttdeci">AkUInt32 uSampleRate</div><div class="ttdoc">Number of samples per second.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_common_defs_8h_source.html#l00063">AkCommonDefs.h:63</a></div></div>
-<div class="ttc" id="astruct_g_u_i_d_html"><div class="ttname"><a href="struct_g_u_i_d.html">GUID</a></div><div class="ttdef"><b>Definition:</b> <a href="_plugin_helpers_8h_source.html#l00045">PluginHelpers.h:45</a></div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname">AkUInt32</div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:38</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a4cb8ff0b7014efdaa21697f4ef928926_html_a4cb8ff0b7014efdaa21697f4ef928926"><div class="ttname">AkPluginParamID</div><div class="ttdeci">AkInt16 AkPluginParamID</div><div class="ttdoc">Source or effect plug-in parameter ID.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:148</div></div>
+<div class="ttc" id="aclass_ak_audio_buffer_html"><div class="ttname"><a href="class_ak_audio_buffer.html">AkAudioBuffer</a></div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:463</div></div>
+<div class="ttc" id="astruct_ak_audio_format_a4fbe6f5b2d3e04945c6c1444f14c2118_html_a4fbe6f5b2d3e04945c6c1444f14c2118"><div class="ttname">AkAudioFormat::GetNumChannels</div><div class="ttdeci">AkForceInline AkUInt32 GetNumChannels() const</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:74</div></div>
+<div class="ttc" id="a_platforms_2_windows_2_ak_types_8h_ab66f3fb84361798a69b92a110f8a14cf_html_ab66f3fb84361798a69b92a110f8a14cf"><div class="ttname">AK_RESTRICT</div><div class="ttdeci">#define AK_RESTRICT</div><div class="ttdoc">Refers to the __restrict compilation flag available on some platforms.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:80</div></div>
+<div class="ttc" id="astruct_ak_audio_format_html"><div class="ttname"><a href="struct_ak_audio_format.html">AkAudioFormat</a></div><div class="ttdoc">Defines the parameters of an audio buffer format.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:62</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_effect_plugin_context_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_effect_plugin_context.html">AK::IAkEffectPluginContext</a></div><div class="ttdef"><b>Definition:</b> IAkPlugin.h:358</div></div>
+<div class="ttc" id="astruct_ak_audio_format_ad94d7b21266cb1d8a9aa5557f875d0fa_html_ad94d7b21266cb1d8a9aa5557f875d0fa"><div class="ttname">AkAudioFormat::uSampleRate</div><div class="ttdeci">AkUInt32 uSampleRate</div><div class="ttdoc">Number of samples per second.</div><div class="ttdef"><b>Definition:</b> AkCommonDefs.h:63</div></div>
+<div class="ttc" id="astruct_g_u_i_d_html"><div class="ttname"><a href="struct_g_u_i_d.html">GUID</a></div><div class="ttdef"><b>Definition:</b> PluginHelpers.h:45</div></div>
 </body>
 </html>
+

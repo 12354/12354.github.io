@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -47,12 +47,12 @@
 <div class="line"><span class="comment">//</span></div>
 <div class="line"> </div>
 <div class="line"><a class="code" href="class_ak_world_transform.html">AkSoundPosition</a> soundPos;</div>
-<div class="line">soundPos.<a class="code" href="class_ak_world_transform_a19899b0203f09cc66bab093224bbb6f0.html#a19899b0203f09cc66bab093224bbb6f0">Position</a>.<a class="code" href="struct_ak_vector64_aa9f25e79fcf2e203a1ad208318ab9d72.html#aa9f25e79fcf2e203a1ad208318ab9d72">X</a> = 0.5;</div>
-<div class="line">soundPos.<a class="code" href="class_ak_world_transform_a19899b0203f09cc66bab093224bbb6f0.html#a19899b0203f09cc66bab093224bbb6f0">Position</a>.<a class="code" href="struct_ak_vector64_a43855ff95744a96c7df2e41669ecbe47.html#a43855ff95744a96c7df2e41669ecbe47">Y</a> = 0;</div>
-<div class="line">soundPos.<a class="code" href="class_ak_world_transform_a19899b0203f09cc66bab093224bbb6f0.html#a19899b0203f09cc66bab093224bbb6f0">Position</a>.<a class="code" href="struct_ak_vector64_aadfc254736cd7ccdca89e2906dee2e02.html#aadfc254736cd7ccdca89e2906dee2e02">Z</a> = 0.5;</div>
+<div class="line">soundPos.Position.X = 0.5;</div>
+<div class="line">soundPos.Position.Y = 0;</div>
+<div class="line">soundPos.Position.Z = 0.5;</div>
 <div class="line">soundPos.Orientation.X = -1;</div>
 <div class="line">soundPos.Orientation.Y = soundPos.Orientation.Z = 0;</div>
-<div class="line"><a class="code" href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition</a>( GAME_OBJECT_ID_CAR, soundPos );</div>
+<div class="line">AK::SoundEngine::SetPosition( GAME_OBJECT_ID_CAR, soundPos );</div>
 </div><!-- fragment --><p>If you play the engine sound in the sample program, you will hear it at the front-right because of the position it was set to.</p>
 <p>Refer to <a class="el" href="soundengine_3dpositions.html">Integration Details - 3D Positions</a> for more information.</p>
 <table border="0" cellspacing="0" cellpadding="2">
@@ -61,11 +61,12 @@
 </table>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="aclass_ak_world_transform_a19899b0203f09cc66bab093224bbb6f0_html_a19899b0203f09cc66bab093224bbb6f0"><div class="ttname"><a href="class_ak_world_transform_a19899b0203f09cc66bab093224bbb6f0.html#a19899b0203f09cc66bab093224bbb6f0">AkWorldTransform::Position</a></div><div class="ttdeci">const AkVector64 &amp; Position() const</div><div class="ttdoc">Get position vector.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00500">AkTypes.h:500</a></div></div>
-<div class="ttc" id="aclass_ak_world_transform_html"><div class="ttname"><a href="class_ak_world_transform.html">AkWorldTransform</a></div><div class="ttdoc">Position and orientation of game objects in the world (i.e. supports 64-bit-precision position)</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00492">AkTypes.h:493</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455_html_a789e25bda32d1e11849afb6584942455"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">AK::SoundEngine::SetPosition</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetPosition(AkGameObjectID in_GameObjectID, const AkSoundPosition &amp;in_Position, AkSetPositionFlags in_eFlags=AkSetPositionFlags_Default)</div></div>
-<div class="ttc" id="astruct_ak_vector64_a43855ff95744a96c7df2e41669ecbe47_html_a43855ff95744a96c7df2e41669ecbe47"><div class="ttname"><a href="struct_ak_vector64_a43855ff95744a96c7df2e41669ecbe47.html#a43855ff95744a96c7df2e41669ecbe47">AkVector64::Y</a></div><div class="ttdeci">AkReal64 Y</div><div class="ttdoc">Y Position.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00438">AkTypes.h:438</a></div></div>
-<div class="ttc" id="astruct_ak_vector64_aadfc254736cd7ccdca89e2906dee2e02_html_aadfc254736cd7ccdca89e2906dee2e02"><div class="ttname"><a href="struct_ak_vector64_aadfc254736cd7ccdca89e2906dee2e02.html#aadfc254736cd7ccdca89e2906dee2e02">AkVector64::Z</a></div><div class="ttdeci">AkReal64 Z</div><div class="ttdoc">Z Position.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00439">AkTypes.h:439</a></div></div>
-<div class="ttc" id="astruct_ak_vector64_aa9f25e79fcf2e203a1ad208318ab9d72_html_aa9f25e79fcf2e203a1ad208318ab9d72"><div class="ttname"><a href="struct_ak_vector64_aa9f25e79fcf2e203a1ad208318ab9d72.html#aa9f25e79fcf2e203a1ad208318ab9d72">AkVector64::X</a></div><div class="ttdeci">AkReal64 X</div><div class="ttdoc">X Position.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00437">AkTypes.h:437</a></div></div>
+<div class="ttc" id="aclass_ak_world_transform_a19899b0203f09cc66bab093224bbb6f0_html_a19899b0203f09cc66bab093224bbb6f0"><div class="ttname">AkWorldTransform::Position</div><div class="ttdeci">const AkVector64 &amp; Position() const</div><div class="ttdoc">Get position vector.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:500</div></div>
+<div class="ttc" id="aclass_ak_world_transform_html"><div class="ttname"><a href="class_ak_world_transform.html">AkWorldTransform</a></div><div class="ttdoc">Position and orientation of game objects in the world (i.e. supports 64-bit-precision position)</div><div class="ttdef"><b>Definition:</b> AkTypes.h:493</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455_html_a789e25bda32d1e11849afb6584942455"><div class="ttname">AK::SoundEngine::SetPosition</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT SetPosition(AkGameObjectID in_GameObjectID, const AkSoundPosition &amp;in_Position, AkSetPositionFlags in_eFlags=AkSetPositionFlags_Default)</div></div>
+<div class="ttc" id="astruct_ak_vector64_a43855ff95744a96c7df2e41669ecbe47_html_a43855ff95744a96c7df2e41669ecbe47"><div class="ttname">AkVector64::Y</div><div class="ttdeci">AkReal64 Y</div><div class="ttdoc">Y Position.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:438</div></div>
+<div class="ttc" id="astruct_ak_vector64_aadfc254736cd7ccdca89e2906dee2e02_html_aadfc254736cd7ccdca89e2906dee2e02"><div class="ttname">AkVector64::Z</div><div class="ttdeci">AkReal64 Z</div><div class="ttdoc">Z Position.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:439</div></div>
+<div class="ttc" id="astruct_ak_vector64_aa9f25e79fcf2e203a1ad208318ab9d72_html_aa9f25e79fcf2e203a1ad208318ab9d72"><div class="ttname">AkVector64::X</div><div class="ttdeci">AkReal64 X</div><div class="ttdoc">X Position.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:437</div></div>
 </body>
 </html>
+

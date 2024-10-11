@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -39,7 +39,7 @@ Sound Engine Initialization</h1>
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> Before initializing the sound engine itself, the memory manager and streaming manager must be initialized. Please refer to the section <a class="el" href="workingwithsdks_initialization.html">Initializing Sound Engine Modules</a> for more information about global initialization. </td></tr>
 </table>
-<p>Initializing the sound engine itself is done by calling the <a class="el" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a> function. The default initialization shown in <a class="el" href="workingwithsdks_initialization.html#initialization_soundengine">Initializing the sound engine</a> is copied here for your convenience.</p>
+<p>Initializing the sound engine itself is done by calling the AK::SoundEngine::Init function. The default initialization shown in Initializing the sound engine is copied here for your convenience.</p>
 <div class="fragment"><div class="line"><span class="preprocessor">#include &lt;<a class="code" href="_ak_sound_engine_8h.html">AK/SoundEngine/Common/AkSoundEngine.h</a>&gt;</span>                <span class="comment">// Sound Engine</span></div>
 <div class="line"> </div>
 <div class="line">(...)</div>
@@ -53,7 +53,7 @@ Sound Engine Initialization</h1>
 <div class="line">    <span class="comment">// Using default initialization parameters</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    </div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>, <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::SoundEngine::Init( NULL, NULL ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        assert( ! <span class="stringliteral">&quot;Could not initialize the Sound Engine.&quot;</span> );</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
@@ -61,7 +61,7 @@ Sound Engine Initialization</h1>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>The <a class="el" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a> function takes 2 parameters.</p>
+</div><!-- fragment --><p>The AK::SoundEngine::Init function takes 2 parameters.</p>
 <p>First parameter : <a class="el" href="struct_ak_init_settings.html">AkInitSettings</a> * in_pSettings</p>
 <ul>
 <li>This structure contains platform-independent information to initialize the sound engine.</li>
@@ -72,11 +72,11 @@ Sound Engine Initialization</h1>
 </ul>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> Both parameters are considered optional, but we recommend you customize these values to the needs of the game, because some of the default values may cause unnecessarily high memory usage. Refer to the section <a class="el" href="goingfurther_optimizingmempools.html#fixed_allocs">Fixed-size allocations</a> for more information. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> Both parameters are considered optional, but we recommend you customize these values to the needs of the game, because some of the default values may cause unnecessarily high memory usage. Refer to the section Fixed-size allocations for more information. </td></tr>
 </table>
 <h2><a class="anchor" id="soundengine_initialization_advanced_Init_Params"></a>
 Customizing the Creation Parameters</h2>
-<p>The <a class="el" href="struct_ak_init_settings.html">AkInitSettings</a> and <a class="el" href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a> structures must be initialized using the <a class="el" href="namespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e.html#a03381fc17e1b0ee16c2ab501c647ab9e">AK::SoundEngine::GetDefaultInitSettings</a> and <a class="el" href="namespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d.html#aecdb9cd8f2d7f461ef1a58f5f5f5725d">AK::SoundEngine::GetDefaultPlatformInitSettings</a> functions.</p>
+<p>The <a class="el" href="struct_ak_init_settings.html">AkInitSettings</a> and <a class="el" href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a> structures must be initialized using the AK::SoundEngine::GetDefaultInitSettings and AK::SoundEngine::GetDefaultPlatformInitSettings functions.</p>
 <p>Initializing the structure using these two functions fills the structures with the default parameters. This is useful because:</p>
 <ul>
 <li>Once initialized, the parameters that need to be modified can easily be changed to fit the needs of the game.</li>
@@ -99,29 +99,30 @@ Customizing the Creation Parameters</h2>
 <div class="line">    <a class="code" href="struct_ak_init_settings.html">AkInitSettings</a>          initSettings;</div>
 <div class="line">    <a class="code" href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a>  platformInitSettings;</div>
 <div class="line">    </div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e.html#a03381fc17e1b0ee16c2ab501c647ab9e">AK::SoundEngine::GetDefaultInitSettings</a>( initSettings );</div>
-<div class="line">    <a class="code" href="namespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d.html#aecdb9cd8f2d7f461ef1a58f5f5f5725d">AK::SoundEngine::GetDefaultPlatformInitSettings</a>( platformInitSettings );</div>
+<div class="line">    AK::SoundEngine::GetDefaultInitSettings( initSettings );</div>
+<div class="line">    AK::SoundEngine::GetDefaultPlatformInitSettings( platformInitSettings );</div>
 <div class="line">    </div>
-<div class="line">    initSettings.<a class="code" href="struct_ak_init_settings_aa8137dca0d7b55c06900371c17ce6c8e.html#aa8137dca0d7b55c06900371c17ce6c8e">uMaxNumPaths</a> = 16;</div>
+<div class="line">    initSettings.uMaxNumPaths = 16;</div>
 <div class="line">    </div>
-<div class="line">    <span class="keywordflow">if</span> ( <a class="code" href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a>( &amp;initSettings, &amp;platformInitSettings ) != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( AK::SoundEngine::Init( &amp;initSettings, &amp;platformInitSettings ) != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
 <div class="line">}</div>
-</div><!-- fragment --><p>For more information on adjusting memory sizes, refer to <a class="el" href="goingfurther_optimizingmempools.html#fixed_allocs">Fixed-size allocations</a>. </p>
+</div><!-- fragment --><p>For more information on adjusting memory sizes, refer to Fixed-size allocations. </p>
 </div></div><!-- contents -->
 </div><!-- PageDoc -->
 <div class="ttc" id="a_ak_sound_engine_8h_html"><div class="ttname"><a href="_ak_sound_engine_8h.html">AkSoundEngine.h</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f_html_a9a26da64092b97243844df77cbcdbf5f"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f.html#a9a26da64092b97243844df77cbcdbf5f">AK::SoundEngine::Init</a></div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkInitSettings *in_pSettings, AkPlatformInitSettings *in_pPlatformSettings)</div></div>
-<div class="ttc" id="astruct_ak_platform_init_settings_html"><div class="ttname"><a href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_win_sound_engine_8h_source.html#l00044">AkWinSoundEngine.h:45</a></div></div>
-<div class="ttc" id="astruct_ak_init_settings_aa8137dca0d7b55c06900371c17ce6c8e_html_aa8137dca0d7b55c06900371c17ce6c8e"><div class="ttname"><a href="struct_ak_init_settings_aa8137dca0d7b55c06900371c17ce6c8e.html#aa8137dca0d7b55c06900371c17ce6c8e">AkInitSettings::uMaxNumPaths</a></div><div class="ttdeci">AkUInt32 uMaxNumPaths</div><div class="ttdoc">Maximum number of paths for positioning.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_sound_engine_8h_source.html#l00218">AkSoundEngine.h:218</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a></div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00215">AkTypes.h:215</a></div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e_html_a03381fc17e1b0ee16c2ab501c647ab9e"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e.html#a03381fc17e1b0ee16c2ab501c647ab9e">AK::SoundEngine::GetDefaultInitSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkInitSettings &amp;out_settings)</div></div>
-<div class="ttc" id="anamespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d_html_aecdb9cd8f2d7f461ef1a58f5f5f5725d"><div class="ttname"><a href="namespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d.html#aecdb9cd8f2d7f461ef1a58f5f5f5725d">AK::SoundEngine::GetDefaultPlatformInitSettings</a></div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultPlatformInitSettings(AkPlatformInitSettings &amp;out_platformSettings)</div></div>
-<div class="ttc" id="astruct_ak_init_settings_html"><div class="ttname"><a href="struct_ak_init_settings.html">AkInitSettings</a></div><div class="ttdef"><b>Definition:</b> <a href="_ak_sound_engine_8h_source.html#l00214">AkSoundEngine.h:215</a></div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a9a26da64092b97243844df77cbcdbf5f_html_a9a26da64092b97243844df77cbcdbf5f"><div class="ttname">AK::SoundEngine::Init</div><div class="ttdeci">AKSOUNDENGINE_API AKRESULT Init(AkInitSettings *in_pSettings, AkPlatformInitSettings *in_pPlatformSettings)</div></div>
+<div class="ttc" id="astruct_ak_platform_init_settings_html"><div class="ttname"><a href="struct_ak_platform_init_settings.html">AkPlatformInitSettings</a></div><div class="ttdef"><b>Definition:</b> AkWinSoundEngine.h:45</div></div>
+<div class="ttc" id="astruct_ak_init_settings_aa8137dca0d7b55c06900371c17ce6c8e_html_aa8137dca0d7b55c06900371c17ce6c8e"><div class="ttname">AkInitSettings::uMaxNumPaths</div><div class="ttdeci">AkUInt32 uMaxNumPaths</div><div class="ttdoc">Maximum number of paths for positioning.</div><div class="ttdef"><b>Definition:</b> AkSoundEngine.h:218</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname">AK_Success</div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:215</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_a03381fc17e1b0ee16c2ab501c647ab9e_html_a03381fc17e1b0ee16c2ab501c647ab9e"><div class="ttname">AK::SoundEngine::GetDefaultInitSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultInitSettings(AkInitSettings &amp;out_settings)</div></div>
+<div class="ttc" id="anamespace_a_k_1_1_sound_engine_aecdb9cd8f2d7f461ef1a58f5f5f5725d_html_aecdb9cd8f2d7f461ef1a58f5f5f5725d"><div class="ttname">AK::SoundEngine::GetDefaultPlatformInitSettings</div><div class="ttdeci">AKSOUNDENGINE_API void GetDefaultPlatformInitSettings(AkPlatformInitSettings &amp;out_platformSettings)</div></div>
+<div class="ttc" id="astruct_ak_init_settings_html"><div class="ttname"><a href="struct_ak_init_settings.html">AkInitSettings</a></div><div class="ttdef"><b>Definition:</b> AkSoundEngine.h:215</div></div>
 </body>
 </html>
+

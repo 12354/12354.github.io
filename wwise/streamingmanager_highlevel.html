@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -46,7 +46,7 @@ Instantiating the Stream Manager</h2>
 <tr>
 <td><b>Default Streaming Manager Information</b><br  />
 <br  />
- Stream Manager instantiation is implementation specific. The factory function of Audiokinetic's default implementation of the Stream Manager is thus defined in <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a>: <a class="el" href="namespace_a_k_1_1_stream_mgr_af9d67dd0e502e5603a2921099916e2ab.html#af9d67dd0e502e5603a2921099916e2ab">AK::StreamMgr::Create()</a>. You need to pass it implementation-specific settings (refer to <a class="el" href="streamingmanager_settings.html">Audiokinetic Stream Manager Initialization Settings</a> for a description of the initialization settings). </td></tr>
+ Stream Manager instantiation is implementation specific. The factory function of Audiokinetic's default implementation of the Stream Manager is thus defined in <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a>: AK::StreamMgr::Create(). You need to pass it implementation-specific settings (refer to <a class="el" href="streamingmanager_settings.html">Audiokinetic Stream Manager Initialization Settings</a> for a description of the initialization settings). </td></tr>
 </table>
 <h2><a class="anchor" id="streamingmanager_highlevel_api_interface_highleveldevices"></a>
 High-Level Streaming Devices</h2>
@@ -54,7 +54,7 @@ High-Level Streaming Devices</h2>
 <tr>
 <td><b>Default Streaming Manager Information</b><br  />
 <br  />
- Before you can create and use stream objects, you need to create a high-level streaming device. This concept is specific to Audiokinetic's default implementation of the Stream Manager. A high-level streaming device is essentially an I/O scheduler implementation, running in its own thread, which centralizes the stream object associated with it and posts data transfer requests to the Low-Level I/O. High-level devices are generally referred to simply as devices. One or more devices are created by the game, preferably at initialization time, with specific flags and settings. For more details about the initialization settings, refer to section <a class="el" href="streamingmanager_settings.html">Audiokinetic Stream Manager Initialization Settings</a>. <a class="el" href="namespace_a_k_1_1_stream_mgr_a64a22d377d25137222fbb66ff21965d5.html#a64a22d377d25137222fbb66ff21965d5">AK::StreamMgr::CreateDevice()</a> returns a device ID, which should be kept by the Low-Level I/O for file location and device assignation purposes. (Refer to the <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_location">File Location Resolving</a> section for more information. ) This device ID must be passed to <a class="el" href="namespace_a_k_1_1_stream_mgr_a6af0f503def99f59b5ed7c903d919106.html#a6af0f503def99f59b5ed7c903d919106">AK::StreamMgr::DestroyDevice()</a> for proper termination. As for all implementation-specific functions, <a class="el" href="namespace_a_k_1_1_stream_mgr_a64a22d377d25137222fbb66ff21965d5.html#a64a22d377d25137222fbb66ff21965d5">AK::StreamMgr::CreateDevice()</a> and <a class="el" href="namespace_a_k_1_1_stream_mgr_a6af0f503def99f59b5ed7c903d919106.html#a6af0f503def99f59b5ed7c903d919106">AK::StreamMgr::DestroyDevice()</a> are defined in the header <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a>. </td></tr>
+ Before you can create and use stream objects, you need to create a high-level streaming device. This concept is specific to Audiokinetic's default implementation of the Stream Manager. A high-level streaming device is essentially an I/O scheduler implementation, running in its own thread, which centralizes the stream object associated with it and posts data transfer requests to the Low-Level I/O. High-level devices are generally referred to simply as devices. One or more devices are created by the game, preferably at initialization time, with specific flags and settings. For more details about the initialization settings, refer to section <a class="el" href="streamingmanager_settings.html">Audiokinetic Stream Manager Initialization Settings</a>. AK::StreamMgr::CreateDevice() returns a device ID, which should be kept by the Low-Level I/O for file location and device assignation purposes. (Refer to the File Location Resolving section for more information. ) This device ID must be passed to AK::StreamMgr::DestroyDevice() for proper termination. As for all implementation-specific functions, AK::StreamMgr::CreateDevice() and AK::StreamMgr::DestroyDevice() are defined in the header <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a>. </td></tr>
 </table>
 <h2><a class="anchor" id="streamingmanager_highlevel_api_interface_streamcreation"></a>
 Stream Creation</h2>
@@ -68,9 +68,9 @@ Stream Creation</h2>
 <tr>
 <td><b>Default Streaming Manager Information</b><br  />
 <br  />
- This pointer is passed as is to the Low-Level I/O. Refer to sections <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_location_soundbanks">SoundBanks</a>, <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_location_streamedfiles">Streamed Audio Files</a> and <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_default_implementation_walkthrough_file_location">Basic File Location</a> for more details on the <a class="el" href="struct_ak_file_system_flags.html" title="File system flags for file descriptors mapping.">AkFileSystemFlags</a> and how the sound engine uses them. </td></tr>
+ This pointer is passed as is to the Low-Level I/O. Refer to sections SoundBanks, Streamed Audio Files and Basic File Location for more details on the <a class="el" href="struct_ak_file_system_flags.html" title="File system flags for file descriptors mapping.">AkFileSystemFlags</a> and how the sound engine uses them. </td></tr>
 </table>
-<p>There is an additional argument in the stream creation methods: in_bSyncOpen. Users (like the sound engine) pass true when they require that the file handle, wrapped by the stream object, be opened during this call. If they pass false, it means that they allow the Stream Manager to defer opening of the file. The latter may or may not defer it. If it does defer it, and opening fails, then the next call to <a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a> or <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> will return AK_Fail.</p>
+<p>There is an additional argument in the stream creation methods: in_bSyncOpen. Users (like the sound engine) pass true when they require that the file handle, wrapped by the stream object, be opened during this call. If they pass false, it means that they allow the Stream Manager to defer opening of the file. The latter may or may not defer it. If it does defer it, and opening fails, then the next call to AK::IAkStdStream::Read() or AK::IAkAutoStream::GetBuffer() will return AK_Fail.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
 <td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><b>Note:</b> This should not be considered as a fatal error. The sound engine passes false for streamed audio files. If GetBuffer() returns false, it considers it as an I/O error, and destroys the stream gracefully. </td></tr>
@@ -79,9 +79,9 @@ Stream Creation</h2>
 <tr>
 <td><b>Default Streaming Manager Information</b><br  />
 <br  />
- Argument in_bSyncOpen is passed directly to the Low-Level I/O. Refer to <a class="el" href="streamingmanager_lowlevel.html#streamingmanager_lowlevel_location_deferred_open">Deferred Opening</a> for details on the consequences of this flag in the Low-Level I/O. </td></tr>
+ Argument in_bSyncOpen is passed directly to the Low-Level I/O. Refer to Deferred Opening for details on the consequences of this flag in the Low-Level I/O. </td></tr>
 </table>
-<p><a class="el" href="class_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6.html#a1de2a7935a2d3cddb71e7cc7f48effd6">AK::IAkStreamMgr::CreateStd()</a> creates a standard stream, and <a class="el" href="class_a_k_1_1_i_ak_stream_mgr_afe30a576bd859ff4e9b60a3f8e1710fb.html#afe30a576bd859ff4e9b60a3f8e1710fb">AK::IAkStreamMgr::CreateAuto()</a> creates an automatic stream. These two types of streams are described in the following sections.</p>
+<p>AK::IAkStreamMgr::CreateStd() creates a standard stream, and AK::IAkStreamMgr::CreateAuto() creates an automatic stream. These two types of streams are described in the following sections.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_api_interface_streamdestruction"></a>
 Stream Destruction</h2>
 <p>Both types of stream objects define a Destroy() method. You need to call this method to free the resources used by the stream. After doing so, you must not use the object again.</p>
@@ -89,36 +89,36 @@ Stream Destruction</h2>
 <tr>
 <td><p class="starttd"><b>Default Streaming Manager Information</b><br  />
 <br  />
- In the default implementation of the stream manager, <a class="el" href="class_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403.html#aaa6bca57f4a01a98dff95f68b1320403">AK::IAkStdStream::Destroy()</a> and <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a7371eb45a24988fc3d5372bc15c77db7.html#a7371eb45a24988fc3d5372bc15c77db7">AK::IAkAutoStream::Destroy()</a> are simply used to set a flag on the stream object. Actual destruction is performed later, by the I/O thread. Every time it wakes up, it inspects all the open streams, finds the next stream for which an I/O request will be issued to the Low-Level I/O, and cleans up all dead streams. It is only at this point that memory will be freed, and <a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook_a7a50a7a5fa624691d7bb7608753dc096.html#a7a50a7a5fa624691d7bb7608753dc096">AK::StreamMgr::IAkLowLevelIOHook::Close()</a> (where the file handle is released) will be called.</p>
+ In the default implementation of the stream manager, AK::IAkStdStream::Destroy() and AK::IAkAutoStream::Destroy() are simply used to set a flag on the stream object. Actual destruction is performed later, by the I/O thread. Every time it wakes up, it inspects all the open streams, finds the next stream for which an I/O request will be issued to the Low-Level I/O, and cleans up all dead streams. It is only at this point that memory will be freed, and AK::StreamMgr::IAkLowLevelIOHook::Close() (where the file handle is released) will be called.</p>
 <p class="intertd">Stream objects that are scheduled for destruction signal the I/O thread so that they get freed as soon as no more I/O transfers they own are pending in the Low-Level I/O.</p>
 <p class="endtd">If stream profiling is occurring, the I/O thread waits for the monitoring thread to give its approval before disposing of the stream object. The monitoring thread performs a profiling pass every 200 ms. </p>
 </td></tr>
 </table>
 <h1><a class="anchor" id="streamingmanager_highlevel_standardstreams"></a>
 Standard Streams</h1>
-<p>Calling <a class="el" href="class_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6.html#a1de2a7935a2d3cddb71e7cc7f48effd6">AK::IAkStreamMgr::CreateStd()</a> creates a standard stream object that is controllable via the returned <a class="el" href="class_a_k_1_1_i_ak_std_stream.html">AK::IAkStdStream</a> interface.</p>
+<p>Calling AK::IAkStreamMgr::CreateStd() creates a standard stream object that is controllable via the returned <a class="el" href="class_a_k_1_1_i_ak_std_stream.html">AK::IAkStdStream</a> interface.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_standardstreams_definition"></a>
 Definition</h2>
-<p>A standard stream uses a basic Read/Write scheme to control I/O operations. When <a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a> or <a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a> is called, an I/O request is queued to the scheduler, and the stream sets its status to AK_StmStatusPending. The user passes the transfer size requested and the address of the buffer. Upon completion, the stream sets its status to either AK_StmStatusCompleted or AK_StmStatusError. Its position is incremented by the actual size transferred, so the next operation will occur at the new position. To force another position, the user must use the <a class="el" href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">AK::IAkStdStream::SetPosition()</a> method before initiating a new transfer.</p>
-<p>Only one I/O operation can occur at a time. Subsequent operations need to be explicitly initiated by calling <a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a> or <a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a>. When the user has finished using a stream, <a class="el" href="class_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403.html#aaa6bca57f4a01a98dff95f68b1320403">AK::IAkStdStream::Destroy()</a> must be called. Then the interface becomes invalid.</p>
+<p>A standard stream uses a basic Read/Write scheme to control I/O operations. When AK::IAkStdStream::Read() or AK::IAkStdStream::Write() is called, an I/O request is queued to the scheduler, and the stream sets its status to AK_StmStatusPending. The user passes the transfer size requested and the address of the buffer. Upon completion, the stream sets its status to either AK_StmStatusCompleted or AK_StmStatusError. Its position is incremented by the actual size transferred, so the next operation will occur at the new position. To force another position, the user must use the AK::IAkStdStream::SetPosition() method before initiating a new transfer.</p>
+<p>Only one I/O operation can occur at a time. Subsequent operations need to be explicitly initiated by calling AK::IAkStdStream::Read() or AK::IAkStdStream::Write(). When the user has finished using a stream, AK::IAkStdStream::Destroy() must be called. Then the interface becomes invalid.</p>
 <table border="1" cellspacing="0" cellpadding="5" bgcolor="#a4ecc9">
 <tr>
 <td><b>Default Streaming Manager Information</b><br  />
 <br  />
- Read or write calls end up in I/O transfers in the Low-Level I/O. If the size requested at the client level is greater than the streaming device's granularity (<a class="el" href="struct_ak_device_settings_abd4879bfd150b9a2f898102e3815dbe2.html#abd4879bfd150b9a2f898102e3815dbe2" title="I/O requests granularity (typical bytes/request).">AkDeviceSettings::uGranularity</a>), the transfers are split up. The stream stays in AK_StmStatusPending or AK_StmStatusIdle state until the whole transfer is complete, or until an error or an end-of-file condition occurs. </td></tr>
+ Read or write calls end up in I/O transfers in the Low-Level I/O. If the size requested at the client level is greater than the streaming device's granularity (AkDeviceSettings::uGranularity), the transfers are split up. The stream stays in AK_StmStatusPending or AK_StmStatusIdle state until the whole transfer is complete, or until an error or an end-of-file condition occurs. </td></tr>
 </table>
 <p>The interface exposes other methods, including setting queries, access to current status or positions, and access to buffers supplied to previous operations.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_standardstreams_dataaccess"></a>
 Standard Stream Data Access Schemes</h2>
 <p>A standard stream operation can be launched in two different ways:</p>
 <ul>
-<li>Synchronously: When the in_bWait parameter of <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a></code> or <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a></code> is true, the method will immediately block until all I/O is complete.</li>
-<li>Asynchronously: When the in_bWait parameter of <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a></code> or <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a></code> is false, the methods will return before I/O is complete, and the remainder of the operation will complete asynchronously. The status of the stream can be polled by calling <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275.html#a165ff91b84857e73891f7943261ba275">AK::IAkStdStream::GetStatus()</a></code> until AK_StmStatusCompleted is returned, or it is possible to do a blocking wait for completion of the asynchronous task by calling <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_ac1dbc6c6e84ef70c877544545c45007b.html#ac1dbc6c6e84ef70c877544545c45007b">AK::IAkStdStream::WaitForPendingOperation()</a></code>. For a read opepration, data can then be safely accessed by calling <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_ac5726fc41a0e0f9f05d262a85b200909.html#ac5726fc41a0e0f9f05d262a85b200909">AK::IAkStdStream::GetData()</a></code>, or reading the buffer provided during the initial call to <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a></code>.</li>
+<li>Synchronously: When the in_bWait parameter of <code>AK::IAkStdStream::Read()</code> or <code>AK::IAkStdStream::Write()</code> is true, the method will immediately block until all I/O is complete.</li>
+<li>Asynchronously: When the in_bWait parameter of <code>AK::IAkStdStream::Read()</code> or <code>AK::IAkStdStream::Write()</code> is false, the methods will return before I/O is complete, and the remainder of the operation will complete asynchronously. The status of the stream can be polled by calling <code>AK::IAkStdStream::GetStatus()</code> until AK_StmStatusCompleted is returned, or it is possible to do a blocking wait for completion of the asynchronous task by calling <code>AK::IAkStdStream::WaitForPendingOperation()</code>. For a read opepration, data can then be safely accessed by calling <code>AK::IAkStdStream::GetData()</code>, or reading the buffer provided during the initial call to <code>AK::IAkStdStream::Read()</code>.</li>
 </ul>
 <h2><a class="anchor" id="streamingmanager_highlevel_standardstreams_creationsettings"></a>
 Creation Settings</h2>
-<p>You need to specify the open mode (AkOpenMode) when creating a standard stream. Open mode specifies if the stream can be used for reading, writing, or both. Obviously, calling <a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a> on a stream opened for reading only will fail.</p>
-<p>You can also specify a name for the stream by using <a class="el" href="class_a_k_1_1_i_ak_std_stream_a95c36cbf662e531c10f90165de1fd576.html#a95c36cbf662e531c10f90165de1fd576">AK::IAkStdStream::SetStreamName()</a>. The string is copied in the stream object, and can be queried with <a class="el" href="class_a_k_1_1_i_ak_std_stream_a744adfcaf87eb5bf4962dbf4556a6201.html#a744adfcaf87eb5bf4962dbf4556a6201">AK::IAkStdStream::GetInfo()</a>.</p>
+<p>You need to specify the open mode (AkOpenMode) when creating a standard stream. Open mode specifies if the stream can be used for reading, writing, or both. Obviously, calling AK::IAkStdStream::Write() on a stream opened for reading only will fail.</p>
+<p>You can also specify a name for the stream by using AK::IAkStdStream::SetStreamName(). The string is copied in the stream object, and can be queried with AK::IAkStdStream::GetInfo().</p>
 <table border="1" cellspacing="0" cellpadding="5" bgcolor="#a4ecc9">
 <tr>
 <td><b>Default Streaming Manager Information</b><br  />
@@ -128,10 +128,10 @@ Creation Settings</h2>
 <h2><a class="anchor" id="streamingmanager_highlevel_standardstreams_heuristics"></a>
 Heuristics</h2>
 <p>Heuristics of standard streams are specified on a per-operation basis.</p>
-<p><a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a> and <a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a> require a priority and a deadline (in milliseconds) for the operation. Typically, the Stream Manager will favor operations that have a short deadline. When the application requires more I/O bandwidth than what the storage device can provide, it favors streams that have high priority. Specifying a deadline of zero means that data is needed now, so I/O is already late. In that case, it will be serviced before any other streams that have a lower priority.</p>
+<p>AK::IAkStdStream::Read() and AK::IAkStdStream::Write() require a priority and a deadline (in milliseconds) for the operation. Typically, the Stream Manager will favor operations that have a short deadline. When the application requires more I/O bandwidth than what the storage device can provide, it favors streams that have high priority. Specifying a deadline of zero means that data is needed now, so I/O is already late. In that case, it will be serviced before any other streams that have a lower priority.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> The sound engine's Bank Manager is a user of standard streams. It reads and parses SoundBank data in its own buffer. A method is exposed in the sound engine API to specify an average throughput and priority of bank loading: <a class="el" href="namespace_a_k_1_1_sound_engine_ab8f05d2ee628529bb2bde9dab2d56047.html#ab8f05d2ee628529bb2bde9dab2d56047">AK::SoundEngine::SetBankLoadIOSettings()</a>. (Refer to Banks in the Wwise Sound Engine for more information. ) The Bank Manager calls <a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a>, parses data when it completes, and reads. It uses the priority given as an argument of that method. It computes the operation's deadline from the user-specified throughput: </p><div class="fragment"><div class="line">fDeadline = uBufferSize / fUserSpecifiedThroughput;</div>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> The sound engine's Bank Manager is a user of standard streams. It reads and parses SoundBank data in its own buffer. A method is exposed in the sound engine API to specify an average throughput and priority of bank loading: AK::SoundEngine::SetBankLoadIOSettings(). (Refer to Banks in the Wwise Sound Engine for more information. ) The Bank Manager calls AK::IAkStdStream::Read(), parses data when it completes, and reads. It uses the priority given as an argument of that method. It computes the operation's deadline from the user-specified throughput: </p><div class="fragment"><div class="line">fDeadline = uBufferSize / fUserSpecifiedThroughput;</div>
 </div><!-- fragment --><p class="endtd">Deadlines of standard stream operations and average throughput of automatic streams are equivalent for the Stream Manager's I/O scheduler. Users of the sound engine can thus tweak the burden of bank loading on I/O with that of audio streams, and other streams in the game. </p>
 </td></tr>
 </table>
@@ -139,54 +139,54 @@ Heuristics</h2>
 Common pitfalls and other considerations</h2>
 <h3><a class="anchor" id="streamingmanager_highlevel_standardstreams_watchout_blocksize"></a>
 Block Size</h3>
-<p>The low-level constraint on read and seek granularity and buffer alignment is referred to as "block size" at the Stream Manager level. The <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b.html#a1121f1b371a613e020d38b99e65e7a2b">AK::IAkStdStream::GetBlockSize()</a></code> method on the streams' interface queries the Low-Level I/O, passing it the file descriptor associated with the stream, and returning that value to the caller. Refer to the Low-Level I/O section for more details on file descriptors and the <code><a class="el" href="class_a_k_1_1_stream_mgr_1_1_i_ak_low_level_i_o_hook_a5018552d455ddc2a95b727fc543aac9e.html#a5018552d455ddc2a95b727fc543aac9e">AK::StreamMgr::IAkLowLevelIOHook::GetBlockSize()</a></code> method. Some storage devices have restrictions on data transfer sizes. For example, on Win32 platforms, a file opened with the FILE_FLAG_UNBUFFERED flag will permit transfer sizes that are a multiple of the physical device's sector size only. Read or Write operations will fail if they request a transfer size that is not a multiple of the block size. It is the responsibility of the user of the high-level interface to ask for read sizes that are multiples of the value returned by <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b.html#a1121f1b371a613e020d38b99e65e7a2b">AK::IAkStdStream::GetBlockSize()</a></code>. <code><a class="el" href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">AK::IAkStdStream::SetPosition()</a></code> is subject to the same constraint. However, it automatically snaps to the lower block boundary, and returns the actual file position offset.</p>
+<p>The low-level constraint on read and seek granularity and buffer alignment is referred to as "block size" at the Stream Manager level. The <code>AK::IAkStdStream::GetBlockSize()</code> method on the streams' interface queries the Low-Level I/O, passing it the file descriptor associated with the stream, and returning that value to the caller. Refer to the Low-Level I/O section for more details on file descriptors and the <code>AK::StreamMgr::IAkLowLevelIOHook::GetBlockSize()</code> method. Some storage devices have restrictions on data transfer sizes. For example, on Win32 platforms, a file opened with the FILE_FLAG_UNBUFFERED flag will permit transfer sizes that are a multiple of the physical device's sector size only. Read or Write operations will fail if they request a transfer size that is not a multiple of the block size. It is the responsibility of the user of the high-level interface to ask for read sizes that are multiples of the value returned by <code>AK::IAkStdStream::GetBlockSize()</code>. <code>AK::IAkStdStream::SetPosition()</code> is subject to the same constraint. However, it automatically snaps to the lower block boundary, and returns the actual file position offset.</p>
 <p>Typically, a game title is a user of the Stream Manager. Since the game title also implements the Low-Level I/O submodule, it is already aware of the transfer sizes it is allowed to use. The sound engine is not aware of storage device constraints, so it always snaps its standard stream read sizes to a block size boundary.</p>
 <h3><a class="anchor" id="streamingmanager_highlevel_standardstreams_watchout_callswhilepending"></a>
 Methods Called While Stream Status is Pending</h3>
-<p><a class="el" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read()</a> and <a class="el" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write()</a> fail if called while a stream is in AK_StmStatusPending state. <a class="el" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">AK::IAkStdStream::GetPosition()</a> and <a class="el" href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">AK::IAkStdStream::SetPosition()</a> yield undetermined results, since they could occur before or after the I/O transfer is complete. However, they do not block on I/O.</p>
-<p><a class="el" href="class_a_k_1_1_i_ak_std_stream_a12c0a90ec223f7d03d265094b0319c88.html#a12c0a90ec223f7d03d265094b0319c88">AK::IAkStdStream::Cancel()</a> can be used while a transfer is pending, but we do not recommend using it, as performance will suffer. This method confirms to the caller that no I/O is pending. If the call is executed before a request is sent to the Low-Level I/O, the task is simply removed from the queue. However, if a request has already been sent to the Low-Level I/O, the caller is blocked until the I/O is complete.</p>
+<p>AK::IAkStdStream::Read() and AK::IAkStdStream::Write() fail if called while a stream is in AK_StmStatusPending state. AK::IAkStdStream::GetPosition() and AK::IAkStdStream::SetPosition() yield undetermined results, since they could occur before or after the I/O transfer is complete. However, they do not block on I/O.</p>
+<p>AK::IAkStdStream::Cancel() can be used while a transfer is pending, but we do not recommend using it, as performance will suffer. This method confirms to the caller that no I/O is pending. If the call is executed before a request is sent to the Low-Level I/O, the task is simply removed from the queue. However, if a request has already been sent to the Low-Level I/O, the caller is blocked until the I/O is complete.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Users do not have to call <a class="el" href="class_a_k_1_1_i_ak_std_stream_a12c0a90ec223f7d03d265094b0319c88.html#a12c0a90ec223f7d03d265094b0319c88">AK::IAkStdStream::Cancel()</a> explicitly before destroying a stream (<a class="el" href="class_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403.html#aaa6bca57f4a01a98dff95f68b1320403">AK::IAkStdStream::Destroy()</a>). However, for best performance, users should call Destroy() only when the stream is not in AK_StmStatusPending state. </td></tr>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><b>Tip:</b> Users do not have to call AK::IAkStdStream::Cancel() explicitly before destroying a stream (AK::IAkStdStream::Destroy()). However, for best performance, users should call Destroy() only when the stream is not in AK_StmStatusPending state. </td></tr>
 </table>
 <h1><a class="anchor" id="streamingmanager_highlevel_autostreams"></a>
 Automatic Streams</h1>
-<p>Calling <a class="el" href="class_a_k_1_1_i_ak_stream_mgr_afe30a576bd859ff4e9b60a3f8e1710fb.html#afe30a576bd859ff4e9b60a3f8e1710fb">AK::IAkStreamMgr::CreateAuto()</a> creates an automatic stream object that is controllable through the returned <a class="el" href="class_a_k_1_1_i_ak_auto_stream.html">AK::IAkAutoStream</a> interface.</p>
+<p>Calling AK::IAkStreamMgr::CreateAuto() creates an automatic stream object that is controllable through the returned <a class="el" href="class_a_k_1_1_i_ak_auto_stream.html">AK::IAkAutoStream</a> interface.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_autostreams_definition"></a>
 Definition</h2>
-<p>Automatic streams are streams used for input only. They are called automatic because I/O requests are sent to the Low-Level I/O "under the hood", without any explicit function calls by the user. Streaming memory is owned by the Stream Manager, and streamed data is accessed by asking for a streaming memory address. When a region of the streaming memory is granted to the user, it remains locked until it is explicitly released. Meanwhile, the internal scheduler performs data transfers in memory that is not locked. A stream is idle when it is created. Automatic scheduling of I/O requests begins when the user calls <a class="el" href="class_a_k_1_1_i_ak_auto_stream_ae9d58aa42a893863f8fe85a5ee45d638.html#ae9d58aa42a893863f8fe85a5ee45d638">AK::IAkAutoStream::Start()</a>. It can be stopped or paused by calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_ad1b80ad36a23b15e96f697685f710b1f.html#ad1b80ad36a23b15e96f697685f710b1f">AK::IAkAutoStream::Stop()</a>, and resumed by calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_ae9d58aa42a893863f8fe85a5ee45d638.html#ae9d58aa42a893863f8fe85a5ee45d638">AK::IAkAutoStream::Start()</a> again.</p>
+<p>Automatic streams are streams used for input only. They are called automatic because I/O requests are sent to the Low-Level I/O "under the hood", without any explicit function calls by the user. Streaming memory is owned by the Stream Manager, and streamed data is accessed by asking for a streaming memory address. When a region of the streaming memory is granted to the user, it remains locked until it is explicitly released. Meanwhile, the internal scheduler performs data transfers in memory that is not locked. A stream is idle when it is created. Automatic scheduling of I/O requests begins when the user calls AK::IAkAutoStream::Start(). It can be stopped or paused by calling AK::IAkAutoStream::Stop(), and resumed by calling AK::IAkAutoStream::Start() again.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> Do not call GetBuffer() while the stream is stopped. You should always call <a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_1_1_xml_write_state_a9802053bd44c7926486300763e602293.html#a9802053bd44c7926486300763e602293a681b2db48f90de72b60f64c23e183690" title="Start">Start()</a> before attempting to get buffers from the stream. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> Do not call GetBuffer() while the stream is stopped. You should always call Start() before attempting to get buffers from the stream. </td></tr>
 </table>
-<p>Data is accessed by calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a>. If data has already been read from the Low-Level I/O, the method will return AK_DataReady, the address of the buffer containing that data, and its size. When the buffer is not required anymore, it is released by callingAK::IAkAutoStream::ReleaseBuffer(). The stream position as seen by the user is then incremented by the size of the released buffer. The user can force a new position by calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a>. The next call to <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> will be consistent with that position.</p>
+<p>Data is accessed by calling AK::IAkAutoStream::GetBuffer(). If data has already been read from the Low-Level I/O, the method will return AK_DataReady, the address of the buffer containing that data, and its size. When the buffer is not required anymore, it is released by callingAK::IAkAutoStream::ReleaseBuffer(). The stream position as seen by the user is then incremented by the size of the released buffer. The user can force a new position by calling AK::IAkAutoStream::SetPosition(). The next call to AK::IAkAutoStream::GetBuffer() will be consistent with that position.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> Changing the stream position may cause some data to be flushed. Automatic streams are optimized for sequential access. There are heuristics that specify looping, which help the Stream Manager manage its streaming memory efficiently. For more information, refer to the <a class="el" href="streamingmanager_highlevel.html#streamingmanager_highlevel_autostreams_watchout">Common Pitfalls and Other Considerations</a> section. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> Changing the stream position may cause some data to be flushed. Automatic streams are optimized for sequential access. There are heuristics that specify looping, which help the Stream Manager manage its streaming memory efficiently. For more information, refer to the Common Pitfalls and Other Considerations section. </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> If the Low-Level I/O reports an error, the stream puts itself in error mode. Automatic streams cannot recover from their error state, and <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> will always return AK_Fail. </td></tr>
+<td valign="top"><img src="images/Caution.gif" alt="" class="inline"/></td><td><b>Caution:</b> If the Low-Level I/O reports an error, the stream puts itself in error mode. Automatic streams cannot recover from their error state, and AK::IAkAutoStream::GetBuffer() will always return AK_Fail. </td></tr>
 </table>
 <h2><a class="anchor" id="streamingmanager_highlevel_autostreams_dataaccess"></a>
 Automatic Stream Data Access Schemes</h2>
 <p>The data in automatic streams can be accessed in two different ways:</p><ul>
-<li>Blocking on <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a></li>
-<li>Polling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a></li>
+<li>Blocking on AK::IAkAutoStream::GetBuffer()</li>
+<li>Polling AK::IAkAutoStream::GetBuffer()</li>
 </ul>
-<p><a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> has 4 possible return codes:</p>
+<p>AK::IAkAutoStream::GetBuffer() has 4 possible return codes:</p>
 <ul>
 <li>AK_DataReady</li>
 <li>AK_NoMoreData</li>
 <li>AK_NoDataReady</li>
 <li>AK_Fail</li>
 </ul>
-<p>If the user is granted a buffer filled with data, the method returns either AK_DataReady, or AK_NoMoreData. If the stream buffer is empty, <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> returns AK_NoDataReady, with a size of zero and a buffer address of null. If the Low-Level I/O reports an error, or the method is called with invalid parameters, it returns AK_Fail.</p>
-<p>AK_NoMoreData is returned instead of AK_DataReady when the last buffer of the file is granted. The Stream Manager evaluates that it is the last buffer by comparing the current position (as seen by the user) with the file size provided by the Low-Level I/O as a member of the file descriptor structure. Subsequent calls to <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> return AK_NoMoreData with a size of zero.</p>
-<p>Every call to <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> provides a new buffer. Buffers must be explicitly released by calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a4676200056afb266b730f25d5262d2c8.html#a4676200056afb266b730f25d5262d2c8">AK::IAkAutoStream::ReleaseBuffer()</a>. They are released in the order they were granted by GetBuffer(). When a buffer is released, its address becomes invalid. ReleaseBuffer() returns AK_Fail when the client holds no buffer. However this should not be considered as a fatal error.</p>
+<p>If the user is granted a buffer filled with data, the method returns either AK_DataReady, or AK_NoMoreData. If the stream buffer is empty, AK::IAkAutoStream::GetBuffer() returns AK_NoDataReady, with a size of zero and a buffer address of null. If the Low-Level I/O reports an error, or the method is called with invalid parameters, it returns AK_Fail.</p>
+<p>AK_NoMoreData is returned instead of AK_DataReady when the last buffer of the file is granted. The Stream Manager evaluates that it is the last buffer by comparing the current position (as seen by the user) with the file size provided by the Low-Level I/O as a member of the file descriptor structure. Subsequent calls to AK::IAkAutoStream::GetBuffer() return AK_NoMoreData with a size of zero.</p>
+<p>Every call to AK::IAkAutoStream::GetBuffer() provides a new buffer. Buffers must be explicitly released by calling AK::IAkAutoStream::ReleaseBuffer(). They are released in the order they were granted by GetBuffer(). When a buffer is released, its address becomes invalid. ReleaseBuffer() returns AK_Fail when the client holds no buffer. However this should not be considered as a fatal error.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> If possible, get only one buffer at a time. This provides more room to the Stream Manager to perform I/O. Using more than one buffer at a time is typically reserved for hardware or other interfaces that need access to a ring/double buffer. If you plan to use more than one buffer at a time for a given stream, you should inform by passing proper heuristics (<a class="el" href="struct_ak_auto_stm_heuristics_aeda0fa45777364065a470210b54bffea.html#aeda0fa45777364065a470210b54bffea">AkAutoStmHeuristics::uMinNumBuffers</a>).</p>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> If possible, get only one buffer at a time. This provides more room to the Stream Manager to perform I/O. Using more than one buffer at a time is typically reserved for hardware or other interfaces that need access to a ring/double buffer. If you plan to use more than one buffer at a time for a given stream, you should inform by passing proper heuristics (AkAutoStmHeuristics::uMinNumBuffers).</p>
 <p class="endtd"></p>
 </td></tr>
 </table>
@@ -207,10 +207,10 @@ Automatic Stream Data Access Schemes</h2>
 </table>
 <h3><a class="anchor" id="streamingmanager_highlevel_autostreams_dataaccess_blocking"></a>
 Blocking</h3>
-<p>Calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> with the in_bWait flag set to True blocks the user until data is ready. Therefore, the method cannot return AK_NoDataReady. If the final buffer has already been granted and released, the method returns AK_NoMoreData right away with size zero.</p>
+<p>Calling AK::IAkAutoStream::GetBuffer() with the in_bWait flag set to True blocks the user until data is ready. Therefore, the method cannot return AK_NoDataReady. If the final buffer has already been granted and released, the method returns AK_NoMoreData right away with size zero.</p>
 <h3><a class="anchor" id="streamingmanager_highlevel_autostreams_dataaccess_polling"></a>
 Polling</h3>
-<p>The user can try to get data by evaluating the code returned by <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a>, called with the in_bWait flag set to False. If it is AK_NoDataReady, the user should perform other tasks and try again later.</p>
+<p>The user can try to get data by evaluating the code returned by AK::IAkAutoStream::GetBuffer(), called with the in_bWait flag set to False. If it is AK_NoDataReady, the user should perform other tasks and try again later.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_autostreams_creationsetings"></a>
 Creation Settings</h2>
 <p>Automatic streams are instantiated with more settings than standard streams, among them constraints on buffer sizes and heuristics. These settings help the Stream Manager allocate optimal amounts of memory and prioritize data transfer requests.</p>
@@ -231,52 +231,52 @@ Buffer Constraints</h3>
 </table>
 <h3><a class="anchor" id="streamingmanager_highlevel_autostreams_creationsetings_heuristics"></a>
 Heuristics</h3>
-<p>Heuristics must be provided to help the Stream Manager perform scheduling and memory allocation. Automatic streams heuristics are specified per-stream, at creation time, and are very important for optimal behavior. They can be queried and changed anytime through <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a8017b864cb413b545e685b2fa1acfe65.html#a8017b864cb413b545e685b2fa1acfe65">AK::IAkAutoStream::GetHeuristics()</a> and <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a0991f4a2b25e6c2fcf5fc4e04cfeaebc.html#a0991f4a2b25e6c2fcf5fc4e04cfeaebc">AK::IAkAutoStream::SetHeuristics()</a>.</p>
+<p>Heuristics must be provided to help the Stream Manager perform scheduling and memory allocation. Automatic streams heuristics are specified per-stream, at creation time, and are very important for optimal behavior. They can be queried and changed anytime through AK::IAkAutoStream::GetHeuristics() and AK::IAkAutoStream::SetHeuristics().</p>
 <ul>
 <li>Throughput: The average throughput translates as a deadline for the I/O scheduler, since it knows how much data it has already available for a given stream. It is equivalent to the standard stream's per-operation deadline heuristic.</li>
 <li>Priority: This is generally used when the application requires more I/O bandwidth than what the storage device can provide. In that case, the Stream Manager will try to fulfill requests of streams with higher priority. It is equivalent to the standard stream's per-operation priority heuristic.</li>
-<li>Looping: You can specify looping positions in a stream that loops. This helps the Stream Manager in managing its memory. If the loop is released, it is a good practice to set that heuristic back to "non-looping" (set uLoopEnd to 0). Note that this is only a heuristic: the stream position shall not be changed unless the client called <a class="el" href="namespace_a_k_1_1_sound_engine_a789e25bda32d1e11849afb6584942455.html#a789e25bda32d1e11849afb6584942455">SetPosition()</a>. However, unexpected position changes in regard to looping heuristics will typically result in data flushing.</li>
+<li>Looping: You can specify looping positions in a stream that loops. This helps the Stream Manager in managing its memory. If the loop is released, it is a good practice to set that heuristic back to "non-looping" (set uLoopEnd to 0). Note that this is only a heuristic: the stream position shall not be changed unless the client called SetPosition(). However, unexpected position changes in regard to looping heuristics will typically result in data flushing.</li>
 <li>uMinClientBuffers: This indicates how many buffers the client plans to hold at the same time. Typically, you should hold one buffer at a time. Sometimes it may be required to hold 2 buffers at a time. In this case, set uMinClientBuffers to 2. The Stream Manager should try to buffer your stream with at least (uMinClientBuffers + 1) buffers. Note that specifying 0 for uMinClientBuffers (default value) is equivalent to 1.</li>
 </ul>
 <h2><a class="anchor" id="streamingmanager_highlevel_autostreams_watchout"></a>
 Common Pitfalls and Other Considerations</h2>
 <h3><a class="anchor" id="streamingmanager_highlevel_autostreams_watchout_blocksize"></a>
 Block Size</h3>
-<p>The Stream Manager always queries the block size of a given file to the Low-Level I/O before choosing the buffer size, to ensure that the buffer size is a multiple of the block size. Therefore, users of automatic streams do not have to concern themselves with the Low-Level block size, unless they are forcing the stream to another position. In this case, they need to consider the block size obtained from <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a6869aba1d6b9301a3f59468166a8fb7c.html#a6869aba1d6b9301a3f59468166a8fb7c">AK::IAkAutoStream::GetBlockSize()</a>, or the real absolute offset returned by <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a>.</p>
+<p>The Stream Manager always queries the block size of a given file to the Low-Level I/O before choosing the buffer size, to ensure that the buffer size is a multiple of the block size. Therefore, users of automatic streams do not have to concern themselves with the Low-Level block size, unless they are forcing the stream to another position. In this case, they need to consider the block size obtained from AK::IAkAutoStream::GetBlockSize(), or the real absolute offset returned by AK::IAkAutoStream::SetPosition().</p>
 <h3><a class="anchor" id="streamingmanager_highlevel_autostreams_watchout_position"></a>
 Stream Position</h3>
-<p>Stream position is evaluated from the user's point of view, and is queried and set by the Get/SetPosition() methods. Data transferred from the Low-Level I/O into the Stream Manager's buffers is not taken into account when computing the position. It is updated when a buffer is released by the user. If some data had already been transferred from the Low-Level I/O when <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a> was called, that data is generally flushed.</p>
+<p>Stream position is evaluated from the user's point of view, and is queried and set by the Get/SetPosition() methods. Data transferred from the Low-Level I/O into the Stream Manager's buffers is not taken into account when computing the position. It is updated when a buffer is released by the user. If some data had already been transferred from the Low-Level I/O when AK::IAkAutoStream::SetPosition() was called, that data is generally flushed.</p>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> Users should avoid calling <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a> whenever possible. If it must be used, it should be called as early as possible. For example, in the sound engine, when a looping sound source obtains a buffer from the Stream Manager, it checks to see if the loop end is contained in that buffer. If it is, <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a> is called right away (that is, long before ReleaseBuffer()), thus minimizing the risk of streaming useless data. Also, specifying looping heuristics can help the internal scheduler make better decisions regarding requests to the Low-Level I/O.</p>
+<td valign="top"><img src="images/Note.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Note:</b> Users should avoid calling AK::IAkAutoStream::SetPosition() whenever possible. If it must be used, it should be called as early as possible. For example, in the sound engine, when a looping sound source obtains a buffer from the Stream Manager, it checks to see if the loop end is contained in that buffer. If it is, AK::IAkAutoStream::SetPosition() is called right away (that is, long before ReleaseBuffer()), thus minimizing the risk of streaming useless data. Also, specifying looping heuristics can help the internal scheduler make better decisions regarding requests to the Low-Level I/O.</p>
 <p class="endtd"></p>
 </td></tr>
 </table>
 <table border="0" cellspacing="0" cellpadding="2">
 <tr>
-<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a> can be called with or without having a buffer locked, but it is recommended to change the position as early as possible, to minimize the risk of streaming data for nothing. Stopping the stream appropriately can also help minimize wasted bandwidth.</p>
-<p class="intertd"><a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a> does not release buffers held by the client. Clients decide when buffers should be released by calling ReleaseBuffer() explicitly. <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition()</a> actually indicates the position expected by the client for the <b>next call</b> to GetBuffer().</p>
-<p class="endtd"><a class="el" href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">AK::IAkAutoStream::GetPosition()</a> returns the position of the first buffer currently held by the client. If the client holds no buffer, then it returns the position of the buffer that will be granted at the next call to GetBuffer(). </p>
+<td valign="top"><img src="images/Tip.gif" alt="" class="inline"/></td><td><p class="starttd"><b>Tip:</b> AK::IAkAutoStream::SetPosition() can be called with or without having a buffer locked, but it is recommended to change the position as early as possible, to minimize the risk of streaming data for nothing. Stopping the stream appropriately can also help minimize wasted bandwidth.</p>
+<p class="intertd">AK::IAkAutoStream::SetPosition() does not release buffers held by the client. Clients decide when buffers should be released by calling ReleaseBuffer() explicitly. AK::IAkAutoStream::SetPosition() actually indicates the position expected by the client for the <b>next call</b> to GetBuffer().</p>
+<p class="endtd">AK::IAkAutoStream::GetPosition() returns the position of the first buffer currently held by the client. If the client holds no buffer, then it returns the position of the buffer that will be granted at the next call to GetBuffer(). </p>
 </td></tr>
 </table>
-<p>The AK_NoMoreData return code of <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> is determined from the stream position. The out_bEndOfStream optional flag returned by <a class="el" href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">AK::IAkAutoStream::GetPosition()</a> is also bound to the stream position. It returns True if and only if</p><ul>
+<p>The AK_NoMoreData return code of AK::IAkAutoStream::GetBuffer() is determined from the stream position. The out_bEndOfStream optional flag returned by AK::IAkAutoStream::GetPosition() is also bound to the stream position. It returns True if and only if</p><ul>
 <li>uLoopEnd heuristics is set to 0 (not looping),</li>
 <li>no more data is being transferred from the Low-Level I/O,</li>
 <li>the user has released all its buffers.</li>
 </ul>
 <h3><a class="anchor" id="streamingmanager_highlevel_autostreams_watchout_blocking"></a>
 Methods Blocking on Pending Low-Level Operations</h3>
-<p>The automatic stream API has been designed so that the user never blocks on any pending transactions with the Low-Level I/O, except for blocking <a class="el" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer()</a> calls. Even <a class="el" href="class_a_k_1_1_i_ak_auto_stream_a7371eb45a24988fc3d5372bc15c77db7.html#a7371eb45a24988fc3d5372bc15c77db7">AK::IAkAutoStream::Destroy()</a> should not block. Typically, if a stream is still interacting with the Low-Level I/O when it is destroyed, it will continue to live internally until the current transfer with the Low-Level I/O is complete.</p>
+<p>The automatic stream API has been designed so that the user never blocks on any pending transactions with the Low-Level I/O, except for blocking AK::IAkAutoStream::GetBuffer() calls. Even AK::IAkAutoStream::Destroy() should not block. Typically, if a stream is still interacting with the Low-Level I/O when it is destroyed, it will continue to live internally until the current transfer with the Low-Level I/O is complete.</p>
 <h1><a class="anchor" id="streamingmanager_highlevel_overriding"></a>
 Overriding the Stream Manager</h1>
 <p>To override the entire Stream Manager, the game title must implement all the interfaces defined in <a class="el" href="_i_ak_stream_mgr_8h.html">IAkStreamMgr.h</a>. The implementation should follow the rules described elsewhere in this section.</p>
 <p>You can replace the static library AkStreamMgr.lib by the game's own. The creation function and other implementation-specific settings and definition, such as the Low-Level I/O API, are located in <a class="el" href="_ak_stream_mgr_module_8h.html">AkStreamMgrModule.h</a> and are therefore not part of the Stream Manager.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_overriding_link"></a>
 Linkage with the Sound Engine</h2>
-<p>The sound engine accesses the Stream Manager by calling its inline static <a class="el" href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get()</a> method, which returns a pointer to the <a class="el" href="class_a_k_1_1_i_ak_stream_mgr.html">AK::IAkStreamMgr</a> interface, defined as a protected member of <a class="el" href="class_a_k_1_1_i_ak_stream_mgr.html">AK::IAkStreamMgr</a>. The custom implementation must declare only one variable (<a class="el" href="class_a_k_1_1_i_ak_stream_mgr_a85c6043c1a45f13b7df2f05729248b1f.html#a85c6043c1a45f13b7df2f05729248b1f">AK::IAkStreamMgr::m_pStreamMgr</a>), and linkage is automatic. If the Stream Manager and the sound engine are not linked together in the same executable or DLL. <a class="el" href="class_a_k_1_1_i_ak_stream_mgr_a85c6043c1a45f13b7df2f05729248b1f.html#a85c6043c1a45f13b7df2f05729248b1f">AK::IAkStreamMgr::m_pStreamMgr</a> must have the __dllexport attribute. The AKSTREAMMGR_API macro may be used, with AKSTREAMMGR_EXPORTS defined in the compiler settings for the custom Stream Manager library.</p>
+<p>The sound engine accesses the Stream Manager by calling its inline static AK::IAkStreamMgr::Get() method, which returns a pointer to the <a class="el" href="class_a_k_1_1_i_ak_stream_mgr.html">AK::IAkStreamMgr</a> interface, defined as a protected member of <a class="el" href="class_a_k_1_1_i_ak_stream_mgr.html">AK::IAkStreamMgr</a>. The custom implementation must declare only one variable (AK::IAkStreamMgr::m_pStreamMgr), and linkage is automatic. If the Stream Manager and the sound engine are not linked together in the same executable or DLL. AK::IAkStreamMgr::m_pStreamMgr must have the __dllexport attribute. The AKSTREAMMGR_API macro may be used, with AKSTREAMMGR_EXPORTS defined in the compiler settings for the custom Stream Manager library.</p>
 <h2><a class="anchor" id="streamingmanager_highlevel_overriding_profiling"></a>
 Profiling</h2>
-<p>The profiling interfaces also need to be implemented to enable linking with the non-AK_OPTIMIZED version of the sound engine. The interface is fairly self-explanatory. Implementing it enables profiling in Wwise. If profiling is not required, <a class="el" href="class_a_k_1_1_i_ak_stream_mgr_abce23f619236db5f03364d9447caec71.html#abce23f619236db5f03364d9447caec71">AK::IAkStreamMgr::GetStreamMgrProfile()</a> should return NULL, and the interfaces can then be implemented with empty code. In this case, no profiling information will be displayed in Wwise.</p>
+<p>The profiling interfaces also need to be implemented to enable linking with the non-AK_OPTIMIZED version of the sound engine. The interface is fairly self-explanatory. Implementing it enables profiling in Wwise. If profiling is not required, AK::IAkStreamMgr::GetStreamMgrProfile() should return NULL, and the interfaces can then be implemented with empty code. In this case, no profiling information will be displayed in Wwise.</p>
 <h1><a class="anchor" id="streamingmanager_highlevel_examplecode"></a>
 Example code</h1>
 <p>The code below is intended to show some considerations that are better explained by code than textually. It is particularly useful if you wish to override or change the implementation of the Stream Manager. This code is intentionally heavy, as it points out some issues to which you should pay particular attention.</p>
@@ -287,24 +287,24 @@ Example code</h1>
 <div class="line"><span class="comment">// This function returns true if the test is successful (if the Stream Manager behaves</span></div>
 <div class="line">correctly).</div>
 <div class="line">bool BasicStdStreamTest(</div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="_platforms_2_windows_2_ak_types_8h_af48843ed095e0ea7dd05bd1b64070664.html#af48843ed095e0ea7dd05bd1b64070664">AkOSChar</a> * in_pszFilename</div>
+<div class="line">    <span class="keyword">const</span> AkOSChar * in_pszFilename</div>
 <div class="line">    )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Basic standard stream test.</span></div>
 <div class="line">    <span class="keywordtype">bool</span> bSuccess = <span class="keyword">true</span>;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a7b5402d7570cb20a11c8d21f2c2710ec.html#a7b5402d7570cb20a11c8d21f2c2710ec">AkUInt64</a> iCurPosition;</div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a> POSITION_BEGIN = 0;</div>
+<div class="line">    AkUInt64 iCurPosition;</div>
+<div class="line">    <span class="keyword">const</span> AkInt64 POSITION_BEGIN = 0;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Create a stream object for reading.</span></div>
 <div class="line">    <a class="code" href="class_a_k_1_1_i_ak_std_stream.html">AK::IAkStdStream</a> * pStream;</div>
-<div class="line">    <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a>()-&gt;<a class="code" href="class_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6.html#a1de2a7935a2d3cddb71e7cc7f48effd6">CreateStd</a>(</div>
+<div class="line">    AKRESULT eResult = AK::IAkStreamMgr::Get()-&gt;CreateStd(</div>
 <div class="line">        in_pszFilename,     <span class="comment">// Application stream identifier (file name).</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>,               <span class="comment">// No file system flags: we provide the full path and do not need any file location resolving logic.</span></div>
-<div class="line">        <a class="code" href="_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7.html#afb72442488d89ecc645c457ff48a90b7ab35230305828a2d0aee87a3190ff661f">AK_OpenModeRead</a>,    <span class="comment">// Creation setting: Open Mode.</span></div>
+<div class="line">        NULL,               <span class="comment">// No file system flags: we provide the full path and do not need any file location resolving logic.</span></div>
+<div class="line">        AK_OpenModeRead,    <span class="comment">// Creation setting: Open Mode.</span></div>
 <div class="line">        pStream,            <span class="comment">// Returned stream interface.</span></div>
 <div class="line">        <span class="keyword">true</span> );             <span class="comment">// Require synchronous file open.</span></div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Failed creating stream.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -318,7 +318,7 @@ Example code</h1>
 <div class="line">    <span class="comment">// Before attempting any read, users who are unaware of the implementation of the Low-Level I/O module</span></div>
 <div class="line">    <span class="comment">// should ensure their read sizes are consistent with the block size constraint. This test assumes</span></div>
 <div class="line">    <span class="comment">// that BUFFER_SIZE is a multiple of the block size. If it is not, we do not continue.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( BUFFER_SIZE % pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b.html#a1121f1b371a613e020d38b99e65e7a2b">GetBlockSize</a>() != 0 )</div>
+<div class="line">    <span class="keywordflow">if</span> ( BUFFER_SIZE % pStream-&gt;GetBlockSize() != 0 )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Low-Level storage device requirements are not compatible with this test.\n&quot;</span>);</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -328,16 +328,16 @@ Example code</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// Read BUFFER_SIZE bytes in buffer. Blocking read.</span></div>
 <div class="line">    <span class="comment">//</span></div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uSizeTransferred;</div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    AkUInt32 uSizeTransferred;</div>
+<div class="line">    eResult = pStream-&gt;Read(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of course).</span></div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -346,7 +346,7 @@ Example code</h1>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Test: If we did not reach the end of file, size read should equal size requested. Verify.</span></div>
 <div class="line">    <span class="keywordtype">bool</span> bReachedEOF;</div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">GetPosition</a>( &amp;bReachedEOF );</div>
+<div class="line">    pStream-&gt;GetPosition( &amp;bReachedEOF );</div>
 <div class="line">    <span class="keywordflow">if</span> ( !bReachedEOF &amp;&amp;</div>
 <div class="line">         uSizeTransferred != BUFFER_SIZE )</div>
 <div class="line">    {</div>
@@ -368,16 +368,16 @@ Example code</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// Read BUFFER_SIZE bytes in buffer. Non-blocking read.</span></div>
 <div class="line">    <span class="comment">//</span></div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    eResult = pStream-&gt;Read(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Non-blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of</span></div>
 <div class="line">        course).</div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -385,15 +385,15 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Poll until data is ready.</span></div>
-<div class="line">    <a class="code" href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307">AkStmStatus</a> eStatus = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275.html#a165ff91b84857e73891f7943261ba275">GetStatus</a>();</div>
-<div class="line">    <span class="keywordflow">while</span> ( eStatus != <a class="code" href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307a4ee943eb5fbd1c15c114a7db3cd9620e">AK_StmStatusCompleted</a> &amp;&amp; eStatus != <a class="code" href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307acd646559057f6060264897517d7af22e">AK_StmStatusError</a> )</div>
+<div class="line">    AkStmStatus eStatus = pStream-&gt;GetStatus();</div>
+<div class="line">    <span class="keywordflow">while</span> ( eStatus != AK_StmStatusCompleted &amp;&amp; eStatus != AK_StmStatusError )</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Do something else...</span></div>
-<div class="line">        <a class="code" href="namespace_a_k_p_l_a_t_f_o_r_m_aacfeaa07eeeea022207bb97991cc6260.html#aacfeaa07eeeea022207bb97991cc6260">AKPLATFORM::AkSleep</a>(0);</div>
+<div class="line">        AKPLATFORM::AkSleep(0);</div>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Check status.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275.html#a165ff91b84857e73891f7943261ba275">GetStatus</a>() != <a class="code" href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307a4ee943eb5fbd1c15c114a7db3cd9620e">AK_StmStatusCompleted</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;GetStatus() != AK_StmStatusCompleted )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -401,7 +401,7 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Check again that we did not reach EOF, because data comparison would fail.</span></div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">GetPosition</a>( &amp;bReachedEOF );</div>
+<div class="line">    pStream-&gt;GetPosition( &amp;bReachedEOF );</div>
 <div class="line">    <span class="keywordflow">if</span> ( bReachedEOF )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Input file not big enough. Could not complete test.\n&quot;</span> );</div>
@@ -413,14 +413,14 @@ Example code</h1>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// SetPosition to ABS_POSITION (absolute from the beginning of the file), and read BUFFER_SIZE bytes in buffer.</span></div>
 <div class="line">    <span class="comment">//</span></div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a> ABS_POSITION = 12000;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a> iRealOffset;</div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">SetPosition</a>(</div>
+<div class="line">    AkInt64 ABS_POSITION = 12000;</div>
+<div class="line">    AkInt64 iRealOffset;</div>
+<div class="line">    eResult = pStream-&gt;SetPosition(</div>
 <div class="line">        ABS_POSITION,</div>
-<div class="line">        <a class="code" href="_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865.html#a61588d0ebdfe1148a6ee6f8304bf4865aaafcaeced22c9ffabc151a3cf0585fee">AK_MoveBegin</a>,</div>
+<div class="line">        AK_MoveBegin,</div>
 <div class="line">        &amp;iRealOffset );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;SetPosition failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -432,26 +432,26 @@ Example code</h1>
 <div class="line">    <span class="comment">// size was 2000, the position would be set to 8000, and so would be iRealOffset).</span></div>
 <div class="line">    printf( <span class="stringliteral">&quot;Set position to %u, low-level block size is %u, actual position set to %u\n&quot;</span>,</div>
 <div class="line">        ABS_POSITION,</div>
-<div class="line">        pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b.html#a1121f1b371a613e020d38b99e65e7a2b">GetBlockSize</a>(),</div>
+<div class="line">        pStream-&gt;GetBlockSize(),</div>
 <div class="line">        iRealOffset );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Read.</span></div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    eResult = pStream-&gt;Read(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of course).</span></div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
 <div class="line">        <span class="keywordflow">goto</span> stdstmbasictest_cleanup;</div>
 <div class="line">    }</div>
 <div class="line">    <span class="comment">// Check again that we did not reached EOF, because data comparison would fail.</span></div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">GetPosition</a>( &amp;bReachedEOF );</div>
+<div class="line">    pStream-&gt;GetPosition( &amp;bReachedEOF );</div>
 <div class="line">    <span class="keywordflow">if</span> ( bReachedEOF )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Input file not big enough. Could not complete test.\n&quot;</span> );</div>
@@ -460,18 +460,18 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Keep the current absolute position.</span></div>
-<div class="line">    iCurPosition = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> );</div>
+<div class="line">    iCurPosition = pStream-&gt;GetPosition( NULL );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// SetPosition backwards, -REL_POSITION relative to current position</span></div>
 <div class="line">    <span class="comment">//</span></div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a> REL_POSITION = -8000;</div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">SetPosition</a>(</div>
+<div class="line">    AkInt64 REL_POSITION = -8000;</div>
+<div class="line">    eResult = pStream-&gt;SetPosition(</div>
 <div class="line">        REL_POSITION,</div>
-<div class="line">        <a class="code" href="_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865.html#a61588d0ebdfe1148a6ee6f8304bf4865ad7036d3c0758b66299e6c1d0e60a14c5">AK_MoveCurrent</a>,</div>
+<div class="line">        AK_MoveCurrent,</div>
 <div class="line">        &amp;iRealOffset );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;SetPosition failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -486,27 +486,27 @@ Example code</h1>
 <div class="line">    <span class="comment">// iCurPosition contains the &quot;real&quot; ABS_POSITION, and iRealOffset now contains the &quot;real&quot; REL_POSITION,</span></div>
 <div class="line">    <span class="comment">// that is, the real move offset. Therefore, GetPosition(), which always returns the absolute position,</span></div>
 <div class="line">    <span class="comment">// should equal iCurPosition+iRealOffset.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> ) != iCurPosition+iRealOffset )</div>
+<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;GetPosition( NULL ) != iCurPosition+iRealOffset )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Wrong stream position.&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
 <div class="line">        <span class="keywordflow">goto</span> stdstmbasictest_cleanup;</div>
 <div class="line">    }</div>
 <div class="line"> </div>
-<div class="line">    iCurPosition = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> );</div>
+<div class="line">    iCurPosition = pStream-&gt;GetPosition( NULL );</div>
 <div class="line">    printf( <span class="stringliteral">&quot;Reading from offset %u.\n&quot;</span>, iCurPosition );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Read from there.</span></div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    eResult = pStream-&gt;Read(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of</span></div>
 <div class="line">        course).</div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -518,16 +518,16 @@ Example code</h1>
 <div class="line">    <span class="comment">// Cancelling an operation</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// Read.</span></div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    eResult = pStream-&gt;Read(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of</span></div>
 <div class="line">        course).</div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -535,14 +535,14 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Cancel.</span></div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a12c0a90ec223f7d03d265094b0319c88.html#a12c0a90ec223f7d03d265094b0319c88">Cancel</a>();</div>
+<div class="line">    pStream-&gt;Cancel();</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Here, either the Stream Manager had time to send and complete the request to low-level</span></div>
 <div class="line">    <span class="comment">// (status would be AK_StmStatusCompleted), or it removed it from the queue of pending operations</span></div>
 <div class="line">    <span class="comment">// (status would be AK_StmStatusCancelled).</span></div>
 <div class="line">    <span class="comment">// In either case, we can be sure that no operation is pending for our stream.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275.html#a165ff91b84857e73891f7943261ba275">GetStatus</a>() != <a class="code" href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307a4ee943eb5fbd1c15c114a7db3cd9620e">AK_StmStatusCompleted</a> &amp;&amp;</div>
-<div class="line">         pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275.html#a165ff91b84857e73891f7943261ba275">GetStatus</a>() != <a class="code" href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307a8122c26f72bda0dbe4cbeaa94917f4b0">AK_StmStatusCancelled</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;GetStatus() != AK_StmStatusCompleted &amp;&amp;</div>
+<div class="line">         pStream-&gt;GetStatus() != AK_StmStatusCancelled )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Inconsistent status after operation cancellation.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -554,15 +554,15 @@ Example code</h1>
 <div class="line">    <span class="comment">// Writing.</span></div>
 <div class="line">    <span class="comment">//</span></div>
 <div class="line">    <span class="comment">// Read.</span></div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    eResult = pStream-&gt;Read(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of course).</span></div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -572,29 +572,29 @@ Example code</h1>
 <div class="line">    <span class="comment">// Write back to another file (blocking).</span></div>
 <div class="line">    <span class="comment">// Create stream.</span></div>
 <div class="line">    <a class="code" href="class_a_k_1_1_i_ak_std_stream.html">AK::IAkStdStream</a> * pWrStream;</div>
-<div class="line">    eResult = <a class="code" href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a>()-&gt;<a class="code" href="class_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6.html#a1de2a7935a2d3cddb71e7cc7f48effd6">CreateStd</a>(</div>
+<div class="line">    eResult = AK::IAkStreamMgr::Get()-&gt;CreateStd(</div>
 <div class="line">        <span class="stringliteral">&quot;out.dat&quot;</span>,</div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>,                   <span class="comment">// We could use this argument to tell the Low-Level I/O that this file needs to</span></div>
+<div class="line">        NULL,                   <span class="comment">// We could use this argument to tell the Low-Level I/O that this file needs to</span></div>
 <div class="line">                                <span class="comment">// be created in another storage device (one that supports writing).</span></div>
-<div class="line">        <a class="code" href="_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7.html#afb72442488d89ecc645c457ff48a90b7ab17f6b95edc9ff7cd668878325ffd93a">AK_OpenModeReadWrite</a>,</div>
+<div class="line">        AK_OpenModeReadWrite,</div>
 <div class="line">        pWrStream,</div>
 <div class="line">        <span class="keyword">true</span> );                 <span class="comment">// Require synchronous file open.</span></div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Failed creating stream for writing.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
 <div class="line">        <span class="keywordflow">goto</span> stdstmbasictest_cleanup;</div>
 <div class="line">    }</div>
-<div class="line">    eResult = pWrStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">Write</a>(</div>
+<div class="line">    eResult = pWrStream-&gt;Write(</div>
 <div class="line">        pBuffer,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of course).</span></div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> ||</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success ||</div>
 <div class="line">         uSizeTransferred != BUFFER_SIZE )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Write failed.\n&quot;</span> );</div>
@@ -602,11 +602,11 @@ Example code</h1>
 <div class="line">        <span class="keywordflow">goto</span> stdstmbasictest_cleanup;</div>
 <div class="line">    }</div>
 <div class="line">    <span class="comment">// Set position to beginning, and read back file in another buffer to compare data.</span></div>
-<div class="line">    eResult = pWrStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">SetPosition</a>(</div>
+<div class="line">    eResult = pWrStream-&gt;SetPosition(</div>
 <div class="line">        POSITION_BEGIN,</div>
-<div class="line">        <a class="code" href="_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865.html#a61588d0ebdfe1148a6ee6f8304bf4865aaafcaeced22c9ffabc151a3cf0585fee">AK_MoveBegin</a>,</div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> );</div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">        AK_MoveBegin,</div>
+<div class="line">        NULL );</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;SetPosition failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -614,15 +614,15 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordtype">unsigned</span> <span class="keywordtype">char</span> pBufferCheck[BUFFER_SIZE];</div>
-<div class="line">    eResult = pWrStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">Read</a>(</div>
+<div class="line">    eResult = pWrStream-&gt;Read(</div>
 <div class="line">        pBufferCheck,</div>
 <div class="line">        BUFFER_SIZE,</div>
 <div class="line">        <span class="keyword">true</span>,                   <span class="comment">// Blocking</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>,    <span class="comment">// Default priority.</span></div>
+<div class="line">        AK_DEFAULT_PRIORITY,    <span class="comment">// Default priority.</span></div>
 <div class="line">        0,                      <span class="comment">// Deadline is 0: data is requested NOW (will be late, of course).</span></div>
 <div class="line">        uSizeTransferred );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> ||</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success ||</div>
 <div class="line">         uSizeTransferred != BUFFER_SIZE )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Read failed.\n&quot;</span> );</div>
@@ -642,9 +642,9 @@ Example code</h1>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Close streams.</span></div>
 <div class="line">    <span class="keywordflow">if</span> ( pStream )</div>
-<div class="line">        pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403.html#aaa6bca57f4a01a98dff95f68b1320403">Destroy</a>();</div>
+<div class="line">        pStream-&gt;Destroy();</div>
 <div class="line">    <span class="keywordflow">if</span> ( pWrStream )</div>
-<div class="line">        pWrStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403.html#aaa6bca57f4a01a98dff95f68b1320403">Destroy</a>();</div>
+<div class="line">        pWrStream-&gt;Destroy();</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> bSuccess;</div>
 <div class="line">}</div>
@@ -653,7 +653,7 @@ Example code</h1>
 <div class="line"><span class="comment">// Automatic streams usage and considerations.</span></div>
 <div class="line"><span class="comment">// This function returns true if the test is successful (if the Stream Manager behaves correctly).</span></div>
 <div class="line"><span class="keywordtype">bool</span> BasicAutoStreamTest(</div>
-<div class="line">    <span class="keyword">const</span> <a class="code" href="_platforms_2_windows_2_ak_types_8h_af48843ed095e0ea7dd05bd1b64070664.html#af48843ed095e0ea7dd05bd1b64070664">AkOSChar</a> * in_pszFilename</div>
+<div class="line">    <span class="keyword">const</span> AkOSChar * in_pszFilename</div>
 <div class="line">    )</div>
 <div class="line">{</div>
 <div class="line">    <span class="comment">// Create an automatic stream.</span></div>
@@ -662,27 +662,27 @@ Example code</h1>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Set heuristics.</span></div>
 <div class="line">    <a class="code" href="struct_ak_auto_stm_heuristics.html">AkAutoStmHeuristics</a> heuristics;</div>
-<div class="line">    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a4765f706b096765eb25dd6c06073d9af.html#a4765f706b096765eb25dd6c06073d9af">fThroughput</a>  = 1048576;  <span class="comment">// 1 Mb/s</span></div>
+<div class="line">    heuristics.fThroughput  = 1048576;  <span class="comment">// 1 Mb/s</span></div>
 <div class="line">    <span class="comment">// Note: Since this will be the only stream created in the Stream Manager, throughput has no effect.</span></div>
 <div class="line">    <span class="comment">// The scheduler will always choose this stream for I/O.</span></div>
-<div class="line">    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a7970062dcd75b2e5ec860c916efdda1e.html#a7970062dcd75b2e5ec860c916efdda1e">uLoopStart</a>   = 0;</div>
-<div class="line">    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a5084255c5c7c92649b78315447835c1b.html#a5084255c5c7c92649b78315447835c1b">uLoopEnd</a>     = 0;    <span class="comment">// Not looping.</span></div>
+<div class="line">    heuristics.uLoopStart   = 0;</div>
+<div class="line">    heuristics.uLoopEnd     = 0;    <span class="comment">// Not looping.</span></div>
 <div class="line">    <span class="comment">// Note: Looping heuristics are important even if there is only one stream in the whole application,</span></div>
 <div class="line">    <span class="comment">// because it might change the way streaming memory is managed.</span></div>
-<div class="line">    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a574352be21d197e2bbca4e87177a48ab.html#a574352be21d197e2bbca4e87177a48ab">priority</a>     = <a class="code" href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a>;</div>
+<div class="line">    heuristics.priority     = AK_DEFAULT_PRIORITY;</div>
 <div class="line">    <span class="comment">// Note: Priority is also irrelevant. However, you must specify a value between AK_MIN_PRIORITY</span></div>
 <div class="line">    <span class="comment">// and AK_MAX_PRIORITY (inclusive), otherwise the Stream Manager will consider its creation settings to be invalid.</span></div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Create stream.</span></div>
-<div class="line">    <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a> eResult = <a class="code" href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a>()-&gt;<a class="code" href="class_a_k_1_1_i_ak_stream_mgr_afe30a576bd859ff4e9b60a3f8e1710fb.html#afe30a576bd859ff4e9b60a3f8e1710fb">CreateAuto</a>(</div>
+<div class="line">    AKRESULT eResult = AK::IAkStreamMgr::Get()-&gt;CreateAuto(</div>
 <div class="line">        in_pszFilename, <span class="comment">// File name.</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>,           <span class="comment">// No file system flags: we provide the full path and do not need any file location resolving logic.</span></div>
+<div class="line">        NULL,           <span class="comment">// No file system flags: we provide the full path and do not need any file location resolving logic.</span></div>
 <div class="line">        heuristics,     <span class="comment">// Our heuristics.</span></div>
-<div class="line">        <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a>,           <span class="comment">// Buffer constraints: none. Users should not specify user constraints if they don&#39;t need to.</span></div>
+<div class="line">        NULL,           <span class="comment">// Buffer constraints: none. Users should not specify user constraints if they don&#39;t need to.</span></div>
 <div class="line">        pStream,        <span class="comment">// Returned stream interface.</span></div>
 <div class="line">        <span class="keyword">true</span> );         <span class="comment">// Require synchronous file open.</span></div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Failed creating stream.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -690,23 +690,23 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Start stream. I/O scheduler starts considering this stream.</span></div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_ae9d58aa42a893863f8fe85a5ee45d638.html#ae9d58aa42a893863f8fe85a5ee45d638">Start</a>();</div>
+<div class="line">    pStream-&gt;Start();</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Get stream size (through GetInfo).</span></div>
 <div class="line">    <a class="code" href="struct_ak_stream_info.html">AkStreamInfo</a> streamInfo;</div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a345fdbb2d4551f048727bc66f58eb80f.html#a345fdbb2d4551f048727bc66f58eb80f">GetInfo</a>( streamInfo );</div>
+<div class="line">    pStream-&gt;GetInfo( streamInfo );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Get the first buffer. This access will be blocking.</span></div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uBufferSize;</div>
+<div class="line">    AkUInt32 uBufferSize;</div>
 <div class="line">    <span class="keywordtype">void</span> * pBuffer;</div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">GetBuffer</a>(</div>
+<div class="line">    eResult = pStream-&gt;GetBuffer(</div>
 <div class="line">        pBuffer,        <span class="comment">// Address of granted data space.</span></div>
 <div class="line">        uBufferSize,    <span class="comment">// Size of granted data space.</span></div>
 <div class="line">        <span class="keyword">true</span>            <span class="comment">// Block until data is ready.</span></div>
 <div class="line">        );</div>
 <div class="line">    <span class="comment">// Check return code.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a42844243c26095d10ade29e0f020ee0f">AK_DataReady</a> &amp;&amp;</div>
-<div class="line">         eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a94ba10d374d31161770fc490e0245802">AK_NoMoreData</a> )</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_DataReady &amp;&amp;</div>
+<div class="line">         eResult != AK_NoMoreData )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;GetBuffer failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -715,11 +715,11 @@ Example code</h1>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Let&#39;s suppose we parsed data contained in the buffer, which gave us information about the file.</span></div>
 <div class="line">    <span class="comment">// For example, it says that the file should be looping between positions 10000 and 150000 (bytes).</span></div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uLoopStart = 10000;</div>
-<div class="line">    <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uLoopEnd = 150000;</div>
+<div class="line">    AkUInt32 uLoopStart = 10000;</div>
+<div class="line">    AkUInt32 uLoopEnd = 150000;</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Note: In order for this test to properly compare data, the input file should be bigger than uLoopEnd.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( (<a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a>)streamInfo.<a class="code" href="struct_ak_stream_info_aa350fbeb216793ac822d5521df98eccf.html#aa350fbeb216793ac822d5521df98eccf">uSize</a> &lt; uLoopEnd )</div>
+<div class="line">    <span class="keywordflow">if</span> ( (AkUInt32)streamInfo.uSize &lt; uLoopEnd )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Input file not big enough. Could not complete test.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -727,14 +727,14 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// For optimal Stream Manager behavior, we should set the heuristics accordingly.</span></div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a8017b864cb413b545e685b2fa1acfe65.html#a8017b864cb413b545e685b2fa1acfe65">GetHeuristics</a>( heuristics );   <span class="comment">// Note: In the present case, it is not necessary to get the heuristics first.</span></div>
-<div class="line">    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a7970062dcd75b2e5ec860c916efdda1e.html#a7970062dcd75b2e5ec860c916efdda1e">uLoopStart</a> = uLoopStart;</div>
-<div class="line">    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a5084255c5c7c92649b78315447835c1b.html#a5084255c5c7c92649b78315447835c1b">uLoopEnd</a> = uLoopEnd;</div>
-<div class="line">    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a0991f4a2b25e6c2fcf5fc4e04cfeaebc.html#a0991f4a2b25e6c2fcf5fc4e04cfeaebc">SetHeuristics</a>( heuristics );</div>
+<div class="line">    pStream-&gt;GetHeuristics( heuristics );   <span class="comment">// Note: In the present case, it is not necessary to get the heuristics first.</span></div>
+<div class="line">    heuristics.uLoopStart = uLoopStart;</div>
+<div class="line">    heuristics.uLoopEnd = uLoopEnd;</div>
+<div class="line">    pStream-&gt;SetHeuristics( heuristics );</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Note: The current stream position is the position seen by the client. It is therefore 0, because</span></div>
 <div class="line">    <span class="comment">// we did not release the buffer yet.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> ) != 0 )</div>
+<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;GetPosition( NULL ) != 0 )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Invalid stream position.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -742,8 +742,8 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Release the buffer.</span></div>
-<div class="line">    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a4676200056afb266b730f25d5262d2c8.html#a4676200056afb266b730f25d5262d2c8">ReleaseBuffer</a>();</div>
-<div class="line">    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">    eResult = pStream-&gt;ReleaseBuffer();</div>
+<div class="line">    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;ReleaseBuffer failed.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -751,7 +751,7 @@ Example code</h1>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">    <span class="comment">// Note: Now that we have released the buffer, the current stream position should be uBufferSize.</span></div>
-<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> ) != uBufferSize )</div>
+<div class="line">    <span class="keywordflow">if</span> ( pStream-&gt;GetPosition( NULL ) != uBufferSize )</div>
 <div class="line">    {</div>
 <div class="line">        printf( <span class="stringliteral">&quot;Invalid stream position.\n&quot;</span> );</div>
 <div class="line">        bSuccess = <span class="keyword">false</span>;</div>
@@ -773,24 +773,24 @@ Example code</h1>
 <div class="line">    <span class="keywordflow">while</span> ( !bEOF )</div>
 <div class="line">    {</div>
 <div class="line">        <span class="comment">// Polling reads until we cross position uLoopEnd.</span></div>
-<div class="line">        eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">GetBuffer</a>(</div>
+<div class="line">        eResult = pStream-&gt;GetBuffer(</div>
 <div class="line">            pBuffer,</div>
 <div class="line">            uBufferSize,</div>
 <div class="line">            <span class="keyword">false</span> );</div>
 <div class="line">        <span class="comment">// Check return code.</span></div>
-<div class="line">        <span class="keywordflow">if</span> ( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a904c9822fd2d40bb0ea6bfad9ead659b">AK_Fail</a> )</div>
+<div class="line">        <span class="keywordflow">if</span> ( eResult == AK_Fail )</div>
 <div class="line">        {</div>
 <div class="line">            assert( !<span class="stringliteral">&quot;I/O error&quot;</span> );</div>
 <div class="line">            <span class="keywordflow">return</span> <span class="keyword">false</span>;</div>
 <div class="line">        }</div>
-<div class="line">        <span class="keywordflow">else</span> <span class="keywordflow">if</span> ( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a47f7a12fe3a41a9d52ae25543b92b4de">AK_NoDataReady</a> )</div>
+<div class="line">        <span class="keywordflow">else</span> <span class="keywordflow">if</span> ( eResult == AK_NoDataReady )</div>
 <div class="line">        {</div>
 <div class="line">            printf( <span class="stringliteral">&quot;Starving...\n&quot;</span> );</div>
 <div class="line">        }</div>
 <div class="line">        <span class="keywordflow">else</span></div>
 <div class="line">        {</div>
 <div class="line">            <span class="comment">// End of file condition.</span></div>
-<div class="line">            bEOF = ( eResult == <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a94ba10d374d31161770fc490e0245802">AK_NoMoreData</a> ) &amp;&amp; !bDoLoop;</div>
+<div class="line">            bEOF = ( eResult == AK_NoMoreData ) &amp;&amp; !bDoLoop;</div>
 <div class="line"> </div>
 <div class="line">            <span class="comment">// Handle looping. After first call to SetPosition, set bDoLoop to false</span></div>
 <div class="line">            <span class="comment">// so that we stop looping.</span></div>
@@ -802,20 +802,20 @@ Example code</h1>
 <div class="line">                <span class="comment">// that value to get the position of the end of the buffer.</span></div>
 <div class="line">                <span class="comment">// Note: Keeping track of the position without calling GetPosition()</span></div>
 <div class="line">                <span class="comment">// would be more efficient.</span></div>
-<div class="line">                <a class="code" href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a> uCurPosition = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> );</div>
+<div class="line">                AkUInt32 uCurPosition = pStream-&gt;GetPosition( NULL );</div>
 <div class="line">                <span class="keywordflow">if</span> ( ( uCurPosition + uBufferSize ) &gt; uLoopEnd )</div>
 <div class="line">                {</div>
 <div class="line">                    <span class="comment">// We crossed the loop end.</span></div>
 <div class="line">                    <span class="comment">// Set the position to the loop start.</span></div>
-<div class="line">                    <a class="code" href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a> iLoopStart;</div>
+<div class="line">                    AkInt64 iLoopStart;</div>
 <div class="line">                    iLoopStart.HighPart = 0;</div>
 <div class="line">                    iLoopStart.LowPart = uLoopStart;</div>
-<div class="line">                    <a class="code" href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a> iRealOffset;</div>
-<div class="line">                    eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">SetPosition</a>(</div>
+<div class="line">                    AkInt64 iRealOffset;</div>
+<div class="line">                    eResult = pStream-&gt;SetPosition(</div>
 <div class="line">                        iLoopStart,</div>
-<div class="line">                        <a class="code" href="_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865.html#a61588d0ebdfe1148a6ee6f8304bf4865aaafcaeced22c9ffabc151a3cf0585fee">AK_MoveBegin</a>,</div>
+<div class="line">                        AK_MoveBegin,</div>
 <div class="line">                        &amp;iRealOffset );</div>
-<div class="line">                    <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">                    <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">                    {</div>
 <div class="line">                        printf( <span class="stringliteral">&quot;SetPosition failed.\n&quot;</span> );</div>
 <div class="line">                        bSuccess = <span class="keyword">false</span>;</div>
@@ -825,7 +825,7 @@ Example code</h1>
 <div class="line">                    <span class="comment">// Note: Since we did not release the buffer yet, GetPosition() should still return the</span></div>
 <div class="line">                    <span class="comment">// position of the start of the buffer.</span></div>
 <div class="line">                    <span class="comment">// Verify this.</span></div>
-<div class="line">                    <span class="keywordflow">if</span> ( pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">GetPosition</a>( <a class="code" href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a> ) != uCurPosition )</div>
+<div class="line">                    <span class="keywordflow">if</span> ( pStream-&gt;GetPosition( NULL ) != uCurPosition )</div>
 <div class="line">                    {</div>
 <div class="line">                        printf( <span class="stringliteral">&quot;Invalid position returned.\n&quot;</span> );</div>
 <div class="line">                        bSuccess = <span class="keyword">false</span>;</div>
@@ -841,17 +841,17 @@ Example code</h1>
 <div class="line">                    <span class="comment">// (minus the correction value).</span></div>
 <div class="line">                    <span class="comment">// For best performance, the looping heuristic value can be changed right away because</span></div>
 <div class="line">                    <span class="comment">// there is no looping anymore.</span></div>
-<div class="line">                    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a7970062dcd75b2e5ec860c916efdda1e.html#a7970062dcd75b2e5ec860c916efdda1e">uLoopStart</a> = 0;</div>
-<div class="line">                    heuristics.<a class="code" href="struct_ak_auto_stm_heuristics_a5084255c5c7c92649b78315447835c1b.html#a5084255c5c7c92649b78315447835c1b">uLoopEnd</a> = 0;    <span class="comment">// 0: Not looping.</span></div>
-<div class="line">                    pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a0991f4a2b25e6c2fcf5fc4e04cfeaebc.html#a0991f4a2b25e6c2fcf5fc4e04cfeaebc">SetHeuristics</a>( heuristics );</div>
+<div class="line">                    heuristics.uLoopStart = 0;</div>
+<div class="line">                    heuristics.uLoopEnd = 0;    <span class="comment">// 0: Not looping.</span></div>
+<div class="line">                    pStream-&gt;SetHeuristics( heuristics );</div>
 <div class="line"> </div>
 <div class="line">                     <span class="comment">// Stop looping.</span></div>
 <div class="line">                    bDoLoop = <span class="keyword">false</span>;</div>
 <div class="line">                }</div>
 <div class="line">            }</div>
 <div class="line"> </div>
-<div class="line">            eResult = pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a4676200056afb266b730f25d5262d2c8.html#a4676200056afb266b730f25d5262d2c8">ReleaseBuffer</a>();</div>
-<div class="line">            <span class="keywordflow">if</span> ( eResult != <a class="code" href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a> )</div>
+<div class="line">            eResult = pStream-&gt;ReleaseBuffer();</div>
+<div class="line">            <span class="keywordflow">if</span> ( eResult != AK_Success )</div>
 <div class="line">            {</div>
 <div class="line">                printf( <span class="stringliteral">&quot;ReleaseBuffer failed.\n&quot;</span> );</div>
 <div class="line">                bSuccess = <span class="keyword">false</span>;</div>
@@ -861,67 +861,68 @@ Example code</h1>
 <div class="line"> </div>
 <div class="line">        <span class="comment">// Simulate user throughput. Wait time is the buffer size divided by the throughput.</span></div>
 <div class="line">        <span class="comment">//AKPLATFORM::AkSleep( DWORD( 1000*uBufferSize / heuristics.fThroughput ) );</span></div>
-<div class="line">        <a class="code" href="namespace_a_k_p_l_a_t_f_o_r_m_aacfeaa07eeeea022207bb97991cc6260.html#aacfeaa07eeeea022207bb97991cc6260">AKPLATFORM::AkSleep</a>( 0 );</div>
+<div class="line">        AKPLATFORM::AkSleep( 0 );</div>
 <div class="line">    }</div>
 <div class="line"> </div>
 <div class="line">autostmbasictest_cleanup:</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">if</span> ( pStream )</div>
-<div class="line">        pStream-&gt;<a class="code" href="class_a_k_1_1_i_ak_auto_stream_a7371eb45a24988fc3d5372bc15c77db7.html#a7371eb45a24988fc3d5372bc15c77db7">Destroy</a>();</div>
+<div class="line">        pStream-&gt;Destroy();</div>
 <div class="line"> </div>
 <div class="line">    <span class="keywordflow">return</span> bSuccess;</div>
 <div class="line">}</div>
 </div><!-- fragment --> </div></div><!-- contents -->
 </div><!-- PageDoc -->
-<div class="ttc" id="astruct_ak_auto_stm_heuristics_a7970062dcd75b2e5ec860c916efdda1e_html_a7970062dcd75b2e5ec860c916efdda1e"><div class="ttname"><a href="struct_ak_auto_stm_heuristics_a7970062dcd75b2e5ec860c916efdda1e.html#a7970062dcd75b2e5ec860c916efdda1e">AkAutoStmHeuristics::uLoopStart</a></div><div class="ttdeci">AkUInt32 uLoopStart</div><div class="ttdoc">Set to the start of loop (byte offset from the beginning of the stream) for streams that loop,...</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00135">IAkStreamMgr.h:135</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e_html_ac650db9915bd06d5eebc1852e0d0cd6e"><div class="ttname"><a href="class_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e.html#ac650db9915bd06d5eebc1852e0d0cd6e">AK::IAkStreamMgr::Get</a></div><div class="ttdeci">static IAkStreamMgr * Get()</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00735">IAkStreamMgr.h:735</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a904c9822fd2d40bb0ea6bfad9ead659b"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a904c9822fd2d40bb0ea6bfad9ead659b">AK_Fail</a></div><div class="ttdeci">@ AK_Fail</div><div class="ttdoc">The operation failed.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00216">AkTypes.h:216</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e_html_ae7fa6bd56c493b906e294618b47be39e"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e.html#ae7fa6bd56c493b906e294618b47be39e">AK::IAkAutoStream::GetPosition</a></div><div class="ttdeci">virtual AkUInt64 GetPosition(bool *out_pbEndOfStream)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6_html_a1de2a7935a2d3cddb71e7cc7f48effd6"><div class="ttname"><a href="class_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6.html#a1de2a7935a2d3cddb71e7cc7f48effd6">AK::IAkStreamMgr::CreateStd</a></div><div class="ttdeci">virtual AKRESULT CreateStd(const AkFileOpenData &amp;in_FileOpen, IAkStdStream *&amp;out_pStream, bool in_bSyncOpen)=0</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a42844243c26095d10ade29e0f020ee0f"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a42844243c26095d10ade29e0f020ee0f">AK_DataReady</a></div><div class="ttdeci">@ AK_DataReady</div><div class="ttdoc">The provider has available data.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00241">AkTypes.h:241</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a4676200056afb266b730f25d5262d2c8_html_a4676200056afb266b730f25d5262d2c8"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_a4676200056afb266b730f25d5262d2c8.html#a4676200056afb266b730f25d5262d2c8">AK::IAkAutoStream::ReleaseBuffer</a></div><div class="ttdeci">virtual AKRESULT ReleaseBuffer()=0</div></div>
-<div class="ttc" id="astruct_ak_auto_stm_heuristics_a5084255c5c7c92649b78315447835c1b_html_a5084255c5c7c92649b78315447835c1b"><div class="ttname"><a href="struct_ak_auto_stm_heuristics_a5084255c5c7c92649b78315447835c1b.html#a5084255c5c7c92649b78315447835c1b">AkAutoStmHeuristics::uLoopEnd</a></div><div class="ttdeci">AkUInt32 uLoopEnd</div><div class="ttdoc">Set to the end of loop (byte offset from the beginning of the stream) for streams that loop,...</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00136">IAkStreamMgr.h:136</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a345fdbb2d4551f048727bc66f58eb80f_html_a345fdbb2d4551f048727bc66f58eb80f"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_a345fdbb2d4551f048727bc66f58eb80f.html#a345fdbb2d4551f048727bc66f58eb80f">AK::IAkAutoStream::GetInfo</a></div><div class="ttdeci">virtual void GetInfo(AkStreamInfo &amp;out_info)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b_html_a1121f1b371a613e020d38b99e65e7a2b"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b.html#a1121f1b371a613e020d38b99e65e7a2b">AK::IAkStdStream::GetBlockSize</a></div><div class="ttdeci">virtual AkUInt32 GetBlockSize()=0</div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63">AKRESULT</a></div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00212">AkTypes.h:213</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a47f7a12fe3a41a9d52ae25543b92b4de"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a47f7a12fe3a41a9d52ae25543b92b4de">AK_NoDataReady</a></div><div class="ttdeci">@ AK_NoDataReady</div><div class="ttdoc">The provider does not have available data.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00242">AkTypes.h:242</a></div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7_html_afb72442488d89ecc645c457ff48a90b7ab17f6b95edc9ff7cd668878325ffd93a"><div class="ttname"><a href="_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7.html#afb72442488d89ecc645c457ff48a90b7ab17f6b95edc9ff7cd668878325ffd93a">AK_OpenModeReadWrite</a></div><div class="ttdeci">@ AK_OpenModeReadWrite</div><div class="ttdoc">Read and write access.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00077">IAkStreamMgr.h:76</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a94ba10d374d31161770fc490e0245802"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63a94ba10d374d31161770fc490e0245802">AK_NoMoreData</a></div><div class="ttdeci">@ AK_NoMoreData</div><div class="ttdoc">No more data is available from the source.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00226">AkTypes.h:226</a></div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7_html_afb72442488d89ecc645c457ff48a90b7ab35230305828a2d0aee87a3190ff661f"><div class="ttname"><a href="_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7.html#afb72442488d89ecc645c457ff48a90b7ab35230305828a2d0aee87a3190ff661f">AK_OpenModeRead</a></div><div class="ttdeci">@ AK_OpenModeRead</div><div class="ttdoc">Read-only access.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00073">IAkStreamMgr.h:73</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275_html_a165ff91b84857e73891f7943261ba275"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275.html#a165ff91b84857e73891f7943261ba275">AK::IAkStdStream::GetStatus</a></div><div class="ttdeci">virtual AkStmStatus GetStatus()=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d_html_a2b12fb0cd1beb3c1d77c8206a8b5796d"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d.html#a2b12fb0cd1beb3c1d77c8206a8b5796d">AK::IAkStdStream::Read</a></div><div class="ttdeci">virtual AKRESULT Read(void *in_pBuffer, AkUInt32 in_uReqSize, bool in_bWait, AkPriority in_priority, AkReal32 in_fDeadline, AkUInt32 &amp;out_uSize)=0</div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865_html_a61588d0ebdfe1148a6ee6f8304bf4865aaafcaeced22c9ffabc151a3cf0585fee"><div class="ttname"><a href="_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865.html#a61588d0ebdfe1148a6ee6f8304bf4865aaafcaeced22c9ffabc151a3cf0585fee">AK_MoveBegin</a></div><div class="ttdeci">@ AK_MoveBegin</div><div class="ttdoc">Move offset from the start of the stream.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00065">IAkStreamMgr.h:65</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname"><a href="_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4.html#a070d2ce7b6bb7e5c05602aa8c308d0c4">NULL</a></div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00046">AkTypes.h:46</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname"><a href="_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63.html#a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e">AK_Success</a></div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00215">AkTypes.h:215</a></div></div>
-<div class="ttc" id="a_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e_html_ab390e82d48949e194e1a1a24675b067e"><div class="ttname"><a href="_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e.html#ab390e82d48949e194e1a1a24675b067e">AK_DEFAULT_PRIORITY</a></div><div class="ttdeci">static const AkPriority AK_DEFAULT_PRIORITY</div><div class="ttdoc">Default sound / I/O priority.</div><div class="ttdef"><b>Definition:</b> <a href="_common_2_ak_types_8h_source.html#l00194">AkTypes.h:194</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a0991f4a2b25e6c2fcf5fc4e04cfeaebc_html_a0991f4a2b25e6c2fcf5fc4e04cfeaebc"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_a0991f4a2b25e6c2fcf5fc4e04cfeaebc.html#a0991f4a2b25e6c2fcf5fc4e04cfeaebc">AK::IAkAutoStream::SetHeuristics</a></div><div class="ttdeci">virtual AKRESULT SetHeuristics(const AkAutoStmHeuristics &amp;in_heuristics)=0</div></div>
-<div class="ttc" id="astruct_ak_auto_stm_heuristics_a4765f706b096765eb25dd6c06073d9af_html_a4765f706b096765eb25dd6c06073d9af"><div class="ttname"><a href="struct_ak_auto_stm_heuristics_a4765f706b096765eb25dd6c06073d9af.html#a4765f706b096765eb25dd6c06073d9af">AkAutoStmHeuristics::fThroughput</a></div><div class="ttdeci">AkReal32 fThroughput</div><div class="ttdoc">Average throughput in bytes/ms.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00134">IAkStreamMgr.h:134</a></div></div>
-<div class="ttc" id="astruct_ak_stream_info_html"><div class="ttname"><a href="struct_ak_stream_info.html">AkStreamInfo</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00122">IAkStreamMgr.h:123</a></div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865_html_a61588d0ebdfe1148a6ee6f8304bf4865ad7036d3c0758b66299e6c1d0e60a14c5"><div class="ttname"><a href="_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865.html#a61588d0ebdfe1148a6ee6f8304bf4865ad7036d3c0758b66299e6c1d0e60a14c5">AK_MoveCurrent</a></div><div class="ttdeci">@ AK_MoveCurrent</div><div class="ttdoc">Move offset from the current stream position.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00066">IAkStreamMgr.h:66</a></div></div>
-<div class="ttc" id="anamespace_a_k_p_l_a_t_f_o_r_m_aacfeaa07eeeea022207bb97991cc6260_html_aacfeaa07eeeea022207bb97991cc6260"><div class="ttname"><a href="namespace_a_k_p_l_a_t_f_o_r_m_aacfeaa07eeeea022207bb97991cc6260.html#aacfeaa07eeeea022207bb97991cc6260">AKPLATFORM::AkSleep</a></div><div class="ttdeci">void AkSleep(AkUInt32 in_ulMilliseconds)</div><div class="ttdoc">Platform Independent Helper.</div><div class="ttdef"><b>Definition:</b> <a href="_win32_2_ak_platform_funcs_8h_source.html#l00351">AkPlatformFuncs.h:351</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403_html_aaa6bca57f4a01a98dff95f68b1320403"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403.html#aaa6bca57f4a01a98dff95f68b1320403">AK::IAkStdStream::Destroy</a></div><div class="ttdeci">virtual void Destroy()=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c_html_aa8197d63b8e758acb075a437103e573c"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c.html#aa8197d63b8e758acb075a437103e573c">AK::IAkAutoStream::GetBuffer</a></div><div class="ttdeci">virtual AKRESULT GetBuffer(void *&amp;out_pBuffer, AkUInt32 &amp;out_uSize, bool in_bWait)=0</div></div>
-<div class="ttc" id="a_platforms_2_windows_2_ak_types_8h_af48843ed095e0ea7dd05bd1b64070664_html_af48843ed095e0ea7dd05bd1b64070664"><div class="ttname"><a href="_platforms_2_windows_2_ak_types_8h_af48843ed095e0ea7dd05bd1b64070664.html#af48843ed095e0ea7dd05bd1b64070664">AkOSChar</a></div><div class="ttdeci">wchar_t AkOSChar</div><div class="ttdoc">Generic character string.</div><div class="ttdef"><b>Definition:</b> <a href="_platforms_2_windows_2_ak_types_8h_source.html#l00108">AkTypes.h:108</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a8017b864cb413b545e685b2fa1acfe65_html_a8017b864cb413b545e685b2fa1acfe65"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_a8017b864cb413b545e685b2fa1acfe65.html#a8017b864cb413b545e685b2fa1acfe65">AK::IAkAutoStream::GetHeuristics</a></div><div class="ttdeci">virtual void GetHeuristics(AkAutoStmHeuristics &amp;out_heuristics)=0</div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c_html_a3f2533eb6fb2011f230af7474daabc6c"><div class="ttname"><a href="_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c.html#a3f2533eb6fb2011f230af7474daabc6c">AkInt64</a></div><div class="ttdeci">int64_t AkInt64</div><div class="ttdoc">Signed 64-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00044">AkNumeralTypes.h:44</a></div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a7b5402d7570cb20a11c8d21f2c2710ec_html_a7b5402d7570cb20a11c8d21f2c2710ec"><div class="ttname"><a href="_ak_numeral_types_8h_a7b5402d7570cb20a11c8d21f2c2710ec.html#a7b5402d7570cb20a11c8d21f2c2710ec">AkUInt64</a></div><div class="ttdeci">uint64_t AkUInt64</div><div class="ttdoc">Unsigned 64-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00039">AkNumeralTypes.h:39</a></div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307a4ee943eb5fbd1c15c114a7db3cd9620e"><div class="ttname"><a href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307a4ee943eb5fbd1c15c114a7db3cd9620e">AK_StmStatusCompleted</a></div><div class="ttdeci">@ AK_StmStatusCompleted</div><div class="ttdoc">Operation completed / Automatic stream reached end.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00053">IAkStreamMgr.h:53</a></div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307"><div class="ttname"><a href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307">AkStmStatus</a></div><div class="ttdeci">AkStmStatus</div><div class="ttdoc">Stream status.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00050">IAkStreamMgr.h:51</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream.html">AK::IAkAutoStream</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00558">IAkStreamMgr.h:559</a></div></div>
-<div class="ttc" id="astruct_ak_stream_info_aa350fbeb216793ac822d5521df98eccf_html_aa350fbeb216793ac822d5521df98eccf"><div class="ttname"><a href="struct_ak_stream_info_aa350fbeb216793ac822d5521df98eccf.html#aa350fbeb216793ac822d5521df98eccf">AkStreamInfo::uSize</a></div><div class="ttdeci">AkUInt64 uSize</div><div class="ttdoc">Total stream/file size in bytes.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00126">IAkStreamMgr.h:126</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_ae9d58aa42a893863f8fe85a5ee45d638_html_ae9d58aa42a893863f8fe85a5ee45d638"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_ae9d58aa42a893863f8fe85a5ee45d638.html#ae9d58aa42a893863f8fe85a5ee45d638">AK::IAkAutoStream::Start</a></div><div class="ttdeci">virtual AKRESULT Start()=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360_html_a5d0c3c6c525a882d89558b1aae485360"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360.html#a5d0c3c6c525a882d89558b1aae485360">AK::IAkStdStream::SetPosition</a></div><div class="ttdeci">virtual AKRESULT SetPosition(AkInt64 in_iMoveOffset, AkMoveMethod in_eMoveMethod)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38_html_a3bbe9d9fe0f933ee75da2adfbfbc9e38"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38.html#a3bbe9d9fe0f933ee75da2adfbfbc9e38">AK::IAkAutoStream::SetPosition</a></div><div class="ttdeci">virtual AKRESULT SetPosition(AkInt64 in_iMoveOffset, AkMoveMethod in_eMoveMethod)=0</div></div>
-<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname"><a href="_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce.html#a39c6c5d577901802ca77775760b704ce">AkUInt32</a></div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> <a href="_ak_numeral_types_8h_source.html#l00038">AkNumeralTypes.h:38</a></div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307acd646559057f6060264897517d7af22e"><div class="ttname"><a href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307acd646559057f6060264897517d7af22e">AK_StmStatusError</a></div><div class="ttdeci">@ AK_StmStatusError</div><div class="ttdoc">The low-level I/O reported an error.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00057">IAkStreamMgr.h:56</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_afe30a576bd859ff4e9b60a3f8e1710fb_html_afe30a576bd859ff4e9b60a3f8e1710fb"><div class="ttname"><a href="class_a_k_1_1_i_ak_stream_mgr_afe30a576bd859ff4e9b60a3f8e1710fb.html#afe30a576bd859ff4e9b60a3f8e1710fb">AK::IAkStreamMgr::CreateAuto</a></div><div class="ttdeci">virtual AKRESULT CreateAuto(const AkFileOpenData &amp;in_FileOpen, const AkAutoStmHeuristics &amp;in_heuristics, AkAutoStmBufSettings *in_pBufferSettings, IAkAutoStream *&amp;out_pStream, bool in_bSyncOpen, bool in_bCaching=false)=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a7371eb45a24988fc3d5372bc15c77db7_html_a7371eb45a24988fc3d5372bc15c77db7"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream_a7371eb45a24988fc3d5372bc15c77db7.html#a7371eb45a24988fc3d5372bc15c77db7">AK::IAkAutoStream::Destroy</a></div><div class="ttdeci">virtual void Destroy()=0</div></div>
-<div class="ttc" id="astruct_ak_auto_stm_heuristics_a574352be21d197e2bbca4e87177a48ab_html_a574352be21d197e2bbca4e87177a48ab"><div class="ttname"><a href="struct_ak_auto_stm_heuristics_a574352be21d197e2bbca4e87177a48ab.html#a574352be21d197e2bbca4e87177a48ab">AkAutoStmHeuristics::priority</a></div><div class="ttdeci">AkPriority priority</div><div class="ttdoc">The stream priority. it should be between AK_MIN_PRIORITY and AK_MAX_PRIORITY (included).</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00141">IAkStreamMgr.h:141</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream.html">AK::IAkStdStream</a></div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00420">IAkStreamMgr.h:421</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a12c0a90ec223f7d03d265094b0319c88_html_a12c0a90ec223f7d03d265094b0319c88"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_a12c0a90ec223f7d03d265094b0319c88.html#a12c0a90ec223f7d03d265094b0319c88">AK::IAkStdStream::Cancel</a></div><div class="ttdeci">virtual void Cancel()=0</div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779_html_af983e5aec5edd20b88a6b01e466d8779"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779.html#af983e5aec5edd20b88a6b01e466d8779">AK::IAkStdStream::Write</a></div><div class="ttdeci">virtual AKRESULT Write(void *in_pBuffer, AkUInt32 in_uReqSize, bool in_bWait, AkPriority in_priority, AkReal32 in_fDeadline, AkUInt32 &amp;out_uSize)=0</div></div>
-<div class="ttc" id="astruct_ak_auto_stm_heuristics_html"><div class="ttname"><a href="struct_ak_auto_stm_heuristics.html">AkAutoStmHeuristics</a></div><div class="ttdoc">Automatic streams heuristics.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00132">IAkStreamMgr.h:133</a></div></div>
-<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa_html_a7d43a89fb7bc5db13285a2669ec912fa"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa.html#a7d43a89fb7bc5db13285a2669ec912fa">AK::IAkStdStream::GetPosition</a></div><div class="ttdeci">virtual AkUInt64 GetPosition(bool *out_pbEndOfStream)=0</div></div>
-<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307a8122c26f72bda0dbe4cbeaa94917f4b0"><div class="ttname"><a href="_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307.html#ae8711a0190f80248b6e59f1b17f64307a8122c26f72bda0dbe4cbeaa94917f4b0">AK_StmStatusCancelled</a></div><div class="ttdeci">@ AK_StmStatusCancelled</div><div class="ttdoc">Operation cancelled.</div><div class="ttdef"><b>Definition:</b> <a href="_i_ak_stream_mgr_8h_source.html#l00055">IAkStreamMgr.h:55</a></div></div>
+<div class="ttc" id="astruct_ak_auto_stm_heuristics_a7970062dcd75b2e5ec860c916efdda1e_html_a7970062dcd75b2e5ec860c916efdda1e"><div class="ttname">AkAutoStmHeuristics::uLoopStart</div><div class="ttdeci">AkUInt32 uLoopStart</div><div class="ttdoc">Set to the start of loop (byte offset from the beginning of the stream) for streams that loop,...</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:135</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_ac650db9915bd06d5eebc1852e0d0cd6e_html_ac650db9915bd06d5eebc1852e0d0cd6e"><div class="ttname">AK::IAkStreamMgr::Get</div><div class="ttdeci">static IAkStreamMgr * Get()</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:735</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a904c9822fd2d40bb0ea6bfad9ead659b"><div class="ttname">AK_Fail</div><div class="ttdeci">@ AK_Fail</div><div class="ttdoc">The operation failed.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:216</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_ae7fa6bd56c493b906e294618b47be39e_html_ae7fa6bd56c493b906e294618b47be39e"><div class="ttname">AK::IAkAutoStream::GetPosition</div><div class="ttdeci">virtual AkUInt64 GetPosition(bool *out_pbEndOfStream)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_a1de2a7935a2d3cddb71e7cc7f48effd6_html_a1de2a7935a2d3cddb71e7cc7f48effd6"><div class="ttname">AK::IAkStreamMgr::CreateStd</div><div class="ttdeci">virtual AKRESULT CreateStd(const AkFileOpenData &amp;in_FileOpen, IAkStdStream *&amp;out_pStream, bool in_bSyncOpen)=0</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a42844243c26095d10ade29e0f020ee0f"><div class="ttname">AK_DataReady</div><div class="ttdeci">@ AK_DataReady</div><div class="ttdoc">The provider has available data.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:241</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a4676200056afb266b730f25d5262d2c8_html_a4676200056afb266b730f25d5262d2c8"><div class="ttname">AK::IAkAutoStream::ReleaseBuffer</div><div class="ttdeci">virtual AKRESULT ReleaseBuffer()=0</div></div>
+<div class="ttc" id="astruct_ak_auto_stm_heuristics_a5084255c5c7c92649b78315447835c1b_html_a5084255c5c7c92649b78315447835c1b"><div class="ttname">AkAutoStmHeuristics::uLoopEnd</div><div class="ttdeci">AkUInt32 uLoopEnd</div><div class="ttdoc">Set to the end of loop (byte offset from the beginning of the stream) for streams that loop,...</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:136</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a345fdbb2d4551f048727bc66f58eb80f_html_a345fdbb2d4551f048727bc66f58eb80f"><div class="ttname">AK::IAkAutoStream::GetInfo</div><div class="ttdeci">virtual void GetInfo(AkStreamInfo &amp;out_info)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a1121f1b371a613e020d38b99e65e7a2b_html_a1121f1b371a613e020d38b99e65e7a2b"><div class="ttname">AK::IAkStdStream::GetBlockSize</div><div class="ttdeci">virtual AkUInt32 GetBlockSize()=0</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63"><div class="ttname">AKRESULT</div><div class="ttdeci">AKRESULT</div><div class="ttdoc">Standard function call result.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:213</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a47f7a12fe3a41a9d52ae25543b92b4de"><div class="ttname">AK_NoDataReady</div><div class="ttdeci">@ AK_NoDataReady</div><div class="ttdoc">The provider does not have available data.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:242</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7_html_afb72442488d89ecc645c457ff48a90b7ab17f6b95edc9ff7cd668878325ffd93a"><div class="ttname">AK_OpenModeReadWrite</div><div class="ttdeci">@ AK_OpenModeReadWrite</div><div class="ttdoc">Read and write access.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:76</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63a94ba10d374d31161770fc490e0245802"><div class="ttname">AK_NoMoreData</div><div class="ttdeci">@ AK_NoMoreData</div><div class="ttdoc">No more data is available from the source.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:226</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_afb72442488d89ecc645c457ff48a90b7_html_afb72442488d89ecc645c457ff48a90b7ab35230305828a2d0aee87a3190ff661f"><div class="ttname">AK_OpenModeRead</div><div class="ttdeci">@ AK_OpenModeRead</div><div class="ttdoc">Read-only access.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:73</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a165ff91b84857e73891f7943261ba275_html_a165ff91b84857e73891f7943261ba275"><div class="ttname">AK::IAkStdStream::GetStatus</div><div class="ttdeci">virtual AkStmStatus GetStatus()=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a2b12fb0cd1beb3c1d77c8206a8b5796d_html_a2b12fb0cd1beb3c1d77c8206a8b5796d"><div class="ttname">AK::IAkStdStream::Read</div><div class="ttdeci">virtual AKRESULT Read(void *in_pBuffer, AkUInt32 in_uReqSize, bool in_bWait, AkPriority in_priority, AkReal32 in_fDeadline, AkUInt32 &amp;out_uSize)=0</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865_html_a61588d0ebdfe1148a6ee6f8304bf4865aaafcaeced22c9ffabc151a3cf0585fee"><div class="ttname">AK_MoveBegin</div><div class="ttdeci">@ AK_MoveBegin</div><div class="ttdoc">Move offset from the start of the stream.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:65</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a070d2ce7b6bb7e5c05602aa8c308d0c4_html_a070d2ce7b6bb7e5c05602aa8c308d0c4"><div class="ttname">NULL</div><div class="ttdeci">#define NULL</div><div class="ttdef"><b>Definition:</b> AkTypes.h:46</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_a64f7d1f79613cc4dcc49a4efba6caa63_html_a64f7d1f79613cc4dcc49a4efba6caa63ad7c47fea3da641e7422573c6a13dc35e"><div class="ttname">AK_Success</div><div class="ttdeci">@ AK_Success</div><div class="ttdoc">The operation was successful.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:215</div></div>
+<div class="ttc" id="a_common_2_ak_types_8h_ab390e82d48949e194e1a1a24675b067e_html_ab390e82d48949e194e1a1a24675b067e"><div class="ttname">AK_DEFAULT_PRIORITY</div><div class="ttdeci">static const AkPriority AK_DEFAULT_PRIORITY</div><div class="ttdoc">Default sound / I/O priority.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:194</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a0991f4a2b25e6c2fcf5fc4e04cfeaebc_html_a0991f4a2b25e6c2fcf5fc4e04cfeaebc"><div class="ttname">AK::IAkAutoStream::SetHeuristics</div><div class="ttdeci">virtual AKRESULT SetHeuristics(const AkAutoStmHeuristics &amp;in_heuristics)=0</div></div>
+<div class="ttc" id="astruct_ak_auto_stm_heuristics_a4765f706b096765eb25dd6c06073d9af_html_a4765f706b096765eb25dd6c06073d9af"><div class="ttname">AkAutoStmHeuristics::fThroughput</div><div class="ttdeci">AkReal32 fThroughput</div><div class="ttdoc">Average throughput in bytes/ms.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:134</div></div>
+<div class="ttc" id="astruct_ak_stream_info_html"><div class="ttname"><a href="struct_ak_stream_info.html">AkStreamInfo</a></div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:123</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_a61588d0ebdfe1148a6ee6f8304bf4865_html_a61588d0ebdfe1148a6ee6f8304bf4865ad7036d3c0758b66299e6c1d0e60a14c5"><div class="ttname">AK_MoveCurrent</div><div class="ttdeci">@ AK_MoveCurrent</div><div class="ttdoc">Move offset from the current stream position.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:66</div></div>
+<div class="ttc" id="anamespace_a_k_p_l_a_t_f_o_r_m_aacfeaa07eeeea022207bb97991cc6260_html_aacfeaa07eeeea022207bb97991cc6260"><div class="ttname">AKPLATFORM::AkSleep</div><div class="ttdeci">void AkSleep(AkUInt32 in_ulMilliseconds)</div><div class="ttdoc">Platform Independent Helper.</div><div class="ttdef"><b>Definition:</b> AkPlatformFuncs.h:351</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_aaa6bca57f4a01a98dff95f68b1320403_html_aaa6bca57f4a01a98dff95f68b1320403"><div class="ttname">AK::IAkStdStream::Destroy</div><div class="ttdeci">virtual void Destroy()=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_aa8197d63b8e758acb075a437103e573c_html_aa8197d63b8e758acb075a437103e573c"><div class="ttname">AK::IAkAutoStream::GetBuffer</div><div class="ttdeci">virtual AKRESULT GetBuffer(void *&amp;out_pBuffer, AkUInt32 &amp;out_uSize, bool in_bWait)=0</div></div>
+<div class="ttc" id="a_platforms_2_windows_2_ak_types_8h_af48843ed095e0ea7dd05bd1b64070664_html_af48843ed095e0ea7dd05bd1b64070664"><div class="ttname">AkOSChar</div><div class="ttdeci">wchar_t AkOSChar</div><div class="ttdoc">Generic character string.</div><div class="ttdef"><b>Definition:</b> AkTypes.h:108</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a8017b864cb413b545e685b2fa1acfe65_html_a8017b864cb413b545e685b2fa1acfe65"><div class="ttname">AK::IAkAutoStream::GetHeuristics</div><div class="ttdeci">virtual void GetHeuristics(AkAutoStmHeuristics &amp;out_heuristics)=0</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a3f2533eb6fb2011f230af7474daabc6c_html_a3f2533eb6fb2011f230af7474daabc6c"><div class="ttname">AkInt64</div><div class="ttdeci">int64_t AkInt64</div><div class="ttdoc">Signed 64-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:44</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a7b5402d7570cb20a11c8d21f2c2710ec_html_a7b5402d7570cb20a11c8d21f2c2710ec"><div class="ttname">AkUInt64</div><div class="ttdeci">uint64_t AkUInt64</div><div class="ttdoc">Unsigned 64-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:39</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307a4ee943eb5fbd1c15c114a7db3cd9620e"><div class="ttname">AK_StmStatusCompleted</div><div class="ttdeci">@ AK_StmStatusCompleted</div><div class="ttdoc">Operation completed / Automatic stream reached end.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:53</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307"><div class="ttname">AkStmStatus</div><div class="ttdeci">AkStmStatus</div><div class="ttdoc">Stream status.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:51</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_auto_stream.html">AK::IAkAutoStream</a></div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:559</div></div>
+<div class="ttc" id="astruct_ak_stream_info_aa350fbeb216793ac822d5521df98eccf_html_aa350fbeb216793ac822d5521df98eccf"><div class="ttname">AkStreamInfo::uSize</div><div class="ttdeci">AkUInt64 uSize</div><div class="ttdoc">Total stream/file size in bytes.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:126</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_ae9d58aa42a893863f8fe85a5ee45d638_html_ae9d58aa42a893863f8fe85a5ee45d638"><div class="ttname">AK::IAkAutoStream::Start</div><div class="ttdeci">virtual AKRESULT Start()=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a5d0c3c6c525a882d89558b1aae485360_html_a5d0c3c6c525a882d89558b1aae485360"><div class="ttname">AK::IAkStdStream::SetPosition</div><div class="ttdeci">virtual AKRESULT SetPosition(AkInt64 in_iMoveOffset, AkMoveMethod in_eMoveMethod)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a3bbe9d9fe0f933ee75da2adfbfbc9e38_html_a3bbe9d9fe0f933ee75da2adfbfbc9e38"><div class="ttname">AK::IAkAutoStream::SetPosition</div><div class="ttdeci">virtual AKRESULT SetPosition(AkInt64 in_iMoveOffset, AkMoveMethod in_eMoveMethod)=0</div></div>
+<div class="ttc" id="a_ak_numeral_types_8h_a39c6c5d577901802ca77775760b704ce_html_a39c6c5d577901802ca77775760b704ce"><div class="ttname">AkUInt32</div><div class="ttdeci">uint32_t AkUInt32</div><div class="ttdoc">Unsigned 32-bit integer.</div><div class="ttdef"><b>Definition:</b> AkNumeralTypes.h:38</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307acd646559057f6060264897517d7af22e"><div class="ttname">AK_StmStatusError</div><div class="ttdeci">@ AK_StmStatusError</div><div class="ttdoc">The low-level I/O reported an error.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:56</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_stream_mgr_afe30a576bd859ff4e9b60a3f8e1710fb_html_afe30a576bd859ff4e9b60a3f8e1710fb"><div class="ttname">AK::IAkStreamMgr::CreateAuto</div><div class="ttdeci">virtual AKRESULT CreateAuto(const AkFileOpenData &amp;in_FileOpen, const AkAutoStmHeuristics &amp;in_heuristics, AkAutoStmBufSettings *in_pBufferSettings, IAkAutoStream *&amp;out_pStream, bool in_bSyncOpen, bool in_bCaching=false)=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_auto_stream_a7371eb45a24988fc3d5372bc15c77db7_html_a7371eb45a24988fc3d5372bc15c77db7"><div class="ttname">AK::IAkAutoStream::Destroy</div><div class="ttdeci">virtual void Destroy()=0</div></div>
+<div class="ttc" id="astruct_ak_auto_stm_heuristics_a574352be21d197e2bbca4e87177a48ab_html_a574352be21d197e2bbca4e87177a48ab"><div class="ttname">AkAutoStmHeuristics::priority</div><div class="ttdeci">AkPriority priority</div><div class="ttdoc">The stream priority. it should be between AK_MIN_PRIORITY and AK_MAX_PRIORITY (included).</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:141</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_html"><div class="ttname"><a href="class_a_k_1_1_i_ak_std_stream.html">AK::IAkStdStream</a></div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:421</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a12c0a90ec223f7d03d265094b0319c88_html_a12c0a90ec223f7d03d265094b0319c88"><div class="ttname">AK::IAkStdStream::Cancel</div><div class="ttdeci">virtual void Cancel()=0</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_af983e5aec5edd20b88a6b01e466d8779_html_af983e5aec5edd20b88a6b01e466d8779"><div class="ttname">AK::IAkStdStream::Write</div><div class="ttdeci">virtual AKRESULT Write(void *in_pBuffer, AkUInt32 in_uReqSize, bool in_bWait, AkPriority in_priority, AkReal32 in_fDeadline, AkUInt32 &amp;out_uSize)=0</div></div>
+<div class="ttc" id="astruct_ak_auto_stm_heuristics_html"><div class="ttname"><a href="struct_ak_auto_stm_heuristics.html">AkAutoStmHeuristics</a></div><div class="ttdoc">Automatic streams heuristics.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:133</div></div>
+<div class="ttc" id="aclass_a_k_1_1_i_ak_std_stream_a7d43a89fb7bc5db13285a2669ec912fa_html_a7d43a89fb7bc5db13285a2669ec912fa"><div class="ttname">AK::IAkStdStream::GetPosition</div><div class="ttdeci">virtual AkUInt64 GetPosition(bool *out_pbEndOfStream)=0</div></div>
+<div class="ttc" id="a_i_ak_stream_mgr_8h_ae8711a0190f80248b6e59f1b17f64307_html_ae8711a0190f80248b6e59f1b17f64307a8122c26f72bda0dbe4cbeaa94917f4b0"><div class="ttname">AK_StmStatusCancelled</div><div class="ttdeci">@ AK_StmStatusCancelled</div><div class="ttdoc">Operation cancelled.</div><div class="ttdef"><b>Definition:</b> IAkStreamMgr.h:55</div></div>
 </body>
 </html>
+

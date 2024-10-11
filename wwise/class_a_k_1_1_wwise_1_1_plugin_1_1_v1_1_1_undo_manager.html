@@ -1,4 +1,4 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "https://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <meta http-equiv="Content-Type" content="text/xhtml;charset=UTF-8"/>
@@ -43,7 +43,7 @@
 <div class="contents">
 
 <p>Host API to handle the plug-in's undo operations.  
- <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager.html#details">More...</a></p>
+ More...</p>
 
 <p><code>#include &lt;<a class="el" href="_host_undo_manager_8h_source.html">HostUndoManager.h</a>&gt;</code></p>
 <div class="dynheader">
@@ -59,55 +59,56 @@ Inheritance diagram for AK.Wwise::Plugin::V1::UndoManager:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-types"></a>
 Public Types</h2></td></tr>
-<tr class="memitem:ae4b979d1eef86508c53cbff74e01b3d4"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceTypeValue { <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_ae4b979d1eef86508c53cbff74e01b3d4.html#ae4b979d1eef86508c53cbff74e01b3d4a0eb0d8c5ae36dd0fe2324aa4bedc2d00">k_interfaceType</a> = AK_WWISE_PLUGIN_INTERFACE_TYPE_HOST_UNDO_MANAGER
+<tr class="memitem:ae4b979d1eef86508c53cbff74e01b3d4"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceTypeValue { k_interfaceType = AK_WWISE_PLUGIN_INTERFACE_TYPE_HOST_UNDO_MANAGER
  }</td></tr>
-<tr class="memdesc:ae4b979d1eef86508c53cbff74e01b3d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface type, as requested by this plug-in.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_ae4b979d1eef86508c53cbff74e01b3d4.html#ae4b979d1eef86508c53cbff74e01b3d4">More...</a><br /></td></tr>
+<tr class="memdesc:ae4b979d1eef86508c53cbff74e01b3d4"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface type, as requested by this plug-in.  More...<br /></td></tr>
 <tr class="separator:ae4b979d1eef86508c53cbff74e01b3d4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9187b061e97d696e6033c121bc6d4978"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceVersion { <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a9187b061e97d696e6033c121bc6d4978.html#a9187b061e97d696e6033c121bc6d4978a807cc4f8d02ea1326ea4ee18778ff202">k_interfaceVersion</a> = 1
+<tr class="memitem:a9187b061e97d696e6033c121bc6d4978"><td class="memItemLeft" align="right" valign="top">enum &#160;</td><td class="memItemRight" valign="bottom">: InterfaceVersion { k_interfaceVersion = 1
  }</td></tr>
-<tr class="memdesc:a9187b061e97d696e6033c121bc6d4978"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface version, as requested by this plug-in.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a9187b061e97d696e6033c121bc6d4978.html#a9187b061e97d696e6033c121bc6d4978">More...</a><br /></td></tr>
+<tr class="memdesc:a9187b061e97d696e6033c121bc6d4978"><td class="mdescLeft">&#160;</td><td class="mdescRight">The interface version, as requested by this plug-in.  More...<br /></td></tr>
 <tr class="separator:a9187b061e97d696e6033c121bc6d4978"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a51cbcba089f95a039df5fa3d7d6b6a8c"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a51cbcba089f95a039df5fa3d7d6b6a8c.html#a51cbcba089f95a039df5fa3d7d6b6a8c">Interface</a> = <a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_1_1_v1_a52afd9e84cbd6263c830cc1340cb27ed.html#a52afd9e84cbd6263c830cc1340cb27ed">CHostUndoManager</a></td></tr>
+<tr class="memitem:a51cbcba089f95a039df5fa3d7d6b6a8c"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom">Interface = CHostUndoManager</td></tr>
 <tr class="separator:a51cbcba089f95a039df5fa3d7d6b6a8c"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue"><td colspan="2" onclick="javascript:toggleInherit('pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue.html">AK.Wwise::Plugin::CBaseInstanceGlue&lt; CHostUndoManager &gt;</a></td></tr>
-<tr class="memitem:aff6221118cb1d81f1e67f1932fb66b60 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue_aff6221118cb1d81f1e67f1932fb66b60.html#aff6221118cb1d81f1e67f1932fb66b60">Instance</a> = typename CInterface::Instance</td></tr>
+<tr class="memitem:aff6221118cb1d81f1e67f1932fb66b60 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom">Instance = typename CInterface::Instance</td></tr>
 <tr class="separator:aff6221118cb1d81f1e67f1932fb66b60 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_instance_glue"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="inherit_header pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td colspan="2" onclick="javascript:toggleInherit('pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue')"><img src="closed.png" alt="-"/>&#160;Public Types inherited from <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue.html">AK.Wwise::Plugin::CBaseInterfaceGlue&lt; CHostUndoManager &gt;</a></td></tr>
-<tr class="memitem:a270936e06e5c9627548246cbebde0467 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue_a270936e06e5c9627548246cbebde0467.html#a270936e06e5c9627548246cbebde0467">GluedInterface</a> = <a class="el" href="namespace_a_k_1_1_wwise_1_1_plugin_a6f05bedc5077d964a3015045f166aec9.html#a6f05bedc5077d964a3015045f166aec9">CHostUndoManager</a></td></tr>
+<tr class="memitem:a270936e06e5c9627548246cbebde0467 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="memItemLeft" align="right" valign="top">using&#160;</td><td class="memItemRight" valign="bottom">GluedInterface = CHostUndoManager</td></tr>
 <tr class="separator:a270936e06e5c9627548246cbebde0467 inherit pub_types_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:ac3e57e2518e901d81ddc4d88724f4cec"><td class="memItemLeft" align="right" valign="top"><a class="el" href="group__global_gaa45e88025407465159f485763021d524.html#gaa45e88025407465159f485763021d524">ak_wwise_plugin_undo_group_id</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_ac3e57e2518e901d81ddc4d88724f4cec.html#ac3e57e2518e901d81ddc4d88724f4cec">OpenGroup</a> (<a class="el" href="group__global_gaa45e88025407465159f485763021d524.html#gaa45e88025407465159f485763021d524">ak_wwise_plugin_undo_group_id</a> in_reopenGroupId=0)</td></tr>
-<tr class="memdesc:ac3e57e2518e901d81ddc4d88724f4cec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open a group that will contain all subsequent undo events.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_ac3e57e2518e901d81ddc4d88724f4cec.html#ac3e57e2518e901d81ddc4d88724f4cec">More...</a><br /></td></tr>
+<tr class="memitem:ac3e57e2518e901d81ddc4d88724f4cec"><td class="memItemLeft" align="right" valign="top">ak_wwise_plugin_undo_group_id&#160;</td><td class="memItemRight" valign="bottom">OpenGroup (ak_wwise_plugin_undo_group_id in_reopenGroupId=0)</td></tr>
+<tr class="memdesc:ac3e57e2518e901d81ddc4d88724f4cec"><td class="mdescLeft">&#160;</td><td class="mdescRight">Open a group that will contain all subsequent undo events.  More...<br /></td></tr>
 <tr class="separator:ac3e57e2518e901d81ddc4d88724f4cec"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8df113c765722217518ad343d516adce"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a8df113c765722217518ad343d516adce.html#a8df113c765722217518ad343d516adce">CloseGroup</a> (<a class="el" href="group__global_ga49b0af3e4205b935aa476d7ab1c9f65c.html#ga49b0af3e4205b935aa476d7ab1c9f65c">ak_wwise_plugin_undo_group_close_action</a> in_action=<a class="el" href="group__global_ga49b0af3e4205b935aa476d7ab1c9f65c.html#gga49b0af3e4205b935aa476d7ab1c9f65ca7b066ecc400936abe8602ec9deb27e5f">AK_WWISE_PLUGIN_UNDO_GROUP_CLOSE_ACTION_APPLY</a>, <a class="el" href="group__global_gaa45e88025407465159f485763021d524.html#gaa45e88025407465159f485763021d524">ak_wwise_plugin_undo_group_id</a> in_groupId=0, const char *in_szApplyEventName=nullptr)</td></tr>
-<tr class="memdesc:a8df113c765722217518ad343d516adce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Closes the last opened group, in stack ordering.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a8df113c765722217518ad343d516adce.html#a8df113c765722217518ad343d516adce">More...</a><br /></td></tr>
+<tr class="memitem:a8df113c765722217518ad343d516adce"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom">CloseGroup (ak_wwise_plugin_undo_group_close_action in_action=AK_WWISE_PLUGIN_UNDO_GROUP_CLOSE_ACTION_APPLY, ak_wwise_plugin_undo_group_id in_groupId=0, const char *in_szApplyEventName=nullptr)</td></tr>
+<tr class="memdesc:a8df113c765722217518ad343d516adce"><td class="mdescLeft">&#160;</td><td class="mdescRight">Closes the last opened group, in stack ordering.  More...<br /></td></tr>
 <tr class="separator:a8df113c765722217518ad343d516adce"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aeb06646805b2ed1844e2af28c188fe3d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_aeb06646805b2ed1844e2af28c188fe3d.html#aeb06646805b2ed1844e2af28c188fe3d">AddCustomEvent</a> (<a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event.html">BaseUndoEvent</a> *in_pEvent)</td></tr>
-<tr class="memdesc:aeb06646805b2ed1844e2af28c188fe3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a custom event to the currently opened group.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_aeb06646805b2ed1844e2af28c188fe3d.html#aeb06646805b2ed1844e2af28c188fe3d">More...</a><br /></td></tr>
+<tr class="memitem:aeb06646805b2ed1844e2af28c188fe3d"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom">AddCustomEvent (<a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_base_undo_event.html">BaseUndoEvent</a> *in_pEvent)</td></tr>
+<tr class="memdesc:aeb06646805b2ed1844e2af28c188fe3d"><td class="mdescLeft">&#160;</td><td class="mdescRight">Adds a custom event to the currently opened group.  More...<br /></td></tr>
 <tr class="separator:aeb06646805b2ed1844e2af28c188fe3d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a50469bb416b73bf94d8f7c31bb87a9bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a50469bb416b73bf94d8f7c31bb87a9bc.html#a50469bb416b73bf94d8f7c31bb87a9bc">CanAddEvent</a> () const</td></tr>
-<tr class="memdesc:a50469bb416b73bf94d8f7c31bb87a9bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if we are currently in a state where we can add undo events.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a50469bb416b73bf94d8f7c31bb87a9bc.html#a50469bb416b73bf94d8f7c31bb87a9bc">More...</a><br /></td></tr>
+<tr class="memitem:a50469bb416b73bf94d8f7c31bb87a9bc"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom">CanAddEvent () const</td></tr>
+<tr class="memdesc:a50469bb416b73bf94d8f7c31bb87a9bc"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if we are currently in a state where we can add undo events.  More...<br /></td></tr>
 <tr class="separator:a50469bb416b73bf94d8f7c31bb87a9bc"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a3ebcf7bbe7f7cebb3af27340f35f329a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a3ebcf7bbe7f7cebb3af27340f35f329a.html#a3ebcf7bbe7f7cebb3af27340f35f329a">IsBusy</a> () const</td></tr>
-<tr class="memdesc:a3ebcf7bbe7f7cebb3af27340f35f329a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if we are busy (undoing or redoing).  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a3ebcf7bbe7f7cebb3af27340f35f329a.html#a3ebcf7bbe7f7cebb3af27340f35f329a">More...</a><br /></td></tr>
+<tr class="memitem:a3ebcf7bbe7f7cebb3af27340f35f329a"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom">IsBusy () const</td></tr>
+<tr class="memdesc:a3ebcf7bbe7f7cebb3af27340f35f329a"><td class="mdescLeft">&#160;</td><td class="mdescRight">Check if we are busy (undoing or redoing).  More...<br /></td></tr>
 <tr class="separator:a3ebcf7bbe7f7cebb3af27340f35f329a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a153df8eddf6d395fb2383b7e72ccaf47"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a153df8eddf6d395fb2383b7e72ccaf47.html#a153df8eddf6d395fb2383b7e72ccaf47">CanLogUndos</a> () const</td></tr>
-<tr class="memdesc:a153df8eddf6d395fb2383b7e72ccaf47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns whether logging can occur or not.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_v1_1_1_undo_manager_a153df8eddf6d395fb2383b7e72ccaf47.html#a153df8eddf6d395fb2383b7e72ccaf47">More...</a><br /></td></tr>
+<tr class="memitem:a153df8eddf6d395fb2383b7e72ccaf47"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom">CanLogUndos () const</td></tr>
+<tr class="memdesc:a153df8eddf6d395fb2383b7e72ccaf47"><td class="mdescLeft">&#160;</td><td class="mdescRight">Returns whether logging can occur or not.  More...<br /></td></tr>
 <tr class="separator:a153df8eddf6d395fb2383b7e72ccaf47"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="inherited"></a>
 Additional Inherited Members</h2></td></tr>
 <tr class="inherit_header pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td colspan="2" onclick="javascript:toggleInherit('pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue')"><img src="closed.png" alt="-"/>&#160;Static Public Attributes inherited from <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue.html">AK.Wwise::Plugin::CBaseInterfaceGlue&lt; CHostUndoManager &gt;</a></td></tr>
-<tr class="memitem:a8b682b3105da8940f7ea75845254d491 inherit pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="memItemLeft" align="right" valign="top">static <a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue_a270936e06e5c9627548246cbebde0467.html#a270936e06e5c9627548246cbebde0467">GluedInterface</a> *&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue_a8b682b3105da8940f7ea75845254d491.html#a8b682b3105da8940f7ea75845254d491">g_cinterface</a></td></tr>
-<tr class="memdesc:a8b682b3105da8940f7ea75845254d491 inherit pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="mdescLeft">&#160;</td><td class="mdescRight">The unique instance of the CInterface interface. Defined at nullptr first, overridden by the Host once loaded.  <a href="class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue_a8b682b3105da8940f7ea75845254d491.html#a8b682b3105da8940f7ea75845254d491">More...</a><br /></td></tr>
+<tr class="memitem:a8b682b3105da8940f7ea75845254d491 inherit pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="memItemLeft" align="right" valign="top">static GluedInterface *&#160;</td><td class="memItemRight" valign="bottom">g_cinterface</td></tr>
+<tr class="memdesc:a8b682b3105da8940f7ea75845254d491 inherit pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="mdescLeft">&#160;</td><td class="mdescRight">The unique instance of the CInterface interface. Defined at nullptr first, overridden by the Host once loaded.  More...<br /></td></tr>
 <tr class="separator:a8b682b3105da8940f7ea75845254d491 inherit pub_static_attribs_class_a_k_1_1_wwise_1_1_plugin_1_1_c_base_interface_glue"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p>Host API to handle the plug-in's undo operations. </p>
 
-<p class="definition">Definition at line <a class="el" href="_host_undo_manager_8h_source.html#l00487">487</a> of file <a class="el" href="_host_undo_manager_8h_source.html">HostUndoManager.h</a>.</p>
+<p class="definition">Definition at line 487 of file <a class="el" href="_host_undo_manager_8h_source.html">HostUndoManager.h</a>.</p>
 </div></div><!-- contents -->
 </body>
 </html>
+
