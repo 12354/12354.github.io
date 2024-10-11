@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tWarenLagerPlatz Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tWarenLagerPlatz Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKommentar</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Kommentar zum Warenlagerplatz</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Names des Platzes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dWmsInventurDatum</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Letztes Inventurdatum</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fBreite</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>breite des Warenlagerplatztes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGewichtMax</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Maximales Gewicht</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fHoehe</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Höhe des Warenlagerplatztes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fLaenge</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Länge des Warenlagerplatzes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLager</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tWarenlager</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerPlatz</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerPlatzTyp</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Typ des Warenlagerplatzes. Achtung die Tabelle tWarenlagerplatzTyp gibt es nicht mehr, der Wert wird aus einem Enum bestimmt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWmsInventur</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Inventurnummer der aktuellen Inventur im WMS welche dieser Platz zugeordnet ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuslieferungGesperrt</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Gibt an, ob der Warenlagerplatz für die Auslieferung gesperrt ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nGesperrt</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt a,n ob ein Warenlagerplatz zum verfügbaren Bestand hinzugerechnet werden soll.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nInvGezaehlt</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Wird für die WMS-Inventur verwendet, gibt an ob für diesen Platz schon alle Bestände aufgenommen sind und gebucht werden darf.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPreInvStatus</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Status des Platzes bevor er den Status inventur-gesperrt erhalten hat, damit nach der Inventur der gleiche Status wie vorher vergeben werden kann</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPrio</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Enthält die Priorität des Warenlagerplatzes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSort</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Sortiernummer für Wegeoptimierung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStatus</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Status des Warenlagerplatzes</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

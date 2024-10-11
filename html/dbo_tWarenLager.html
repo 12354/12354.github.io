@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tWarenLager Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tWarenLager Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAdresszusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Adresszusatz des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerAbteilung</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Abteilung des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerAnrede</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Anrede des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerEMail</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>E-Mailadresse des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerFax</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Faxnummer des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerName</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerTel</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Telefonnummer des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnsprechpartnerVorname</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Vorname des Ansprechpartners</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBeschreibung</td>
+            <td>NVARCHAR(2048)</td>
+            <td>Yes</td>
+            <td>Beschreibung des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBundesland</td>
+            <td>NVARCHAR(200)</td>
+            <td>Yes</td>
+            <td>Bundesland des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension1Name</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name der ersten Lagerdimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension1Trennzeichen</td>
+            <td>NVARCHAR(2)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension2Name</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name der zweiten Lagerdimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension2Trennzeichen</td>
+            <td>NVARCHAR(2)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension3Name</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name der dritten Lagerdimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension3Trennzeichen</td>
+            <td>NVARCHAR(2)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension4Name</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name der vierten Lagerdimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension4Trennzeichen</td>
+            <td>NVARCHAR(2)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension5Name</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name der fünften Lagerdimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDimension5Trennzeichen</td>
+            <td>NVARCHAR(2)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEmpfaengerFirma</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFfnWarehouseId</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Interne ID des Lagers für das Fulfillmentnetzwerk</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKuerzel</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Kürzel des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLagerTyp</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLand</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Land des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Namen des Warenlagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cOrt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Ort des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPLZ</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Postleitzahl des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStrasse</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Strasse des Lagers</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kFirma</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tFirma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kQuellLager</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Fremdschluessel auf das QuellLager im Falle, dass dies ein Streckenlager ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kUser</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLager</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kZielLager</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Fremdschluessel auf ein Ziellager im Falle, dass dies ein Streckenlager ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAktiv</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob das Lager aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuslieferungsPrio</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Enthält die Priorität des Lagers für die Auslieferung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension1Laenge</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Länge der ersten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension1Typ</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Typ der ersten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension2Laenge</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Länge der zweiten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension2Typ</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Typ der zweiten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension3Laenge</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Länge der dritten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension3Typ</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Typ der dritten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension4Laenge</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Länge der vierten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension4Typ</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Typ der vierten Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension5Laenge</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Länge der fünften Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDimension5Typ</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Typ der fünften Dimension</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nFulfillment</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob es ein Fulfillmentlager ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLagerplatzVerwaltung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob Lagerplatzverwaltung aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPackStationAktiv</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

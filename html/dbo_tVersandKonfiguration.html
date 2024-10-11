@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tVersandKonfiguration Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tVersandKonfiguration Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBenutzer</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Benutzer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFirmen</td>
+            <td>NVARCHAR(2000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Firmen ueber eine Liste von kFirma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKundengruppen</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Kundengruppen ueber eine Liste von kKundengruppe</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLaenderListeISO</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(120)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPlattformen</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Plattformen ueber eine liste von kPlattform</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cShops</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte shops ueber eine liste von kShop</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cText</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVersandartListe</td>
+            <td>NVARCHAR(8000)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVersandklassen</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Versandklassen ueber eine Liste von kVersandlkasse</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cWarengruppen</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Warengruppen ueber eine Liste von kWarengruppe</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungsarten</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkungen auf bestimmte Zahlungsarten ueber eine Liste von kZahlungsart</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGewichtMax</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Einschraenkung, Gewicht des Auftrags darf den Wert nicht ueberschreiten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGewichtMin</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Einschraenkung, Gewicht des Auftrags darf den Wert nicht unterschreiten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fWertBis</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fWertVon</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kFormular</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kVersandKonfiguration</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenlager</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneVersandart</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Wenn 1 = Auch alle ohne Versandart werden betrachtet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneWarengruppe</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Wenn 1 = Auch alle ohne Warengruppe werden betrachtet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneZahlungsart</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Falls 1 = Auch alle ohne Zahlungsart werden betrachtet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahl</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahlProPaket</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArt</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelBreiteBis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelBreiteVon</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelHoeheBis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelHoeheVon</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLaengeBis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLaengeVon</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelZustandFilter</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Filter für Artikelzustaende</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuftragsArt</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an welche art von Aufträgen gefiltert werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAusfuehrungBei</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Wann soll der Vorgang ausgeführt werden, Immer, ErsteTeillieferung, letzte Teillieferung des Auftrags </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDiffAdressRechnungLieferschein</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Nur ausfuehren wenn Rechnungs und Lieferadresse unterschiedlich sind.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEigeneFelderFilter</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Filter für Eigene Felder der Artikel</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEnthaeltArtAusWarengruppe</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Falls 1 = Der Auftrag muß nur min einen Artikel aus den Feld cWarengruppen haben</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLandTyp</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVorgang</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Um welchen Vorgang handelt es sich. Zb. Drucken, Faxen, Mailen...</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

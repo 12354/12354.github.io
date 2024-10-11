@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beschaffung.tItemStockDemand Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Beschaffung.tItemStockDemand Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cComment</td>
+            <td>NTEXT</td>
+            <td>No</td>
+            <td>Der Kommentar, welcher der Ersteller hinterlegt hat.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dCreationDate</td>
+            <td>DATETIMEOFFSET</td>
+            <td>No</td>
+            <td>Der Zeitpunkt, zu welchem der Bedarf erstellt wurde</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dTargetDate</td>
+            <td>DATETIMEOFFSET</td>
+            <td>Yes</td>
+            <td>Das Datum zu welchem der Bedarf im Lager sein muss</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fQuantity</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Die Menge, die vom dem Artikel benötigt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>iContext</td>
+            <td>UNIQUEIDENTIFIER</td>
+            <td>Yes</td>
+            <td>Identifikator des Kontextes, aus welchem der Bedarf entstanden ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kArtikel</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Artikel, welcher benötigt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBenutzer</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Benutzer, welcher den Bedarf angemeldet hat</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kContext</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der PK der Entität, aus welchem der Bedarf entstanden ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kItemStockDemand</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>PK des Bedarfs</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLager</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Das Warenlager, in welchem der Bedarf benötigt wird.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerBereich</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Bereich eines WMS Lagers, in welchem der Bedarf benötigt wird.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerPlatz</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Warenlagerplatz, an welchem der Bedarf benötigt wird.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStatus</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Der Status, welcher der Bedarf aktuell hat</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

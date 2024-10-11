@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tRestApiRequestLog Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tRestApiRequestLog Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Rowversion</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMethod</td>
+            <td>CHAR(40)</td>
+            <td>Yes</td>
+            <td>Aufgerufene Methode</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPath</td>
+            <td>NVARCHAR(1024)</td>
+            <td>Yes</td>
+            <td>Aufgerufener Pfad</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cRequestIp</td>
+            <td>NVARCHAR(200)</td>
+            <td>Yes</td>
+            <td>Aufgerufener Pfad</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dTimestamp</td>
+            <td>DATETIMEOFFSET</td>
+            <td>Yes</td>
+            <td>Zeitpunkt des Logeintrags</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>iRequestTime</td>
+            <td>BIGINT</td>
+            <td>Yes</td>
+            <td>Dauer des Aufrufs in Ticks</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>iStatusCode</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Response Statuscode</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBenutzerApp</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>App Benutzer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBenutzerRunAs</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Benutzer, der per RunAs gesetzt wurde.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kRestApiRegistrationRequest</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Foreign Key auf die App, zu welchem der Request gehört</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kRestApiRequestLog</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Pk der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

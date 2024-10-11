@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PParams.tProcessParameterTargetValue Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>PParams.tProcessParameterTargetValue Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Rowversion</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cValueText</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Der Ausgabe-/Sollwert als Kurztext (einzeilig) oder Langext (mehrzeilig).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dValueDateTime</td>
+            <td>DATETIMEOFFSET</td>
+            <td>Yes</td>
+            <td>Der Ausgabe-/Sollwert als Datum und/oder Uhrzeit.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kFile</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Ausgabe-/Sollwert als (Referenz auf eine) Datei.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kProcessParameterAssignmentTargetValueObjectType</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Schlüssel des für eine Prozessparameterzuweisung aktivierten Bezugsobjekttyps für die Ausgabe-/Sollwerterfassung.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kProcessParameterTargetValue</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Schlüssel des Ausgabe-/Sollwerts für ein Bezugsobjekt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kTargetValueObject</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Schlüssel des Bezugsobjekts.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nValueDecimal</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Der Ausgabe-/Sollwert als Dezimalzahl.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nValueInt</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Ausgabe-/Sollwert als Ganzzahl oder logischer Wahrheitswert.</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

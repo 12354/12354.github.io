@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.ebay_checkout Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.ebay_checkout Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>cAdresszusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Adresszusatz (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnrede</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>Anrede (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cComment</td>
+            <td>NVARCHAR(1000)</td>
+            <td>Yes</td>
+            <td>Kommentar </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEMail</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Emailadresse (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFax</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Faxnummer (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFirma</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Firma (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLand</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Land (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferAdresszusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Adresszusatz (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferAnrede</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>Anrede (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferFax</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Faxnummer (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferFirma</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Firma (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferHandy</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>mobile Rufnummer (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferLand</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Land (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferNachname</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Nachname (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferNamenszusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Namenszusatz (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferOrt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Ort (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferOrtszusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Ortszusatz (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferPLZ</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Postleitzahl (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferStrasse</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Straße (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferTel</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Festnetznummer (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferVorname</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Vorname (Lieferadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMobil</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>mobile Rufnummer (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cNachname</td>
+            <td>NVARCHAR(252)</td>
+            <td>Yes</td>
+            <td>Nachname (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cOrderId</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cOrt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Ort (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPaymentStatus</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Status der Zahlung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPaypalTransactionID</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Paypal-Transaktions-ID</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPLZ</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Postleitzahl (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPUIZahlungsdaten</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar. Enthält vermutlich manchmal die Paypal-Transaktions-ID, für die aber schon die Spalte cPaypalTransactionID existiert.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStrasse</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Straße (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTel</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Festnetznummer (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cUStID</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>Umsatzsteuer-ID</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVersandArt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Versandart</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVerwendungszweck</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Verwendungszweck</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVorname</td>
+            <td>NVARCHAR(252)</td>
+            <td>Yes</td>
+            <td>Vorname (Rechnungsadresse)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungBankName</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name der Bank</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungBLZ</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Bankleitzahl</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungCVV</td>
+            <td>NVARCHAR(8)</td>
+            <td>Yes</td>
+            <td>Prüfnummer für Kreditkarten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungGueltigkeit</td>
+            <td>NVARCHAR(24)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungInhaber</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Kontoinhaber</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungKartenNr</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Kartennummer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungKartenTyp</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Kartentyp</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungKontoNr</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Kontonummer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungsart</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Zahlungsart</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dAbgeschlossenAm</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Gibt an, wann die Kaufabwicklung abgeschlossen wurde.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dErstelltAm</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Gibt vermutlich an, wann die Kaufabwicklung bei eBay angelegt wurde. Die Logik scheint jedoch etwas inkonsistent/unintuitiv zu sein. Wird z.B. bei Auftragerstellung auf aktuellen Zeitpunkt gesetzt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fSumme</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Gibt vermutlich die Summe aus Kaufbetrag und Versandkosten an. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fVersandkosten</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Versandkosten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEbayBuyer</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>eBay-Käufer (verweist auf ebay_buyer.kBuyer)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEbayCheckout</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>PK der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEbayUser</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>eBay-Konto des Wawi-Benutzers (verweist auf ebay_user.kEbayuser)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahlPos</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt vermutlich die Anzahl der Positionen an.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCheckoutType</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nInBearbeitung</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNeu</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStatus</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Wawi-interner Status der Kaufabwicklung. 0 = abgeschlossene Kaufabwicklung, 2 = komplett erledigt (Auftrag erstellt)</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

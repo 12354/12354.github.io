@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tfirma Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tfirma Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAktiv</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>Gibt an, ob diese Firma aktiv ist. Inaktive Firmen können in Vorgängen nicht ausgewählt werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBank</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Enthält den Banknamen der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBIC</td>
+            <td>NVARCHAR(128)</td>
+            <td>Yes</td>
+            <td>Enthält den Bank Identifier Code (BIC) der Bank der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBLZ</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Enthält die Bankleitzahl der Bank der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEMail</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält die Hauptemailadresse der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFax</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>Enthält die Faxnummer der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFusszeile</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Fußzeile, die in Druckformularen genutzt werden kann</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cGlaeubigerID</td>
+            <td>NVARCHAR(70)</td>
+            <td>Yes</td>
+            <td>Gläubiger ID der Firma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cIBAN</td>
+            <td>NVARCHAR(128)</td>
+            <td>Yes</td>
+            <td>Enthält den IBAN der Bank der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cInet</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>Veraltet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cIntrashipKdNr</td>
+            <td>NVARCHAR(30)</td>
+            <td>Yes</td>
+            <td>Kundennummer für DHL Intraship. Für Sendungsdatenexport zu DHL Intraship notwendig</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKontoInhaber</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Namen des Kontoinhabers der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKontoNr</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Enthält die Kontonummer der Bank der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKopfGrafik</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Deprecated – Abgelöst von List&Label</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLand</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Land der Firma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLandISO</td>
+            <td>NVARCHAR(10)</td>
+            <td>Yes</td>
+            <td>ISO Code für das Land der Firma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Firmenname.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cObfuskierung</td>
+            <td>NVARCHAR(200)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cOrt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Ort, in welcher sich die Firma befindet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPayPalEMail</td>
+            <td>NVARCHAR(500)</td>
+            <td>Yes</td>
+            <td>PayPal EMailadresse der Firma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPLZ</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Enthält die Postleitzahl (PLZ) des Ortes in welcher sich die Firma befindet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cSteuerNr</td>
+            <td>NVARCHAR(50)</td>
+            <td>Yes</td>
+            <td>Enthält die Steuernummer der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStrasse</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält die Strasse, in welcher sich die Firma befindet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTel</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Enthält die Telefonnummer der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cUnternehmer</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Namen des Firmeninhabers.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cUPSKdNr</td>
+            <td>NVARCHAR(30)</td>
+            <td>Yes</td>
+            <td>Kundennummer für UPS. Für Sendungsdatenexport zu UPS notwendig</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cWWW</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält die Webadresse der Firma.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kFirma</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Enthält den eindeutigen internen Primärschlüssel.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKleinunternehmer</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

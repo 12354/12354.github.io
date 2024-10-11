@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.pf_amazon_angebot_ext Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.pf_amazon_angebot_ext Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>cConditionNote</td>
+            <td>NVARCHAR(4000)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFulfillmentChannel</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cNameSeller1</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cSellerSKU</td>
+            <td>NVARCHAR(200)</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dDeaktiviertUtc</td>
+            <td>DATETIME2</td>
+            <td>Yes</td>
+            <td>Zeitpunkt in UTC zu dem das Angebot durch einen Inventardatenimport deaktiviert wurde</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLastSwitchFulfillmentTo</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLetzteBearbeitungszeitAenderung</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLetzteBestandAenderung</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLetztePreisAenderung</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Ist Null wenn ein Sonderpreis übertragen werden sollen (Steuer wahrscheinlich die Farben Blau und Gelb, also ob ein Preis schon übertragen wurde)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLetztesAPAUpdate</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLetzteTaxShippingAenderung</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLetzteVersandAenderung</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dRestockDate</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dSaleEnd</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dSaleStart</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dSellerdaten</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fAPAMaxPreis</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fAPAMinPreis</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fAPAPreisabstand</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fAPAPreisabstandFBA</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fPreis</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Ist per Default NULL, wenn gefüllt, muss dieser Preis übertragen werden. Wenn übertragen wird fPreis auf NULL gesetzt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fPreisSeller1</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fSalePrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Ist ein Sonderpreis, kann nicht auf NULL gesetzt werden, der kommt nicht als Sonderpreis zurück und muss bestehend bleiben.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fVersandkosten</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fVersandSeller1</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kAmazonVersandgruppe</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kSteuercode</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kUser</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAPANutzen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Steuert ob die Preisinformationen für diesen Artikel an den Repricer gesendet werden müssen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAPAPruefIntervall</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAPASellerPositiveFeedbackRating</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAPAShippingTime</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAPAUpdate</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nB2BPreiseSenden</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBearbeitungsZeit</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nConditionNoteChanged</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDelete</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Soll beim nächsten Abgleich aus dem Sortiment genommen werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDeleteB2BPreis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nIstAPAPreisabstandFBAProzentual</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nIstAPAPreisabstandProzentual</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLetzteBearbeitungsZeit</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Hier wird die Bearbeitungszeit gespeichert die zuletzt an Amazon gesendet wurde. Hieran erkennt der Abgleich ob sich die Zeit geändert hat und erneut übertragen werden muss.
+			Bearbeitungszeit ermittelt sich aus Summe von:
+			-> Bestand > 0 Dann tartikel.nBearbeitungszeit ansonsten tArtikel.[nLiefertagewennausverkauftTagewennausverkauft] 
+			-> pf_user.[zusätzlicheBearbeitungszeit].</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMaxBestand</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Mehr als dieser Bestand darf nicht zu Amazon übertragen werden. Bei Angeboten ohne JTL-Wawi Artikel, wird immer dieser Wert übertragen. Wird ein Artikel bei Amazon verkauft, wird wieder der Max Bestand geschickt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPlattform</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Verweist auf tPlattform.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPreisUndBestandsaenderungenAusschliessen</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSendeBestand</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSwitchFulfillmentTo</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUseAPAGlobal</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVerkaufsrang</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

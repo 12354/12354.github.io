@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.pf_amazon_bestellungpos Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.pf_amazon_bestellungpos Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>cArchiveUrl</td>
+            <td>NVARCHAR(1024)</td>
+            <td>Yes</td>
+            <td>URL des Zip-Archivs der Amazon Custom Data</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cArtNr</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>SKU der Bestellposition</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cCarrier</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Logisikter, der diesen Artikel versendet hat (nur für FBA)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cCustomJson</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cCustomUrl</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cErrorMessage</td>
+            <td>NVARCHAR(4000)</td>
+            <td>Yes</td>
+            <td>Fehlermeldung der Übertragung der Versandbestätigung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFulfillmentCenterId</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>FulfillmentCenterId des Versandzentrums, das diesen Artikel versendet hat (Nur für FBA)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFulfillmentChannel</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>AFN = Amazon Fulfillment Network: Amazon versendet diese Position. Leer = Händler versendet selbst</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cGeschenkverpackungTyp</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Diese Spalte wird aktuell nicht genutzt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cGrusstext</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Optionaler Grußtext, der dem Produkt beigelegt werden soll</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMerchantOrderItemId</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Bestellpositionsnummer des Händlers (Nur für Multichannel FBA)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name des Artikels</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cOrderItemId</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>ID der Bestellposition von Amazon</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cShipCountry</td>
+            <td>NVARCHAR(10)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTrackingNumber</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Trackingnummer des Logistikers (nur für FBA)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dErrorErstellt</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Zeitpunkt des Fehlers bei der Übertragung der Versandbestätigung zu dieser Bestellposition</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dEstimatedArrivalDate</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Voraussichtliche Ankunftszeitpunkt des Produkts beim Kunden (Nur FBA)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGeschenkverpackungKosten</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Kosten der Geschenkverpackung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fItemPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Preis der Position</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fItemTax</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Umsatzsteuer der Position</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fPreisNetto</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Nettopreis der Position</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fShippingPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Versandkosten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fShippingTax</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Umsatzsteuer der Versandkosten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kAmazonBestellung</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.pf_amazon_bestellung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kAmazonBestellungPos</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kFulfillmentAuftragPos</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tfulfilmentpos</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCustom</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nErrorCode</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>ErrorCode des Fehlers bei der Übertragung der Versandbestätigung zu dieser Bestellposition</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nGeschenk</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob es sich um ein Geschenk handelt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nQuantityPurchased</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Menge dieser Bestellposition</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandt</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an ob die Position versendet wurde</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

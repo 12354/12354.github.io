@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pps.tWorkJobBillOfMaterialsComponent Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>pps.tWorkJobBillOfMaterialsComponent Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fActualQuantity</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Die Istmenge oder null, wenn für den zugrunde liegenden Artikel eine Bestandsführung konfiguriert ist, die bedingt, dass die Istmenge anhand der zu belastenden Bestände summiert werden muss.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fTargetQuantity</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Die Sollmenge oder null, wenn die Sollmenge der Menge der zugrunde liegenden Stücklistenkomponente entspricht.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kArtikel</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Schlüssel des zugrunde liegenden Artikels.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kMasseinheit</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Schlüssel der Maßeinheit, in der fActualQuantity und fTargetQuantity geführt sind, oder null, wenn sie in der Verkaufseinheit des zugrunde liegenden Artikels geführt sind.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kOriginBillOfMaterialComponent</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Schlüssel der zugrunde liegenden Stücklistenkomponente oder null, wenn die Artikelposition anderweitig entstanden ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWorkJobBillOfMaterialsComponent</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Schlüssel, der diese Artikelposition eindeutig identifiziert.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWorkJobOperation</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Der Schlüssel des Arbeitsgangs, in dem diese Artikelposition enthalten ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

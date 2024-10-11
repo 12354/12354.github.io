@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tHintergrundDienst Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tHintergrundDienst Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAktiv</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob der Worker aktiv ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAmazonAuftrag</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Amaton Aufträge berücksichtigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEbayAuftrag</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Ebay Aufträge berücksichtigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEbayBestand</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an. ob Bestände bei Ebay berückschtigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEbaySmall</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeinAmazon</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Amazon ausgeschlossen ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeinEbay</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Ebay ausgeschlossen ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeinFulfillment</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Fulfillment ausgeschlossen ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeinShop</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Shop ausgeschlossen ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeinZahlungsabgleich</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob Zahlungsabgleich ausgeschlossen ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKundenupdate</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Kundenupdates gesendet werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nReDrucken</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Rechnungsdruck aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nRepricer</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Repricer berücksichtigt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nRetourenErstellen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Retouren Erstellen aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSek</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt den Zeitraum an</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUpdateBilderBeschreibung</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Bilderbeschreibungen aktualisiert werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWaehrung</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob der Währungsabgleich aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWebshopAuftrag</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>GIbt an, ob der Webshopabgleich aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.tBerichtsanfrage Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.tBerichtsanfrage Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>cBerichtstyp</td>
+            <td>NVARCHAR(510)</td>
+            <td>No</td>
+            <td>Art des Berichtes, das angefordert werden soll</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMeldung</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Warnungen/Fehlermeldungen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPfad</td>
+            <td>NVARCHAR(510)</td>
+            <td>No</td>
+            <td>Pfad, in dem die Berichte abgelegt werden sollen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dEndeUtc</td>
+            <td>DATETIME2</td>
+            <td>Yes</td>
+            <td>Enddatum für den absoluten Zeitraum</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dStartUtc</td>
+            <td>DATETIME2</td>
+            <td>Yes</td>
+            <td>Startdatum für den absoluten Zeitraum</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBerichtsanfrage</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>PK der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kUser</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Id des Amazonkontos</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nExternalId</td>
+            <td>BIGINT</td>
+            <td>No</td>
+            <td>Berichtsanfragen-ID vom Server</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nIntervallTyp</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Intervall in dem der Bericht angefordert werden soll. 0: einmalig; 1:täglich; 2:wöchentlich; 3: monatlich</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nRelativerZeitraumTyp</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Zeitraum in dem der Bericht angefordert werden soll. 0: kein Zeitrum; 1: 7 Tage; 2: 14 Tage; 3: 30 Tage; 4: letzter Monat; 5: aktueller Monat</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStatus</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Status des Berichtes. 0: angelegt; 1: aktiv; 2: wird gelöscht</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nZeitraumTyp</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Typ für den Zeitraum in dem der Bericht angefordert werden soll. 0: ohne Zeitraum; 1: Relativer Zeitraum; 2: Absoluter Zeitraum</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

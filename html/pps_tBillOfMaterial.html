@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pps.tBillOfMaterial Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>pps.tBillOfMaterial Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cComment</td>
+            <td>NVARCHAR(6000)</td>
+            <td>No</td>
+            <td>Kommentare und Beschreibung zu einer Stückliste</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cHash</td>
+            <td>NVARCHAR(510)</td>
+            <td>No</td>
+            <td>Eindeutiger Hash einer Stückliste, wird aus dem Komponenten Berechnet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(200)</td>
+            <td>No</td>
+            <td>Name einer Stückliste, um diese zu Identifizieren</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dActive</td>
+            <td>DATETIMEOFFSET</td>
+            <td>Yes</td>
+            <td>Erste Live Schaltung der Stückliste</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dCalculatedStockTimeStamp</td>
+            <td>DATETIMEOFFSET</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dCreated</td>
+            <td>DATETIMEOFFSET</td>
+            <td>No</td>
+            <td>Erstelldatum der Stückliste</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dLastChanged</td>
+            <td>DATETIMEOFFSET</td>
+            <td>Yes</td>
+            <td>Datum, wann die Stückliste das letzte mal Bearbeitet wurde</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fCalculatedStock</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kArtikel</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>ForeignKey auf die pps.tProdItem</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBenutzerLastChanged</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Der Benutzer welcher die Stückliste das letzte mal Bearbeitet hat</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBillOfMaterial</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der tBillOfMaterial</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kParentBillOfMaterial</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>FK zu tBillOfMaterialkBillOfMaterial wenn es sich bei der Stückliste um eine Konkrete Ausprägung einer Individual Stückliste handelt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAdditionalShelfLifeEndDateTime</td>
+            <td>BIGINT</td>
+            <td>Yes</td>
+            <td>Zusätzliche MHD Zeit, für MHD pflichtige Produkte.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nComponentPostingsBatchNumberRequirements</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nComponentPostingsShelfLifeEndDateRequirements</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nShelfLifeEndDateGenerationMode</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Erstellungsmodus der MHD für MHD pflichtige Produkte.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nState</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Der Status der Stückliste: 0 = Entwicklung, 1 = Live, 2 = Archiviert, 3 = Alternative, 99 = Gelöscht</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nType</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Der Typ der Stückliste: 0 = Regular, 1 = Subset, 2 = Disassembly, 3 = Reverse</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersion</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Version der Stückliste, wird hochgezählt</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

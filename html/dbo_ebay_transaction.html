@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.ebay_transaction Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.ebay_transaction Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>AdjustmentAmount</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>AmountPaid</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>gezahlter Betrag</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BestOfferSale</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>gibt vermutlich an, ob ein Preisvorschlag akzeptiert wurde</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BuyerPaidStatus</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDispute</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Display-String eines Konfliktgrundes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cDisputeInfo</td>
+            <td>NVARCHAR(1024)</td>
+            <td>Yes</td>
+            <td>Interne ID eines Konfliktgrundes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ConvertedAdjustmentAmount</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ConvertedAmountPaid</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ConvertedTransactionPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>CreateDate</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>vermutlich Erstelldatum der Transaktion in der Wawi </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Currency</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Währung des Angebots</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dZahlungsdatum</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Zahlungsdatum</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FinalValueFee</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FL_CommentText</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FL_CommentType</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FL_TargetUser</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FR_CommentText</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FR_CommentType</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>FR_TargetUser</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ItemID</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Angebotsnummer des verknüpften Angebots</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kAlien</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Ggf. Verweis auf ein Fremdangebot (= nicht über Wawi eingestellt oder importiert). Impliziter Foreign Key auf ebay_alienitem.kAlienItem.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBestellung</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf einen Wawi-Auftrag, falls erstellt. Impliziter Foreign Key auf tBestellung.kBestellung.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBuyer</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf eBay-Käufer (ebay_buyer.kBuyer)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEbayUser</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEigenschaftKombi</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf Variations-Werte-Konstellation, falls ein Varkombi-Kind gekauft wurde (tEigenschaftKombiWert.kEigenschaftKombi).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kTransaction</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>PK der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCheckout</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob eine Kaufabwicklung für die Transaktion vorliegt (siehe ebay_checkout).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKonflikt</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob ein Konfliktfall für die Transaktion vorliegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nZuletztAktualisiert</td>
+            <td>BIGINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PaidTime</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Gibt vermutlich den Zeitpunkt der Zahlung an (falls stattgefunden).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>QuantityPurchased</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verkaufsmenge</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ShippedTime</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Gibt vermutlich den Zeitpunkt des Versandes an.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SiteID</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Verweist auf den Marktplatz des Angebotes (ebay_xx_sites.SiteID).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SKU</td>
+            <td>NVARCHAR(128)</td>
+            <td>Yes</td>
+            <td>Bestandseinheit auf eBay</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SSS_ExpeditedService</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SSS_ShippingInsuranceCost</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SSS_ShippingService</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Versandart der Transaktion (Verweis auf ebay_xx_versandarten.ShippingService, für Eindeutigkeit sollte noch die SiteID herangezogen werden).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SSS_ShippingServiceAdditionalCost</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>zusätzliche Versandkosten für die Transaktion</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SSS_ShippingServiceCost</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Versandkosten für die Transaktion</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>4 = offen (noch kein Wawi-Auftrag erstellt), 6 = abgeschlossen (Wawi-Auftrag erstellt)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status_BuyerSelectedShipping</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status_CheckoutStatus</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Status der Kaufabwicklung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status_CompleteStatus</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Gibt an, inwieweit die Kaufabwicklung abgeschlossen ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status_LastTimeModified</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status_PaymentMethodUsed</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Zahlungsmethode</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Stauts_eBayPaymentStatus</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>TransactionID</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>ID der Transaktion. Immer 0 für Auktionen. Eine Transaktion wird nur durch die Kombination aus ItemID und TransactionID eindeutig bestimmt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>TransactionPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>zu zahlender Preis für die Transaktion</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>VariationTitle</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Bezeichnung für die gekaufte Variation, sofern eine solche vorliegt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>VAT</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Steuersatz</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

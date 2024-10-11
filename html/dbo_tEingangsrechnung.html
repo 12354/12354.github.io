@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tEingangsrechnung Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tEingangsrechnung Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAdresszusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Zusatz zur angegebenen Adresse</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBundesland</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Bundeland der angegebenen Adresse</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEigeneRechnungsnummer</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Die interne Rechnungsnummer der Eingangsrechnung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFax</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Faxnummer des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFremdbelegnummer</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Die externe Rechnungsnummer der Eingangsrechnung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cHinweise</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Hinweis zur Eingangsrechnung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLandISO</td>
+            <td>NVARCHAR(10)</td>
+            <td>Yes</td>
+            <td>ISO Code des Landes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferant</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Name des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMail</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Mailadresse des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMobil</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Mobilnummer des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cOrt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Ort des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPLZ</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Postleitzahl des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStrasse</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Strasse des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTel</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Telefonnummer des Lieferanten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dBelegdatum</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Datum der Eingangsrechnung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dBezahlt</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Bezahldatum der Eingangsrechnung</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dErstellt</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Erstelldatum des Datensatzes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dZahlungsziel</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Datumm, wann die Bezahlung fällig ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fFremdFaktor</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Faktor bei Fremdwährungen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kAnsprechpartner</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tAnsprechpartner</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBenutzer</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle eazybusiness.dbo.tBenutzer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEingangsrechnung</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kLieferant</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tLieferant</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDeleted</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Eingangsrechnung gelöscht wurde</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKumuliert</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Eingangsrechnung kumuliert ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStatus</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Status der Eingangsrechnung: Offen = 0, Gebucht = 5, Abgeschlossen = 20</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVerteilungsArt</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt die Art der Verteilung an. 0 = Menge, 1 = Einkaufspreis, 2 = Versandgewicht</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nZahlungFreigegeben</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Zahlung freigegeben ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

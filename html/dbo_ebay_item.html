@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.ebay_item Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.ebay_item Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>ApplicationData</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ApplyShippingDiscount</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>AutoPay</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>bBestandReserviert</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob beim Erstellen einer Transaktion Bestand reserviert werden soll.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BestOfferAutoAcceptPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Gibt an, ab welchem Betrag Preisvorschläge automatisch akzeptiert werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BestOfferEnabled</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Preisvorschläge akzeptiert werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BestOfferMinPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Gibt an, bis zu welchem Betrag Preisvorschläge automatisch abgelehnt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>bIstVerkaufsaktion</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BusinessSeller</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt vermutlich an, ob ein geschäftlicher Verkäufer (im Gegensatz zu einem privaten) vorliegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BuyerProtection</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>BuyItNowPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Sofortkaufpreis. Nur für Auktionen relevant.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>CategoryBasedAttributesPrefill</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>CategoryMappingAllowed</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Verknüpfung zu Katalogdaten aktiv ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEAN</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>EAN</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEbayUserProfileIdPayment</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Rahmenbedingung für Zahlung. Impliziter Foreign Key auf ebay_userprofile.ProfileID (nebst SiteID und kEbayUser).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEbayUserProfileIdReturn</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Rahmenbedingung für Rückgabe. Impliziter Foreign Key auf ebay_userprofile.ProfileID (nebst SiteID und kEbayUser).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cEbayUserProfileIdShipping</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Rahmenbedingung für Versand. Impliziter Foreign Key auf ebay_userprofile.ProfileID (nebst SiteID und kEbayUser).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ChangePaymentInstructions</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cInternationaleRueckgabefrist</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cInternationaleRueckgabeMoeglich</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cInternationalerVersandkostenTraeger</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ConditionDescription</td>
+            <td>NVARCHAR(2000)</td>
+            <td>Yes</td>
+            <td>Zustandsbeschreibung (siehe ConditionID)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ConditionID</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Artikelzustand (z.B. neu/gebraucht/...).Impliziter Foreign Key auf ebay_xx_condition.ID (nebst SiteID).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Country</td>
+            <td>NVARCHAR(510)</td>
+            <td>No</td>
+            <td>Artikelstandort (Land) (2stelliger ISO)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPaymentInstructions</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cRelistedItemID</td>
+            <td>NVARCHAR(512)</td>
+            <td>Yes</td>
+            <td>Veraltet, wird nicht mehr verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cRelistID</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Fürs Neu-/Wieder-Einstellen ausgelaufener Angebote. Hier steht ggf. die alte Angebotsnummer (siehe ItemID). </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cRueckgabefrist</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Rückgabefrist (z.B. Days_14 oder Months_1). Entspricht ebay_xx_rueckgabe.cOption. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cRueckgabeMoeglich</td>
+            <td>NVARCHAR(100)</td>
+            <td>No</td>
+            <td>Gibt an, ob Rücksendungen möglich sind (z.B. ReturnsAccepted). Entspricht ebay_xx_rueckgabe.cOption. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStreichPreisTyp</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Interne ID für den Streichpreistyp. Mögliche Werte sind UvpProducer, EbayCrossPriceExistingEbayPrice und EbayCrossPriceExistingOtherPrice.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTakeBackId</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Currency</td>
+            <td>NVARCHAR(510)</td>
+            <td>No</td>
+            <td>Währung (2stelliger ISO)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVersandkostenTraeger</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Versandkosten für eine Rücksendung vom Käufer oder Verkäufer getragen werden. Entspricht ebay_xx_rueckgabe.cOption. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>DiscountProfileID</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Interne ID für Inland-Versandregel zum Sonderpreis. Impliziter Foreign Key auf ebay_shippingprofiles.DiscountProfileID.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>DiscountProfileIDInt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Interne ID für internationale Versandregel zum Sonderpreis. Impliziter Foreign Key auf ebay_shippingprofiles.iscountProfileID.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>DispatchTimeMax</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Bearbeitungszeit. Impliziter Foreign Key auf ebay_xx_bearbeitungszeiten.cDispatchTime.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dZuEbayGesendet</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Gibt an, wann ein Angebot im Status einzustellend zu eBay gesendet wurde und somit in den Status schwebend übergeht. Schwebende Angebote warten noch auf ihre Angebotsnummer und können daher nicht bearbeitet werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>EndTime</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Zeitpunkt, zu dem das Angebot automatisch beendet werden soll.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGewicht</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Artikelgewicht</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fStreichPreis</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>Yes</td>
+            <td>Streichpreis (alter höherer Preis, der durchgestrichen dargestellt wird)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>GalleryType</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Interne ID für die Darstellung des Hauptartikelbildes im produktiven eBay. Mögliche Werte sind Gallery, Plus und Featured. Achtung: diese Optionen können sehr teuer werden!</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>GalleryURL</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>URL des Galeriebildes</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>GetItFast</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob das Angebot Schnellversand unterstützt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>GiftIcon</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>GiftServices</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>HitCount</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an, wie oft das Angebot aufgerufen wurde.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>HitCounter</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Gibt die Art des Zählers der Aufrufe für das Angebot an. Möglich Werte sind NoHitCounter, BasicStyle, RetroStyle und HiddenStyle.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>htmlTemplate</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Gibt an, aus welcher Angebotsvorlage ein Angebot erstellt wurde. Impliziter Foreign Key auf ebay_item.kItem.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>IncludeeBayProductDetails</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ItemID</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Angebotsnummer. Eindeutige ID innerhalb vom produktiven eBay. Besteht aus 12 Ziffern. Leer für Angebotsvorlagen. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kArtikel</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Stammartikel, dem die Vorlage oder das Angebot zugeordnet ist. Impliziter Foreign Key auf tArtikel.kArtikel.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEbayuser</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>eBay-Konto der Vorlage odes des Angebots. Impliziter Foreign Key auf ebay_user.kEbayuser.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kEigenschaft</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt die Variation an, anhand deren verschiedene Artikelbilder angezeigt werden. Impliziter Foreign Key auf teigenschaft.kEigenschaft.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kItem</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>PK der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kKategorie</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Wawi-Kategorie des Vorlage oder des Angebots, in welcher normalerweise auch der Stammartikel liegt. Strenggenommen überflüssige Information, kann jedoch zur Vereinfachung und für die Performance nützlich sein. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kMessage</td>
+            <td>BIGINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung verfügbar. Wird im eBay-Abgleich verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kPlanung</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Veraltet, wird nicht mehr verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kPlanungsItem</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Veraltet, wird nicht mehr verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kTemplate</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Designvorlage. Impliziter Foreign Key auf ebay_vw_htmltemplate.kEbayHtmlTemplate.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>LinkedPayPalAccount</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ListingDuration</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Angebotsdauer (z.B. Days_3). Entspricht ebay_xx_laufzeiten.cDuration.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ListingEnhancement</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ListingType</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Angebotstyp (FixedPriceItem = Festpreis, Chinese = Auktion; veralteter, nicht mehr verwendeter Wert: Dutch (Bedeutung unbekannt))</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ListingURL</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>URL des Angebots im produktiven eBay</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Location</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Artikelstandort (Stadt)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>LotSize</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Anzahl pro Stück. Z.B. 6 für einen Sixpack Bier. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>MaxQuantity</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Max-Menge für den Bestandsabgleich. Rein Wawi-seitig relevant. Gibt an, bis zu welcher Angebotsmenge Bestand bei eBay aufgefüllt werden soll, sofern er in der Wawi verfügbar ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAutomatischEinstellen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Angebote automatisch aus Vorlagen erstellt werden, wenn ein Mindestbestand vorliegt und noch kein Angebot für diese Vorlage existiert.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEbayPlus</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die eBay-Plus-Option aktiviert ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nFehler</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob Fehler für das Angebot vorliegen. Ist als Spalte aber mehr oder weniger bedeutungslos und redundant.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLaufend</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Soll vermutlich die Anzahl laufender Angebote für eine Vorlage angeben. Wahrsch. veraltet und wird nicht mehr verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLeecher</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Hat ursprünglich angegeben, ob die Vorlage oder das Angebot durch den Angebotsimport erstellt wurden. Spielt jetzt nur noch (u.a.?) beim eBay-Bestandsabgleich eine (unintuitive) Rolle.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMinQuantity</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an, welche Angebotsmenge unterschritten werden muss, damit die Max-Menge greift (siehe ebay_item.MaxQuantity).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNurAnGewerbliche</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob sich das Angebot nur an gewerbliche Käufer richtet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>NowAndNew</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPickup</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPremium</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Premium-Option aktiviert ist. Achtung, diese Option kann sehr teuer werden!</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nProduktKennzeichnung</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Numerischer Wert für einen Flags-Enum für die Produktkennzeichnung. Ean = 1, HanHersteller = 2, Upc = 4, Isbn = 8.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nReturnPolicy</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Veraltet, wird nicht mehr verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSchwelleAutomatischEinstellen</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an, ab welchem Bestand automatisch ein einzustellendes Angebot aus der Vorlage erstellt wird (sofern die Option aktiviert ist).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSendVAT</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob die Umsatzsteuer beim eBay-Abgleich berücksichtigt wird.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUseHomeShippingCostTable</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob die Inlands-Versandkostentabelle verwendet werden soll. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUseInternationalShippingCostTable</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an, ob die internationale Versandkostentabelle verwendet werden soll. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVariationenAktiv</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob die Vorlage oder das Angebot mit Variationen arbeitet (abhängig vom verknüpften Stammartikel).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVKSonderregel</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob eine Inland-Versandregel zum Sonderpreis verwendet werden soll.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVKSonderregelInt</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob eine internationale Versandregel zum Sonderpreis verwendet werden soll.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PaymentMethods</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Komma-separierter String mit den internen IDs der zugelassenen Zahlungsmethoden. Siehe ebay_xx_zahlungsmethoden.PaymentOption.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PayPalEmailAddress</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Emailadresse für Paypal</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PhotoDisplay</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PictureURL</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PostalCode</td>
+            <td>NVARCHAR(100)</td>
+            <td>Yes</td>
+            <td>Artikelstandort (PLZ)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PrimaryCategoryId</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>1. eBay-Kategorie. Impliziter Foreign Key auf ebay_xx_categories.CategoryId (zusammen mit SiteID).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>PrivateListing</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Quantity</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Angebotsmenge</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>QuestionCount</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ReservePrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Mindestpreis. Nur für Auktionen relevant.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>RestrictedToBusiness</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ScheduleDate</td>
+            <td>NVARCHAR(20)</td>
+            <td>Yes</td>
+            <td>Datum für geplanten Angebotsstart (TT.MM.YYYY)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ScheduleServerSide</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>Gibt an, ob mit geplantem Angebotsstart gearbeitet wird. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ScheduleTime</td>
+            <td>NVARCHAR(10)</td>
+            <td>Yes</td>
+            <td>Uhrzeit für geplanten Angebotsstart (HH:MM)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SecondaryCategoryId</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>2. eBay-Kategorie. Impliziter Foreign Key auf ebay_xx_categories.CategoryId (zusammen mit SiteID).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Sent</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>Gibt an, ob das Angebot bereits zu eBay gesendet wurde.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ShippingTerms</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Veraltet, wird nicht mehr verwendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ShippingTermsInDescription</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ShippingType</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ShipToLocations</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Komma-separierter String mit den internen IDs sämtlicher Lieferländer für den internationalen Versand. Siehe ebay_xx_versandlaender.ShippingLocation.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Site</td>
+            <td>NVARCHAR(510)</td>
+            <td>No</td>
+            <td>Wird nicht mehr wirklich verwendet. Enthält z.B. Germany. Siehe stattdessen SiteID. </td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SiteID</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Marktplatz, auf dem das eBay-Angebot eingestellt wird (z.B. ebay.de). Impliziter Foreign Key auf ebay_xx_sites.SiteID.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SKU</td>
+            <td>NVARCHAR(200)</td>
+            <td>Yes</td>
+            <td>eBay-Bestandseinheit. Fällt üblicherweise mit der Artikelnummer des verknüpften Stammartikels zusammen. Eigentlich redundant und wird wahrsch. nur geschrieben und (fast) nie gelesen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SS_BidCount</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Anzahl Gebote auf eine Auktion. (SS = Seller State)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SS_BidderCount</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Anzahl Bieter auf eine Auktion. (SS = Seller State)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SS_CurrentPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Aktuell höchstes Gebot auf eine Auktion. (SS = Seller State)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SS_HighBidderUserId</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>eBay-Name des Bieters mit dem aktuell höchsten Gebot auf eine Auktion. (SS = Seller State)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>StartPrice</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Startpreis bei Auktionen bzw. Kaufpreis bei Festpreisangeboten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>StartTime</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Startzeitpunkt des Angebots</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Status</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt zusammen mit ebay_item.Type den Zustand der Vorlage oder des Angebots an. 0 = Vorlage, 79 = einzustellend, 1 = einzustellend + fehlerhaft, 78 = schwebend, 3 = laufend, 7 = laufend + fehlerhaft, 4 = erfolgreich beendet, 5 = erfolglos beendet, 55 = erfolglos beendet + versteckt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>StoreCategory2Id</td>
+            <td>BIGINT</td>
+            <td>Yes</td>
+            <td>2. eBay-Shop-Kategorie. Impliziter Foreign Key auf ebay_shop_category.CategoryID.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>StoreCategoryId</td>
+            <td>BIGINT</td>
+            <td>Yes</td>
+            <td>1. eBay-Shop-Kategorie. Impliziter Foreign Key auf ebay_shop_category.CategoryID.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>SubTitle</td>
+            <td>NVARCHAR(110)</td>
+            <td>Yes</td>
+            <td>Untertitel</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Templatename</td>
+            <td>NVARCHAR(2000)</td>
+            <td>Yes</td>
+            <td>Vorlagenname. Nur Wawi-intern relevant.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>ThirdPartyCheckout</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Title</td>
+            <td>NVARCHAR(160)</td>
+            <td>Yes</td>
+            <td>Angebotstitel</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Totalfees</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Angebotsgebühren</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>Type</td>
+            <td>CHAR(1)</td>
+            <td>Yes</td>
+            <td>Gibt zusammen mit ebay_item.Status den Zustand der Vorlage oder des Angebots an. V = Vorlage, G = globale Vorlage, L = Angebot (Listing)</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>UUID</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>VATPercent</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Steuersatz. Wird Wawi-seitig allerdings nie (außer zum Anzeigen) gelesen. Die Steuer-Berechnung erfolgt komplett Wawi-seitig weil eBay uns anscheinend manchmal falsche Werte sendet.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>WatchCount</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>vermutlich Anzahl Beobachter des Angebots</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

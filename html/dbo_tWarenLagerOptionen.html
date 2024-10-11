@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tWarenLagerOptionen Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tWarenLagerOptionen Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kKategorieNeuerArtikel</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLager</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerOptionen</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenlagerPlatzBoxen</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerPlatzEingang</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerPlatzEingangDefaultMobile</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenlagerPlatzInBearbeitung</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an, welcher der Standardplatz für Pickwagen ist. Dieser wird automatisch durch das WMS angelegt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenLagerPlatzRetoure</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAbgelaufenesMHDNichtEinbuchen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAllePackHinweiseAlsPopUp</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Alle Packhinweise als PopUp</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelAnmerkungenPackhinweis</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob beim Verpacken die Anmerkungen aus der Artikel angezeigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelAttributeBeachten</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob bei der Picklistenerstellung nur Boxen berücksichtigt werden, deren Attribute mit denen der Artikel übereinstimmen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelBezeichnungAusArtikel</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Artikelbezeichnung kommt aus tArtikel statt tbestellpos cString</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAutoAbmelden</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an ob nach wieviel Minuten sich das WMS automatisch ausloggen soll, bei untätigkeit. 0 = Option aus.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBesondereWEPlaetze</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenDirektTauschen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob bei der Rollenden Kommissionierung die Boxen direkt beim 'In die Box legen' getauscht werden können, indem eine andere Box angegeben wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenDruckAusAuftragsVorlage</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenFuellenBestaetigen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob beim MDE Dialog Boxen füllen die Box durch scan oder click bestätigt werden muss</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenKeinenRechnungOhneDruck</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keinen Rechnungsbeleg beim BoxenVerpacken erzeugen, solange keine Rechnung gedruckt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenKeineRechnungBeiNullEuro</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Bei 0 Euro Auftrag Rechnungen nicht erzeugen beim BoxenVerpacken</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenSplittAuftrag</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an ob beim BoxenVerpacken bestellungen gesplittet werden dürfen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nChargen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob im Lager mit Chargen-Artikeln gearbeitet wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCreateInventurMobile</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Inventuren können direkt über JTL-WMS Mobile App angelegt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCreateInventurMobile_Interval</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Nach wieviel Tagen/Monaten/Wochen die Plätze erneut gezählt werden sollen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCreateInventurMobile_NumberOfPlatzDefault</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Default Anzahl der Plätze die gezählt werden sollen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCreateInventurMobile_NumberOfPlatzManuel</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Anzahl der Plätze per Mobile App bestimmen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCreateInventurMobile_Period</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>In welchem Zeitraum die Plätze erneut gezählt werden sollen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nCreateInventurMobile_Platz</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Wie sollen in beim Inventur anlegen die Plätze ausgewählt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShipping</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Ist das EazyShippingmodul aktiv?</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShippingArtikelButtons</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an ob im Eazyshipping die Knöpfe zum erhöhen der Artikelmenge angezeigt werden sollen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShippingArtikelDetails</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShippingFreiposButtons</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Alle Positionen mit nicht WMS-Artikel, müßen per Knopf gezählt werden, bevor verpackt werden kann.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShippingKeinenRechnungOhneDruck</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keinen Rechnungsbeleg beim EazyShipping erzeugen, solange keine Rechnung gedruckt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShippingKeineRechnungBeiNullEuro</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Bei 0 Euro Auftrag Rechnungen nicht erzeugen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEazyShippingSplittAuftrag</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt an ob beim Eazyshipping bestellungen gesplittet werden dürfen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEinlagerwagenVerwenden</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nFirstMobileAppPicklistenVorlageVerwenden</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Es wird immer die erste Auftragsbezogene Picklistenvorlage verwendet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nFreierWeEKUnbekanntHandling</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt die verschienenen Vorgehensweisen an wie verfahren wird wenn der EK unbekannt ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nFreierWeLieferantenArtikelAutoZuordnung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Ordnet den Lieferanten ohne Nachfrage dem eingebuchten Artikel zu</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nGanzeBestellungVerpackenInEazyShip</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Option für Eazyshipping. Wenn Pickliste nur eine Bestellung hat, kann sie direkt übernommen werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nGanzeBestellungVerpackenNurPickInEazyShip</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Option für Eazyshipping. Wenn Pickliste nur eine Bestellung hat, kann sie direkt übernommen werden, nur wenn Pickliste komplett mit Mobils-App gepickt ist.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nIdentischeAuftraegeMitTeillieferung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Teillieferbare Auftraege werden  mit Identische Auftraegen verpackt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKartonagenabfrageVerpflichtend</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Schaltet Kartonagenabfragepflicht im Warenausgang WMS und Packtisch</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeineLiefNachfrage</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKommentarPflichtArtikelZustandAendern</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Kommentarpflicht Artikelzustand aendern</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKommentarPflichtInventur</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Kommentarpfliche für Inventur</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKommentarPflichtKorrekturbuchung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Bei einer Korrekturbuchung soll der Hinweis zwingend anzugeben sein.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKundeEigenesFeld</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Kundenkommentar aus einenen Feld. Wert entspricht kAttribut.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLagerKleinerNullImWESetzen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Sollen neue Artikel das Flag Ueberlieferung erlauben automatisch gesetzt bekommen, wenn sie zum ersten mal im WMS eingalgert werden und das Flag Lagerartikel erhalten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLagerplatzBestaetigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>In der Kommesionierung muss der Lagerplatz vor dem Picken bestätigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMassenauslieferung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Schaltet die Massenauslieferung im WMS frei</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMassenauslieferungMinGleicheAuftraege</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Voreinstellung fuer den Filter fuer die minimalen gleichen Auftraege in der Massenauslieferung.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMassenauslieferungPicklisteDrucken</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an ob bei anlage einer Massenauslieferungs Pickliste automatisch gedruckt werden soll</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMengeBestaetigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMHD</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an, ob im LAger mit MHD-Artikeln gearbeitet werden soll</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMHDChargeAnywhere</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Nicht sortenreine Einlagerung von Chargen und Mindesthaltbarkeitsdatum auf Lagerplaetzen erlauben</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMhdChargenOnDifferendPlatzen</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMixMhdChargen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobileInventurOhneVorladen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Nicht eindeutige Artikel für mobile Inventur nicht vorladen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobilerPacktisch</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Ist der MobilePacktisch aktiv?</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobilerPacktischGebindeScanForArtikel</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an ob Gebinde EAN/UPS als Bestaetigung fuer den Pick verwendet werden darf</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobilerPacktischKeinenRechnungOhneDruck</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keinen Rechnungsbeleg beim Mobilen Packtisch erzeugen, solange keine Rechnung gedruckt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobilerPacktischKeineRechnungBeiNullEuro</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Bei 0 Euro Auftrag Rechnungen nicht erzeugen, im Mobilen Packtisch</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobilerPacktischMengeBestaetigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Mobiler Packtisch Menge bestaetigen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNachschubNurBezahlteAuftraege</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Nur bezahlte Aufträge bei Nachschub berücksichtigen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNachschubOhneScan</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Im Nachschub können Artikel ohne Scan oder Abtippen der Artikelnummer bestätigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNumPad</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPackHinweisVorVerpacken</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPacktischMHDChargeNichtScannen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob beim Packtisch die MHD/Chargen Scannung unterdrückt werden soll</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPartialPickEnabled</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPickenOhneScan</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPickHinweisArtikelAnmerkung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Artikel-Anmerkung beim picken anzeigen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPickHinweisArtikelEigenesFeld</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Artikelkommentar aus eigenem Feld. Wert entspricht kAttribut.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPoolRoKo</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Mehrere Boxen in einem Pickvorgang gleichzeitig befüllen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nRetoureAufVorgabeplatz</td>
+            <td>BIT</td>
+            <td>Yes</td>
+            <td>Retouren werden direkt auf den Artikel Vorgabeplatz gebucht</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nRetourenPlatzManuellWaehlen</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nRollendeKommissionierung</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nScanInMehrereArtikel</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSelectPlatzByTouch</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTeillieferbarUmlagern</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Auch teillieferbare Aufträge vom Pickwagen auf Boxenplatz umlagern</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTeilmengen</td>
+            <td>BIT</td>
+            <td>No</td>
+            <td>Diese Option schaltet die Teilmengen fuer was entsprechende WMS-Warenlager.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTeilrechnungBoxen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Teilrechnungen pro Lieferschein Aktiv</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTeilrechnungEazyshipping</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Teilrechnungen pro Lieferschein Aktiv</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTeilrechnungMoPa</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Teilrechnungen pro Lieferschein Aktiv</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUeberlieferung</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUeberlieferungNachfragen</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nUseScannerImWE</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVerpackenAnmerkung</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Soll die Anmerkung des Auftrags beim Verpacken angezeigt werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVerpackenBestellhinweis</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Soll der BEstellhinweis des Auftrags beim Verpacken angezeigt werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVerpackenMehrMengeErlaubt</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandBoxenButtons</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob beim BoxenVerpacken die Knöpfe zum erhöhen der Artikelmenge angezeigt werden sollen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandBoxenFreiPosButtons</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob beim BoxenVerpacken die Freipositionen auch hochgezählt werden müßen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandboxenProzess</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandboxenProzessmitRoKo</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandBoxenScan</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Die Artikel müssen gescannt werden, analog zum eazyshipping</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVersandHinweisConfirmEnabled</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Hinweise beim picken als Popup anzeigen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWADirektAusWE</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWADirektAusWE1Artikel</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWADirektAusWEAuchLeereBoxenBelegen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWADirektAusWEAuchLeereBoxenBelegenFreiProzent</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWADirektAusWEAuchLeereBoxenBelegenZulauf</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWADirektWE1ArtikelMengenCheck</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Mengen größer als eins müssen bestätigt werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWAHintDisappearAfterXSeconds</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Hinweise Popup nach X sekunden ausblenden. X ist die zahl der Spalte. 0 ist deaktiv.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWareingangBestellungAnzeigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Offene Lieferantenbestellungen werden direkt im Wareneingang angezeigt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWareneingangOhneScan</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Wareneingang von Artikeln ohne Scan wird erlaubt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWAVerpackteArtikelNachUnten</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Eazyshipping/Packtisch/Boxenverpacken. Schiebt in der Ansicht gescannte Artikel nach unten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWAVersandartScan</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEAufVorgabeplatz</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt an ob die Artikel aus dem WE direkt auf Vorgabeplätze gebucht werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEDirektBuchenAktiv</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEFremdeWarenlagerAnzeigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Im WE werden auch Bestellungen von fremden Warenlägern angezeigt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEHinweisArtikelAnmerkung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Artikel-Anmerkung im Wareneingang anzeigen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEHinweisArtikelEigenesFeld</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Artikelkommentar aus eigenem Feld. Wert entspricht kAttribut.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEInLeereBoxenNurBeiVorkomm</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>WE in leere Boxen nur wenn die Lieferoption Vorkommisionieren aktiv ist</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEMengeInArtField</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWENeuenArtikelAnlegen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWEOffeneBestellungsmengenZeigen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWePlatzSortierung</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt die reinfolge an wie Lagerplaetze in den Wareneingangsviews sortiert werden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nWESortArtikelByEinbuchdatum</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Falls geschaltet, werden die Artikellisten im WE nach dErstellt sortiert</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

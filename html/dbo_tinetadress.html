@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tinetadress Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tinetadress Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAdressZusatz</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält eine zusätzliche Lieferadressenzeile (Bspw.: Apartment 2.5).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAnrede</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>Enthält die Anrede eines Kunden (Bspw.: Herr).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBundesland</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält das Bundesland der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFax</td>
+            <td>NVARCHAR(90)</td>
+            <td>Yes</td>
+            <td>Enthält die Faxnummer der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFirma</td>
+            <td>NVARCHAR(256)</td>
+            <td>Yes</td>
+            <td>Enthält den Firmenamen einer Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLand</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält das Lad der Lieferadersse</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMail</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält die Emailadresse der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cMobil</td>
+            <td>NVARCHAR(60)</td>
+            <td>Yes</td>
+            <td>Enthält die Mobilnummer der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cNachname</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Nachnamen der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPLZ</td>
+            <td>NVARCHAR(40)</td>
+            <td>Yes</td>
+            <td>Enthält die Postleitzahl der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStadt</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Ortsnamen der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cStrasse</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Straßennamen und Hausnummer der Lieferadresse,</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTel</td>
+            <td>NVARCHAR(90)</td>
+            <td>Yes</td>
+            <td>Enthält die Telefonummer der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cTitel</td>
+            <td>NVARCHAR(128)</td>
+            <td>Yes</td>
+            <td>Enthält den Lieferadressentitel (Bswp.: Prof. Dr.).</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVorname</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Enthält den Vornamen der Lieferadresse.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZusatz</td>
+            <td>NVARCHAR(120)</td>
+            <td>Yes</td>
+            <td>Enthält einen Lieferadressenzusatz</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kInetAdress</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kKunde</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tKunde</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kShop</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Verweis auf den Primärschlüssel der Tabelle dbo.tShop</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>

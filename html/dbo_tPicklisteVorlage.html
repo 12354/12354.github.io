@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.tPicklisteVorlage Details</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        .back-link { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>dbo.tPicklisteVorlage Details</h1>
+    <table>
+        <tr>
+            <th>Column Name</th>
+            <th>Type</th>
+            <th>Nullable</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Updated At</th>
+        </tr>
+        <tr>
+            <td>bRowversion</td>
+            <td>TIMESTAMP</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAuftragkennzeichnung</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Auftragskennzeichnung jetzt als Liste. Vorher das Feld nBestellungWMSFreigabe.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAuftragsFarben</td>
+            <td>NVARCHAR(8000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Auftragsfarben</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cAuftragsPrio</td>
+            <td>NVARCHAR(1024)</td>
+            <td>Yes</td>
+            <td>Beinhaltet die AuftragsPrios die diese Vorlage reservieren kann</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBenutzer</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Benutzer durch eine Liste mit kBenutzer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cBenutzerAuftrag</td>
+            <td>NVARCHAR(8000)</td>
+            <td>Yes</td>
+            <td>Filter fuer Benutzer des Auftrags</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cColor</td>
+            <td>NVARCHAR(64)</td>
+            <td>Yes</td>
+            <td>Farbe des Quickbuttons der Picklistenvorlage</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cFirmen</td>
+            <td>NVARCHAR(2000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Firmen durch eine Liste mit kFirma</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKommentar</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Kommentar zur Vorlage</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cKundengruppen</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Kundengruppen durch eine Liste mit kKundengruppe</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLagerbereiche</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Lagerbereiche durch eine Liste mit kWMSLagerbereichen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cLieferlaender</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Lieferlaender durch eine Liste mit kland</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cName</td>
+            <td>NVARCHAR(128)</td>
+            <td>Yes</td>
+            <td>Name der Picklistenvorlage</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPlattformen</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cPlatzTypen</td>
+            <td>NVARCHAR(2000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Platztypen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cRechnungslaender</td>
+            <td>NVARCHAR(8000)</td>
+            <td>Yes</td>
+            <td>Filter fuer Rechnungslaender</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cShops</td>
+            <td>NVARCHAR(510)</td>
+            <td>Yes</td>
+            <td>Einschränkung auf Shops durch eine Liste mit kShop</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVersandartNr</td>
+            <td>NVARCHAR(8000)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung verfügbar</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVersandklassen</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Versandklassen durch eine Liste mit kVersandklasse</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cVorlageSerialized</td>
+            <td>NVARCHAR(MAX)</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cWarengruppen</td>
+            <td>NVARCHAR(8000)</td>
+            <td>Yes</td>
+            <td>Einschränkung auf Warengruppen durch eine Liste mit kWarengruppe</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>cZahlungsarten</td>
+            <td>NVARCHAR(6000)</td>
+            <td>Yes</td>
+            <td>Einschraenkung auf Zahlungsarten durch eine Liste mit kZahlungsart</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dAngelegt</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Anlegedatum der Vorlage</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dBisDatum</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>dVonDatum</td>
+            <td>DATETIME</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGewichtBis</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fGewichtVon</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fPreisAuftragMax</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Einschraenkung, Auftrag darf maximal den Wert haben.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fPreisAuftragMin</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Einschraenkung, Auftrag muß mindesten den Wert haben.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>fTeillieferungenWert</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBenutzer</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf dem Primärschlüssel der Tabelle eazybusiness.dbo.tBenutzer</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kBestellNr</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf dem Primärschlüssel der Tabelle dbo.tbestellnr</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kPickliste</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf dem Primärschlüssel der Tabelle dbo.tPickliste</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kPicklistenVorlageUrsprung</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kPicklisteVorlage</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Primärschlüssel der Tabelle</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kPicklisteVorlageParent</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kRollendeKommissionierungPickwagen</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kVorlagenSet</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Das Vorlagenset für den Picklistendruck</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenlager</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Verweis auf dem Primärschlüssel der Tabelle dbo.tWarenlager</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>kWarenlagerUmlagerung</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Warenlagerfilter fuer Ziellager von Umlagerungen. 0 ist ohne Filter.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAdressenCheck</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Vergleicht Lieferadresse des Auftrags mit Rechnungsadresse. Identische und Unterschiedliche.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneFarben</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Picklistenfilter fuer Auftragsfarben</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneHersteller</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneLagerbereich</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Alle Artikel Ohne Lagerbereich reservieren</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneVersandart</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Auch alle Aufträge ohne Versandart betrachten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneWarengruppe</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Auch alle Artikel ohne Warengruppe betrachten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAlleOhneZahlungsart</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Auch alle Aufträge ohne Zahlungsart betrachten</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAngebrocheneBoxenImmerVervollstaendigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Falls geschaltet, werden Aufträge die bereits in einer Box liegen, unabhängig der auftragsfilter, reserviert</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahlArtikelAuftragMax</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahlArtikelAuftragMin</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahlBestellungen</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAnzahlBestellungenMin</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelBreiteBis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelBreiteVon</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelEinzelPreisMax</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelEinzelPreisMin</td>
+            <td>DECIMAL(25, 13)</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelHoeheBis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelHoeheVon</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelKuerzesteKanteMax</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelKuerzesteKanteMin</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLabelFilterModus</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLaengeBis</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLaengeVon</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLaengsteKanteMax</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nArtikelLaengsteKanteMin</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuftraegeChargenrein</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Auftraege werden chargenrein reserviert</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuftragsArt</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an welche art von Aufträgen Reserviert werden darf</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuftragsVolumenBis</td>
+            <td>BIGINT</td>
+            <td>No</td>
+            <td>Maximalmenge des Volumens des Auftrags</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAuftragsVolumenVon</td>
+            <td>BIGINT</td>
+            <td>No</td>
+            <td>Mindestmenge des Volumens des Auftrags</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAutomatischErstellen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nAutomatischErstellenMaxAnzahl</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Maximale Anzahl automatisch erstellter Picklisten nach dieser Vorlage</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBenutzerAuftragAusschliessen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Gibt ab ob der Filter fuer Benutzer des Auftrags, ausschliesst oder beinhaltet</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBestellungWMSFreigabe</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Schränkt auf Aufträge mit bestimmten Einstellungen ein</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenBis</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenNurGanzeStuecklistenAufPL</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Fuer BoxenPicklisten, es werden nur komplette Stuecklisten reserviert</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nBoxenVon</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nDirektVerpacken</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Falls = 1. Im eazyshipping wird ohne bestätigung durch knopf, direkt verpackt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEnthaeltArtArtikelZustand</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEnthaeltArtAusEigeneFelder</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEnthaeltArtAusWarengruppe</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Falls 1 = Auftrag muß nur min einen Artikel aus der Warengruppe haben. Falls 0 = Auftrag darf nur aus artikeln der Warengruppe bestehen.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEnthaeltAuftragAusEigeneFelder</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Eigene Felder für Auftrag. 1 = Min ein Feld vohanden, 2 = Kein Feld darf drin sein, 3 = Alle Felder muessen drin sein</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nEnthaeltHersteller</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nIstVorlage</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeineAuftraegeVollstaendigAufPickliste</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nKeineOderAlleInLagerbereich</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Endweder alle artikel den ausgewaehlten lagerbereichen oder keiner</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nLagerplatzNachMenge</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Es werden Lagerplaetze bevorzugt wo genug Menge an Artikeln zum reservieren liegt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMaxAnzahlArtikel</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Wieviele Artikel maximal auf eine Pickliste sollen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMHDHandling</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Sagt ob und wie abgelaufene MHDs reserviert werden drüfen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMHDMinHaltbarkeit</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMinAnzahlArtikel</td>
+            <td>INT</td>
+            <td>No</td>
+            <td>Minimal Anzahl reservierter Artikel ab welcher die Pickliste erstellt wird</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nMobileAppPicklistenVorlage</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Picklistenvorlage für reservieren ueber Sammelkomm. per Mobile App</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNachschubPickenLast</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Die Artikel werden zuletzt vom Plaetzen in Nachschubbereichen gepickt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNichtBezahltAutomatischAufVorkommi</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNichtBezahltVorkommissionieren</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nNurAusgewaehlteVersandartenAnzeigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an ob beim Verpacken nur ausgewaehlte Versandarten angezeigt werden.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nOhneVolumenAusschliessen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Auftraege mit Artikeln ohne Valumen werden ausgeschloßen</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPicklisteFuerBenutzerAusblenden</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPicklistenVorlageTyp</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Der Typ der Picklistenvorlage</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPlaetzeOhneReservierungZuerst</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nPlatzPrioBeruecksichtigen</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Warenlagerplatz Priorität wird bei der Sortierreihenfolge bevorzugt</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nQuickSlot</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Schnellzugriffstaste der Pickliste</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nReservierungsFehler</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSortenrein</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Bevorzugt Bestellungen mit gleichen Artikeln in einer Pickliste.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSortenreinMaxAnzahlArtikel</td>
+            <td>INT</td>
+            <td>Yes</td>
+            <td>Gibt die maximale Anzahl der Artikel an die Sortenrein reserviert werden können. Bei 0 wird versucht sortenrein zu reservieren ohne auf die Anzahl zu achten.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nSortierung</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStuecklisteNurWennAlleAufPlatz</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Gibt an das Stuecklisten nur reserviert werden, wenn alle seine Artikel auf dem Platz vorhanden sind</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nStuecklisteVonGleichenPlatz</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Stuecklisten bevorzugt vom gleichen Platz reservieren</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTeillieferungen</td>
+            <td>TINYINT</td>
+            <td>Yes</td>
+            <td>Keine Beschreibung vorhanden</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nTreeSort</td>
+            <td>SMALLINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVollstaendigTeilgeliefertFIFO</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Auftrag gemaess FIFO vollstaendig teilgeliefert</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVollstaengigeImmerVorkommissionieren</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+        <tr>
+            <td>nVorschauDeaktiv</td>
+            <td>TINYINT</td>
+            <td>No</td>
+            <td>Keine Beschreibung hinterlegt.</td>
+            <td></td>
+            <td></td>
+        </tr>
+    </table>
+    <div class="back-link"><a href="index.html">Back to Index</a></div>
+</body>
+</html>
