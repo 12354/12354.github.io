@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spCleanQueuesForShop</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spCleanQueuesForShop</h1>
+    <p><strong>Description:</strong> Die Procedure löscht alle Einträge aus den Queues für den Shopabgleich die nicht benötigt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spCleanQueuesForShop]
+
+@kShop AS INT
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+
+	DECLARE @kShopKategorie AS INT;
+	DECLARE @ShopEinstellung AS INT;
+
+	DECLARE @UnterstuetztArtikelbilder AS INT;
+	DECLARE @UnterstuetztKategoriebilder AS INT;
+	DECLARE @UnterstuetztHerstellerbilder AS INT;
+	DECLARE @UnterstuetztMerkmalbilder AS INT;
+	DECLARE @UnterstuetztMerkmalwertbilder AS INT;
+	DECLARE @UnterstuetztVariationsbilder AS INT;
+	DECLARE @UnterstuetztNormaleVariationen AS INT;
+	DECLARE @UnterstuetztVariationkombis AS INT;
+	--DECLARE @UnterstuetztStuecklisten AS INT;
+	DECLARE @UnterstuetztFreifelder AS INT;
+	DECLARE @BenoetigtWurzelkategorie AS INT;
+
+	SET @kShopKategorie = (SELECT dbo.tShop.kKategorie
+						   FROM dbo.tShop
+						   WHERE dbo.tShop.kShop = @kShop);
+
+	SET @ShopEinstellung = (SELECT TOP (1) dbo.tShopConnectorFunktion.nTyp 
+							FROM dbo.tShopConnectorFunktion 
+							WHERE dbo.tShopConnectorFunktion.kShop = @kShop);
+
+	SET @UnterstuetztArtikelbilder = 16;
+	SET @UnterstuetztKategoriebilder = 32;
+	SET @UnterstuetztHerstellerbilder = 64;
+	SET @UnterstuetztMerkmalbilder = 128;
+	SET @UnterstuetztMerkmalwertbilder = 256;
+	SET @UnterstuetztVariationsbilder = 1024;
+	SET @UnterstuetztNormaleVariationen = 2048;
+	SET @UnterstuetztVariationkombis = 4096;
+	--SET @UnterstuetztStuecklisten = 8192;
+	SET @UnterstuetztFreifelder = 32768;
+	SET @BenoetigtWurzelkategorie = 65536;
+
+	CREATE TABLE #DeletedArtikel (kArtikel INT NOT NULL);
+
+	DELETE dbo.tKategorieShop
+	FROM dbo.tKategorieShop
+	LEFT JOIN dbo.tkategorie ON dbo.tKategorieShop.kKategorie = dbo.tkategorie.kKategorie
+	WHERE dbo.tkategorie.kKategorie IS NULL;
+
+	DELETE dbo.tArtikelShop
+	FROM dbo.tArtikelShop
+	LEFT JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+	WHERE dbo.tArtikel.kArtikel IS NULL;
+
+	DELETE dbo.tHerstellerBildPlattform
+	FROM dbo.tHerstellerBildPlattform
+	LEFT JOIN dbo.tHersteller ON dbo.tHerstellerBildPlattform.kHersteller = dbo.tHersteller.kHersteller
+	WHERE dbo.tHersteller.kHersteller IS NULL;
+
+	DELETE dbo.tQueue
+	FROM dbo.tQueue
+	LEFT JOIN dbo.tHersteller ON dbo.tQueue.kWert = dbo.tHersteller.kHersteller
+	WHERE dbo.tHersteller.kHersteller IS NULL 
+		AND dbo.tQueue.kShop = @kShop
+		AND dbo.tQueue.nAction = 1
+		AND dbo.tQueue.cName = &#39;tHersteller&#39;;
+
+	DELETE dbo.tQueue
+	FROM dbo.tQueue
+	LEFT JOIN dbo.tMerkmal ON dbo.tQueue.kWert = dbo.tMerkmal.kMerkmal
+	WHERE dbo.tMerkmal.kMerkmal IS NULL 
+		AND dbo.tQueue.kShop = @kShop
+		AND dbo.tQueue.nAction = 1
+		AND dbo.tQueue.cName = &#39;tMerkmal&#39;;
+
+	DELETE FROM dbo.tinetkunde
+	WHERE tinetkunde.kInetKunde = 0
+		AND tinetkunde.kShop = @kShop;
+
+	DELETE FROM dbo.tInetKundeShop
+	WHERE (tInetKundeShop.kInetKunde = 0 
+			OR tInetKundeShop.kKunde = 0)
+		AND tInetKundeShop.kShop = @kShop;
+
+	UPDATE dbo.tArtikelShop
+	SET tArtikelShop.nAktion = IIF(tShopKonfiguration.nUploadArtikelPreise = 1, 2, 0) + IIF(tShopKonfiguration.nUploadArtikelBestand = 1, 4, 0)
+	FROM dbo.tArtikelShop
+	JOIN dbo.tShopKonfiguration ON tArtikelShop.kShop = tShopKonfiguration.kShop
+	WHERE tArtikelShop.cInet = &#39;Y&#39;
+		AND tArtikelShop.nAktion IN (1,6,7)
+		AND tArtikelShop.kShop = @kShop
+		AND (ISNULL(tShopKonfiguration.nUploadArtikelPreise, 0) = 1 OR ISNULL(tShopKonfiguration.nUploadArtikelBestand, 0) = 1)
+		AND ISNULL(tShopKonfiguration.nUploadArtikelKomplett, 0) = 0;
+
+	--
+	-- Keine Artikel hochladen, die keiner Kategorie zugewiesen sind (au&#223;er Varkombikinder)
+	--
+	UPDATE dbo.tArtikelShop
+		SET dbo.tArtikelShop.cInet = &#39;N&#39;,
+			dbo.tArtikelShop.nAktion = 0
+	FROM dbo.tArtikelShop
+	JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+	LEFT JOIN dbo.tkategorieartikel ON dbo.tArtikelShop.kArtikel = dbo.tkategorieartikel.kArtikel
+	WHERE dbo.tkategorieartikel.kKategorieArtikel IS NULL 
+		AND dbo.tArtikel.kEigenschaftKombi = 0 
+		AND dbo.tArtikelShop.kShop = @kShop;
+
+	--
+	-- Keine Varkombi-Kinder hochladen, deren Eltern nicht im Shop sind
+	--
+	UPDATE dbo.tArtikelShop
+		SET dbo.tArtikelShop.cInet = &#39;N&#39;,
+			dbo.tArtikelShop.nAktion = 0
+	FROM dbo.tArtikelShop
+	JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+						AND dbo.tArtikel.kEigenschaftKombi &gt; 0
+						AND dbo.tArtikel.kVaterArtikel &gt; 0
+	LEFT JOIN dbo.tArtikelShop AS Vater ON dbo.tArtikel.kVaterArtikel = Vater.kArtikel
+	WHERE Vater.kArtikel IS NULL;
+
+	UPDATE tArtikelShop
+		SET tArtikelShop.nAktion = tArtikelShop.nAktion - 4
+	FROM dbo.tArtikelShop
+	JOIN dbo.tArtikel ON tArtikelShop.kArtikel = tArtikel.kArtikel
+	WHERE (tArtikelShop.nAktion &amp; 4) &gt; 0
+		AND tArtikel.cLagerAktiv &lt;&gt; &#39;Y&#39;	
+
+	--
+	-- Keine Bilder zu Kategorien/Artikeln hochladen, deren Besitzer gar nicht im Shop sind
+	--
+	UPDATE dbo.tKategoriebildPlattform
+		SET dbo.tKategoriebildPlattform.nInet = 0
+	FROM dbo.tKategoriebildPlattform
+	LEFT JOIN dbo.tKategorieShop ON dbo.tKategoriebildPlattform.kKategorie = dbo.tKategorieShop.kKategorie
+								AND dbo.tKategoriebildPlattform.kShop = dbo.tKategorieShop.kShop
+	WHERE dbo.tKategorieShop.kKategorie IS NULL AND dbo.tKategoriebildPlattform.kShop = @kShop;
+
+	IF(@kShopKategorie &gt; 0)
+	BEGIN
+		--
+		-- Wenn der Shop die Wurzelkategorie der Wawi nicht ben&#246;tigt, Upload auf false setzen
+		--
+		IF(@ShopEinstellung &amp; @BenoetigtWurzelkategorie = 0)
+		BEGIN
+			UPDATE dbo.tKategorieShop
+				SET dbo.tKategorieShop.cInet = &#39;N&#39;
+			FROM dbo.tKategorieShop
+			WHERE dbo.tKategorieShop.kKategorie = @kShopKategorie
+				AND dbo.tKategorieShop.kShop = @kShop;
+		END
+		ELSE
+		BEGIN
+			--
+			-- Wenn der Shop die Wurzelkategorie der Wawi ben&#246;tigt, Kategorie in tKategorieShop mit aufnehmen
+			--
+			IF(NOT EXISTS(SELECT * 
+							FROM dbo.tKategorieShop 
+							WHERE dbo.tKategorieShop.kKategorie = @kShopKategorie 
+								AND dbo.tKategorieShop.kShop = @kShop))
+			BEGIN
+				INSERT INTO dbo.tKategorieShop(kKategorie, kShop, cInet)
+				VALUES(@kShopKategorie, @kShop, &#39;Y&#39;);
+			END;
+		END;
+
+		UPDATE dbo.tKategorieShop
+			SET dbo.tKategorieShop.cInet = &#39;N&#39;
+		FROM dbo.tKategorieShop
+		LEFT JOIN dbo.ifKategoriebaum(@kShopKategorie) AS Baum ON dbo.tKategorieShop.kKategorie = Baum.kKategorie
+		WHERE Baum.kKategorie IS NULL
+			AND dbo.tKategorieShop.kShop = @kShop;
+
+		--
+		-- Keine Artikel hochladen, die sich nicht im Baum der Shopkategorie befinden
+		--
+		UPDATE dbo.tArtikelShop
+			SET dbo.tArtikelShop.cInet = &#39;N&#39;,
+				dbo.tArtikelShop.nAktion = 0
+		FROM dbo.tArtikelShop
+		LEFT JOIN
+		(
+			SELECT dbo.tArtikelShop.kArtikel, dbo.tArtikelShop.kShop
+			FROM dbo.tArtikelShop
+			JOIN dbo.tkategorieartikel ON dbo.tArtikelShop.kArtikel = dbo.tkategorieartikel.kArtikel
+			JOIN dbo.ifKategoriebaum(@kShopKategorie) AS Kategoriebaum ON dbo.tkategorieartikel.kKategorie = Kategoriebaum.kKategorie
+			GROUP BY dbo.tArtikelShop.kArtikel, dbo.tArtikelShop.kShop
+		) AS Baum ON dbo.tArtikelShop.kArtikel = Baum.kArtikel
+				AND dbo.tArtikelShop.kShop = Baum.kShop
+		JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+						AND dbo.tArtikel.kEigenschaftKombi = 0
+		WHERE Baum.kArtikel IS NULL
+			AND dbo.tArtikelShop.kShop = @kShop;
+
+		--
+		-- Keine Artikel hochladen, die sich nicht im Baum der Shopkategorie befinden (Varkombi-Kinder)
+		--
+		UPDATE dbo.tArtikelShop
+			SET dbo.tArtikelShop.cInet = &#39;N&#39;,
+				dbo.tArtikelShop.nAktion = 0
+		FROM dbo.tArtikelShop
+		JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+						AND dbo.tArtikel.kVaterArtikel &gt; 0
+		LEFT JOIN
+		(
+			SELECT dbo.tArtikelShop.kArtikel AS kVater, dbo.tArtikelShop.kShop
+			FROM dbo.tArtikelShop
+			JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+							AND dbo.tArtikel.nIstVater = 1
+			JOIN dbo.tkategorieartikel ON dbo.tArtikelShop.kArtikel = dbo.tkategorieartikel.kArtikel
+			JOIN dbo.ifKategoriebaum(@kShopKategorie) AS Kategoriebaum ON dbo.tkategorieartikel.kKategorie = Kategoriebaum.kKategorie
+			GROUP BY dbo.tArtikelShop.kArtikel, dbo.tArtikelShop.kShop
+		) AS VaeterInBaum ON VaeterInBaum.kVater = dbo.tArtikel.kVaterArtikel
+		WHERE VaeterInBaum.kVater IS NULL
+			AND dbo.tArtikelShop.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztArtikelbilder = 0)
+	BEGIN
+		UPDATE dbo.tArtikelbildPlattform
+		SET dbo.tArtikelbildPlattform.nInet = 0
+		WHERE dbo.tArtikelbildPlattform.kShop = @kShop
+			AND dbo.tArtikelbildPlattform.nInet = 1;
+
+		DELETE FROM dbo.tQueue
+		WHERE LOWER(dbo.tQueue.cName) = &#39;tartikelbildplattform&#39;
+				AND dbo.tQueue.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztKategoriebilder = 0)
+	BEGIN
+		UPDATE dbo.tKategoriebildPlattform
+		SET dbo.tKategoriebildPlattform.nInet = 0
+		WHERE dbo.tKategoriebildPlattform.kShop = @kShop
+			AND dbo.tKategoriebildPlattform.nInet = 1;
+
+		DELETE FROM dbo.tQueue
+		WHERE LOWER(dbo.tQueue.cName) = &#39;tkategoriebildplattform&#39;
+				AND dbo.tQueue.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztHerstellerbilder = 0)
+	BEGIN
+		UPDATE dbo.tHerstellerBildPlattform
+		SET dbo.tHerstellerBildPlattform.nInet = 0
+		WHERE dbo.tHerstellerBildPlattform.kShop = @kShop
+			AND dbo.tHerstellerBildPlattform.nInet = 1;
+
+		DELETE FROM dbo.tQueue
+		WHERE LOWER(dbo.tQueue.cName) = &#39;therstellerbildplattform&#39;
+				AND dbo.tQueue.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztMerkmalbilder = 0)
+	BEGIN
+		UPDATE dbo.tMerkmalBildPlattform
+		SET dbo.tMerkmalBildPlattform.nInet = 0
+		WHERE dbo.tMerkmalBildPlattform.kShop = @kShop
+			AND dbo.tMerkmalBildPlattform.nInet = 1;
+
+		DELETE FROM dbo.tQueue
+		WHERE LOWER(dbo.tQueue.cName) = &#39;tmerkmalbildplattform&#39;
+				AND dbo.tQueue.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztMerkmalwertbilder = 0)
+	BEGIN
+		UPDATE dbo.tMerkmalwertBildPlattform
+		SET dbo.tMerkmalwertBildPlattform.nInet = 0
+		WHERE dbo.tMerkmalwertBildPlattform.kShop = @kShop
+			AND dbo.tMerkmalwertBildPlattform.nInet = 1;
+
+		DELETE FROM dbo.tQueue
+		WHERE LOWER(dbo.tQueue.cName) = &#39;tmerkmalwertbildplattform&#39;
+				AND dbo.tQueue.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztVariationsbilder = 0)
+	BEGIN
+		UPDATE dbo.tEigenschaftWertPict
+		SET dbo.tEigenschaftWertPict.nInet = 0
+		WHERE dbo.tEigenschaftWertPict.kShop = @kShop
+			AND dbo.tEigenschaftWertPict.nInet = 1;
+
+		DELETE FROM dbo.tQueue
+		WHERE LOWER(dbo.tQueue.cName) = &#39;teigenschaftwertpict&#39;
+				AND dbo.tQueue.kShop = @kShop;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztNormaleVariationen = 0)
+	BEGIN
+		DELETE dbo.tArtikelShop
+		OUTPUT DELETED.kArtikel INTO #DeletedArtikel
+		FROM dbo.tArtikelShop
+		JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+							AND dbo.tArtikel.nIstVater = 0
+							AND dbo.tArtikelShop.kShop = @kShop
+		JOIN dbo.teigenschaft ON dbo.tArtikel.kArtikel = dbo.teigenschaft.kArtikel;
+	END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztVariationkombis = 0)
+	BEGIN
+		DELETE dbo.tArtikelShop
+		OUTPUT DELETED.kArtikel INTO #DeletedArtikel
+		FROM dbo.tArtikelShop
+		JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+						AND (dbo.tArtikel.kEigenschaftKombi + dbo.tArtikel.nIstVater) &gt; 0
+						AND dbo.tArtikelShop.kShop = @kShop;
+
+	END;
+
+	--IF(@ShopEinstellung &amp; @UnterstuetztStuecklisten = 0)
+	--BEGIN
+	--	UPDATE dbo.tArtikelbildPlattform
+	--		SET dbo.tArtikelbildPlattform.nInet = 0
+	--	FROM dbo.tArtikelbildPlattform
+	--	JOIN dbo.tArtikelShop ON dbo.tArtikelbildPlattform.kArtikel = dbo.tArtikelShop.kArtikel
+	--	JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+	--					AND dbo.tArtikel.kStueckliste &gt; 0
+	--					AND dbo.tArtikelShop.kShop = @kShop
+	--					AND dbo.tArtikelbildPlattform.nInet = 1
+	--					AND dbo.tArtikelbildPlattform.kShop = @kShop;
+	--
+	--	UPDATE dbo.tArtikelShop
+	--		SET dbo.tArtikelShop.cInet = &#39;N&#39;,
+	--			dbo.tArtikelShop.nAktion = 0
+	--	FROM dbo.tArtikelShop
+	--	JOIN dbo.tArtikel ON dbo.tArtikelShop.kArtikel = dbo.tArtikel.kArtikel
+	--					AND dbo.tArtikel.kStueckliste &gt; 0
+	--					AND dbo.tArtikelShop.kShop = @kShop;
+	--END;
+
+	IF(@ShopEinstellung &amp; @UnterstuetztFreifelder = 0)
+	BEGIN
+		DELETE dbo.tArtikelShop
+		OUTPUT DELETED.kArtikel INTO #DeletedArtikel
+		FROM dbo.tArtikelShop
+		JOIN dbo.teigenschaft ON dbo.tArtikelShop.kArtikel = dbo.teigenschaft.kArtikel
+		LEFT JOIN dbo.teigenschaft AS andereEigenschaften ON dbo.tArtikelShop.kArtikel = andereEigenschaften.kArtikel
+			AND andereEigenschaften.cTyp != &#39;FREIFELD&#39; 
+			AND andereEigenschaften.cTyp != &#39;PFLICHT-FREIFELD&#39;
+		WHERE (dbo.teigenschaft.cTyp = &#39;FREIFELD&#39; OR dbo.teigenschaft.cTyp = &#39;PFLICHT-FREIFELD&#39;)
+			AND andereEigenschaften.kEigenschaft IS NULL
+			AND dbo.tArtikelShop.kShop = @kShop;
+	END;
+
+	UPDATE dbo.tArtikelbildPlattform
+		SET dbo.tArtikelbildPlattform.nInet = 0
+	FROM dbo.tArtikelbildPlattform
+	LEFT JOIN dbo.tArtikelShop ON dbo.tArtikelbildPlattform.kArtikel = dbo.tArtikelShop.kArtikel
+							AND dbo.tArtikelbildPlattform.kShop = dbo.tArtikelShop.kShop
+	WHERE dbo.tArtikelShop.kArtikel IS NULL AND dbo.tArtikelbildPlattform.kShop = @kShop;
+
+	DELETE FROM dbo.tArtikelbildPlattform
+	WHERE dbo.tArtikelbildPlattform.kShop = @kShop
+		AND dbo.tArtikelbildPlattform.kArtikel IN
+	(
+		SELECT #DeletedArtikel.kArtikel
+		FROM #DeletedArtikel
+	);
+
+	DELETE dbo.tQueue
+	FROM dbo.tQueue
+	JOIN #DeletedArtikel ON dbo.tQueue.kWert = #DeletedArtikel.kArtikel
+	WHERE dbo.tQueue.kShop = @kShop
+		AND dbo.tQueue.cName = &#39;tArtikel&#39;;
+
+	DELETE dbo.tQueue
+	FROM dbo.tQueue
+	JOIN #DeletedArtikel ON dbo.tQueue.kOption1 = #DeletedArtikel.kArtikel
+	WHERE dbo.tQueue.kShop = @kShop
+		AND dbo.tQueue.cName = &#39;tArtikelbildPlattform&#39;;
+
+	DROP TABLE #DeletedArtikel;
+
+	DELETE dbo.tQueue
+	FROM dbo.tQueue
+	LEFT JOIN
+	(
+		SELECT kShop, kPlattform, cName, kWert, MAX(nAction) AS nAction
+		FROM dbo.tQueue
+		WHERE dbo.tQueue.cName IN (&#39;tMerkmal&#39;, &#39;tHersteller&#39;)
+		GROUP BY kShop, kPlattform, cName, kWert
+	) AS maxAction ON dbo.tQueue.kShop = maxAction.kShop
+		AND dbo.tQueue.kPlattform = maxAction.kPlattform
+		AND dbo.tQueue.cName = maxAction.cName
+		AND dbo.tQueue.kWert = maxAction.kWert
+		AND dbo.tQueue.nAction = maxAction.nAction
+	WHERE maxAction.kWert IS NULL
+		AND dbo.tQueue.cName IN (&#39;tMerkmal&#39;, &#39;tHersteller&#39;)
+	
+
+END</code></pre>
+</body>
+</html>

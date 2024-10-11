@@ -1,0 +1,1864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklisteErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklisteErstellen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklisteErstellen] 
+	@kWarenlager INT, 
+	@kPicklisteVorlage INT, 
+	@kBenutzer INT, 
+	@kSessionID INT, 
+	@nDebug INT, 
+	@kRollendeKommissionierungWagen INT
+
+AS 
+BEGIN	
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;  
+	--Returnwerte: 
+	--positive Zahl X: Pickliste mit der Nummer X wurde erfolgreich angelegt 
+	--0: Es konnte nichts reserviert werden, entweder weil kein BEstand da ist oder weil keine Auftr&#228;ge reserviert werden sollen 
+	--(-999999999): Es trat eine Exception auf und es war zu diesem Zeitpunkt noch nichts reserviert 
+	--negative Zahl X: Es trat eine Exception auf, zu dem Zeitpunkt waren jedoch schon Positionen reserviert. Diese sind in der Pickliste X enthalten 
+
+	--
+	-- DECLARE
+	--
+	DECLARE @cSQLInsert NVARCHAR(MAX), @cSQL NVARCHAR(MAX), @cSQLSelect NVARCHAR(MAX), @cSQLFROM NVARCHAR(MAX), @cSQLWHERE NVARCHAR(MAX), @cSQLORDERBY NVARCHAR(MAX), @cSQLGROUP NVARCHAR(MAX), @cSQLHAVING NVARCHAR(MAX);
+	DECLARE @nAnzArtMax INT, @nAnzArtMin INT, @nAnzAuftraege INT, @kBestellNr INT, @nSortierung INT, @nBoxVon INT, @nBoxBis INT, @nIstNeueLHM INT , @kLHMStatus INT;
+	DECLARE @kBestellung INT, @nTeilLiefErlaubt INT, @kVersandBox INT, @nAnzReservierterAuftraege INT, @kPickliste INT, @nAnzahlPositionen INT , @nPicklistenVorlageTyp INT;
+	DECLARE @cVersandArten NVARCHAR(4000), @cWarengruppen NVARCHAR(4000), @cShops NVARCHAR(255), @cPlattformen NVARCHAR(255), @cBoxId NVARCHAR(30);
+    DECLARE @fTeilliefPreis DECIMAL(25,13), @nGewMin DECIMAL(25,13), @nGewMax DECIMAL(25,13), @fMengeErfolgreichReserviert DECIMAL(25,13), @fMengeErfolgreichReserviertGesamt DECIMAL(25,13);
+    DECLARE @cBestellung NVARCHAR(255), @cYes NVARCHAR(1), @nNichtBezahltVorkommissionieren INT, @cISO NVARCHAR(3000), @cRechnungslaender NVARCHAR(4000);
+	DECLARE @nIstVorlage INT, @nTeillieferungErlaubt INT, @nVorkommissionieren INT, @nTeillieferungSpeicher INT, @nBestellungWMSFreigabe INT, @nMaxAnzahlArtikel INT, @nArtikelAttributeBeachten TINYINT;
+	
+	-- FehlerCodes f&#252;r Reservierungs&#252;bersicht
+	DECLARE @DBError_000001001 INT = 100001001; --&#39;Auftrag ist bereits auf einer offenen Pickliste.&#39;
+	DECLARE @DBError_000001002 INT = 100001002; --&#39;Hinweise zum Auftrag&#39;
+	DECLARE @DBError_000001003 INT = 100001003; --&#39;Auftrag ist nicht lieferbar. Alle Artikel ohne ausreichenden verf&#252;gbaren Bestand.&#39;
+	DECLARE @DBError_000001004 INT = 100001004; --&#39;Auftrag ist nur teilweise lieferbar. Nicht alle Artikel verf&#252;gen &#252;ber gen&#252;gend Bestand.&#39;
+	DECLARE @DBError_000001005 INT = 100001005; --&#39;Artikel haben gen&#252;gend Bestand, k&#246;nnen aber nicht reserviert werden. M&#246;gliche Gr&#252;nde:  Einstellungen in der Picklistenvorlage oder im Auftrag.&#39;
+	DECLARE @DBError_000001006 INT = 100001006; --&#39;Kunde ist gesperrt.&#39;
+	DECLARE @DBError_000001007 INT = 100001007; --&#39;Auftrag wird zur&#252;ckgehalten.&#39;
+	DECLARE @DBError_000001008 INT = 100001008; --&#39;Auftrag ist f&#252;r die Auslieferung &#252;ber JTL-WMS gesperrt.&#39;
+	DECLARE @DBError_000001009 INT = 100001009; --&#39;Auftrag ist nicht bezahlt.&#39;
+	DECLARE @DBError_000001010 INT = 100001010; -- Auftrag ist bereits auf einer offenen Pickliste.
+	DECLARE @DBError_000001011 INT = 100001011; --&#39;Anzahl der Rechnungskorrekturen zu diesem Auftrag: {0} . Bitte beachten Sie, dass Artikel zu denen eine Rechnungskorrektur erstellt wurde, nicht reserviert werden k&#246;nnen. &#39;
+	DECLARE @DBError_000001012 INT = 100001012; --&#39;FIFO ist aktiv. Auftrag ist nicht lieferbar. Alle Artikel ohne ausreichenden verf&#252;gbaren Bestand.&#39; 
+	DECLARE @DBError_000001013 INT = 100001013; --&#39;FIFO ist aktiv. Auftrag ist nur teilweise lieferbar. Nicht alle Artikel verf&#252;gen &#252;ber ausreichenden verf&#252;gbaren Bestand.&#39;  
+	DECLARE @DBError_000001014 INT = 100001014; --&#39;&#39;    &lt;- leerzeile
+	DECLARE @DBError_000001015 INT = 100001015; -- Artikel im Auftrag
+	DECLARE @DBError_000001016 INT = 100001016; -- &#39;Artikel: {0} &gt;  Offene Menge im Auftrag: {1}           |      Reservierbare Menge im Lager: {2}
+	DECLARE @DBError_000001017 INT = 100001017; -- &#39;Artikel {0} arbeitet mit Lagerbestand, hat jedoch Variationen. Artikel mit Variationen k&#246;nnen durch JTL-WMS nicht reserviert werden.  &#39; 
+	DECLARE @DBError_000001018 INT = 100001018; -- &#39;Umlagerung ist zurueckgestellt.&#39;
+	DECLARE @DBError_000001019 INT = 100001019; -- &#39;Auftrag ist bereits in einer Versandbox, die von der Picklistenvorlage nicht angefahren werden kann.&#39;
+	DECLARE @DBError_000001020 INT = 100001020; -- Auftrag hat ein Auslieferungsdatum das in der Zukunft liegt
+	DECLARE @DBError_000001021 INT = 100001021; -- Auftrag ist im Status Pending und darf nicht ausgeliefert werden
+    DECLARE @DBError_000001022 INT = 100001022; -- Auftrag hat einen aktiven Fehlerstatus und darf nicht ausgeliefert werden
+	DECLARE @DBError_000001023 INT = 100001023; -- Fehlerstatus: Invalide St&#252;cklisten
+	DECLARE @DBError_000001024 INT = 100001024; -- Fehlerstatus: Invalide Konfigurationen
+	DECLARE @DBError_000001025 INT = 100001025; -- Fehlerstatus: Auftrag ohne Positionen
+	DECLARE @DBError_000001026 INT = 100001026; -- Fehlerstatus: Auftrag mit Artikelpositionen dessen Artikel es nicht mehr gibt
+	DECLARE @DBError_000001027 INT = 100001027; -- Fehlerstatus: Auftragsdaten aktualisieren
+	DECLARE @DBError_000001028 INT = 100001028; -- Fehlerstatus: Unbekannt
+
+	    
+	--Der folgende Parameter gibt an, ob es sich um eine RollendeKommissionierung handelt und falls ja (&gt; 0) um welchen kpickwagen
+	--Der Pickwagen ist ein kwarenlagerplatz auf dem sich mehrere klhm befinden. Wenn sich X leere LHM auf dem Wagen befinden, wird versucht X bestellungen zu reservieren und jeweils einer BEstellung einer der lhms auf dem pickwagen zuzuweisen
+	DECLARE @kRollendeKommissionierungPickwagen INT, @kPicklisteVorlageAktuell INT, @kReineRollendeKommissionierung INT;
+	DECLARE @fPreisAuftragMax DECIMAL(25,13);
+	DECLARE @fPreisAuftragMin DECIMAL(25,13);
+	DECLARE @cAuftragkennzeichnung NVARCHAR(MAX);
+	DECLARE @cFirmen NVARCHAR(MAX);
+	DECLARE @cKundengruppen NVARCHAR(MAX);
+	DECLARE @cVersandklassen NVARCHAR(MAX);
+	DECLARE @cZahlungsarten NVARCHAR(MAX);
+	DECLARE @nEnthaeltArtAusWarengruppe TINYINT;
+	DECLARE @nAlleOhneWarengruppe TINYINT;
+	DECLARE @nAlleOhneVersandart TINYINT;
+	DECLARE @nAlleOhneZahlungsart TINYINT;
+	DECLARE @cBenutzer NVARCHAR(MAX);
+	DECLARE @cBenutzerAusAuftrag NVARCHAR(MAX);
+	DECLARE @nBenutzerAuftragAusschliessen INT;
+	DECLARE @kBestellungsBox INT;
+	DECLARE @tempAktivArtikel TABLE (kArtikel INT);
+	DECLARE @nLookForBestellung INT;
+	DECLARE @nSortenrein TINYINT;
+	DECLARE @cLHMIdForDebug NVARCHAR(255);
+	DECLARE @nArtikelBreiteVon INT;
+	DECLARE @nArtikelBreiteBis INT;
+	DECLARE @nArtikelHoeheVon INT;
+	DECLARE @nArtikelHoeheBis INT;
+	DECLARE @nArtikelLaengeVon INT;
+	DECLARE @nArtikelLaengeBis INT;
+	DECLARE @kSessionIDPickliste INT;
+	DECLARE @nAuftragsVolumenVon BIGINT;
+	DECLARE @nAuftragsVolumenBis BIGINT;
+	DECLARE @nOhneVolumenAusschliessen INT;
+	DECLARE @VersandBoxenProzessMitRoko INT = 0;
+	DECLARE @FifoAktiv TINYINT = 0;
+	DECLARE @kPicklistenVorlageUrsprung INT;
+	DECLARE @IstEigeneFelderArtikelFilter INT = 0;
+	DECLARE @IstEigeneFelderAuftragFilter INT = 0;
+	DECLARE @nEnthaeltArtAusEigeneFelder INT = 0;
+	DECLARE @nEnthaeltAuftragAusEigeneFelder INT = 0;
+	DECLARE @nEnthaeltArtArtikelZustand TINYINT = 0
+	DECLARE @IstArtikelZustandFilter TINYINT = 0;
+	DECLARE @IstArtikelLabelFilter TINYINT = 0;
+	DECLARE @cSQLWHERE_AnzahlGew NVARCHAR(1024) = &#39;&#39;;
+	DECLARE @cAuftragsPrio NVARCHAR(512) = &#39;&#39;;
+	DECLARE @BestellungZuReservieren TYPE_spBestellungReservieren_BestellungZuReservieren;
+	DECLARE @nAngebrocheneBoxenImmerVervollstaendigen TINYINT = 0;
+	DECLARE @NewFifoReservieren TINYINT = 0;
+	DECLARE @IstArtikelHerstellerFilter TINYINT = 0;
+    DECLARE @nAlleOhneHersteller TINYINT;
+	DECLARE @nEnthaeltHersteller TINYINT;
+	DECLARE @cFarben NVARCHAR(4000);
+	DECLARE @nAlleOhneFarben TINYINT;
+	DECLARE @nAdressenCheck TINYINT;
+	DECLARE @nTeilmengen BIT = 0;
+	DECLARE @nWMSLogAktiv BIT = 0;
+	DECLARE @nArtikelKuerzesteKanteMax INT;
+	DECLARE @nArtikelKuerzesteKanteMin INT;
+	DECLARE @nArtikelLaengsteKanteMax INT;
+	DECLARE @nArtikelLaengsteKanteMin INT;
+	DECLARE @IstStartLagerFilter INT = 0;
+	DECLARE @IstZielLagerFilter INT = 0;
+	DECLARE @nVollstaengigeImmerVorkommissionieren TINYINT;
+	DECLARE @nArtikelLabelFilterModus TINYINT;
+	DECLARE @IstBoxenFilter TINYINT;
+	DECLARE @IstVorlageVorgangsstatusFilter TINYINT = 0;
+	DECLARE @nArtikelEinzelPreisMin DECIMAL(25,13);
+	DECLARE @nArtikelEinzelPreisMax DECIMAL(25,13);
+	DECLARE @kPicklisteVorlageParent INT;
+	DECLARE @kPicklisteMulti INT = 0;
+	DECLARE @kSessionIDPicklisteMulti INT = 0;
+	DECLARE @nIstWMSPickliste TINYINT;
+					 
+	BEGIN TRY 
+
+		SET @nAnzReservierterAuftraege = 0;
+		SET @kReineRollendeKommissionierung = 0;
+		SET @fMengeErfolgreichReserviertGesamt = 0;
+
+		IF(EXISTS (SELECT * FROM WMS.tWMSErrorLogController WHERE nProzess = 2 AND (cQuelle = &#39;spPicklisteErstellen&#39; OR ISNULL(tWMSErrorLogController.cQuelle,&#39;&#39;) = &#39;&#39;) AND nAktiv = 1 AND getdate() BETWEEN dStartZeit AND dEndZeit AND kWarenlager = @kWarenlager ))
+		BEGIN
+			SET @nWMSLogAktiv = 1;
+
+			INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+				    VALUES  (&#39;spPicklisteErstellen_START&#39; ,2 ,&#39;spPicklisteErstellen&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,null ,@kPicklisteVorlage ,null)
+
+		END;
+
+		IF (object_id(&#39;tempdb..#AttributString&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #AttributString
+		END;
+
+		CREATE TABLE #AttributString (cAttribut NVARCHAR(255));
+
+
+		
+		IF (object_id(&#39;tempdb..#tempBestellungArtikel&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #tempBestellungArtikel
+		END;
+
+		CREATE TABLE #tempBestellungArtikel (kBestellung INT,kArtikel INT,nPrio INT)
+		CREATE CLUSTERED INDEX IDX_tempBestellungArtikel_kArtikel ON #tempBestellungArtikel(kArtikel)
+
+
+		
+		IF (object_id(&#39;tempdb..#vBestellPosLieferInfoProLagerTemp&#39;) IS NOT NULL)
+	     BEGIN
+	     	DROP TABLE #vBestellPosLieferInfoProLagerTemp
+	     END;
+	     
+	     CREATE TABLE #vBestellPosLieferInfoProLagerTemp (kBestellpos INT, fAnzahlOffen DECIMAL(25,13) PRIMARY KEY (kBestellpos));
+
+
+
+		IF (object_id(&#39;tempdb..#vBestellungLieferInfoProLagerTemp&#39;) IS NOT NULL)
+	     BEGIN
+	     	DROP TABLE #vBestellungLieferInfoProLagerTemp
+	     END;
+	     
+	     CREATE TABLE #vBestellungLieferInfoProLagerTemp (kBestellung INT, nLieferbarEigen TINYINT PRIMARY KEY (kBestellung));
+
+	
+	
+	     
+          ------------Rollende Kommissionierung
+		--Falls eine Vorlage &#252;bergeben wurde, welche wirklich nur eine Vorlage ist (nVorlage = 1) dann muss aus dieser noch eine Kopie erstellt werden, auf welcher dann gearbeitet wird
+		--Dies ist der Fall bei der rollenden Kommissionierung, weil dort nur eine Vorlage ausgew&#228;hlt wird, welche dann in dieser Prozedur noch kopiert werden muss
+		SELECT @nIstVorlage = nIstVorlage 
+		FROM  dbo.tpicklistevorlage  WITH(NOLOCK) 
+		WHERE kPicklistevorlage = @kPicklisteVorlage;
+
+
+		SELECT @nTeilmengen = tWarenLagerOptionen.nTeilmengen
+		FROM dbo.tWarenLagerOptionen
+		WHERE tWarenLagerOptionen.kWarenLager = @kWarenlager;
+
+		SELECT @kReineRollendeKommissionierung = COUNT(*)
+		FROM dbo.twarenlageroptionen WITH(NOLOCK) 
+		WHERE ISNULL(nRollendeKommissionierung,0) = 1
+		AND kWarenlager = @kWarenlager;
+
+		SELECT @VersandBoxenProzessMitRoko = COUNT(*)
+		FROM dbo.twarenlageroptionen WITH(NOLOCK) 
+		WHERE ISNULL(nVersandboxenProzess,0) = 1
+		AND ISNULL(nVersandboxenProzessmitRoko,0) = 1
+		AND kWarenlager = @kWarenlager;
+
+		SELECT @FifoAktiv= CAST(cValue AS TINYINT)
+		FROM tOptions
+		WHERE cKey = &#39;FIFOAktiv&#39;;
+
+		SELECT @NewFifoReservieren= CAST(cValue AS TINYINT)
+		FROM dbo.tOptions
+		WHERE cKey = &#39;NewFifoReservieren&#39;;
+
+		-- Nach Absprache erstmal ausgeklammer, wir kommen bei Roko nie mit der Ist-Vorlafe rein. Der Code knallt !
+		--IF (@nIstVorlage = 1 AND @kRollendeKommissionierungWagen &gt; 0)
+		--BEGIN	
+		--	-- Virtuelle Tabelle erstellen
+		--	SELECT tpicklistevorlage.kPicklisteVorlage, tpicklistevorlage.kPickliste, tpicklistevorlage.nIstVorlage, tpicklistevorlage.nAnzahlBestellungen, tpicklistevorlage.kBestellNr, tpicklistevorlage.nAnzahlArtikelAuftragMax, tpicklistevorlage.nAnzahlArtikelAuftragMin, 
+		--	tpicklistevorlage.nTeillieferungen, tpicklistevorlage.fTeillieferungenWert, tpicklistevorlage.nBoxenVon, tpicklistevorlage.nBoxenBis, tpicklistevorlage.nPicklistenVorlageTyp, tpicklistevorlage.fGewichtVon, tpicklistevorlage.fGewichtBis, tpicklistevorlage.nSortierung, 
+		--	tpicklistevorlage.cKommentar, tpicklistevorlage.dVonDatum, tpicklistevorlage.dBisDatum, tpicklistevorlage.kBenutzer, tpicklistevorlage.dAngelegt, tpicklistevorlage.cVersandartNr, tpicklistevorlage.cShops, tpicklistevorlage.cPlattformen, tpicklistevorlage.kWarenlager, 
+		--	tpicklistevorlage.cName, tpicklistevorlage.nQuickSlot, tpicklistevorlage.cWarengruppen, tpicklistevorlage.kRollendeKommissionierungPickwagen, tpicklistevorlage.nBestellungWMSFreigabe, tpicklistevorlage.nMaxAnzahlArtikel, tpicklistevorlage.nNichtBezahltVorkommissionieren, 
+		--	tpicklistevorlage.nNichtBezahltAutomatischAufVorkommi, tpicklistevorlage.cLieferlaender, tpicklistevorlage.cLagerbereiche, tpicklistevorlage.fPreisAuftragMax, tpicklistevorlage.fPreisAuftragMin, tpicklistevorlage.cAuftragkennzeichnung, tpicklistevorlage.cFirmen, tpicklistevorlage.cKundengruppen, 
+		--	tpicklistevorlage.cVersandklassen, tpicklistevorlage.cZahlungsarten, tpicklistevorlage.nEnthaeltArtAusWarengruppe, tpicklistevorlage.nAlleOhneWarengruppe, tpicklistevorlage.nAlleOhneVersandart, tpicklistevorlage.nAlleOhneZahlungsart, tpicklistevorlage.nDirektVerpacken, tpicklistevorlage.cBenutzer,
+		--	tpicklistevorlage.nSortenrein, tpicklistevorlage.nAuftragsArt, tpicklistevorlage.nMHDHandling, tpicklistevorlage.nMHDMinHaltbarkeit, tpicklistevorlage.nArtikelBreiteVon, tpicklistevorlage.nArtikelBreiteBis, tpicklistevorlage.nArtikelHoeheVon, tpicklistevorlage.nArtikelHoeheBis, tpicklistevorlage.nArtikelLaengeVon, 
+		--	tpicklistevorlage.nArtikelLaengeBis, tpicklistevorlage.nBoxenNurGanzeStuecklistenAufPL, tpicklistevorlage.nAuftragsVolumenVon, tpicklistevorlage.nAuftragsVolumenBis, tpicklistevorlage.nOhneVolumenAusschliessen, tpicklistevorlage.nStuecklisteVonGleichenPlatz, tpicklistevorlage.nMobileAppPicklistenVorlage,
+		--	tpicklistevorlage.nNachschubPickenLast, tpicklistevorlage.nPlatzPrioBeruecksichtigen, tpicklistevorlage.kPicklistenVorlageUrsprung, tpicklistevorlage.nEnthaeltArtAusEigeneFelder, tpicklistevorlage.nEnthaeltArtArtikelZustand, tpicklistevorlage.nNurAusgewaehlteVersandartenAnzeigen, tpicklistevorlage.cAuftragsPrio,
+		--	tpicklistevorlage.nStuecklisteNurWennAlleAufPlatz, tpicklistevorlage.nAngebrocheneBoxenImmerVervollstaendigen,tpicklistevorlage.cRechnungslaender,tpicklistevorlage.cBenutzerAuftrag,tpicklistevorlage.nBenutzerAuftragAusschliessen, tpicklistevorlage.bRowversion,
+		--	tpicklistevorlage.nArtikelKuerzesteKanteMax,tpicklistevorlage.nArtikelKuerzesteKanteMin,tpicklistevorlage.nArtikelLaengsteKanteMax, tpicklistevorlage.nArtikelLaengsteKanteMin, tpicklistevorlage.nEnthaeltAuftragAusEigeneFelder
+		--	INTO #picklistevorlage 
+		--	FROM dbo.tpicklistevorlage  WITH(NOLOCK) 
+		--	WHERE kPicklistevorlage = @kPicklisteVorlage;
+
+		--	-- PK der Virtuellen Tabelle dropen, damit er in der realen erstellt werden kann
+		--	ALTER TABLE #picklistevorlage 
+		--	DROP COLUMN kPicklistevorlage;
+
+		--	INSERT INTO dbo.tpicklistevorlage WITH(ROWLOCK) 
+		--	SELECT #picklistevorlage.kPicklisteVorlage, #picklistevorlage.kPickliste, #picklistevorlage.nIstVorlage, #picklistevorlage.nAnzahlBestellungen, #picklistevorlage.kBestellNr,
+		--	 #picklistevorlage.nAnzahlArtikelAuftragMax, #picklistevorlage.nAnzahlArtikelAuftragMin, #picklistevorlage.nTeillieferungen, #picklistevorlage.fTeillieferungenWert, #picklistevorlage.nBoxenVon,
+		--	 #picklistevorlage.nBoxenBis, #picklistevorlage.nPicklistenVorlageTyp, #picklistevorlage.fGewichtVon, #picklistevorlage.fGewichtBis, #picklistevorlage.nSortierung, #picklistevorlage.cKommentar,
+		--	 #picklistevorlage.dVonDatum, #picklistevorlage.dBisDatum, #picklistevorlage.kBenutzer, #picklistevorlage.dAngelegt, #picklistevorlage.cVersandartNr, #picklistevorlage.cShops,
+		--	 #picklistevorlage.cPlattformen, #picklistevorlage.kWarenlager, #picklistevorlage.cName, #picklistevorlage.nQuickSlot, #picklistevorlage.cWarengruppen,
+		--	 #picklistevorlage.kRollendeKommissionierungPickwagen, #picklistevorlage.nBestellungWMSFreigabe, #picklistevorlage.nMaxAnzahlArtikel, #picklistevorlage.nNichtBezahltVorkommissionieren,
+		--	 #picklistevorlage.nNichtBezahltAutomatischAufVorkommi, #picklistevorlage.cLieferlaender, #picklistevorlage.cLagerbereiche, #picklistevorlage.fPreisAuftragMax,
+		--     #picklistevorlage.fPreisAuftragMin, #picklistevorlage.cAuftragkennzeichnung, #picklistevorlage.cFirmen, #picklistevorlage.cKundengruppen, #picklistevorlage.cVersandklassen,
+		--	 #picklistevorlage.cZahlungsarten, #picklistevorlage.nEnthaeltArtAusWarengruppe, #picklistevorlage.nAlleOhneWarengruppe, #picklistevorlage.nAlleOhneVersandart,
+		--	 #picklistevorlage.nAlleOhneZahlungsart, #picklistevorlage.nDirektVerpacken, #picklistevorlage.cBenutzer, #picklistevorlage.nSortenrein, #picklistevorlage.nAuftragsArt,
+		--	 #picklistevorlage.nMHDHandling, #picklistevorlage.nMHDMinHaltbarkeit, #picklistevorlage.nArtikelBreiteVon, #picklistevorlage.nArtikelBreiteBis, #picklistevorlage.nArtikelHoeheVon,
+		--	 #picklistevorlage.nArtikelHoeheBis, #picklistevorlage.nArtikelLaengeVon, #picklistevorlage.nArtikelLaengeBis, #picklistevorlage.nBoxenNurGanzeStuecklistenAufPL,
+		--	 #picklistevorlage.nAuftragsVolumenVon, #picklistevorlage.nAuftragsVolumenBis, #picklistevorlage.nOhneVolumenAusschliessen, #picklistevorlage.nStuecklisteVonGleichenPlatz,
+		--	 #picklistevorlage.nMobileAppPicklistenVorlage, #picklistevorlage.nNachschubPickenLast, #picklistevorlage.nPlatzPrioBeruecksichtigen, #picklistevorlage.kPicklistenVorlageUrsprung,
+		--	 #picklistevorlage.nEnthaeltArtAusEigeneFelder, #picklistevorlage.nEnthaeltArtArtikelZustand, #picklistevorlage.nNurAusgewaehlteVersandartenAnzeigen, #picklistevorlage.cAuftragsPrio,
+		--	 #picklistevorlage.nStuecklisteNurWennAlleAufPlatz, #picklistevorlage.nAngebrocheneBoxenImmerVervollstaendigen,  #picklistevorlage.cRechnungslaender,
+		--	 #picklistevorlage.cBenutzerAuftrag,#picklistevorlage.nBenutzerAuftragAusschliessen, #picklistevorlage.bRowversion, #picklistevorlage.nArtikelKuerzesteKanteMax,#picklistevorlage.nArtikelKuerzesteKanteMin,
+		--	 #picklistevorlage.nArtikelLaengsteKanteMax, #picklistevorlage.nArtikelLaengsteKanteMin, #picklistevorlage.nEnthaeltAuftragAusEigeneFelder
+		--	FROM #picklistevorlage;
+
+		--	-- Neuen Pickpos wird aktuelle Pickpos
+		--	SET @kPicklisteVorlageAktuell = SCOPE_IDENTITY();
+	  
+		--	UPDATE dbo.tpicklistevorlage WITH(ROWLOCK) 
+		--	SET kWarenlager = @kWarenlager, nIstVorlage = 0, dAngelegt = GETDATE(), kBenutzer = @kBenutzer, 
+		--	    nBoxenVon = 0, nBoxenBis = 999999999, kPickliste = 0, kRollendeKommissionierungPickwagen = @kRollendeKommissionierungWagen, kPicklistenVorlageUrsprung = @kPicklisteVorlage
+		--	WHERE kpicklistevorlage = @kPicklisteVorlageAktuell;
+		   
+
+		--END;
+		--ELSE
+			SET @kPicklisteVorlageAktuell = @kPicklisteVorlage;
+	-----------------------
+	
+
+		     -- Alte Locks l&#246;schen (&#228;lter als 5 min). K&#246;nnen durch absturz der DB verursacht worden sein.
+		    DELETE tBestellungPicklisteLock 
+			FROM tBestellungPicklisteLock 
+			WHERE tBestellungPicklisteLock.dZeitstempel &lt; DateADD(mi, -5,   getdate())
+
+
+			SELECT @nAnzArtMax = nAnzahlArtikelAuftragMax, @nAnzArtMin = nAnzahlArtikelAuftragMin, @nGewMin = fGewichtVon, @nGewMax = fGewichtBis, @nSortierung = nSortierung, 
+					@cVersandArten = cVersandartNr, @cWarengruppen = cWarengruppen, @cPlattformen = cPlattformen, @cShops = cShops, @nAnzAuftraege = nAnzahlBestellungen, @kBestellNr = kBestellNr, 
+					@nBoxVon = isnull(nBoxenVon,0), @nBoxBis = isnull(nBoxenBis,999999), @fTeilliefPreis = fTeillieferungenWert, 
+					@nPicklistenVorlageTyp =  nPicklistenVorlageTyp ,
+					@kRollendeKommissionierungPickwagen = isnull(kRollendeKommissionierungPickwagen,0), @nBestellungWMSFreigabe = isnull(nBestellungWMSFreigabe,0), @nMaxAnzahlArtikel = nMaxAnzahlArtikel, 
+					@nNichtBezahltVorkommissionieren = isnull(nNichtBezahltVorkommissionieren,0), @cISO = cLieferlaender,@fPreisAuftragMax = fPreisAuftragMax, @fPreisAuftragMin = fPreisAuftragMin,
+					@cAuftragkennzeichnung = cAuftragkennzeichnung,@cFirmen = cFirmen, @cKundengruppen = cKundengruppen, @cVersandklassen = cVersandklassen,@cZahlungsarten = cZahlungsarten,
+					@nEnthaeltArtAusWarengruppe = nEnthaeltArtAusWarengruppe, @nAlleOhneWarengruppe= nAlleOhneWarengruppe, @nAlleOhneVersandart = nAlleOhneVersandart,@nAlleOhneZahlungsart = nAlleOhneZahlungsart, @cBenutzer = cBenutzer, 
+					@nSortenrein = nSortenrein, @nArtikelBreiteVon = nArtikelBreiteVon, @nArtikelBreiteBis = nArtikelBreiteBis, @nArtikelHoeheVon = nArtikelHoeheVon,  @nArtikelHoeheBis = nArtikelHoeheBis,
+					@nArtikelLaengeVon = nArtikelLaengeVon, @nArtikelLaengeBis = nArtikelLaengeBis, @nAuftragsVolumenVon = nAuftragsVolumenVon, @nAuftragsVolumenBis = nAuftragsVolumenBis, @nOhneVolumenAusschliessen = nOhneVolumenAusschliessen,
+					@kPicklistenVorlageUrsprung = kPicklistenVorlageUrsprung, @nEnthaeltArtAusEigeneFelder = nEnthaeltArtAusEigeneFelder,  @nEnthaeltArtArtikelZustand = nEnthaeltArtArtikelZustand,
+					@cAuftragsPrio = dbo.tPicklisteVorlage.cAuftragsPrio,@nAngebrocheneBoxenImmerVervollstaendigen = nAngebrocheneBoxenImmerVervollstaendigen, @nAlleOhneHersteller = nAlleOhneHersteller, 
+					@nEnthaeltHersteller = nEnthaeltHersteller, @cFarben = cAuftragsFarben, @nAlleOhneFarben = nAlleOhneFarben, @nAdressenCheck = nAdressenCheck,
+					@cRechnungslaender = cRechnungslaender, @cBenutzerAusAuftrag = cBenutzerAuftrag, @nBenutzerAuftragAusschliessen = nBenutzerAuftragAusschliessen,  @nEnthaeltAuftragAusEigeneFelder = nEnthaeltAuftragAusEigeneFelder,
+					@nArtikelKuerzesteKanteMax = nArtikelKuerzesteKanteMax, @nArtikelKuerzesteKanteMin = nArtikelKuerzesteKanteMin,@nArtikelLaengsteKanteMax =  nArtikelLaengsteKanteMax , @nArtikelLaengsteKanteMin = nArtikelLaengsteKanteMin,
+					@nVollstaengigeImmerVorkommissionieren = nVollstaengigeImmerVorkommissionieren, @nArtikelLabelFilterModus = nArtikelLabelFilterModus, @nArtikelEinzelPreisMin = nArtikelEinzelPreisMin, @nArtikelEinzelPreisMax = nArtikelEinzelPreisMax
+
+
+			FROM dbo.tPicklisteVorlage  WITH(NOLOCK) 
+			WHERE kPicklisteVorlage = @kPicklisteVorlageAktuell;
+
+
+			-- Mu&#223; auf eingene Felder gefiltert werden ?
+			SELECT @IstEigeneFelderArtikelFilter = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+			FROM dbo.tPicklisteVorlageEigeneFelder
+			JOIN dbo.tAttribut ON tAttribut.kAttribut = tPicklisteVorlageEigeneFelder.kAttribut
+			WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung
+			AND tAttribut.nBezugstyp = 0;
+
+			-- Mu&#223; auf eingene Felder gefiltert werden ?
+			SELECT @IstEigeneFelderAuftragFilter = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+			FROM dbo.tPicklisteVorlageEigeneFelder
+			JOIN dbo.tAttribut ON tAttribut.kAttribut = tPicklisteVorlageEigeneFelder.kAttribut
+			WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung
+			AND tAttribut.nBezugstyp = 4;
+
+			-- Mu&#223; auf ArtikelZustand gefiltert werden ?
+			SELECT @IstArtikelZustandFilter = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+			FROM dbo.tPicklisteVorlageArtikelZustand
+			WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung;
+
+			-- Mu&#223; auf ArtikelLabel gefiltert werden ?
+			SELECT @IstArtikelLabelFilter = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+			FROM WMS.tPicklisteVorlageArtikelLabel
+			WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung;
+
+			-- Mu&#223; auf VorgangsStatus  gefiltert werden ?
+			SELECT @IstVorlageVorgangsstatusFilter = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+			FROM WMS.tPicklisteVorlageVorgangsstatus
+			WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung;
+			
+
+			-- Mu&#223; auf Hersteller gefiltert werden ?
+		    SELECT @IstArtikelHerstellerFilter = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+		    FROM WMS.tPicklisteVorlageHersteller
+		    WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung;
+
+			-- Wir filtern Auftraege die man mit der Pickliste wegen des Boxenfilters nicht anfahren kann, ganz raus. Gilt nicht fuer ROKO.
+			SELECT @IstBoxenFilter = CASE WHEN COUNT(*) = 0 OR @kRollendeKommissionierungWagen = 1 THEN 0 ELSE 1 END
+			FROM dbo.tPicklisteVorlageBoxen 
+			WHERE dbo.tPicklisteVorlageBoxen.kPicklisteVorlage = @kPicklistenVorlageUrsprung;
+
+
+			SELECT @IstStartLagerFilter = CASE WHEN ISNULL(SUM(CAST(nStartLagerAktiv AS INT)),0) &gt; 0 THEN 1 ELSE 0 END, 
+				   @IstZielLagerFilter = CASE WHEN ISNULL(SUM(CAST(nZielLagerAktiv AS INT) ),0) &gt; 0 THEN 1 ELSE 0 END
+			FROM WMS.tPicklisteVorlageStartZielLager
+			WHERE kPicklisteVorlage = @kPicklistenVorlageUrsprung;
+
+
+			 --
+			 -- MultiPicklisten. Falls die Vorlage mit der Wir resevieren eine Parent Pickliste hat und diese bereits Positionen hat. Reservieren wir auf dieser Pickliste weiter, statt eine neue zu erstellen
+			 --
+			 SELECT @kPicklisteVorlageParent = kPicklisteVorlageParent 
+			 FROM dbo.tPicklisteVorlage 
+			 WHERE kPicklisteVorlage = @kPicklisteVorlage;
+			 
+			 IF(@kPicklisteVorlageParent &gt; 0) -- Parent vorhanden,  gibt es bereichts eine Pickliste zu den Parent
+			 BEGIN
+
+			 	SELECT @kPicklisteMulti = tPickliste.kPickliste , @kSessionIDPicklisteMulti = tPickliste.kSessionId
+			 	FROM dbo.tPickliste
+                WHERE kPicklistenVorlage IN ( SELECT kPicklisteVorlage FROM tPicklisteVorlage WHERE kPicklisteVorlageParent =  @kPicklisteVorlageParent)
+			 	AND nStatus = 10;
+			 
+			 END;
+			 
+			 IF(@kPicklisteMulti &gt; 0) -- Falls Parent und Pickliste vorhanden, reservieren wir aus dieser weiter. Sonst legen wir eine neue an. 
+			 BEGIN
+                SET @kPickliste = @kPicklisteMulti;
+                SET @kSessionIDPickliste = @kSessionIDPicklisteMulti;
+			 END
+			 ELSE
+			 BEGIN 
+
+                SELECT  @nIstWMSPickliste = tWarenlager.nLagerplatzVerwaltung
+                FROM dbo.tWarenlager
+                WHERE tWarenlager.kWarenLager = @kWarenlager;
+                
+                IF (@kSessionID IS NULL OR @kSessionID = 0)
+                BEGIN
+                    INSERT INTO dbo.tSessionId	(cRechnername,kBenutzer, dLastAction)
+                    VALUES (&#39;WMS&#39;,  @kBenutzer, GETDATE());
+                    
+                    SET @kSessionIDPickliste = SCOPE_IDENTITY();
+                END
+                ELSE
+                BEGIN
+                    SET @kSessionIDPickliste = @kSessionID;
+                END
+                
+                INSERT INTO dbo.tPickliste (kWarenLager, kPicklistenVorlage, nStatus, kSessionId, nType)
+                VALUES (@kWarenLager, @kPicklisteVorlageAktuell, 0, @kSessionIDPickliste, @nIstWMSPickliste);
+                
+                SET @kPickliste = SCOPE_IDENTITY();
+            
+            END;
+
+		     INSERT INTO #vBestellPosLieferInfoProLagerTemp  (kBestellpos, fAnzahlOffen)
+		     SELECT Versand.vBestellPosLieferInfoProLager.kBestellPos, Versand.vBestellPosLieferInfoProLager.fAnzahlOffen
+		     FROM Versand.vBestellPosLieferInfoProLager
+		     WHERE Versand.vBestellPosLieferInfoProLager.kWarenlager = @kWarenlager;
+		     
+		     INSERT INTO #vBestellungLieferInfoProLagerTemp  (kBestellung, nLieferbarEigen)
+		     SELECT kBestellung,nLieferbarEigen 
+		     FROM Versand.vBestellungLieferInfoProLager
+		     WHERE Versand.vBestellungLieferInfoProLager.nLieferbarEigen &gt; 0
+		     AND Versand.vBestellungLieferInfoProLager.kWarenlager = @kWarenlager
+			 OPTION (RECOMPILE);
+	
+
+			SET @cSQLInsert = N&#39;INSERT INTO dbo.tBestellungPicklisteLock  WITH(ROWLOCK) (kBestellung, kpickliste, dZeitstempel) &#39; ; 
+			SET @cSQLSelect = N&#39;SELECT Verkauf.tAuftrag.kAuftrag, &#39; + CAST(@kPickliste AS NVARCHAR) + N&#39;, GETDATE()  &#39;; 
+			SET @cSQLFROM = N&#39; FROM Verkauf.tAuftrag &#39; + 
+			                N&#39; JOIN dbo.tFirmaHistory ON tFirmaHistory.kFirmaHistory = tAuftrag.kFirmaHistory &#39; +
+							N&#39; JOIN Verkauf.tAuftragEckdaten ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag &#39; + 
+							N&#39; JOIN Verkauf.tAuftragPosition ON (Verkauf.tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag and (Verkauf.tAuftragPosition.nType IN (1,11,17,18,19,20) )) &#39; +
+						    N&#39; JOIN #vBestellPosLieferInfoProLagerTemp ON #vBestellPosLieferInfoProLagerTemp.kBestellpos = Verkauf.tAuftragPosition.kAuftragPosition &#39; + 
+							N&#39; LEFT JOIN dbo.tbestellungwmsfreigabe WITH(NOLOCK) on dbo.tbestellungwmsfreigabe.kbestellung = Verkauf.tAuftrag.kAuftrag and dbo.tBEstellungwmsFreigabe.naktiv = 1 &#39; +
+							N&#39; JOIN #vBestellungLieferInfoProLagerTemp WITH(NOLOCK) ON #vBestellungLieferInfoProLagerTemp.kBestellung = Verkauf.tAuftrag.kAuftrag &#39; +
+							N&#39; JOIN dbo.tArtikel WITH(NOLOCK) ON tArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel AND ISNULL(tArtikel.kStueckliste, 0) = 0 &#39; +
+							N&#39; LEFT JOIN dbo.tKunde WITH(NOLOCK) ON dbo.tKunde.kKunde = Verkauf.tAuftrag.kKunde&#39; +
+							N&#39; LEFT JOIN dbo.tZahlungsart  WITH(NOLOCK) ON dbo.tZahlungsart.kZahlungsart = Verkauf.tAuftrag.kZahlungsart &#39; +  
+							N&#39; LEFT JOIN dbo.tUmlagerung  WITH(NOLOCK) ON dbo.tUmlagerung.kBestellung = Verkauf.tAuftrag.kAuftrag  &#39; +  
+							N&#39; OUTER APPLY (SELECT CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END AS IstInBox
+							                FROM  dbo.tPicklistepos
+										    WHERE tpicklistepos.nStatus = 30
+											AND tpicklistepos.kBestellung = Verkauf.tAuftrag.kAuftrag ) AS AuftragInBox &#39;;
+						 
+			SET @cSQLWHERE = N&#39;  WHERE (Verkauf.tAuftragEckdaten.dBezahlt IS NOT NULL OR ISNULL(dbo.tZahlungsart.nAusliefernVorZahlung,0) = 1 OR (  &#39; + CAST(@nNichtBezahltVorkommissionieren AS NVARCHAR) + N&#39; = 1 AND dbo.tbestellungwmsfreigabe.nvorkommissionieren = 1) )&#39; + 
+							 N&#39; AND (dbo.tbestellungwmsfreigabe.nSperre IS NULL OR dbo.tbestellungwmsfreigabe.nSperre = 0) &#39; +
+							 N&#39; AND Verkauf.tAuftrag.nType IN (SELECT nVorgangsTyp FROM WMS.tPicklisteVorlageVorgangsTypen WHERE tPicklisteVorlageVorgangsTypen.kPicklisteVorlage = &#39;  + CAST(@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;) &#39; +
+							 N&#39; AND Verkauf.tAuftrag.nKomplettAusgeliefert = 0 &#39; + 
+							 N&#39; AND Verkauf.tAuftrag.nStorno = 0 &#39; + 
+			                 N&#39; AND Verkauf.tAuftrag.nPending = 0 &#39; + 
+							 N&#39; AND (tAuftrag.dAuslieferungAb IS NULL OR tAuftrag.dAuslieferungAb &lt;= GETDATE())&#39; +
+							 N&#39; AND (dbo.tartikel.cLagerAktiv = &#39;&#39;Y&#39;&#39;) &#39; + 
+							 N&#39; AND (dbo.tartikel.cLagerVariation &lt;&gt; &#39;&#39;Y&#39;&#39;) &#39; + 
+							 N&#39; AND (Verkauf.tAuftrag.kRueckhalteGrund IS NULL OR Verkauf.tAuftrag.kRueckhalteGrund = 0 OR (dbo.tbestellungwmsfreigabe.nvorkommissionieren = 1  AND &#39; + CAST(@nPicklistenVorlageTyp AS NVARCHAR) + N&#39; NOT IN (1,3,4))   ) &#39; + 
+							 N&#39; AND (dbo.tKunde.cSperre IS NULL OR dbo.tKunde.cSperre != &#39;&#39;Y&#39;&#39; )&#39;+
+							 N&#39; AND (tAuftrag.kWarenlager IS NULL OR tAuftrag.kWarenlager = &#39; +  CAST(@kWarenlager AS NVARCHAR) + N&#39; )&#39;+
+							 N&#39; AND (( #vBestellungLieferInfoProLagerTemp.nLieferbarEigen = 2  
+									OR 
+									( #vBestellungLieferInfoProLagerTemp.nLieferbarEigen = 1 AND (dbo.tbestellungwmsfreigabe.nTeillieferungErlaubt = 1 
+																									OR 
+																								   ((dbo.tbestellungwmsfreigabe.nvorkommissionieren = 1 OR (&#39; + CAST(@nAngebrocheneBoxenImmerVervollstaendigen AS NVARCHAR) +&#39; = 1 AND  AuftragInBox.IstInBox = 1))  AND &#39; + CAST(@nPicklistenVorlageTyp AS NVARCHAR) + N&#39; NOT IN (1,3,4))) ) ) ) &#39; +
+							 N&#39; AND NOT EXISTS (SELECT kBestellung FROM dbo.tBestellungPicklisteLock  WITH(NOLOCK) WHERE dbo.tBestellungPicklisteLock.kBestellung = Verkauf.tAuftrag.kAuftrag) &#39; +					 
+							 N&#39; AND NOT EXISTS ( SELECT tLHMStatus.* 
+												 FROM dbo.tLHMStatus
+												 JOIN dbo.tLHM ON tLHM.kLHMStatus = tLHMStatus.kLHMStatus AND tLHM.kLHMTyp != 5
+												 WHERE tLHMStatus.kBestellung  = Verkauf.tAuftrag.kAuftrag
+												 AND tLHMStatus.nStatus &lt; 30
+												 AND tLHM.kWarenlager != &#39; +  CAST(@kWarenlager AS NVARCHAR) + N&#39; )&#39; +
+							 N&#39; AND NOT EXISTS (SELECT * from dbo.tpickliste WITH(NOLOCK)&#39; +
+							 N&#39; 		JOIN dbo.tpicklistevorlage  WITH(NOLOCK) ON dbo.tpicklistevorlage.kpicklistevorlage = dbo.tpickliste.kpicklistenvorlage  &#39; +
+							 N&#39; 		JOIN dbo.tpicklistepos  WITH(NOLOCK) ON dbo.tPicklistepos.kPickliste = dbo.tPickliste.kPickliste  &#39; +
+							 N&#39; 		WHERE dbo.tpicklistepos.kbestellung = Verkauf.tAuftrag.kAuftrag  &#39; +
+							 N&#39;         AND EXISTS (SELECT * FROM Verkauf.tAuftragPosition WHERE tAuftragPosition.kAuftragPosition = tpicklistepos.kBestellPos )  &#39; +
+							 N&#39;         AND dbo.tpicklistepos.kWarenLager =  &#39; +  CAST(@kWarenlager AS NVARCHAR) + N&#39; &#39; +
+							 N&#39; 		AND (dbo.tpicklistevorlage.nPicklistenVorlageTyp IN (1,3,4) OR (&#39; +  CAST(ISNULL(@kReineRollendeKommissionierung,0) AS NVARCHAR)  + &#39; &gt; 0 AND dbo.tpicklistevorlage.kRollendeKommissionierungPickwagen != &#39; + CAST(@kRollendeKommissionierungWagen AS NVARCHAR) + &#39;))&#39; +
+							 N&#39;         AND dbo.tPickliste.nType != 3 &#39;+
+							 N&#39; 		AND dbo.tPicklistePos.nStatus &lt; 40)  &#39;; 
+					
+			SET @cSQLGROUP = N&#39; GROUP BY Verkauf.tAuftrag.kAuftrag, dbo.tbestellungWMSFreigabe.nTeillieferungErlaubt, dbo.tbestellungWMSFreigabe.nVorkommissionieren &#39;; 
+	 
+	 
+
+			SET @cSQLHAVING = N&#39; HAVING SUM(#vBestellPosLieferInfoProLagerTemp.fAnzahlOffen ) &gt; 0 &#39;; 
+
+
+			IF(@nPicklistenVorlageTyp = 4)
+			BEGIN
+				
+				SET @cSQLFROM = @cSQLFROM + N&#39; JOIN WMS.tPicklisteVorlageAuftraege ON tPicklisteVorlageAuftraege.kAuftrag = Verkauf.tAuftrag.kAuftrag AND tPicklisteVorlageAuftraege.kPicklisteVorlage =  &#39; +  CAST(@kPicklisteVorlageAktuell AS NVARCHAR) ;
+
+			END;
+
+			IF(@nAnzArtMin &gt; 0 OR (@nAnzArtMax != 999999 AND @nAnzArtMax  &gt; 0)  OR @nGewMax &gt; 0 OR @nGewMin &gt; 0)
+			BEGIN 
+
+				SET @cSQLFROM =  @cSQLFROM + N&#39; LEFT JOIN (SELECT Verkauf.tAuftragPosition.kAuftrag, SUM(#vBestellPosLieferInfoProLagerTemp.fAnzahlOffen) AS nAnzahl, (SUM(#vBestellPosLieferInfoProLagerTemp.fAnzahlOffen * tArtikel.fGewicht)) AS Gewicht
+											    FROM Verkauf.tAuftragPosition
+												JOIN #vBestellPosLieferInfoProLagerTemp ON #vBestellPosLieferInfoProLagerTemp.kBestellpos = Verkauf.tAuftragPosition.kAuftragPosition
+											    JOIN dbo.tArtikel ON tArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel
+											    WHERE Verkauf.tAuftragPosition.nType IN (1,11,17,18,19,20)
+											    AND tArtikel.cLagerAktiv = &#39;&#39;Y&#39;&#39;
+											    GROUP by Verkauf.tAuftragPosition.kAuftrag) AS BestellPosSummiert ON BestellPosSummiert.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;;
+
+			
+				SET @cSQLWHERE = @cSQLWHERE + &#39;AND (dbo.tbestellungwmsfreigabe.nteillieferungErlaubt = 1  OR (&#39;
+
+
+				IF(@nAnzArtMin &gt; 0)
+				BEGIN
+
+					SET @cSQLWHERE_AnzahlGew =  + N&#39; BestellPosSummiert.nAnzahl &gt;= &#39; +  CAST(@nAnzArtMin AS NVARCHAR) + N&#39; &#39;;  	
+
+				END;
+   
+   				IF(@nAnzArtMax != 999999 AND @nAnzArtMax  &gt; 0)
+				BEGIN
+
+					IF(LEN(@cSQLWHERE_AnzahlGew) &gt; 0)
+					BEGIN
+						SET @cSQLWHERE_AnzahlGew = @cSQLWHERE_AnzahlGew + N&#39; AND &#39;;
+					END;
+
+					SET @cSQLWHERE_AnzahlGew = @cSQLWHERE_AnzahlGew + N&#39;  BestellPosSummiert.nAnzahl &lt;= &#39; +  CAST(@nAnzArtMax AS NVARCHAR) + N&#39; &#39;;  	
+
+				END;
+   
+
+   				IF(@nGewMax &gt; 0)
+				BEGIN
+
+					IF(LEN(@cSQLWHERE_AnzahlGew) &gt; 0)
+					BEGIN
+						SET @cSQLWHERE_AnzahlGew = @cSQLWHERE_AnzahlGew + N&#39; AND &#39;;
+					END;
+
+					SET @cSQLWHERE_AnzahlGew = @cSQLWHERE_AnzahlGew + N&#39;  BestellPosSummiert.Gewicht &lt;= &#39; +  CAST(@nGewMax AS NVARCHAR) + N&#39; &#39;;  	
+
+				END;
+   
+
+   				IF(@nGewMin &gt; 0)
+				BEGIN
+
+					IF(LEN(@cSQLWHERE_AnzahlGew) &gt; 0)
+					BEGIN
+						SET @cSQLWHERE_AnzahlGew = @cSQLWHERE_AnzahlGew + N&#39; AND &#39;;
+					END;
+
+					SET @cSQLWHERE_AnzahlGew = @cSQLWHERE_AnzahlGew + N&#39;  BestellPosSummiert.Gewicht &gt;= &#39; +  CAST(@nGewMin AS NVARCHAR) + N&#39; &#39;;  	
+
+				END;
+
+				SET @cSQLWHERE_AnzahlGew =  @cSQLWHERE_AnzahlGew + &#39; )) &#39;; 
+
+				SET @cSQLWHERE = @cSQLWHERE + @cSQLWHERE_AnzahlGew;
+   
+
+
+			END;
+
+	
+			IF(@fPreisAuftragMax &gt; 0 OR @fPreisAuftragMin &gt; 0)
+			BEGIN
+	
+				SET @cSQLFROM = @cSQLFROM + N&#39; LEFT JOIN (SELECT CAST(ROUND(SUM((Verkauf.tAuftragPosition.fAnzahl*Verkauf.tAuftragPosition.fVKNetto*(100-Verkauf.tAuftragPosition.fRabatt)/100.0)*(100+Verkauf.tAuftragPosition.fMwSt)/100), 2) AS DECIMAL(28,14)) fVKBrutto,Verkauf.tAuftragPosition.kAuftrag  &#39; +
+									   N&#39; FROM Verkauf.tAuftragPosition &#39; +
+									   N&#39; GROUP by Verkauf.tAuftragPosition.kAuftrag  ) AS b1 ON b1.kAuftrag  = Verkauf.tAuftrag.kAuftrag &#39;;
+	  
+	  
+				IF @fPreisAuftragMax &gt; 0
+					SET @cSQLHAVING = @cSQLHAVING + N&#39; AND MAX (b1.fVKBrutto) &lt;= &#39; + CAST (@fPreisAuftragMax AS NVARCHAR);
+	   
+				IF @fPreisAuftragMin &gt; 0
+					SET @cSQLHAVING = @cSQLHAVING + N&#39; AND MAX (b1.fVKBrutto) &gt;= &#39; + CAST (@fPreisAuftragMin AS NVARCHAR);
+			END
+	
+			IF (LEN(ISNULL(@cFirmen,&#39;&#39;)) &gt; 0)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND tFirmaHistory.kFirma IN (&#39; + @cFirmen + N&#39;) &#39;;
+			END
+
+
+			IF (LEN(ISNULL(@cFarben,&#39;&#39;)) &gt; 0)
+			BEGIN
+				IF(@nAlleOhneFarben = 1)
+				BEGIN
+					SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (Verkauf.tAuftrag.kFarbe IN (&#39; + @cFarben + N&#39;) OR Verkauf.tAuftrag.kFarbe IS NULL OR Verkauf.tAuftrag.kFarbe NOT IN (SELECT kFarbe FROM dbo.tFarbe WHERE cName IS NOT NULL AND cName != &#39;&#39;&#39;&#39; )) &#39;;
+				END;
+				ELSE
+				BEGIN
+					SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kFarbe IN (&#39; + @cFarben + N&#39;) &#39;;
+				END
+			END
+			ELSE
+			BEGIN
+				IF(@nAlleOhneFarben = 1)
+				BEGIN
+					SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (Verkauf.tAuftrag.kFarbe IS NULL OR Verkauf.tAuftrag.kFarbe NOT IN (SELECT kFarbe FROM dbo.tFarbe WHERE cName IS NOT NULL AND cName != &#39;&#39;&#39;&#39; )) &#39;;
+				END;
+			END;
+
+			IF(@nTeilmengen = 0) -- TODO Nur Wenn Teilmengen Lizenz aktiv
+			BEGIN
+			    SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS (SELECT * FROM Verkauf.tAuftragPositionTeilmengen 
+															     JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tAuftragPositionTeilmengen.kAuftragPosition
+																 WHERE tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag )  &#39;;
+
+			END;
+
+
+			IF (LEN(ISNULL(@cKundengruppen,&#39;&#39;)) &gt; 0)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND dbo.tKunde.kKundengruppe IN (&#39; + @cKundengruppen + N&#39;) &#39;;
+			END
+	
+			IF (LEN(ISNULL(@cVersandklassen,&#39;&#39;)) &gt; 0)
+			BEGIN
+			
+				     SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPosVersKl   
+	     														   JOIN tartikel  AS ArtVersKl  ON BestPosVersKl.kartikel = ArtVersKl.kartikel 
+	     														   WHERE (BestPosVersKl.ntype IN (1,11,17,18,19,20))
+	     														   AND BestPosVersKl.kAuftrag = Verkauf.tAuftrag.kAuftrag 
+	     								  						   AND ArtVersKl.kVersandklasse NOT IN  (&#39; + @cVersandklassen + N&#39;)
+	   														     ) &#39;;
+ 
+			END	
+	
+			-- Diese Option gibt es wohl nicht mehr in der UI. Erstmal raus.
+			--IF (LEN(ISNULL(@cBenutzer,&#39;&#39;)) &gt; 0)
+			--BEGIN
+			--	SET @cSQLWHERE = @cSQLWHERE + N&#39; AND &#39;  + CAST(@kBenutzer AS NVARCHAR) + &#39; IN (&#39; + @cBenutzer + N&#39;) &#39;;
+			--END	
+
+			IF (LEN(ISNULL(@cBenutzerAusAuftrag,&#39;&#39;)) &gt; 0)
+			BEGIN
+
+			   IF(@nBenutzerAuftragAusschliessen = 0)
+			   BEGIN
+				   SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kBenutzer IN (&#39; + @cBenutzerAusAuftrag + N&#39;) &#39;;
+			   END
+			   ELSE
+			   BEGIN
+				   SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kBenutzer NOT IN (&#39; + @cBenutzerAusAuftrag + N&#39;) &#39;;
+			   END
+
+				
+			END	
+
+			IF (LEN(ISNULL(@cAuftragsPrio,&#39;&#39;)) &gt; 0)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.nLieferPrioritaet IN (&#39; + @cAuftragsPrio + N&#39;) &#39;;
+			END;
+	
+
+			IF @nAlleOhneZahlungsart &gt; 0
+			BEGIN
+				IF(LEN(ISNULL(@cZahlungsarten,&#39;&#39;)) &gt; 0) 
+					SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (Verkauf.tAuftrag.kZahlungsArt IN (&#39; + @cZahlungsarten + N&#39;)  OR Verkauf.tAuftrag.kZahlungsArt IS NULL) &#39;; 
+				ELSE
+					SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kZahlungsArt IS NULL &#39;;
+			END
+			ELSE
+			BEGIN
+				IF (LEN(ISNULL(@cZahlungsarten,&#39;&#39;)) &gt; 0)
+				BEGIN
+					SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kZahlungsArt IN (&#39; + @cZahlungsarten + N&#39;) &#39;;
+				END
+			END;
+	
+			-- Wo versandart gebraucht wird, joinen
+			IF (@cAuftragkennzeichnung like &#39;%4%&#39; OR @cAuftragkennzeichnung like &#39;%8%&#39;)  
+			BEGIN
+				SET @cSQLFROM = @cSQLFROM + N&#39; JOIN dbo.tversandart  WITH(NOLOCK) ON dbo.tVersandart.kVersandart = Verkauf.tAuftrag.kVersandArt &#39;; 
+			END
+ 
+			--Auf Versandarten einschr&#228;nken, PKs werden als Komma-separierter String &#252;bergeben 
+			IF @nAlleOhneVersandart &gt; 0
+			BEGIN
+				IF(LEN(ISNULL(@cVersandArten,&#39;&#39;)) &gt; 0) 
+					SET @cVersandArten = @cVersandArten + N&#39;,0&#39;;
+				ELSE
+					SET @cVersandArten = N&#39;0&#39;;
+			END
+
+
+			IF (LEN(ISNULL(@cVersandArten,&#39;&#39;)) &gt; 0) 
+			BEGIN 
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (Verkauf.tAuftrag.kVersandArt IN (&#39; + @cVersandArten + N&#39;) 
+                                                          OR  Verkauf.tAuftrag.kVersandArt IN (  SELECT tversandart.kversandart  
+																				    FROM dbo.tversandart WITH(NOLOCK)
+																				    WHERE dbo.tversandart.nEigeneversandArt = 0
+																				    AND dbo.tversandart.kMainVersandart IN (&#39; + @cVersandArten + N&#39;))) &#39;;
+			END 
+     
+
+		   	IF(@IstBoxenFilter &gt; 0)
+			BEGIN
+
+
+			    SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS (
+																	SELECT tLHMStatus.* 
+																	FROM dbo.tLHMStatus
+																	JOIN dbo.tLHM ON tLHM.kLHMStatus = tLHMStatus.kLHMStatus
+																	JOIN dbo.tWarenLagerPlatz ON  tWarenLagerPlatz.kWarenLagerPlatz = tLHM.kWarenLagerPlatz
+																	LEFT JOIN dbo.tPicklisteVorlageBoxen ON tPicklisteVorlageBoxen.kLHM = tLHMStatus.kLHM AND tPicklisteVorlageBoxen.kPicklisteVorlage = &#39; +  CAST(@kPicklistenVorlageUrsprung AS NVARCHAR) + &#39;
+																	WHERE tLHMStatus.kBestellung  = Verkauf.tAuftrag.kAuftrag
+																    AND tLHMStatus.nStatus &lt; 25
+																    AND twarenlagerplatz.kwarenlagerplatztyp IN (4,6)
+																	AND tWarenLagerPlatz.kWarenLager = &#39; +  CAST(@kWarenlager AS NVARCHAR) + &#39;
+																	AND tPicklisteVorlageBoxen.kLHM IS NULL  
+																) &#39;;
+				
+
+			END;
+
+
+			IF(@IstStartLagerFilter &gt; 0 )
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (tUmlagerung.kUmlagerung IS NULL OR tUmlagerung.kQuellLager IN (SELECT kWarenlager FROM WMS.tPicklisteVorlageStartZielLager WHERE nStartLagerAktiv = 1 AND kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; )) &#39;;
+			END;
+
+			IF(@IstZielLagerFilter &gt; 0 )
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (tUmlagerung.kUmlagerung IS NULL OR tUmlagerung.kZielLager IN (SELECT kWarenlager FROM WMS.tPicklisteVorlageStartZielLager WHERE nZiellagerAktiv = 1 AND kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; )) &#39;;
+			END;
+
+		
+			IF(@IstStartLagerFilter = 0 AND @IstZielLagerFilter = 0)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE +  N&#39; AND (dbo.tUmlagerung.kUmlagerung IS NULL OR (dbo.tUmlagerung.kUmlagerung &gt; 0 AND dbo.tUmlagerung.kQuellLager =  &#39;  + CAST(@kWarenlager AS NVARCHAR) + N&#39; )) &#39;;
+			END;
+		
+			IF(@IstVorlageVorgangsstatusFilter &gt; 0)
+			BEGIN
+			   SET @cSQLWHERE = @cSQLWHERE +  N&#39; AND Verkauf.tAuftrag.kVorgangsstatus IN (SELECT kVorgangsstatus FROM WMS.tPicklisteVorlageVorgangsstatus WHERE  kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; ) &#39;;
+			END;
+
+
+			--Einschr&#228;nken auf bestimmte Auftragskennzeichnungen z.b. priorisiert, vorkommissionieren, teilliefern
+			IF (  @cAuftragkennzeichnung LIKE &#39;%1%&#39;)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(Verkauf.tAuftrag.nLieferPrioritaet,0) &gt; 0 &#39;;
+			END
+
+			IF (@cAuftragkennzeichnung LIKE &#39;%2%&#39;)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(dbo.tBestellungWMSFreigabe.nVorkommissionieren,0) = 1 &#39;;
+			END
+
+			IF (@cAuftragkennzeichnung LIKE &#39;%3%&#39;)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(dbo.tBestellungWMSFreigabe.nTeillieferungErlaubt,0) = 1 &#39;;
+			END	
+	
+			IF (@cAuftragkennzeichnung LIKE &#39;%4%&#39;)
+			BEGIN			
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(dbo.tversandart.nPrioritaet,0) &gt; 0 &#39;;
+			END
+
+			IF (  @cAuftragkennzeichnung LIKE &#39;%5%&#39;)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(Verkauf.tAuftrag.nLieferPrioritaet,0) = 0 &#39;;
+			END
+
+			IF (@cAuftragkennzeichnung LIKE &#39;%6%&#39;)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(dbo.tBestellungWMSFreigabe.nVorkommissionieren,0) = 0 &#39;;
+			END
+
+			IF (@cAuftragkennzeichnung LIKE &#39;%7%&#39;)
+			BEGIN
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(dbo.tBestellungWMSFreigabe.nTeillieferungErlaubt,0) = 0 &#39;;
+			END	
+	
+			IF (@cAuftragkennzeichnung LIKE &#39;%8%&#39;)
+			BEGIN			
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND ISNULL(dbo.tversandart.nPrioritaet,0) = 0 &#39;;
+			END
+	
+	
+			IF @nAlleOhneWarengruppe &gt; 0
+			BEGIN
+				IF(LEN(ISNULL(@cWarengruppen,&#39;&#39;)) &gt; 0) 
+					SET @cWarengruppen = @cWarengruppen + N&#39;,0&#39;;
+				ELSE
+					SET @cWarengruppen = N&#39;0&#39;;
+			END
+	   
+			--Auf Warengruppen einschr&#228;nken, PKs werden als Komma-separierter String &#252;bergeben 
+		     IF (LEN(ISNULL(@cWarengruppen,&#39;&#39;)) &gt; 0) 
+		     BEGIN 
+	 	     
+			      IF(@nEnthaeltArtAusWarengruppe &gt; 0)
+			      BEGIN
+			  	   SET @cSQLFROM = @cSQLFROM + N&#39; JOIN (  SELECT BestPos1.kAuftrag 
+													   FROM Verkauf.tAuftragPosition AS BestPos1 
+													   JOIN tartikel AS Art1 WITH(NOLOCK) ON BestPos1.kartikel = Art1.kartikel
+													   AND Art1.kwarengruppe IN  (&#39; + @cWarengruppen + N&#39;)
+													   GROUP BY BestPos1.kAuftrag
+								                     ) AS Warengruppen ON  Warengruppen.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;
+			  	END
+			  	ELSE
+			  	BEGIN	
+			  	    SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPos1   &#39; +
+			  							N&#39;  JOIN tartikel  AS Art1  WITH(NOLOCK) ON BestPos1.kartikel = Art1.kartikel &#39; +
+			  							N&#39;  WHERE (BestPos1.ntype IN (1,11,17,18,19,20))&#39; +
+			  							N&#39;		AND BestPos1.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39; +
+			  							N&#39;		AND Art1.kwarengruppe NOT IN  (&#39; + @cWarengruppen + N&#39;)) &#39;;
+			  						 
+			      END;						 
+		     END;
+
+
+        IF(@IstArtikelHerstellerFilter &gt; 0 OR @nAlleOhneHersteller &gt; 0)
+	    BEGIN
+	   
+	   
+	   	  IF(@nEnthaeltHersteller = 1)
+	         BEGIN
+	   
+	   	     DECLARE @cSQLOhneHerstellerEnthaelt NVARCHAR(100) = &#39;&#39;;
+	   		 IF(@nAlleOhneHersteller &gt; 0)
+	   		 BEGIN
+	   		
+	   			 SET @cSQLOhneHerstellerEnthaelt = N&#39; OR NOT EXISTS (SELECT * FROM dbo.tHersteller WHERE tHersteller.kHersteller = Art1.kHersteller ) &#39;;
+	   		
+	   		 END;
+	   
+	   
+	     		 SET @cSQLFROM = @cSQLFROM + N&#39; JOIN (  SELECT BestPos1.kAuftrag 
+	   											   FROM Verkauf.tAuftragPosition AS BestPos1 
+	   											   JOIN tartikel AS Art1 ON BestPos1.kartikel = Art1.kartikel
+	   											   LEFT JOIN WMS.tPicklisteVorlageHersteller ON tPicklisteVorlageHersteller.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+	   											   WHERE tPicklisteVorlageHersteller.kHersteller = Art1.kHersteller
+	   											   &#39; + @cSQLOhneHerstellerEnthaelt + &#39;
+	   											   GROUP BY BestPos1.kAuftrag
+	   											 ) AS Hersteller ON  Hersteller.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;
+	     	 END
+	     	 ELSE
+	         BEGIN	
+	   
+	   	     DECLARE @cSQLOhneHerstellerBesteht NVARCHAR(100) = &#39;&#39;
+	   	  	 IF(@nAlleOhneHersteller &gt; 0)
+	   		 BEGIN
+	   		
+	   			 SET @cSQLOhneHerstellerBesteht = N&#39; AND EXISTS (SELECT * FROM dbo.tHersteller WHERE tHersteller.kHersteller = Art1.kHersteller )  &#39;;
+	   		
+	   		 END;
+	   
+	   	
+	   
+	     	     SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPos1   
+	     														   JOIN tartikel  AS Art1  ON BestPos1.kartikel = Art1.kartikel 
+	     														   WHERE (BestPos1.ntype IN (1,11,17,18,19,20))
+	     														   AND BestPos1.kAuftrag = Verkauf.tAuftrag.kAuftrag 
+	     								  						   AND Art1.kHersteller NOT IN  ( SELECT kHersteller FROM WMS.tPicklisteVorlageHersteller 
+	   															                                WHERE tPicklisteVorlageHersteller.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; )
+	   														   &#39; + @cSQLOhneHerstellerBesteht + &#39; ) &#39;;
+	   
+	         END;				
+	    END;
+
+
+
+
+		IF(@IstArtikelLabelFilter &gt; 0)
+		BEGIN
+		    IF(@nArtikelLabelFilterModus = 1)
+			BEGIN
+
+			    -- In der Bestellung mu&#223; min. ein Artikel mit einen Label vorhanden sein
+			    SET @cSQLFROM = @cSQLFROM + N&#39; JOIN (  SELECT BestPosLabel.kAuftrag 
+												       FROM Verkauf.tAuftragPosition AS BestPosLabel
+												       JOIN dbo.tArtikelLabel ON tArtikelLabel.kartikel = BestPosLabel.kartikel
+													   JOIN WMS.tPicklisteVorlageArtikelLabel ON tPicklisteVorlageArtikelLabel.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+													   WHERE tPicklisteVorlageArtikelLabel.kLabel = tArtikelLabel.kLabel
+												       GROUP BY BestPosLabel.kAuftrag
+							                     ) AS ArtLabel ON  ArtLabel.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;
+
+											
+			END;
+			ELSE IF(@nArtikelLabelFilterModus = 2)
+			BEGIN
+
+			
+				 -- Keiner der Label darf bei den artikeln in der Bestellung vorhanden sein
+				 SET @cSQLWHERE = @cSQLWHERE + 	N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPosLabel
+																	JOIN dbo.tArtikelLabel  ON tArtikelLabel.kArtikel = BestPosLabel.kartikel
+																    JOIN WMS.tPicklisteVorlageArtikelLabel ON tPicklisteVorlageArtikelLabel.kLabel = tArtikelLabel.kLabel
+																    WHERE  BestPosLabel.kAuftrag = Verkauf.tAuftrag.kAuftrag
+																    AND  tPicklisteVorlageArtikelLabel.kPicklisteVorlage =  &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; ) &#39;;
+
+
+
+
+
+
+			END;
+			ELSE
+			BEGIN
+			
+				 -- Alle Label m&#252;&#223;en in den jeweiligen Artikeln der BestellPos enthalten sein
+				 SET @cSQLWHERE = @cSQLWHERE +  N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPosLabel 
+																    LEFT JOIN tArtikelLabel ON BestPosLabel.kartikel = tArtikelLabel.kartikel 
+																    WHERE (BestPosLabel.ntype IN (1,11,17,18,19,20))
+																    AND BestPosLabel.kAuftrag = Verkauf.tAuftrag.kAuftrag
+																    AND (tArtikelLabel.kLabel IS NULL OR tArtikelLabel.kLabel NOT IN (SELECT tPicklisteVorlageArtikelLabel.kLabel FROM wms.tPicklisteVorlageArtikelLabel WHERE tPicklisteVorlageArtikelLabel.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS VARCHAR) + N&#39;) ))&#39;;
+
+
+
+
+			END;
+		
+
+
+		END
+
+
+
+
+		IF(@IstArtikelZustandFilter &gt; 0)
+			BEGIN
+
+				IF(@nEnthaeltArtArtikelZustand = 1)
+				BEGIN
+
+				    -- In der Bestellung mu&#223; min. ein Artikel mit einen Zustand vorhanden sein
+			        SET @cSQLFROM = @cSQLFROM + N&#39; JOIN (  SELECT BestPosArtZu.kAuftrag 
+													    FROM Verkauf.tAuftragPosition BestPosArtZu 
+													    JOIN dbo.tartikel AS ArtikelArtZu ON BestPosArtZu.kartikel = ArtikelArtZu.kartikel
+														JOIN dbo.tPicklisteVorlageArtikelZustand ON tPicklisteVorlageArtikelZustand.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+														WHERE tPicklisteVorlageArtikelZustand.kZustand = ArtikelArtZu.kZustand
+													    GROUP BY BestPosArtZu.kAuftrag
+								                     ) AS ArtZustand ON  ArtZustand.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;
+
+												
+				END;
+				ELSE IF(@nEnthaeltArtArtikelZustand = 2)
+				BEGIN
+
+				
+					 -- Keiner der Zustaende darf bei den artikeln in der Bestellung vorhanden sein
+					 SET @cSQLWHERE = @cSQLWHERE + 	N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPosArtZu
+																		JOIN dbo.tartikel AS ArtikelArtZu ON BestPosArtZu.kartikel = ArtikelArtZu.kartikel
+																	    JOIN dbo.tPicklisteVorlageArtikelZustand ON tPicklisteVorlageArtikelZustand.kZustand = ArtikelArtZu.kZustand
+																	    WHERE  BestPosArtZu.kAuftrag = Verkauf.tAuftrag.kAuftrag
+																	    AND  tPicklisteVorlageArtikelZustand.kPicklisteVorlage =  &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; ) &#39;;
+
+
+
+
+
+
+				END;
+				ELSE
+				BEGIN
+				
+					 -- Alle Zustaende m&#252;&#223;en in den jeweiligen Artikeln der BestellPos enthalten sein
+					 SET @cSQLWHERE = @cSQLWHERE +  N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPosArtZu 
+																	    JOIN tartikel  AS ArtikelArtZu ON BestPosArtZu.kartikel = ArtikelArtZu.kartikel 
+																	    WHERE (BestPosArtZu.ntype IN (1,11,17,18,19,20))
+																	    AND BestPosArtZu.kAuftrag = Verkauf.tAuftrag.kAuftrag
+																	    AND ArtikelArtZu.kZustand NOT IN (SELECT tPicklisteVorlageArtikelZustand.kZustand FROM dbo.tPicklisteVorlageArtikelZustand WHERE tPicklisteVorlageArtikelZustand.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS VARCHAR) + N&#39;) )&#39;;
+
+
+
+
+
+				END;
+		    END;
+
+
+			IF(@IstEigeneFelderArtikelFilter &gt; 0)
+			BEGIN
+
+				IF(@nEnthaeltArtAusEigeneFelder = 1)
+				BEGIN
+
+
+				    -- In der Bestellung mu&#223; min. ein Eigenes Feld in einem Artikel vorhanden sein
+				    SET @cSQLFROM = @cSQLFROM + N&#39; JOIN (  SELECT BestPos2.kAuftrag 
+													    FROM Verkauf.tAuftragPosition AS BestPos2 
+													    JOIN dbo.tartikel AS Art2 ON BestPos2.kartikel = Art2.kartikel
+														JOIN dbo.tArtikelAttribut ON tArtikelAttribut.kArtikel = Art2.kartikel
+													    JOIN dbo.tAttribut ON tAttribut.kAttribut = tArtikelAttribut.kAttribut AND tAttribut.nBezugstyp = 0
+				                                        JOIN dbo.tFeldTyp ON tAttribut.kFeldTyp = tFeldTyp.kFeldTyp
+														JOIN dbo.tArtikelAttributSprache ON tArtikelAttributSprache.kArtikelAttribut  = tArtikelAttribut.kArtikelAttribut  AND tArtikelAttributSprache.kSprache = 0
+														JOIN dbo.tPicklisteVorlageEigeneFelder ON tPicklisteVorlageEigeneFelder.kAttribut = tArtikelAttribut.kAttribut AND tPicklisteVorlageEigeneFelder.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+														WHERE 
+														dbo.tFeldTyp.nDatenTyp = 0 AND dbo.tPicklisteVorlageEigeneFelder.nWertInt = dbo.tArtikelAttributSprache.nWertInt OR -- Ganzzahl, Checkbox
+				                                        dbo.tFeldTyp.nDatenTyp = 1 AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal = dbo.tArtikelAttributSprache.fWertDecimal OR -- Kommazahl
+				                                        dbo.tFeldTyp.nDatenTyp = 2 AND dbo.tPicklisteVorlageEigeneFelder.cWert = dbo.tArtikelAttributSprache.cWertVarchar OR -- Liste, Text
+				                                        dbo.tFeldTyp.nDatenTyp = 3 AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime = dbo.tArtikelAttributSprache.dWertDateTime -- Datum
+													    GROUP BY BestPos2.kAuftrag
+								                     ) AS EigeneFelder ON  EigeneFelder.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;
+
+												
+				END;
+				ELSE IF(@nEnthaeltArtAusEigeneFelder = 2)
+				BEGIN
+
+				
+					 -- Keines der Freien Felder darf bei den artikeln in der Bestellung vorhanden sein
+					 SET @cSQLWHERE = @cSQLWHERE + 	N&#39; AND NOT EXISTS ( SELECT * FROM Verkauf.tAuftragPosition AS BestPos2
+													   JOIN dbo.tArtikelAttribut ON tArtikelAttribut.kartikel = BestPos2.kartikel
+													   JOIN dbo.tAttribut ON tAttribut.kAttribut = tArtikelAttribut.kAttribut AND tAttribut.nBezugstyp = 0
+				                                       JOIN dbo.tFeldTyp ON tAttribut.kFeldTyp = tFeldTyp.kFeldTyp
+													   JOIN dbo.tArtikelAttributSprache ON tArtikelAttributSprache.kArtikelAttribut = tArtikelAttribut.kArtikelAttribut AND tArtikelAttributSprache.kSprache = 0
+													   JOIN dbo.tPicklisteVorlageEigeneFelder ON tPicklisteVorlageEigeneFelder.kAttribut = dbo.tArtikelAttribut.kAttribut
+													   WHERE  BestPos2.kAuftrag = Verkauf.tAuftrag.kAuftrag
+													   AND  tPicklisteVorlageEigeneFelder.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+													   AND (
+														dbo.tFeldTyp.nDatenTyp = 0 AND dbo.tPicklisteVorlageEigeneFelder.nWertInt = dbo.tArtikelAttributSprache.nWertInt OR -- Ganzzahl, Checkbox
+				                                        dbo.tFeldTyp.nDatenTyp = 1 AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal = dbo.tArtikelAttributSprache.fWertDecimal OR -- Kommazahl
+				                                        dbo.tFeldTyp.nDatenTyp = 2 AND dbo.tPicklisteVorlageEigeneFelder.cWert = dbo.tArtikelAttributSprache.cWertVarchar OR -- Liste, Text
+				                                        dbo.tFeldTyp.nDatenTyp = 3 AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime = dbo.tArtikelAttributSprache.dWertDateTime -- Datum
+														)
+													) &#39;;
+
+
+
+
+
+
+				END;
+				ELSE
+				BEGIN
+				
+					 -- Alle Eigenen Felder der Vorlage m&#252;&#223;en in den jeweiligen Artikeln der BestellPos enthalten sein
+					 SET @cSQLWHERE = @cSQLWHERE + 	N&#39; AND 1 = ( SELECT 
+				                                                MIN(
+				                                                CASE 
+				                                                    WHEN tFeldTyp.nDatenTyp = 0 AND dbo.tPicklisteVorlageEigeneFelder.nWertInt IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.nWertInt = dbo.tArtikelAttributSprache.nWertInt THEN 1
+				                                                    WHEN tFeldTyp.nDatenTyp = 1 AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal = dbo.tArtikelAttributSprache.fWertDecimal THEN 1
+				                                                    WHEN tFeldTyp.nDatenTyp = 3 AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime = dbo.tArtikelAttributSprache.dWertDateTime THEN 1
+				                                                    WHEN tFeldTyp.nDatenTyp = 2 AND dbo.tPicklisteVorlageEigeneFelder.cWert IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.cWert = dbo.tArtikelAttributSprache.cWertVarchar THEN 1
+				                                                    ELSE 0
+				                                                END
+				                                                ) AS ValidEigenesFeld
+				                                                FROM  dbo.tPicklisteVorlageEigeneFelder
+													            JOIN Verkauf.tAuftragPosition AS BestPos2 ON BestPos2.kAuftrag = Verkauf.tAuftrag.kAuftrag
+													            LEFT JOIN dbo.tArtikelAttribut ON tArtikelAttribut.kartikel = BestPos2.kArtikel AND tArtikelAttribut.kAttribut = tPicklisteVorlageEigeneFelder.kAttribut
+																LEFT JOIN dbo.tAttribut ON tAttribut.kAttribut = tArtikelAttribut.kAttribut AND tAttribut.nBezugstyp = 0
+				                                                LEFT JOIN dbo.tFeldTyp ON tAttribut.kFeldTyp = tFeldTyp.kFeldTyp
+													            LEFT JOIN dbo.tArtikelAttributSprache ON tArtikelAttributSprache.kArtikelAttribut = tArtikelAttribut.kArtikelAttribut AND tArtikelAttributSprache.kSprache = 0
+													            WHERE  tPicklisteVorlageEigeneFelder.kPicklisteVorlage =  &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+													            AND  (BestPos2.ntype IN (1,11,17,18,19,20))
+				                                              ) &#39;;
+
+				END;
+				
+
+		    END;
+
+		
+			IF(@IstEigeneFelderAuftragFilter &gt; 0)
+			BEGIN
+				 
+				IF(@nEnthaeltAuftragAusEigeneFelder = 1)
+				BEGIN
+
+
+			    -- In der Bestellung mu&#223; min. ein Eigenes Feld in einem Artikel vorhanden sein
+		        SET @cSQLFROM = @cSQLFROM + N&#39; JOIN (    SELECT BestPos2.kAuftrag 
+													     FROM Verkauf.tAuftragPosition AS BestPos2 
+													     JOIN Verkauf.tAuftragAttribut ON tAuftragAttribut.kAuftrag = BestPos2.kAuftrag
+													     JOIN dbo.tAttribut ON tAttribut.kAttribut = tAuftragAttribut.kAttribut
+													     JOIN dbo.tFeldTyp ON tAttribut.kFeldTyp = tFeldTyp.kFeldTyp
+													     JOIN Verkauf.tAuftragAttributSprache ON tAuftragAttributSprache.kAuftragAttribut  = Verkauf.tAuftragAttribut.kAuftragAttribut  AND tAuftragAttributSprache.kSprache = 0
+													     JOIN dbo.tPicklisteVorlageEigeneFelder ON tPicklisteVorlageEigeneFelder.kAttribut = Verkauf.tAuftragAttribut.kAttribut AND tPicklisteVorlageEigeneFelder.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+													     WHERE 
+													     dbo.tFeldTyp.nDatenTyp = 0 AND dbo.tPicklisteVorlageEigeneFelder.nWertInt = Verkauf.tAuftragAttributSprache.nWertInt OR -- Ganzzahl, Checkbox
+													     dbo.tFeldTyp.nDatenTyp = 1 AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal = Verkauf.tAuftragAttributSprache.fWertDecimal OR -- Kommazahl
+													     dbo.tFeldTyp.nDatenTyp = 2 AND dbo.tPicklisteVorlageEigeneFelder.cWert = Verkauf.tAuftragAttributSprache.cWertVarchar OR -- Liste, Text
+													     dbo.tFeldTyp.nDatenTyp = 3 AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime = Verkauf.tAuftragAttributSprache.dWertDateTime -- Datum
+													     GROUP BY BestPos2.kAuftrag
+													    ) AS EigeneFelder ON  EigeneFelder.kAuftrag = Verkauf.tAuftrag.kAuftrag &#39;
+
+											
+			END;
+				ELSE IF(@nEnthaeltAuftragAusEigeneFelder = 2)
+				BEGIN
+
+				
+					 -- Keines der Freien Felder darf bei den Auftrag vorhanden sein
+					 SET @cSQLWHERE = @cSQLWHERE + 	N&#39; AND NOT EXISTS (       SELECT * FROM Verkauf.tAuftrag AS Auftrag
+																			   JOIN Verkauf.tAuftragAttribut ON tAuftragAttribut.kAuftrag = Auftrag.kAuftrag
+																			   JOIN dbo.tAttribut ON tAttribut.kAttribut = tAuftragAttribut.kAttribut AND tAttribut.nBezugstyp = 4
+																			   JOIN dbo.tFeldTyp ON tAttribut.kFeldTyp = tFeldTyp.kFeldTyp
+																			   JOIN Verkauf.tAuftragAttributSprache ON tAuftragAttributSprache.kAuftragAttribut = tAuftragAttribut.kAuftragAttribut AND tAuftragAttributSprache.kSprache = 0
+																			   JOIN dbo.tPicklisteVorlageEigeneFelder ON tPicklisteVorlageEigeneFelder.kAttribut = tAuftragAttribut.kAttribut
+																			   WHERE  Auftrag.kAuftrag = Verkauf.tAuftrag.kAuftrag
+																			   AND  tPicklisteVorlageEigeneFelder.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39;
+																			   AND (
+																				dbo.tFeldTyp.nDatenTyp = 0 AND dbo.tPicklisteVorlageEigeneFelder.nWertInt = tAuftragAttributSprache.nWertInt OR -- Ganzzahl, Checkbox
+																			    dbo.tFeldTyp.nDatenTyp = 1 AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal = tAuftragAttributSprache.fWertDecimal OR -- Kommazahl
+																			    dbo.tFeldTyp.nDatenTyp = 2 AND dbo.tPicklisteVorlageEigeneFelder.cWert = tAuftragAttributSprache.cWertVarchar OR -- Liste, Text
+																			    dbo.tFeldTyp.nDatenTyp = 3 AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime = tAuftragAttributSprache.dWertDateTime -- Datum
+																				)
+														) &#39;;
+
+
+
+
+
+
+				END;
+				ELSE
+				BEGIN
+				
+					 -- Alle Eigenen Felder der Vorlage m&#252;&#223;en in den jeweiligen Auftrag enthalten sein
+					 SET @cSQLWHERE = @cSQLWHERE + 	N&#39; AND 1 = (	 SELECT 
+																	 MIN(
+																	 CASE 
+																	     WHEN tFeldTyp.nDatenTyp = 0 AND dbo.tPicklisteVorlageEigeneFelder.nWertInt IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.nWertInt = tAuftragAttributSprache.nWertInt THEN 1
+																	     WHEN tFeldTyp.nDatenTyp = 1 AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.fWertDecimal = tAuftragAttributSprache.fWertDecimal THEN 1
+																	     WHEN tFeldTyp.nDatenTyp = 3 AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.dWertDateTime = tAuftragAttributSprache.dWertDateTime THEN 1
+																	     WHEN tFeldTyp.nDatenTyp = 2 AND dbo.tPicklisteVorlageEigeneFelder.cWert IS NOT NULL AND dbo.tPicklisteVorlageEigeneFelder.cWert = tAuftragAttributSprache.cWertVarchar THEN 1
+																	     ELSE 0
+																	 END
+																	 ) AS ValidEigenesFeld
+																	 FROM  dbo.tPicklisteVorlageEigeneFelder
+																	   JOIN Verkauf.tAuftrag AS tAuftrag ON tAuftrag.kAuftrag = Verkauf.tAuftrag.kAuftrag
+																	   LEFT JOIN Verkauf.tAuftragAttribut ON tAuftragAttribut.kAuftrag = tAuftrag.kAuftrag AND tAuftragAttribut.kAttribut =  tPicklisteVorlageEigeneFelder.kAttribut
+																	   LEFT JOIN dbo.tAttribut ON tAttribut.kAttribut = tAuftragAttribut.kAttribut AND tAttribut.nBezugstyp = 4
+																	   LEFT JOIN dbo.tFeldTyp ON tAttribut.kFeldTyp = tFeldTyp.kFeldTyp
+																	   LEFT JOIN Verkauf.tAuftragAttributSprache ON tAuftragAttributSprache.kAuftragAttribut = tAuftragAttribut.kAuftragAttribut AND tAuftragAttributSprache.kSprache = 0
+																	   WHERE  tPicklisteVorlageEigeneFelder.kPicklisteVorlage = &#39; + CAST (@kPicklistenVorlageUrsprung AS NVARCHAR) + N&#39; 
+			                                                  ) &#39;;
+
+				END;
+				
+
+		    END;
+
+
+
+
+			IF (@nArtikelBreiteBis &gt; 0 OR @nArtikelHoeheBis &gt; 0  OR @nArtikelLaengeBis &gt; 0 ) 
+			BEGIN
+
+			SET @cSQLWHERE = @cSQLWHERE + N&#39; AND EXISTS (SELECT count(*)
+					  FROM Verkauf.tAuftragPosition 
+					  JOIN dbo.tartikel  WITH(NOLOCK) ON Verkauf.tAuftragPosition.kartikel = dbo.tartikel.kartikel
+					  JOIN #vBestellPosLieferInfoProLagerTemp ON #vBestellPosLieferInfoProLagerTemp.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition 
+					  WHERE Verkauf.tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag
+					  HAVING ((MAX(dbo.tartikel.fBreite) &lt;= &#39;+CAST(@nArtikelBreiteBis AS NVARCHAR)+&#39;  OR &#39;+CAST(@nArtikelBreiteBis AS NVARCHAR)+&#39; = 0) AND MIN(dbo.tartikel.fBreite) &gt;= &#39;+CAST(@nArtikelBreiteVon AS NVARCHAR)+&#39; 
+					  AND (MAX(dbo.tartikel.fHoehe) &lt;=  &#39;+CAST(@nArtikelHoeheBis AS NVARCHAR)+&#39;  OR &#39;+CAST(@nArtikelHoeheBis AS NVARCHAR)+&#39; = 0) AND MIN(dbo.tartikel.fHoehe) &gt;= &#39;+CAST(@nArtikelHoeheVon AS NVARCHAR)+&#39; 
+					  AND (MAX(dbo.tartikel.fLaenge) &lt;=  &#39;+CAST(@nArtikelLaengeBis AS NVARCHAR)+&#39;  OR &#39;+CAST(@nArtikelLaengeBis AS NVARCHAR)+&#39; = 0) AND MIN(dbo.tartikel.fLaenge) &gt;= &#39;+CAST(@nArtikelLaengeVon AS NVARCHAR)+&#39; )) &#39;;
+			END;
+
+
+			IF (@nArtikelEinzelPreisMin &gt; 0 OR @nArtikelEinzelPreisMax &gt; 0 ) 
+			BEGIN
+
+			SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS (SELECT *
+					  FROM Verkauf.tAuftragPosition 
+					  JOIN dbo.tartikel  WITH(NOLOCK) ON Verkauf.tAuftragPosition.kartikel = dbo.tartikel.kartikel
+					  JOIN #vBestellPosLieferInfoProLagerTemp ON #vBestellPosLieferInfoProLagerTemp.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition 
+					  WHERE Verkauf.tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag
+					  AND Verkauf.tAuftragPosition.nType IN (1)
+					  AND round ( tartikel.fVKNetto * (1 + (tAuftragPosition.fMwSt/100)),4) NOT BETWEEN  &#39;+CAST(@nArtikelEinzelPreisMin AS NVARCHAR)+&#39; AND  &#39;+CAST(@nArtikelEinzelPreisMax AS NVARCHAR)+&#39;  ) &#39;;
+
+			END;
+
+
+			IF (@nArtikelKuerzesteKanteMax &gt; 0 OR @nArtikelLaengsteKanteMax &gt; 0 ) 
+			BEGIN
+
+			    DECLARE @cMasseSQL NVARCHAR(2000);
+
+				IF(@nArtikelKuerzesteKanteMax &gt; 0 AND @nArtikelLaengsteKanteMax &gt; 0)
+				BEGIN
+					SET @cMasseSQL = N&#39;  SELECT MIN(Masse.Passt) AS Valid
+										 FROM
+										 (
+										 SELECT CASE WHEN Min(v)  BETWEEN  &#39;+CAST(@nArtikelKuerzesteKanteMin AS NVARCHAR)+&#39; AND  &#39;+CAST(@nArtikelKuerzesteKanteMax AS NVARCHAR)+&#39; THEN 1 ELSE 0 END AS Passt 
+										 FROM (VALUES (CASE WHEN tartikel.fBreite = 0 THEN NULL ELSE tartikel.fBreite END), 
+										              (CASE WHEN tartikel.fHoehe = 0 THEN NULL ELSE tartikel.fHoehe END), 
+										 	          (CASE WHEN tartikel.fLaenge = 0 THEN NULL ELSE tartikel.fLaenge END) ) AS value(v)
+										 
+										 UNION
+										 SELECT  CASE WHEN Max(v) BETWEEN  &#39;+CAST(@nArtikelLaengsteKanteMin AS NVARCHAR)+&#39; AND  &#39;+CAST(@nArtikelLaengsteKanteMax AS NVARCHAR)+&#39; THEN 1 ELSE 0 END AS Passt  FROM (VALUES (tartikel.fBreite), (tartikel.fHoehe ), (tartikel.fLaenge)) AS value(v) 
+										 ) AS Masse &#39;
+				END
+				ELSE IF(@nArtikelKuerzesteKanteMax &gt; 0 AND @nArtikelLaengsteKanteMax = 0)
+				BEGIN
+					SET @cMasseSQL = N&#39;  SELECT CASE WHEN Min(v)  BETWEEN  &#39;+CAST(@nArtikelKuerzesteKanteMin AS NVARCHAR)+&#39; AND  &#39;+CAST(@nArtikelKuerzesteKanteMax AS NVARCHAR)+&#39; THEN 1 ELSE 0 END AS Valid 
+										 FROM (VALUES (CASE WHEN tartikel.fBreite = 0 THEN NULL ELSE tartikel.fBreite END), 
+										              (CASE WHEN tartikel.fHoehe = 0 THEN NULL ELSE tartikel.fHoehe END), 
+										 	          (CASE WHEN tartikel.fLaenge = 0 THEN NULL ELSE tartikel.fLaenge END) ) AS value(v)
+										&#39;;
+				END
+				ELSE IF(@nArtikelKuerzesteKanteMax = 0 AND @nArtikelLaengsteKanteMax &gt; 0)
+				BEGIN
+
+					SET @cMasseSQL = N&#39;  SELECT  CASE WHEN Max(v) BETWEEN  &#39;+CAST(@nArtikelLaengsteKanteMin AS NVARCHAR)+&#39; AND  &#39;+CAST(@nArtikelLaengsteKanteMax AS NVARCHAR)+&#39; THEN 1 ELSE 0 END AS Valid  FROM (VALUES (tartikel.fBreite), (tartikel.fHoehe ), (tartikel.fLaenge)) AS value(v) &#39;
+										
+				END;
+
+
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND EXISTS (SELECT count(*)
+												 FROM Verkauf.tAuftragPosition 
+												 JOIN dbo.tartikel  WITH(NOLOCK) ON Verkauf.tAuftragPosition.kartikel = dbo.tartikel.kartikel
+												 JOIN #vBestellPosLieferInfoProLagerTemp ON #vBestellPosLieferInfoProLagerTemp.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition 
+												 OUTER APPLY 
+												 (
+													&#39; + @cMasseSQL + &#39;
+												 ) AS MasseCheck
+												 WHERE Verkauf.tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag
+												 AND (tartikel.fBreite &gt; 0 OR  tartikel.fHoehe &gt; 0 OR  tartikel.fLaenge &gt; 0)
+												 HAVING count(*) = SUM(MasseCheck.Valid) ) &#39;
+
+
+			END;
+
+
+			IF (@nAuftragsVolumenBis &gt; 0 AND @nAuftragsVolumenVon &lt; @nAuftragsVolumenBis) 
+			BEGIN
+
+			SET @cSQLWHERE = @cSQLWHERE + N&#39; AND 0 &lt; ( SELECT COUNT(*) FROM
+												   	    ( SELECT SUM(ArtikelVolumen.fVolumen) AS fVolumen, SUM(ArtikelVolumen.HasNullValues) AS HasNullValues
+												   		  FROM
+															( SELECT (MAX(VolArt.fBreite) * MAX(VolArt.fHoehe) *  MAX(VolArt.fLaenge) * SUM(Verkauf.tAuftragPosition.fAnzahl)) AS  fVolumen, CASE WHEN MAX(VolArt.fBreite) = 0 OR MAX(VolArt.fHoehe) = 0 OR  MAX(VolArt.fLaenge) = 0 THEN 1 ELSE 0 END AS HasNullValues
+												   			  FROM Verkauf.tAuftragPosition
+															  JOIN #vBestellPosLieferInfoProLagerTemp ON #vBestellPosLieferInfoProLagerTemp.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+												   			  JOIN dbo.tartikel VolArt WITH(NOLOCK) ON Verkauf.tAuftragPosition.kartikel = VolArt.kartikel
+												   			  WHERE Verkauf.tAuftragPosition.kAuftrag =  Verkauf.tAuftrag.kAuftrag
+												   			  GROUP BY VolArt.kArtikel ) AS ArtikelVolumen
+												   		  HAVING  SUM(ArtikelVolumen.fVolumen) &lt;=  &#39;+CAST(@nAuftragsVolumenBis AS NVARCHAR)+&#39; AND  SUM(ArtikelVolumen.fVolumen) &gt;= &#39;+CAST(@nAuftragsVolumenVon AS NVARCHAR)+&#39; AND ((&#39;+CAST(@nOhneVolumenAusschliessen AS NVARCHAR)+&#39; = 1 AND  SUM(ArtikelVolumen.HasNullValues) = 0) OR  &#39;+CAST(@nOhneVolumenAusschliessen AS NVARCHAR)+&#39; = 0)
+												   		) AS VolumenTest) &#39;;
+			END;
+
+
+
+			IF (LEN(ISNULL(@cShops,&#39;&#39;)) &gt; 0 AND LEN(ISNULL(@cPlattformen,&#39;&#39;)) &gt; 0) 
+			BEGIN 
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND (Verkauf.tAuftrag.kShop IN (&#39; + @cShops + N&#39;) OR Verkauf.tAuftrag.kPlattform IN (&#39; + @cPlattformen + N&#39;))&#39;; 
+			END;
+ 
+			IF (LEN(ISNULL(@cShops,&#39;&#39;)) &gt; 0 AND LEN(ISNULL(@cPlattformen,&#39;&#39;)) = 0) 
+			BEGIN 
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kShop IN (&#39; + @cShops + N&#39;) &#39;; 
+			END;
+ 
+			IF (LEN(ISNULL(@cPlattformen,&#39;&#39;)) &gt; 0 AND LEN(ISNULL(@cShops,&#39;&#39;)) = 0) 
+			BEGIN 		
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kPlattform IN (&#39; + @cPlattformen + N&#39;) &#39;; 
+			END;
+
+			IF (LEN(ISNULL(@cISO,&#39;&#39;)) &gt; 0) 
+			BEGIN 		
+				SET @cSQLFROM = @cSQLFROM + N&#39; JOIN Verkauf.tAuftragAdresse AS LieferAdresse ON LieferAdresse.kAuftrag = Verkauf.tAuftrag.kAuftrag AND LieferAdresse.nTyp = 0  &#39;;
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND LieferAdresse.cISO IN  (&#39;&#39;&#39; + REPLACE( @cISO,  &#39;,&#39;  ,  &#39;&#39;&#39;,&#39;&#39;&#39;)  + N&#39;&#39;&#39;)&#39; ;							    
+			END;
+
+			IF (LEN(ISNULL(@cRechnungslaender,&#39;&#39;)) &gt; 0) 
+			BEGIN 		
+				SET @cSQLFROM = @cSQLFROM + N&#39; JOIN Verkauf.tAuftragAdresse AS RechnungsAdresse ON RechnungsAdresse.kAuftrag = Verkauf.tAuftrag.kAuftrag AND RechnungsAdresse.nTyp = 1  &#39;;
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND RechnungsAdresse.cISO IN  (&#39;&#39;&#39; + REPLACE( @cRechnungslaender,  &#39;,&#39;  ,  &#39;&#39;&#39;,&#39;&#39;&#39;)  + N&#39;&#39;&#39;)&#39; ;							    
+			END;
+
+			
+	  
+			IF (@kBestellNr &gt; 0) 
+			BEGIN 
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND Verkauf.tAuftrag.kAuftrag = &#39; + CAST(@kBestellNr AS NVARCHAR); 
+			END
+
+
+			IF(@nAdressenCheck &gt; 0)
+		    BEGIN
+
+				SET @cSQLWHERE = @cSQLWHERE + N&#39; AND &#39; + CAST(@nAdressenCheck AS NVARCHAR) +N&#39; IN ( 
+													SELECT COUNT(*) FROM
+													(
+													SELECT  cAdressZusatz, cBundesland,  cFirma, cISO, cLand,cName,
+													        cOrt,   cPLZ,  cStrasse, cVorname, cZusatz, kAuftrag, kKunde
+													FROM Verkauf.tAuftragAdresse 
+													WHERE nTyp IN (0,1)
+													AND tAuftragAdresse.kAuftrag = Verkauf.tAuftrag.kAuftrag
+													GROUP BY cAdressZusatz, cBundesland,  cFirma, cISO, cLand,cName,
+													         cOrt,   cPLZ,  cStrasse, cVorname, cZusatz, kAuftrag, kKunde
+													) AS AnzahlAdressen	) &#39;;
+
+
+	     	END;
+
+			--Bei 1-Artikel-Picklisten (eazy-Shipping) darf keine Bestellung reserviert werden, welche schon f&#252;r eine Versandbox vorgesehen ist,
+			--da der Auftrag sonst in 2 Teilen rausgeht
+		  	IF (@nPicklistenVorlageTyp IN (1,3,4))
+		  	BEGIN
+		  		SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS (SELECT * FROM dbo.tlhm  &#39; +
+		  								N&#39; JOIN dbo.tlhmstatus ON dbo.tlhmstatus.klhmstatus = dbo.tlhm.klhmstatus &#39; +
+		  								N&#39; WHERE dbo.tlhmstatus.nstatus &gt; 10 &#39; +
+		  								N&#39; AND dbo.tlhm.kWarenlager = &#39; + CAST(@kWarenlager AS NVARCHAR) + &#39; &#39; +
+		  								N&#39; AND dbo.tlhmstatus.kbestellung = Verkauf.tAuftrag.kAuftrag) &#39;;
+		  	END;
+		  	ELSE --Bei Boxen Darf keine bestellung reserviert werden die in einer Box vom Status &quot;geduckt&quot; ist.
+		  	BEGIN
+		  		SET @cSQLWHERE = @cSQLWHERE + N&#39; AND NOT EXISTS (SELECT * FROM dbo.tlhm  &#39; +
+		  								N&#39; JOIN dbo.tlhmstatus ON dbo.tlhmstatus.klhmstatus = dbo.tlhm.klhmstatus &#39; +
+		  								N&#39; WHERE dbo.tlhmstatus.nstatus = 30 &#39; +
+		  								N&#39; AND dbo.tlhm.kWarenlager = &#39; + CAST(@kWarenlager AS NVARCHAR) + &#39; &#39; +
+		  								N&#39; AND dbo.tlhmstatus.kbestellung = Verkauf.tAuftrag.kAuftrag) &#39;;
+
+		  	END;
+
+			IF(@nPicklistenVorlageTyp NOT IN (1))
+			BEGIN
+
+			    SET @cSQLWHERE = @cSQLWHERE + N&#39; AND dbo.tArtikel.nIstTeilmengenArtikel = 0 &#39;;
+			
+			END;
+ 
+			SET @cSQL = @cSQLInsert + @cSQLSelect + @cSQLFROM + @cSQLWHERE + @cSQLGROUP + @cSQLHAVING; 
+
+			-- F&#252;r Debugf&#228;lle speichern wir das SQL in den logs
+			IF (@nDebug = 1) 
+			BEGIN
+				INSERT INTO [dbo].[tLog]([dDatum],[kBenutzer],[cLog],[nTyp]	,[nVorgang])
+				VALUES(getdate(),@kBenutzer,SUBSTRING(@cSQL,1,4000) ,888,88);
+			END;
+
+			IF(@nWMSLogAktiv = 1)
+			BEGIN
+				INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+			    VALUES  (&#39;sp_executesql&#39; ,2 ,&#39;spPicklisteErstellen&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,@cSQL  ,null ,@kPicklisteVorlage ,null)
+			END;
+
+
+			EXEC sp_executesql @cSQL;
+
+
+			IF (@nDebug = 1)
+			BEGIN
+
+				INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,cValue1,nValue1)
+				VALUES (@kSessionID, @kBenutzer, @DBError_000001001, GETDATE(), @kPickliste, 0);
+			END;
+
+
+			IF(@nVollstaengigeImmerVorkommissionieren = 1 AND  @nPicklistenVorlageTyp = 0 )
+			BEGIN
+
+				INSERT INTO @BestellungZuReservieren (kBestellung,nTeillieferungErlaubt,nVorkommissionieren)
+				SELECT tBestellungPicklisteLock.kBestellung,ISNULL(tbestellungwmsfreigabe.nTeillieferungErlaubt,0), 
+				       CASE WHEN #vBestellungLieferInfoProLagerTemp.nLieferbarEigen = 2 AND ISNULL(tbestellungwmsfreigabe.nVorkommissionieren,0) = 0 AND ISNULL(tbestellungwmsfreigabe.nTeillieferungErlaubt,0) = 0
+					        THEN 1 
+							ELSE ISNULL(tbestellungwmsfreigabe.nVorkommissionieren,0) END AS nVorkommissionieren
+				FROM dbo.tBestellungPicklisteLock
+				JOIN #vBestellungLieferInfoProLagerTemp ON #vBestellungLieferInfoProLagerTemp.kBestellung = tBestellungPicklisteLock.kBestellung
+				LEFT JOIN dbo.tbestellungwmsfreigabe ON tbestellungwmsfreigabe.kBestellung = tBestellungPicklisteLock.kBestellung AND tbestellungwmsfreigabe.nAktiv = 1
+				WHERE tBestellungPicklisteLock.kPickliste = @kPickliste;
+
+			END
+			ELSE BEGIN
+
+
+				INSERT INTO @BestellungZuReservieren (kBestellung,nTeillieferungErlaubt,nVorkommissionieren)
+				SELECT tBestellungPicklisteLock.kBestellung,ISNULL(tbestellungwmsfreigabe.nTeillieferungErlaubt,0),ISNULL(tbestellungwmsfreigabe.nVorkommissionieren,0)
+				FROM dbo.tBestellungPicklisteLock
+				LEFT JOIN dbo.tbestellungwmsfreigabe ON tbestellungwmsfreigabe.kBestellung = tBestellungPicklisteLock.kBestellung AND tbestellungwmsfreigabe.nAktiv = 1
+				WHERE tBestellungPicklisteLock.kPickliste = @kPickliste;
+
+			END;
+
+
+			IF(EXISTS (SELECT * FROM @BestellungZuReservieren))
+			BEGIN
+
+			
+		        IF(@nWMSLogAktiv = 1)
+		        BEGIN
+
+				    DECLARE @xBestellungen XML;
+					SET @xBestellungen = (
+						    SELECT kBestellung,nTeillieferungErlaubt,nVorkommissionieren
+							FROM @BestellungZuReservieren 
+							
+							    FOR XML PATH(&#39;Bestellungen&#39;), TYPE
+						    );
+
+
+		            INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+		       	    VALUES  (&#39;spPicklisteErstellen_spBestellungReservieren_ENTRY&#39; ,2 ,&#39;spPicklisteErstellen&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null , null  ,@xBestellungen ,@kPicklisteVorlage ,null)
+		        END;
+
+
+
+			    DECLARE @nRetrys INT = 0
+			    SET @nAnzReservierterAuftraege = -1; -- Initial -1, damit wir in die while schleife kommen
+
+			    -- Falls wir einen fehler @nAnzReservierterAuftraege = &#39;-999999&#39; bekommen, bis zu 5 mal Retry. Fehler kann durch parallele reservierungen passieren.
+			    WHILE @nRetrys &lt; 5 AND @nAnzReservierterAuftraege &lt; 0
+			    BEGIN
+
+				   SET @nAnzReservierterAuftraege = 0;
+
+				   EXEC WMS.spBestellungReservieren  @kWarenlager = @kWarenlager, 
+										    @kPicklisteVorlage = @kPicklisteVorlageAktuell, 
+										    @kBenutzer = @kBenutzer,
+										    @kSessionID = @kSessionID, 
+										    @BestellungZuReservieren = @BestellungZuReservieren,
+										    @BestandReservieren  = 1,
+										    @kPickliste = @kPickliste,
+										    @nAnzahlReservierteBestellung = @nAnzReservierterAuftraege OUTPUT;
+
+				   SET @nRetrys = @nRetrys +1;
+			    END;
+
+			    IF(@nAnzReservierterAuftraege &lt; 0)
+			    BEGIN
+			        SET @nAnzReservierterAuftraege = 0
+			    END;
+		
+			END;
+
+			
+
+		     IF (@nAnzReservierterAuftraege = 0) 
+		  	BEGIN
+
+				IF(ISNULL(@kPicklisteMulti,0) = 0)
+				BEGIN
+				    DELETE FROM dbo.tPickliste 
+				    WHERE kPickliste = @kPickliste;
+				END;
+
+
+
+				DECLARE @nLieferbarEigen INT;
+				DECLARE @cMissingArtikelNr NVARCHAR(255);
+				DECLARE @fMengeOffenBestellung DECIMAL(25,13);
+				DECLARE @fMengeReserviertBestellung DECIMAL(25,13);
+				DECLARE @EigenschaftTyp NVARCHAR(255);
+
+
+				SELECT @nLieferbarEigen = ISNULL(Versand.vBestellungLieferInfoProLager.nLieferbarEigen,0)
+				FROM Versand.vBestellungLieferInfoProLager
+				LEFT JOIN dbo.tbestellungwmsfreigabe ON  Versand.vBestellungLieferInfoProLager.kBestellung = tbestellungwmsfreigabe.kBestellung
+				WHERE Versand.vBestellungLieferInfoProLager.kWarenlager = @kWarenlager
+				AND Versand.vBestellungLieferInfoProLager.kBestellung = @kBestellNr;
+
+
+			     INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+				SELECT @kSessionID,@kBenutzer,@DBError_000001002,GETDATE(),0;
+
+
+				IF(@nLieferbarEigen = 0)
+				BEGIN
+
+				    INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+				    SELECT @kSessionID,@kBenutzer,@DBError_000001003,GETDATE(),2;
+
+
+				END;
+
+				IF((@nLieferbarEigen = 1))
+				BEGIN
+				
+				    INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+				    SELECT @kSessionID,@kBenutzer,@DBError_000001004,GETDATE(),2;
+
+				END;
+
+				IF((@nLieferbarEigen = 2))
+				BEGIN
+				
+				    INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+				    SELECT @kSessionID,@kBenutzer,@DBError_000001005,GETDATE(),2;
+
+				END;
+
+				--Hier k&#246;nnen wir bestellungen checken die nicht im SQL gefunden wurden, wenn wir einzellne Bestellungen reservieren
+				IF( @nDebug = 1 AND @kBestellNr &gt; 0)
+				BEGIN
+
+				  SELECT @cBestellung = cAuftragsNr 
+				  FROM Verkauf.tAuftrag
+				  WHERE kAuftrag = @kBestellNr;
+
+				  IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+				           JOIN tkunde ON tKunde.kKunde  = Verkauf.tAuftrag.kKunde
+				           WHERE kAuftrag = @kBestellNr
+				           AND tkunde.cSperre = &#39;Y&#39;))
+				  BEGIN
+
+			           INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+				      SELECT @kSessionID,@kBenutzer,@DBError_000001006,GETDATE(),2;
+
+				  END;
+
+				  IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+				           WHERE kAuftrag = @kBestellNr
+				           AND Verkauf.tAuftrag.kRueckhalteGrund &gt; 0
+						   AND tAuftrag.nType IN (1, 6) ))
+				  BEGIN
+
+
+				     INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					 SELECT @kSessionID,@kBenutzer,@DBError_000001007,GETDATE(),2;
+
+				  END;
+
+				  IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+				           WHERE kAuftrag = @kBestellNr
+				           AND Verkauf.tAuftrag.kRueckhalteGrund &gt; 0
+						   AND tAuftrag.nType = 2  ))
+				  BEGIN
+
+
+				      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					 SELECT @kSessionID,@kBenutzer,@DBError_000001018,GETDATE(),2;
+
+				  END;
+
+				  IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+				           JOIN dbo.tbestellungwmsfreigabe WITH(NOLOCK) on dbo.tbestellungwmsfreigabe.kbestellung = Verkauf.tAuftrag.kAuftrag and dbo.tBEstellungwmsFreigabe.naktiv = 1 
+				           WHERE  Verkauf.tAuftrag.kAuftrag = @kBestellNr
+				           AND tbestellungwmsfreigabe.nSperre = 1 ))
+				  BEGIN
+
+				      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					 SELECT @kSessionID,@kBenutzer,@DBError_000001008,GETDATE(),2;
+
+				  END;
+
+
+
+			       IF( 0 &lt; (SELECT count(*) 
+				           FROM Verkauf.tAuftrag
+						   JOIN Verkauf.tAuftragEckdaten ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag
+						   LEFT JOIN dbo.tZahlungsart ON tZahlungsart.kZahlungsart =Verkauf.tAuftrag.kZahlungsArt
+				           WHERE tAuftrag.kAuftrag = @kBestellNr
+				           AND Verkauf.tAuftragEckdaten.dBezahlt IS NULL AND ISNULL(tZahlungsart.nAusliefernVorZahlung,0) = 0)
+					)
+				  BEGIN
+
+				      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					  SELECT @kSessionID,@kBenutzer,@DBError_000001009,GETDATE(),2;
+
+				  END;
+
+
+				  IF( 0 &lt; (SELECT count(*) 
+				           FROM dbo.tPicklistePos 
+						 WHERE tPicklistePos.kBestellung = @kBestellNr
+						 AND tPicklistePos.nStatus &lt; 40))
+				  BEGIN
+
+				      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					 SELECT @kSessionID,@kBenutzer,@DBError_000001010,GETDATE(),2	
+
+				  END;
+
+
+				  DECLARE @nRechnungsCount INT
+				  SELECT @nRechnungsCount = count(*) 
+					FROM Verkauf.tAuftrag
+					JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag
+					JOIN Rechnung.tRechnungPosition ON Rechnung.tRechnungPosition.kAuftragPosition = Verkauf.tAuftragPosition.kAuftragPosition
+					JOIN dbo.tGutschriftPos ON tGutschriftPos.kBestellPos = Rechnung.tRechnungPosition.kRechnungPosition
+				    WHERE Verkauf.tAuftrag.kAuftrag = @kBestellNr;
+
+
+				  IF( 0 &lt; @nRechnungsCount)
+				  BEGIN
+
+				      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,cValue1,nValue1)
+					 SELECT @kSessionID,@kBenutzer,@DBError_000001011,GETDATE(),@nRechnungsCount,2;
+
+				  END;
+
+				  IF( 1 = @FifoAktiv)
+				  BEGIN
+
+				     DECLARE @nStatusBestellung INT;
+					SELECT @nStatusBestellung = Versand.vBestellungLieferInfoProLager.nLieferbarEigen
+					FROM Versand.vBestellungLieferInfoProLager
+					WHERE Versand.vBestellungLieferInfoProLager.kWarenLager = kWarenlager
+					AND Versand.vBestellungLieferInfoProLager.kBestellung = @kBestellNr;
+
+					IF(@nStatusBestellung = 0)
+					BEGIN
+					    INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					    SELECT @kSessionID,@kBenutzer,@DBError_000001012,GETDATE(),2;
+					END;
+
+
+					IF(@nStatusBestellung = 1)
+					BEGIN
+					    INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					    SELECT @kSessionID,@kBenutzer,@DBError_000001013,GETDATE(),2;
+					END;
+
+				  END;
+
+
+				  IF(@IstBoxenFilter &gt; 0)
+				  BEGIN
+
+					   DECLARE @nBoxFehler INT = 0;
+
+
+					   SELECT @nBoxFehler = count(tLHMStatus.kLHMStatus)
+					   FROM dbo.tLHMStatus
+					   JOIN dbo.tLHM ON tLHM.kLHMStatus = tLHMStatus.kLHMStatus
+					   JOIN dbo.tWarenLagerPlatz ON  tWarenLagerPlatz.kWarenLagerPlatz = tLHM.kWarenLagerPlatz
+					   LEFT JOIN dbo.tPicklisteVorlageBoxen ON tPicklisteVorlageBoxen.kLHM = tLHMStatus.kLHM AND tPicklisteVorlageBoxen.kPicklisteVorlage = @kPicklistenVorlageUrsprung 
+					   WHERE tLHMStatus.kBestellung  = @kBestellNr
+					   AND tLHMStatus.nStatus &lt; 25
+					   AND twarenlagerplatz.kwarenlagerplatztyp IN (4,6)
+					   AND tWarenLagerPlatz.kWarenLager = @kWarenlager
+					   AND tPicklisteVorlageBoxen.kLHM IS NULL ;
+
+					   IF(@nBoxFehler &gt; 0)
+					   BEGIN
+					      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					      SELECT @kSessionID,@kBenutzer,@DBError_000001019,GETDATE(),2;
+					   END;
+
+
+				  END
+
+
+				   IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+				           WHERE kAuftrag = @kBestellNr
+				           AND Verkauf.tAuftrag.dAuslieferungAb IS NOT NULL  
+						   AND tAuftrag.dAuslieferungAb &gt; GETDATE() ))
+				  BEGIN
+
+
+				      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					  SELECT @kSessionID,@kBenutzer,@DBError_000001020,GETDATE(),2;
+
+				  END;
+				      
+				
+				  IF EXISTS (SELECT * FROM Verkauf.tAuftrag
+				             WHERE kAuftrag = @kBestellNr
+				             AND Verkauf.tAuftrag.nPending = 1 )
+                  BEGIN
+                  
+                  
+                      INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+                      SELECT @kSessionID,@kBenutzer,@DBError_000001021,GETDATE(),2;
+                  
+                  END;
+                     
+                     
+                  IF EXISTS (SELECT * FROM Verkauf.tAuftrag
+				        WHERE kAuftrag = @kBestellNr
+				        AND Verkauf.tAuftrag.nAuftragStatus &gt; 0 )
+                  BEGIN
+                  
+                     
+                     INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+                     SELECT @kSessionID,@kBenutzer,@DBError_000001022,GETDATE(),2
+                     
+                     
+                     INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1)
+                     SELECT @kSessionID,@kBenutzer, CASE
+                                                        WHEN nAuftragStatus = 1 THEN @DBError_000001023
+                                                        WHEN nAuftragStatus = 2 THEN @DBError_000001024
+                                                        WHEN nAuftragStatus = 4 THEN @DBError_000001025
+                                                        WHEN nAuftragStatus = 16 THEN @DBError_000001026
+                                                        WHEN nAuftragStatus = 255 THEN @DBError_000001027
+                                                        ELSE @DBError_000001028 END , GETDATE(),2, CAST(nAuftragStatus AS NVARCHAR(255))
+                     FROM Verkauf.tAuftrag
+                     WHERE kAuftrag = @kBestellNr
+                     
+                     
+                  END;
+
+				END;
+
+				IF( @nLieferbarEigen IN (0,1))
+				BEGIN
+
+					  DECLARE  CUR_FehlBestand CURSOR LOCAL FAST_FORWARD FOR
+					  SELECT Versand.vBestellPosLieferInfoProLager.fAnzahlOffen, Versand.vBestellPosLieferInfoProLager.fAnzahlReserviertEigen, tArtikel.cArtNr, MAX(teigenschaft.cTyp) AS cTyp
+					  FROM Versand.vBestellPosLieferInfoProLager 
+					  JOIN dbo.tArtikel ON tArtikel.kArtikel = Versand.vBestellPosLieferInfoProLager.kArtikel
+					  LEFT JOIN dbo.teigenschaft ON teigenschaft.kArtikel = tArtikel.kArtikel AND teigenschaft.cTyp NOT IN (&#39;PFLICHT-FREIFELD&#39;,&#39;FREIFELD&#39;)
+					  WHERE Versand.vBestellPosLieferInfoProLager.kBestellung = @kBestellNr
+					  AND Versand.vBestellPosLieferInfoProLager.kWarenLager = @kWarenlager
+					  AND Versand.vBestellPosLieferInfoProLager.fAnzahlOffen &gt; Versand.vBestellPosLieferInfoProLager.fAnzahlReserviertEigen
+					  GROUP BY  Versand.vBestellPosLieferInfoProLager.fAnzahlOffen, Versand.vBestellPosLieferInfoProLager.fAnzahlReserviertEigen, tArtikel.cArtNr
+
+					  INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+					  SELECT @kSessionID,@kBenutzer,@DBError_000001014,GETDATE(),1
+					  UNION ALL
+					  SELECT @kSessionID,@kBenutzer,@DBError_000001015,GETDATE(),0;
+
+					  OPEN CUR_FehlBestand
+					  FETCH NEXT FROM CUR_FehlBestand INTO @fMengeOffenBestellung,@fMengeReserviertBestellung,@cMissingArtikelNr,@EigenschaftTyp;
+
+  					  WHILE (@@FETCH_STATUS = 0 ) 
+					  BEGIN
+
+						 INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+						 SELECT @kSessionID,@kBenutzer,@DBError_000001016,GETDATE(),CASE WHEN @fMengeOffenBestellung &lt;= @fMengeReserviertBestellung THEN 1 ELSE 2 END,@cMissingArtikelNr, CAST(CAST(@fMengeOffenBestellung AS FLOAT) AS NVARCHAR),CAST(CAST(@fMengeReserviertBestellung AS FLOAT) AS NVARCHAR);
+						
+
+
+						 IF(LEN(@EigenschaftTyp) &gt; 0)
+						 BEGIN
+
+						     INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1)
+							SELECT @kSessionID,@kBenutzer,@DBError_000001017,GETDATE(),2,@cMissingArtikelNr;
+						
+						 END;
+
+
+						 FETCH NEXT FROM CUR_FehlBestand INTO @fMengeOffenBestellung,@fMengeReserviertBestellung,@cMissingArtikelNr,@EigenschaftTyp;
+					  END;
+
+					  CLOSE CUR_FehlBestand;
+					  DEALLOCATE CUR_FehlBestand;
+
+				END;
+
+	     END;
+		  	ELSE
+		  	BEGIN --Sicherung damit keine Pos ohne pickliste da sind
+
+		  	  IF (NOT EXISTS (SELECT tPickliste.kPickliste, tPickliste.kWarenLager, tPickliste.kPicklistenVorlage, tPickliste.nStatus, tPickliste.kPicklisteStatus, tPickliste.kPicklisteStatusAngelegt, tPickliste.dGedruckt, tPickliste.kSessionId, tPickliste.kLieferant, tPickliste.kAnsprechpartner, tPickliste.bRowversion FROM tPickliste WHERE kPickliste = @kPickliste)) AND 
+		  	     (EXISTS (SELECT tPicklistePos.kPicklistePos, tPicklistePos.kPickliste, tPicklistePos.kWarenLager, tPicklistePos.kWarenLagerEingang, tPicklistePos.fAnzahl, tPicklistePos.kBestellPos, tPicklistePos.kPicklistePosStatus, tPicklistePos.kArtikel, tPicklistePos.kWarenlagerPlatz, tPicklistePos.kPicklistePos_Ursprung, tPicklistePos.kLieferscheinPos, tPicklistePos.kBestellung, tPicklistePos.nPickPrio, tPicklistePos.nStatus, tPicklistePos.kAnsprechpartner, tPicklistePos.bRowversion FROM tPicklistePos WHERE kPickliste = @kPickliste))
+		  		BEGIN
+
+		  		  DELETE FROM tPicklistePos
+		  		  WHERE tPicklistePos.kPickliste = @kPickliste;
+
+		  		END
+		  	END;
+		     
+
+
+			-------------------------------------------------------------------
+			-- Aufr&#228;umen und Status setzten  der Picklisten nach dem Reservieren
+			-------------------------------------------------------------------
+
+		     -- Druch teillieferbare St&#252;cklisten k&#246;nnen picklistenpos mit bestellpos = 0 entstehen, die z&#228;hlen wie gel&#246;schte.
+		     DELETE FROM dbo.tPicklistePos 
+		     WHERE dbo.tPicklistePos.kBestellPos = 0 
+		     AND dbo.tPicklistePos.kWarenLagerEingang = 0
+		     AND dbo.tPicklistePos.kPickliste = @kPickliste;
+	  	     
+		     DELETE FROM dbo.tBestellungPicklisteLock WITH(ROWLOCK) 
+		  	WHERE kPickliste = @kPickliste;
+		     
+		     DELETE FROM dbo.tPicklisteVorlageBoxen WITH(ROWLOCK) 
+		  	WHERE dbo.tPicklisteVorlageBoxen.kPicklisteVorlage = @kPicklisteVorlage;
+		     
+		     DELETE FROM tSessionId
+		  	WHERE kSessionId = @kSessionIDPickliste;
+
+			
+			DECLARE @nStatusPickliste INT = 10;
+
+			SELECT @nStatusPickliste = ISNULL( MIN(tPicklistePos.nStatus) , 10)
+			FROM dbo.tPicklistePos
+			WHERE tPicklistePos.kPickliste = @kPickliste;
+
+
+			IF(ISNULL(@kPicklisteMulti,0) = 0)
+			BEGIN
+				 
+				 INSERT INTO dbo.tPicklisteStatus
+				(
+				    --kPicklisteStatus - this column value is auto-generated
+				    kPickliste,
+				    kBenutzer,
+				    dZeitstempel,
+				    nStatus
+				)
+				VALUES
+				(
+				    @kPickliste, -- kPickliste - int
+				    @kBenutzer, -- kBenutzer - int
+				     GETDATE(), -- dZeitstempel - datetime
+				    @nStatusPickliste -- nStatus - int
+				);
+				 
+				 DECLARE @kPicklisteStatus INT = SCOPE_IDENTITY(); 
+
+				 DECLARE @cNeueNummer VARCHAR(255);
+				 EXEC dbo.spGetNextNummer @cName = &#39;Pickliste&#39;,                       
+										  @kFirma = 0,                       
+										  @nNoUpdate = 0,
+										  @nNoSelect = 1,                 
+										  @cNeueNummer = @cNeueNummer OUTPUT -- varchar(30)
+				 
+				 UPDATE tPickliste SET kPicklisteStatus = @kPicklisteStatus, kPicklisteStatusAngelegt = @kPicklisteStatus, nStatus = @nStatusPickliste, cPicklisteNr = @cNeueNummer
+				 WHERE kPickliste = @kPickliste;
+
+			 END;
+
+			 IF(NOT EXISTS (SELECT * FROM dbo.tPicklistePos where kPickliste = @kPickliste)) -- Wenn aus irgendeinen Grund es keine Pickpos zur Pickliste gibt. Pickliste L&#246;schen.
+			 BEGIN
+				DELETE FROM dbo.tPickliste WHERE kPickliste = @kPickliste;
+				SET @kPickliste = 0;
+
+				IF(@nWMSLogAktiv = 1)
+			    BEGIN
+			        INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+			   	    VALUES  (&#39;spPicklisteErstellen_DELETE_PICKLISTE&#39; ,2 ,&#39;spPicklisteErstellen&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,null ,@kPicklisteVorlage ,null)
+			    END;
+
+			 END;
+
+			 -- Falls alle Pickpos beim reservieren auf &quot;in Box&quot; landen ( zb. Vouchers) BoxenStatus setzten.
+			 IF ((SELECT MIN(nStatus) FROM dbo.tPicklistePos WHERE kPickliste = @kPickliste) = 30)
+			 BEGIN
+				EXEC [WMS].[spVersandBoxenPruefen] @kWarenlager = @kWarenlager;
+			 END;
+			 
+		     
+		     SELECT CASE @nAnzReservierterAuftraege WHEN 0  THEN 0  ELSE @kPickliste END; 
+
+			 IF(@nWMSLogAktiv = 1)
+			 BEGIN
+			     INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+				 VALUES  (&#39;spPicklisteErstellen_END&#39; ,2 ,&#39;spPicklisteErstellen&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,null ,@kPicklisteVorlage ,null)
+			 END;
+
+	END TRY 
+	BEGIN CATCH	
+		DELETE FROM dbo.tBestellungPicklisteLock WITH(ROWLOCK) 
+		WHERE kPickliste = @kPickliste;	
+		
+		DELETE FROM dbo.tPicklistePos WITH(ROWLOCK) 
+		WHERE kBestellung = 0 AND kPickliste = @kPickliste;
+		
+		SELECT @nAnzahlPositionen = COUNT(*) 
+		FROM dbo.tPicklistePos WITH(NOLOCK) 
+		WHERE kPickliste = @kPickliste; 
+
+	     INSERT INTO dbo.tFehler WITH(ROWLOCK) (kSessionId, cText, kkey1, cValue1, nValue1)
+	     VALUES (@kSessionID, &#39;ERROR:&#39; + ERROR_MESSAGE(), @kBestellung,@cBestellung,2);         		
+
+		 IF(@nWMSLogAktiv = 1)
+		 BEGIN
+		     INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+			 VALUES  (&#39;spPicklisteErstellen_ERROR&#39; ,2 ,&#39;spPicklisteErstellen&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null , ERROR_MESSAGE()  ,null ,@kPicklisteVorlage ,null)
+		 END;
+
+		IF (@nAnzahlPositionen &gt; 0) 
+			SELECT -@kPickliste;
+		ELSE 
+		    SELECT -999999999; 
+	END CATCH	 
+END;</code></pre>
+</body>
+</html>

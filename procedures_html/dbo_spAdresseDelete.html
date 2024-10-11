@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spAdresseDelete</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spAdresseDelete</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure dbo.spAdresseDelete können Adressdatensätze gelöscht werden.</p>
+    <p><strong>Long Description:</strong> <p>Mit der Stored Procedure dbo.spAdresseDelete können Adressdatensätze gelöscht werden. Für den Aufruf der Stored Procedure wird ein Type übergeben. Dieser Type ist speziell für die Stored Procedure definiert 
+und beinhaltet die Schlüssel der Datensätze die gelöscht werden sollen.</p><h3>Aufruf der Stored Procedure</h3><p>Im ersten Schritt muss der Type deklariert werden.</p><code>DECLARE @Adresse TYPE_spAdresseDelete;</code><p>In den Type werden dann die Adressen eingefügt die gelöscht werden sollen. Hierbei können beliebig viele Adressen übergeben werden.</p><code>
+INSERT INTO @Adresse (kAdresse)<br />
+VALUES(...) oder SELECT (...)
+</code><p>Dann muss die Stored Procedure noch gecalled werden.</p><code>
+EXEC dbo.spAdresseDelete @Adresse = @Adresse;
+</code></p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>--- 
+--- spAdresseDelete
+---
+
+CREATE PROCEDURE [dbo].[spAdresseDelete]
+	@Adresse TYPE_spAdresseDelete READONLY
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+SET QUOTED_IDENTIFIER ON;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @raiseError BIT;
+DECLARE @ErrorData XML;
+DECLARE @xmlAppend XML;
+SET @ErrorData = (SELECT &#39;Header&#39; AS Header FOR XML PATH(&#39;ErrorList&#39;));
+SET @raiseError = 0;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+    IF(@raiseError = 0)
+    BEGIN
+	   IF(CONTEXT_INFO() IS NOT NULL)
+	   BEGIN
+		  SET @OldContextInfo = CONTEXT_INFO();
+	   END
+	   ELSE
+	   BEGIN
+		  SET @OldContextInfo = 0x0;
+	   END
+	   DECLARE @hash VARBINARY(128);
+	   SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;dbo.spAdresseDelete&#39;);
+	   SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+	   BEGIN TRY  
+		  DECLARE @TranCount INT = @@TRANCOUNT;
+		  IF(@TranCount = 0)
+		  BEGIN
+			 BEGIN TRANSACTION  
+		  END
+			
+		  DECLARE @tKunden TABLE(kKunde INT);
+		  INSERT INTO @tKunden(kKunde)
+		  SELECT DISTINCT kKunde
+		  FROM @Adresse
+		  JOIN dbo.tAdresse ON tAdresse.kAdresse = [@Adresse].kAdresse;
+
+		  --tKunde_Suche aktualisieren
+		  DECLARE @KundenToUpdate AS TYPE_spUpdateKundeSuche;
+
+		  INSERT INTO @KundenToUpdate (kKunde)
+		  SELECT DISTINCT kKunde
+		  FROM dbo.tAdresse
+		  JOIN @Adresse ON [@Adresse].kAdresse = tAdresse.kAdresse
+						
+		  EXEC Kunde.spUpdateKundeSuche @Kunden = @KundenToUpdate;
+
+		  IF(EXISTS(SELECT * 
+					   FROM @Adresse
+					   JOIN dbo.tAdresse ON tAdresse.kAdresse = [@Adresse].kAdresse
+					   WHERE tAdresse.nStandard = 1 
+						  AND tAdresse.nTyp = 1))
+		  BEGIN
+			 RAISERROR(50000,18,1, &#39;Standardadresse muss vorhanden sein.&#39;);
+		  END
+		
+		  --
+		  -- Eintr&#228;ge L&#246;schen
+		  --
+		  DELETE dbo.tAdresse
+		  FROM dbo.tAdresse
+		  JOIN @Adresse ON [@Adresse].kAdresse = tAdresse.kAdresse
+
+			
+			SET @retry = 0;
+		  IF(@TranCount = 0)
+		  BEGIN           
+			 COMMIT TRANSACTION      
+		  END
+	   END TRY       
+	   BEGIN CATCH           
+		  IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+		  BEGIN              
+			 SET @retry = @retry - 1;               
+			 ROLLBACK       
+		  END          
+		  ELSE          
+		  BEGIN              
+			 SET @retry = 0;               
+			 THROW;           
+		  END      
+	   END CATCH
+    END
+END</code></pre>
+</body>
+</html>

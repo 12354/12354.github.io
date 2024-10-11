@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gutschrift.spGutschriftPosStuecklisteLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Gutschrift.spGutschriftPosStuecklisteLoeschen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Stücklisten aus Gutschriften gelöscht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Gutschrift].[spGutschriftPosStuecklisteLoeschen]
+	@kGutschriftStueckliste INT
+AS
+BEGIN
+	DECLARE @xGutschriftPos AS XML;
+	SET @xGutschriftPos = (
+		SELECT dbo.tGutschriftPos.kGutschriftpos AS kGutschriftPos
+			FROM dbo.tGutschriftPos 
+			WHERE dbo.tGutschriftPos.kGutschriftStueckliste = @kGutschriftStueckliste
+		FOR XML PATH(&#39;Gutschriftpos&#39;), TYPE
+	);
+	EXEC Gutschrift.spGutschriftposLoeschen @xGutschriftpos = @xGutschriftpos;
+END</code></pre>
+</body>
+</html>

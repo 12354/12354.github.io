@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spReserviereBestellungen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spReserviereBestellungen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spReserviereBestellungen]  
+
+-- Reservierung mehrerer Bestellungen
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+
+-- &lt;Bestellung&gt;
+--   &lt;kBestellung&gt;1&lt;/kBestellung&gt;
+--   &lt;nPrio&gt;0&lt;/nPrio&gt;
+-- &lt;/Bestellung&gt;
+-- &lt;Bestellung&gt;
+--   &lt;kBestellung&gt;4&lt;/kBestellung&gt;
+--   &lt;nPrio&gt;1&lt;/nPrio&gt;
+-- &lt;/Bestellung&gt;
+-- &lt;Bestellung&gt;
+--   &lt;kBestellung&gt;2&lt;/kBestellung&gt;
+--   &lt;nPrio&gt;2&lt;/nPrio&gt;
+-- &lt;/Bestellung&gt;
+@Bestellungen XML,
+
+@Laeger XML,
+
+@Warenlagereingaenge XML,
+
+-- Optionen f&#252;r die Auslieferung (Bitmaske)
+-- 0x0001 = Pro Bestellung eine Pickliste anlegen
+-- 0x0002 = Chargen automatisch vorbelegen
+@nOptions INT,
+
+-- kBenutzer
+@kBenutzer INT,
+
+-- Sitzungs-Id
+@kSessionId INT
+
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spReserviereBestellungen
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY
+	DECLARE @kBestellung INT;	
+	DECLARE @kBestellPos BIGINT;
+	DECLARE @fAnzahl DECIMAL(28,14);
+
+	DECLARE cBestellungen CURSOR LOCAL FAST_FORWARD FOR
+		SELECT ParamValues.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) AS kBestellung
+		FROM @Bestellungen.nodes(&#39;/Bestellung&#39;) AS ParamValues(ID)
+		ORDER BY ISNULL(ParamValues.ID.value(&#39;nPrio[1]&#39;, &#39;INT&#39;), 0) ASC;
+	OPEN cBestellungen;
+	FETCH NEXT FROM cBestellungen INTO @kBestellung;
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		DECLARE cBestellpositionen CURSOR LOCAL FAST_FORWARD FOR
+			SELECT 
+				Auslieferung.vBestellPos.kBestellPos AS kBestellpos, 
+				Auslieferung.vBestellPos.fAnzahlOffen AS fAnzahl
+			FROM 
+				Auslieferung.vBestellPos
+			WHERE Auslieferung.vBestellPos.kBestellung = @kBestellung AND 
+				Auslieferung.vBestellPos.fAnzahlOffen &gt; 0.0 AND -- Menge gr&#246;&#223;er 0 
+				(((@nOptions &amp; 2) &gt; 0) OR Auslieferung.vBestellPos.nIstChargenartikel = 0) AND -- Chargenartikel nur wenn gew&#252;nscht
+                Auslieferung.vBestellPos.kBestellStueckliste != Auslieferung.vBestellPos.kBestellPos -- keine St&#252;cklistenv&#228;ter
+
+		OPEN cBestellpositionen;
+		FETCH NEXT FROM cBestellpositionen INTO @kBestellpos, @fAnzahl;
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			EXEC Auslieferung.spReserviereBestellposition
+				@kBestellPos = @kBestellPos,
+				@fAnzahl = @fAnzahl,
+				@nOptions = @nOptions,
+				@Laeger = @Laeger,
+				@Warenlagereingaenge = @Warenlagereingaenge,
+				@kBenutzer = @kBenutzer,
+				@kSessionId = @kSessionId;
+
+			FETCH NEXT FROM cBestellpositionen INTO @kBestellpos, @fAnzahl;
+		END
+		CLOSE cBestellpositionen;
+		DEALLOCATE cBestellpositionen;
+
+		FETCH NEXT FROM cBestellungen INTO @kBestellung;
+	END
+	CLOSE cBestellungen;
+	DEALLOCATE cBestellungen;
+
+	EXEC [Auslieferung].[spPicklistenStuecklistenFix]
+		  @kBenutzer = @kBenutzer,
+		  @kSessionId = @kSessionId
+
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+		ROLLBACK TRANSACTION;
+	ELSE
+		IF XACT_STATE() &lt;&gt; -1
+			ROLLBACK TRANSACTION spReserviereBestellungen;
+
+	DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

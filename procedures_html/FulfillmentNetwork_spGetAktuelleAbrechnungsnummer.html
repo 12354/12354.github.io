@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spGetAktuelleAbrechnungsnummer</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spGetAktuelleAbrechnungsnummer</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>--- 
+--- spGetAktuelleAbrechnungsnummer
+---
+
+CREATE PROCEDURE [FulfillmentNetwork].[spGetAktuelleAbrechnungsnummer]
+    @nAbrechnungsZeitraum INT,
+    @dAbrechnungInitial DATETIME,
+    @AbrechnungsNr NVARCHAR(256) OUTPUT,
+    @Start DATETIME OUTPUT,
+    @Ende DATETIME OUTPUT
+AS
+DECLARE @dTagAktuell DATE = CAST(GETDATE() AS DATE);
+DECLARE @dAbrechnungStart DATE;
+DECLARE @dAbrechnungEnde DATE;
+
+
+DECLARE @addDaysToInitial INT = 0;
+--
+
+-- Ab hier wird das Start- und Enddatum, abh&#228;ngig vom Initial eingestellen Startdatum und dem aktuellen Datum berechnet.
+-- Es gibt 5 verschiedene Abrechnungszeitr&#228;ume (T&#228;glich, W&#246;chentlich, Dekadisch, Halbmonatlich und Monatlich)
+--
+
+IF @nAbrechnungsZeitraum = 0 -- T&#228;glich 
+BEGIN
+    --
+    -- Ab dem angegebenen Startdatum wird t&#228;glich eine neue Bestellung erzeugt. Die Bestellnummer hat dann folgendes Format: [Pr&#228;fix][yyyyMMdd][Suffix] Beispiel: JTL-20170824-Abr
+    --
+    SET @dAbrechnungStart = @dTagAktuell;
+    SET @dAbrechnungEnde = @dTagAktuell;
+END;
+ELSE IF @nAbrechnungsZeitraum = 1 --W&#246;chentlich 
+BEGIN
+    --
+    -- Ab dem angegebenen Startdatum wird nach 7 Tagen eine neue Bestellung erzeugt. Die Bestellnummer hat dann folgendes Format: [Pr&#228;fix][yyyyMMdd-MMdd][Suffix] Beispiel: JTL-20170824-0830-Abr
+    -- Wenn das Initiale Startdatum also z.B. ein Mittwoch war, dann muss jeder erste Tag einer Abrechunng auch ein Mittwoch sein.
+    --
+    DECLARE @DaysToAddForWeek INT = DATEDIFF(DAY, @dAbrechnungInitial, @dTagAktuell);
+
+    IF @DaysToAddForWeek &lt; 0
+    BEGIN
+        SET @DaysToAddForWeek = @DaysToAddForWeek + 1;
+        SET @DaysToAddForWeek = @DaysToAddForWeek - (@DaysToAddForWeek % 7) - 7;
+    END;
+    ELSE
+    BEGIN
+        SET @DaysToAddForWeek = @DaysToAddForWeek - (@DaysToAddForWeek % 7);
+    END;
+
+    SET @dAbrechnungStart = DATEADD(DAY, @DaysToAddForWeek, @dAbrechnungInitial);
+    SET @dAbrechnungEnde = DATEADD(DAY, 6, @dAbrechnungStart);
+END;
+
+IF @nAbrechnungsZeitraum = 2 -- Dekadisch
+BEGIN
+    --
+    -- Ab dem angegebenen Startdatum wird nach 10 Tagen eine neue Bestellung erzeugt. Die Bestellnummer hat dann folgendes Format: [Pr&#228;fix][yyyyMMdd-MMdd][Suffix] Beispiel: JTL-20170828-0906-Abr
+    -- Vom Initialen Startdatum muss also hochgerechnet werden, in welchem Abrechnungszeitraum man aktuell ist.
+    -- 
+
+    DECLARE @DaysToAdd INT = DATEDIFF(DAY, @dAbrechnungInitial, @dTagAktuell);
+    IF @DaysToAdd &lt; 0
+    BEGIN
+        SET @DaysToAdd = @DaysToAdd + 1;
+        SET @DaysToAdd = @DaysToAdd - (@DaysToAdd % 10) - 10;
+    END;
+    ELSE
+    BEGIN
+        SET @DaysToAdd = @DaysToAdd - (@DaysToAdd % 10);
+    END;
+    SET @dAbrechnungStart = DATEADD(DAY, @DaysToAdd, @dAbrechnungInitial);
+    SET @dAbrechnungEnde = DATEADD(DAY, 9, @dAbrechnungStart);
+END;
+
+IF @nAbrechnungsZeitraum = 3 -- Halbmonatlich
+BEGIN
+    --
+    -- Ab dem angegebenen Startdatum wird nach einem halben Monat eine neue Bestellung erzeugt. Die L&#228;nge des Intervalls kann der Bestellnummer entnommen werden. Die Bestellnummer hat dann folgendes Format: [Pr&#228;fix][yyyyMMdd-MMdd][Suffix] Beispiel: JTL-20170828-0910-Abr
+    -- Wenn das Initiale Startdatum z.B. der 15.01. ist, muss auch jede zweite Abrechnung mit dem 15. beginnen. Diese Abrechnung beinhaltet dann 14 Tage. Die n&#228;chste Abrechnung geht dann bis zum 14. des n&#228;chsten Monats.
+    -- 
+    DECLARE @MonthDiff INT = DATEDIFF(MONTH, @dAbrechnungInitial, @dTagAktuell);
+
+    IF (
+           @MonthDiff = 0
+           OR @MonthDiff = -1
+       )
+       AND @dTagAktuell &lt; @dAbrechnungInitial
+    BEGIN
+        SET @MonthDiff = @MonthDiff - 1;
+    END;
+
+    SET @dAbrechnungStart = DATEADD(MONTH, @MonthDiff, @dAbrechnungInitial);
+    SET @dAbrechnungEnde = DATEADD(DAY, 13, @dAbrechnungStart);
+
+    IF @dAbrechnungEnde &lt; @dTagAktuell
+    BEGIN
+        SET @dAbrechnungStart = DATEADD(DAY, 1, @dAbrechnungEnde);
+        SET @dAbrechnungEnde = DATEADD(DAY, -1, DATEADD(MONTH, @MonthDiff + 1, @dAbrechnungInitial));
+    END;
+    ELSE IF @dAbrechnungStart &gt; @dTagAktuell
+    BEGIN
+        SET @dAbrechnungEnde = DATEADD(DAY, -1, @dAbrechnungStart);
+        SET @dAbrechnungStart = DATEADD(DAY, 15, DATEADD(MONTH, @MonthDiff - 1, @dAbrechnungInitial));
+    END;
+END;
+
+IF @nAbrechnungsZeitraum = 4 -- Monatlich
+BEGIN
+    --
+    -- Ab dem angegebenen Startdatum wird nach einem Monat eine neue Bestellung erzeugt. Die Bestellnummer hat dann folgendes Format: [Pr&#228;fix][yyyyMMdd-MMdd][Suffix] Beispiel: JTL-20170824-0923-Abr
+    -- Abh&#228;ngig vom Initialen Startdatum muss der erste Tag der Abrechnung immer gleich bleiben, also z.B. immer der 15. des Monats sein.
+    --
+
+    DECLARE @InitialDay AS INT = DAY(@dAbrechnungInitial);
+    DECLARE @CurrentDay AS INT = DAY(@dTagAktuell);
+    DECLARE @LastDayInCurrentMonth INT = DAY(EOMONTH(@dTagAktuell));
+    IF (
+           @InitialDay = @CurrentDay
+           OR
+           (
+               @LastDayInCurrentMonth = @CurrentDay
+               AND @InitialDay &gt; @LastDayInCurrentMonth
+           )
+       )
+    BEGIN
+        SET @dAbrechnungStart = @dTagAktuell;
+    END;
+    ELSE
+    BEGIN
+        DECLARE @startMonth AS INT = MONTH(@dTagAktuell);
+        DECLARE @startYear AS INT = YEAR(@dTagAktuell);
+        IF (@InitialDay &gt; @CurrentDay)
+        BEGIN
+            IF @startMonth = 1
+            BEGIN
+                SET @startMonth = 12;
+                SET @startYear = @startYear - 1;
+            END;
+            ELSE
+            BEGIN
+                SET @startMonth = @startMonth - 1;
+            END;
+        END;
+        DECLARE @firstDayInMonth AS DATE = DATEFROMPARTS(@startYear, @startMonth, 1);
+        DECLARE @maxDayInMonth AS INT = DAY(EOMONTH(@firstDayInMonth));
+        DECLARE @startDay AS INT = @InitialDay;
+        IF @InitialDay &gt; @maxDayInMonth
+        BEGIN
+            SET @startDay = @maxDayInMonth;
+        END;
+        SET @dAbrechnungStart = DATEFROMPARTS(@startYear, @startMonth, @startDay);
+    END;
+
+    DECLARE @endMonth AS DATE = DATEADD(MONTH, 1, @dAbrechnungStart);
+    DECLARE @maxDayInEndMonth AS INT = DAY(EOMONTH(@endMonth));
+    IF @InitialDay&gt; @maxDayInEndMonth
+	BEGIN
+		SET @InitialDay = @maxDayInEndMonth
+	END
+    DECLARE @endDay AS INT = @InitialDay - 1;
+    IF @endDay = 0
+    BEGIN
+        SET @endDay = DAY(EOMONTH(@dAbrechnungStart));
+        SET @endMonth = DATEADD(MONTH, -1, @endMonth);
+    END;
+
+    SET @dAbrechnungEnde = DATEFROMPARTS(YEAR(@endMonth), MONTH(@endMonth), @endDay);
+END;
+
+
+--
+-- Abrechnungsnummer anhand des Abrechnungszeitraums erstellen
+--
+DECLARE @AbrechnungsNummer NVARCHAR(256) = CONVERT(NVARCHAR(10), @dAbrechnungStart, 112);
+
+IF @nAbrechnungsZeitraum &gt; 0
+BEGIN
+    SET @AbrechnungsNummer = @AbrechnungsNummer + N&#39;-&#39; + RIGHT(CONVERT(NVARCHAR(10), @dAbrechnungEnde, 112), 4);
+END;
+
+SELECT @AbrechnungsNr = @AbrechnungsNummer,
+       @Start = @dAbrechnungStart,
+       @Ende = @dAbrechnungEnde;</code></pre>
+</body>
+</html>

@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spAbrechnungEinzelnachweisLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spAbrechnungEinzelnachweisLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE FulfillmentNetwork.[spAbrechnungEinzelnachweisLoeschen]
+    @kAbrechnungEinzelnachweis INT
+AS
+BEGIN
+    DECLARE @kAbrechnungPos AS INT;
+    DECLARE @fAnzahl AS DECIMAL(25,13);
+    DECLARE @fAnzahlNeu AS DECIMAL(25,13);
+    SELECT  @kAbrechnungPos = Einzelnachweis.kAbrechnungPos ,
+            @fAnzahl = Einzelnachweis.fAnzahl
+    FROM    FulfillmentNetwork.tAbrechnungEinzelnachweis AS Einzelnachweis
+    WHERE   Einzelnachweis.kAbrechnungEinzelnachweis = @kAbrechnungEinzelnachweis;
+
+			
+    SELECT  @fAnzahlNeu = fAnzahl - @fAnzahl
+    FROM    FulfillmentNetwork.tAbrechnungPos
+    WHERE   kAbrechnungPos = @kAbrechnungPos;
+    IF ( @fAnzahlNeu &gt; 0 )
+        BEGIN
+            UPDATE  FulfillmentNetwork.tAbrechnungPos
+            SET     fAnzahl = @fAnzahlNeu
+            WHERE   kAbrechnungPos = @kAbrechnungPos;
+
+        END;
+    ELSE
+        BEGIN
+            DELETE  FROM FulfillmentNetwork.tAbrechnungPos
+            WHERE   kAbrechnungPos = @kAbrechnungPos;
+        END;
+
+	
+    DELETE  FROM FulfillmentNetwork.tAbrechnungEinzelnachweis
+    WHERE   kAbrechnungEinzelnachweis = @kAbrechnungEinzelnachweis;
+END</code></pre>
+</body>
+</html>

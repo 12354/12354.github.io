@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spReserviereAuftragPosVomPlatz</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spReserviereAuftragPosVomPlatz</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spReserviereAuftragPosVomPlatz]
+@AuftragPos WMS.TYPE_spReserviereAuftragPosVomPlatz READONLY, -- Die AuftragPos die wir reservieren wollen
+@kWarenlagerPlatz INT, -- Der Warenlagerplatz von dem reserviert werden soll
+@kPickliste INT,
+@kWarenlager INT,
+@kBenutzer INT
+
+--
+-- Diese SP reserviert f&#252;r alle &#252;bergebenen AuftragsPositionen EINER Bestellung Bestand der auf dem uebergebenen Lagerplatz liegt, fuer die angegebene Pickliste.
+-- Es werden Picklistenpositionen erstellt.
+--
+
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @kAuftragPosition INT;
+DECLARE @kArtikel INT;
+DECLARE @fAnzahl DECIMAL(25,13);
+DECLARE @kWarenLagerEingang INT;
+DECLARE @fAnzahlAktuell DECIMAL(25,13);
+DECLARE @kAuftrag INT;
+DECLARE @OldContextInfo  VARBINARY(128) = 0x0000;
+
+-- Cursor &#252;ber alle AuftragsPosionen die uebergeben wurden
+DECLARE cur_GetAuftragPosZuReservieren CURSOR LOCAL FAST_FORWARD FOR
+SELECT tAuftragPosition.kAuftragPosition,tAuftragPosition.kArtikel,tAuftragPosition.fAnzahl,tAuftragPosition.kAuftrag
+FROM Verkauf.tAuftragPosition
+JOIN @AuftragPos ON [@AuftragPos].kAuftragPosition = tAuftragPosition.kAuftragPosition;
+
+
+
+
+BEGIN TRY
+
+    IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END;
+    
+	SET CONTEXT_INFO 0x5022;
+
+	-- Wir reservieren fuer jede AuftragPos, Pickpositionen fuer die gesammte Menge
+	OPEN cur_GetAuftragPosZuReservieren    
+	FETCH NEXT FROM cur_GetAuftragPosZuReservieren INTO  @kAuftragPosition,@kArtikel,@fAnzahl,@kAuftrag
+
+	WHILE (@@FETCH_STATUS = 0)
+	BEGIN  
+
+	    -- Cursor &#252;ber alle Warenlagereing&#228;nge des Artikels mit Bestand auf dem uebergebenen Platz 
+		DECLARE cur_GetWarenlagereingang CURSOR LOCAL FAST_FORWARD FOR
+		SELECT tWarenLagerEingang.kWarenLagerEingang,tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos
+		FROM dbo.tWarenLagerEingang
+		WHERE tWarenLagerEingang.kArtikel = @kArtikel
+		AND tWarenLagerEingang.fAnzahlAktuell &gt; 0
+		AND tWarenLagerEingang.kWarenLagerPlatz = @kWarenlagerPlatz
+		ORDER BY tWarenLagerEingang.dErstellt DESC;
+
+		DECLARE @MengeZuReservieren DECIMAL(25,13) = @fAnzahl;
+
+		-- Wir suchen solange Warenlagereingaenge bis die gesammte Menge der AuftragPos reserviert wurde
+		OPEN cur_GetWarenlagereingang  
+    	FETCH NEXT FROM cur_GetWarenlagereingang INTO  @kWarenLagerEingang,@fAnzahlAktuell
+		WHILE (@@FETCH_STATUS = 0 AND @MengeZuReservieren &gt; 0)
+		BEGIN
+
+
+			 INSERT INTO dbo.tPicklistePos
+			 (
+			   kPickliste,  kWarenLager, kWarenLagerEingang, fAnzahl,  kBestellPos, kArtikel,  kWarenlagerPlatz,kBestellung,  nStatus
+			 )
+			 VALUES( @kPickliste,@kWarenlager, @kWarenLagerEingang, CASE WHEN @fAnzahlAktuell &gt; @MengeZuReservieren THEN @MengeZuReservieren ELSE @fAnzahlAktuell END,
+			         @kAuftragPosition,@kArtikel,@kWarenlagerPlatz, @kAuftrag , 10);
+			 
+
+			 DECLARE @kPicklistePosNew INT = SCOPE_IDENTITY();
+
+			 INSERT INTO dbo.tPicklistePosStatus (kPicklistePos,nStatus,kBenutzer,dZeitstempel)
+	         SELECT tPicklistePos.kPicklistePos,10,@kBenutzer,GETDATE()  
+	         FROM dbo.tPicklistePos 
+	         WHERE tPicklistePos.kPicklistePos = @kPicklistePosNew;
+	       
+	         UPDATE dbo.tPicklistePos SET kPicklistePosStatus = SCOPE_IDENTITY()
+			 WHERE tPicklistePos.kPicklistePos = @kPicklistePosNew;
+
+			 SET @MengeZuReservieren = @MengeZuReservieren - (CASE WHEN @fAnzahlAktuell &gt; @MengeZuReservieren THEN @MengeZuReservieren ELSE @fAnzahlAktuell END);
+
+		FETCH NEXT FROM cur_GetWarenlagereingang INTO  @kWarenLagerEingang,@fAnzahlAktuell
+		END;
+		CLOSE cur_GetWarenlagereingang;
+		DEALLOCATE cur_GetWarenlagereingang;
+
+
+
+	FETCH NEXT FROM cur_GetAuftragPosZuReservieren INTO  @kAuftragPosition,@kArtikel,@fAnzahl,@kAuftrag
+	END;
+
+	CLOSE cur_GetAuftragPosZuReservieren;
+    DEALLOCATE cur_GetAuftragPosZuReservieren;
+
+	SET CONTEXT_INFO @OldContextInfo;
+
+
+	-- Konsistenz Check, wenn was nicht reserviert wurde ist was schiefgelaufen, abbrechen.
+	IF EXISTS(  SELECT * 
+				FROM Verkauf.tAuftragPosition
+				JOIN @AuftragPos ON [@AuftragPos].kAuftragPosition = tAuftragPosition.kAuftragPosition
+				OUTER APPLY(SELECT SUM(tPicklistePos.fAnzahl) AS fAnzahl
+							FROM dbo.tPicklistePos 
+							WHERE tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition
+							GROUP BY tPicklistePos.kBestellPos) AS PicklistePos
+				WHERE PicklistePos.fAnzahl IS NULL
+				OR tAuftragPosition.fAnzahl &lt; PicklistePos.fAnzahl )
+
+	BEGIN
+		RAISERROR (	&#39;Interner DB Fehler: Es wurde weniger Kartonmenge reserviert als ausgew&#228;hlt&#39;, 11, 1);
+	END;
+
+
+END TRY
+
+BEGIN CATCH
+
+			SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+			RAISERROR (	@ErrorMessage, 
+						@ErrorSeverity,
+						@ErrorState);
+		
+END CATCH;</code></pre>
+</body>
+</html>

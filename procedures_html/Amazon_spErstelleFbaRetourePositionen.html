@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spErstelleFbaRetourePositionen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spErstelleFbaRetourePositionen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>-- SP die FBA Retoure Positionen f&#252;r einen kUser erzeugt
+CREATE PROCEDURE [Amazon].[spErstelleFbaRetourePositionen] 
+	@kUser INT
+AS 
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+IF(ISNULL(@kUser, 0) &lt; 1)
+BEGIN
+	RETURN;
+END
+
+BEGIN TRY
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+	DECLARE @RowCount INT = 0;
+DeadlockRetry:
+	BEGIN TRY
+	
+		INSERT INTO pf_amazon_retourpos
+		(kUser, kAmazonBestellung, cOrderId, cSellerSKU, cFremdSKU, cASIN, cArtikelname, nMenge, cFulfillmentCenter, cArtikelzustand, cRueckgabegrund, dRetourzeit,
+			nStatus, dEingelesen, kMessageId, cFehler, cLicencePlateNumber, cKundenkommentar, kSettlementPos, fAmountPerItem, cOrderItemCode, cFulfillmentId)
+		SELECT
+			[RetourPos].[kUser], 
+			[RetourPos].[kAmazonBestellung], 
+			[RetourPos].[cOrderId], 
+			[RetourPos].[SKU], 
+			[RetourPos].[cFremdSKU], 
+			[RetourPos].[cASIN], 
+			[RetourPos].[cArtikelname], 
+			[RetourPos].[Menge], 
+			[RetourPos].[cFulfillmentCenter], 
+			[RetourPos].[cArtikelzustand], 
+			[RetourPos].[cRueckgabegrund], 
+			[RetourPos].[dRetourzeit], 
+			[RetourPos].[nStatus], 
+			[RetourPos].[dEingelesen], 
+			[RetourPos].[kMessageId],	
+			[RetourPos].[cFehler], 
+			[RetourPos].[cLicencePlateNumber], 
+			[RetourPos].[cKundenkommentar], 
+			[RetourPos].[kSettlementPos], 	
+			CASE WHEN Menge != 0
+				THEN [RetourPos].[fAmountSum] / [RetourPos].[Menge] 
+				ELSE 0 
+			END AS AmountPerItem,
+			RetourPos.cOrderItemCode,
+			RetourPos.cFulfillmentId
+		FROM
+		(
+			SELECT 
+				pf_amazon_settlementpos.kUser,
+				AmazonBestellPos.kAmazonBestellung,
+				AmazonBestellPos.cOrderId,
+				pf_amazon_settlementpos.SKU,
+				&#39;NotAvailable&#39; AS cFremdSKU,
+				&#39;NotAvailable&#39; AS cASIN,
+				&#39;NotAvailable&#39; AS cArtikelname,
+				CASE WHEN 
+					SUM(CASE WHEN pf_amazon_settlementpos.AmountType IN (&#39;ItemPrice&#39;, &#39;ItemWithheldTax&#39;)
+								AND pf_amazon_settlementpos.AmountDescription IN (&#39;Principal&#39;, &#39;Tax&#39;, &#39;MarketplaceFacilitatorTax-Principal&#39;)
+							THEN ROUND(pf_amazon_settlementpos.Amount, 2)
+							ELSE 0 
+						END) / (AmazonBestellPos.fItemPrice / AmazonBestellPos.nQuantityPurchased) % 1 = 0
+					THEN SUM(CASE WHEN pf_amazon_settlementpos.AmountType IN (&#39;ItemPrice&#39;, &#39;ItemWithheldTax&#39;)
+									AND pf_amazon_settlementpos.AmountDescription IN (&#39;Principal&#39;, &#39;Tax&#39;, &#39;MarketplaceFacilitatorTax-Principal&#39;)
+								THEN ROUND(pf_amazon_settlementpos.Amount, 2)
+								ELSE 0 
+							END) / (AmazonBestellPos.fItemPrice / AmazonBestellPos.nQuantityPurchased) * -1 
+					ELSE 0 
+				END AS Menge,
+				&#39;NotAvailable&#39; AS cFulfillmentCenter,
+				&#39;NotAvailable&#39; AS cArtikelzustand,
+				&#39;NotAvailable&#39; AS cRueckgabegrund,
+				MAX(pf_amazon_settlementpos.PostedDateTime) AS dRetourzeit,
+				CASE WHEN AmazonBestellPos.kAmazonBestellung IS NULL 
+					THEN 5 --Bestellung nicht im System
+					ELSE 
+					CASE WHEN (SUM(CASE WHEN pf_amazon_settlementpos.AmountType IN (&#39;ItemPrice&#39;, &#39;ItemWithheldTax&#39;)
+										AND pf_amazon_settlementpos.AmountDescription IN (&#39;Principal&#39;, &#39;Tax&#39;, &#39;MarketplaceFacilitatorTax-Principal&#39;)
+									THEN ROUND(pf_amazon_settlementpos.Amount, 2)
+									ELSE 0 
+								END) / (SUM(AmazonBestellPos.fItemPrice) / SUM(AmazonBestellPos.nQuantityPurchased)) % 1 != 0 
+								OR WawiBestellung.AnzahlBestellungen &gt; 1 
+								OR SUM(CASE WHEN pf_amazon_settlementpos.AmountType IN (&#39;ItemPrice&#39;, &#39;ItemWithheldTax&#39;)
+											AND pf_amazon_settlementpos.AmountDescription IN (&#39;Principal&#39;, &#39;Tax&#39;, &#39;MarketplaceFacilitatorTax-Principal&#39;)
+										THEN ROUND(pf_amazon_settlementpos.Amount, 2)
+										ELSE 0 
+									   END) / (SUM(AmazonBestellPos.fItemPrice) / SUM(AmazonBestellPos.nQuantityPurchased)) = 0 )     
+						THEN 8 --Manuell zu bearbeiten
+						ELSE 
+							CASE WHEN WawiBestellung.kBestellung IS NULL 
+								THEN 7 --Bestellung nicht in der Wawi
+								ELSE 0 --Offen
+							END 
+					END
+				END AS nStatus,
+				GETDATE() AS dEingelesen,
+				0 AS kMessageId,		
+				NULL AS cFehler,
+				NULL AS cLicencePlateNumber,
+				NULL AS cKundenkommentar,
+				MAX(pf_amazon_settlementpos.kMessageId) AS kSettlementPos,
+				SUM(pf_amazon_settlementpos.Amount) fAmountSum,
+				pf_amazon_settlementpos.OrderItemCode AS cOrderItemCode,
+				pf_amazon_settlementpos.FulfillmentID AS cFulfillmentId
+			FROM pf_amazon_settlementpos
+			OUTER APPLY 
+			(
+				SELECT 
+					pf_amazon_bestellung.kAmazonBestellung,
+					pf_amazon_bestellung.cOrderId, 
+					SUM(pf_amazon_bestellungpos.fItemPrice) AS fItemPrice, 
+					SUM(pf_amazon_bestellungpos.nQuantityPurchased) AS nQuantityPurchased
+				FROM dbo.pf_amazon_bestellungpos
+				JOIN pf_amazon_bestellung ON pf_amazon_bestellungpos.kAmazonBestellung = pf_amazon_bestellung.kAmazonBestellung
+				WHERE pf_amazon_bestellungpos.cOrderItemId = pf_amazon_settlementpos.OrderItemCode 
+					AND pf_amazon_bestellung.kUser = @kUser
+				GROUP BY  pf_amazon_bestellung.kAmazonBestellung,pf_amazon_bestellung.cOrderId 
+			) AS AmazonBestellPos
+			OUTER APPLY 
+			(
+				SELECT MAX(tAuftrag.kAuftrag) AS kBestellung, COUNT(tAuftrag.kAuftrag) AS AnzahlBestellungen
+				FROM Verkauf.tAuftrag
+				WHERE tAuftrag.cExterneAuftragsnummer = pf_amazon_settlementpos.OrderID
+			) AS WawiBestellung
+			WHERE pf_amazon_settlementpos.TransactionType = &#39;Refund&#39;
+				AND pf_amazon_settlementpos.FulfillmentId IN (&#39;AFN&#39;, &#39;MFN&#39;)
+				AND [pf_amazon_settlementpos].[AmountType] IN (&#39;ItemPrice&#39;, &#39;Promotion&#39;, &#39;ItemWithheldTax&#39;)
+				AND [pf_amazon_settlementpos].[AmountDescription] IS NOT NULL
+				AND [pf_amazon_settlementpos].[AmountDescription] != &#39;&#39;
+				AND pf_amazon_settlementpos.kMessageId &gt; (SELECT ISNULL(MAX(kSettlementPos),0) FROM  pf_amazon_retourpos WHERE pf_amazon_retourpos.kUser = @kUser)
+				AND pf_amazon_settlementpos.kUser = @kUser
+				AND AmazonBestellPos.nQuantityPurchased &gt; 0
+				AND AmazonBestellPos.fItemPrice &gt; 0
+			GROUP BY pf_amazon_settlementpos.OrderItemCode, 
+				pf_amazon_settlementpos.kUser, 
+				AmazonBestellPos.kAmazonBestellung, 
+				AmazonBestellPos.cOrderId, 
+				pf_amazon_settlementpos.SKU, 
+				WawiBestellung.AnzahlBestellungen,
+				WawiBestellung.kBestellung,
+				AmazonBestellPos.fItemPrice,
+				AmazonBestellPos.nQuantityPurchased,
+				pf_amazon_settlementpos.OrderItemCode,
+				pf_amazon_settlementpos.FulfillmentID
+		) AS RetourPos
+;
+		
+		SET @RowCount = @@ROWCOUNT;
+
+		INSERT INTO dbo.pf_logbuch(kPlattform, cKategorie, cBetreff, cLog, dZeit, kUser) 
+		VALUES (50, &#39;FBA-Retouren&#39;, &#39;Retouren werden anhand der Settlementpos geschrieben&#39;, &#39;Es wurden &#39; + CAST(@RowCount AS NVARCHAR)  + &#39; Eintr&#228;ge geschrieben &#39;, GETDATE(), @kUser);
+
+		--Wenn es mehrere Retouren an der gleichen Bestellung gibt, m&#252;ssen die Retouren manuell bearbeitet werden.
+		IF(@RowCount &gt; 0)
+		BEGIN
+			UPDATE pf_amazon_retourpos
+			SET nStatus = 8
+			FROM pf_amazon_retourpos
+			WHERE pf_amazon_retourpos.nStatus = 0
+				AND pf_amazon_retourpos.kUser = @kUser
+			AND EXISTS (SELECT * FROM pf_amazon_retourpos ar 
+						WHERE ar.kSettlementPos !=pf_amazon_retourpos.kSettlementPos 
+						AND ar.nStatus = 0
+						AND ar.kUser = pf_amazon_retourpos.kUser
+						AND ar.kAmazonBestellung = pf_amazon_retourpos.kAmazonBestellung);
+		END
+	END TRY
+	BEGIN CATCH
+		BEGIN TRY
+			  EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			  IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+		END TRY
+		BEGIN CATCH
+			  IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+		END CATCH;
+		THROW;
+	END CATCH
+	
+END TRY
+BEGIN CATCH	
+	THROW;
+END CATCH</code></pre>
+</body>
+</html>

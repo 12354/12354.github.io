@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGutschriftEckdatenBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGutschriftEckdatenBerechnen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGutschriftEckdatenBerechnen]
+	@Gutschriften AS dbo.TYPE_spGutschriftEckdatenBerechnen READONLY
+AS
+BEGIN
+	IF NOT EXISTS(SELECT 1 FROM @Gutschriften)
+	BEGIN
+		RETURN 0;
+	END
+
+	DECLARE
+		@OldContextInfo VARBINARY(128),
+		@Hash VARBINARY(128);
+
+	SET @OldContextInfo = ISNULL(CONTEXT_INFO(), 0x0);
+	SET @Hash = HASHBYTES(&#39;SHA1&#39;, &#39;dbo.spGutschriftEckdatenBerechnen&#39;);
+	SET CONTEXT_INFO @Hash;
+
+	-- ---------- Gutschriftseckdatenberechnen und Gutschrift als valide kennzeichnen ----------
+	UPDATE dbo.tgutschrift
+		SET
+			fPreis = PosDaten.BruttoPreis,
+			nGutschriftStatus = 0
+		FROM dbo.tgutschrift
+		JOIN @Gutschriften AS Gutschriften ON Gutschriften.kGutschrift = tgutschrift.kGutschrift
+		JOIN (
+			SELECT 
+				tGutschriftPos.tGutschrift_kGutschrift,
+				ROUND(SUM(tGutschriftPos.nAnzahl * tGutschriftPos.fVKNetto * (1 - (tGutschriftPos.fRabatt / 100)) * (1 + (tGutschriftPos.fMwSt / 100))), 2) AS BruttoPreis
+			FROM dbo.tGutschriftPos
+			GROUP BY tGutschriftPos.tGutschrift_kGutschrift
+		) AS PosDaten ON PosDaten.tGutschrift_kGutschrift = tgutschrift.kGutschrift;
+
+	-- ---------- Rechnungseckdaten berechnen ----------
+	DECLARE @tempRechnungsKeys AS Rechnung.TYPE_spRechnungEckdatenBerechnen
+
+	INSERT INTO @tempRechnungsKeys (kRechnung)
+	SELECT		DISTINCT tgutschrift.kRechnung
+	FROM		dbo.tgutschrift
+	INNER JOIN	@Gutschriften AS Gutschriften ON Gutschriften.kGutschrift = tgutschrift.kGutschrift;
+
+	EXEC Rechnung.spRechnungEckdatenBerechnen @tempRechnungsKeys;
+
+	SET CONTEXT_INFO @OldContextInfo;
+END</code></pre>
+</body>
+</html>

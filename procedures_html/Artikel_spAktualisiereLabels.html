@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artikel.spAktualisiereLabels</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Artikel.spAktualisiereLabels</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Artikel.spAktualisiereLabels @Artikel Artikel.TYPE_spAktualisiereLabels READONLY
+AS
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+    DECLARE @DeadlockRetries TINYINT = CASE
+                                           WHEN @@TRANCOUNT = 0
+                                            AND XACT_STATE() = 0 THEN 5
+                                           ELSE 0
+                                       END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+    SET CONTEXT_INFO @MyContextInfo;
+    DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0)
+            BEGIN TRANSACTION;
+        -- Start vom Code
+
+        IF OBJECT_ID(&#39;tempdb..#spAktualisiereLabels&#39;) IS NOT NULL
+        BEGIN
+            DROP TABLE #spAktualisiereLabels;
+        END;
+        CREATE TABLE #spAktualisiereLabels (kArtikel INT NOT NULL PRIMARY KEY);
+        INSERT INTO #spAktualisiereLabels (kArtikel)
+        SELECT [@Artikel].kArtikel
+        FROM   @Artikel
+        WHERE  EXISTS (SELECT *
+                       FROM   dbo.tArtikel
+                       WHERE  tArtikel.kArtikel = [@Artikel].kArtikel);
+
+        -- Artikel.cLabelNamen aktualisieren
+        -- &#196;nderungen an Labels eines Artikels synchronisieren
+        WITH targetData
+        AS (SELECT tArtikel.cLabelNamen, tArtikel.kArtikel
+            FROM   dbo.tArtikel
+            WHERE  EXISTS (SELECT *
+                           FROM   #spAktualisiereLabels
+                           WHERE  #spAktualisiereLabels.kArtikel = tArtikel.kArtikel))
+        MERGE INTO targetData
+        USING (SELECT STUFF((SELECT   &#39;, &#39; + tLabel.cName
+                             FROM     dbo.tLabel
+                             WHERE    EXISTS (SELECT *
+                                              FROM   dbo.tArtikelLabel
+                                              WHERE  tArtikelLabel.kArtikel = #spAktualisiereLabels.kArtikel
+                                                AND  tArtikelLabel.kLabel = tLabel.kLabel)
+                             ORDER BY tLabel.kLabel
+                            FOR XML PATH(&#39;&#39;)), 1, 2, N&#39;&#39;) AS cLabelNamen,
+                      #spAktualisiereLabels.kArtikel
+               FROM   #spAktualisiereLabels) AS sourceData
+        ON targetData.kArtikel = sourceData.kArtikel
+        WHEN MATCHED AND (EXISTS (SELECT targetData.cLabelNamen
+                                  EXCEPT
+                                  SELECT sourceData.cLabelNamen)) THEN
+            UPDATE SET targetData.cLabelNamen = sourceData.cLabelNamen
+        WHEN NOT MATCHED BY SOURCE AND (targetData.cLabelNamen IS NOT NULL) THEN
+            UPDATE SET targetData.cLabelNamen = NULL;
+
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0)
+       AND (@@TRANCOUNT &gt; 0)
+       AND (XACT_STATE() = 1)
+            COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0)
+                GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266
+                THROW;
+        END CATCH;
+        THROW;
+    END CATCH;
+
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH;</code></pre>
+</body>
+</html>

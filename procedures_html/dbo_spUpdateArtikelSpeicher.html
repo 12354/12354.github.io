@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spUpdateArtikelSpeicher</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spUpdateArtikelSpeicher</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure wird der Artikelspeicher, der für die Suche nach Artikeln verwendet wird, komplett neu berechnet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spUpdateArtikelSpeicher]
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+
+TRUNCATE TABLE dbo.tArtikelSpeicher;
+
+---
+--- Beachten: Die Artikel IDs werden getrimt. 
+---
+;WITH Alle AS 
+(
+		  SELECT LTRIM(RTRIM(tArtikel.cArtNr)) AS Nummer, tArtikel.kArtikel, 0 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft Artikelnummer&#39;
+			 WHERE tArtikel.cArtNr IS NOT NULL 
+			 AND tArtikel.cArtNr &lt;&gt; &#39;&#39; 
+							
+    UNION ALL
+		  SELECT LTRIM(RTRIM(tArtikel.cBarcode)) AS Nummer, tArtikel.kArtikel, 1 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft EAN&#39;
+			 WHERE tArtikel.cBarcode IS NOT NULL 
+				AND tArtikel.cBarcode &lt;&gt; &#39;&#39; 
+    UNION ALL
+		  SELECT  LTRIM(RTRIM(tArtikel.cHAN)) AS Nummer, tArtikel.kArtikel, 2 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft HAN&#39;
+			 WHERE tArtikel.cHAN IS NOT NULL 
+				AND tArtikel.cHAN &lt;&gt; &#39;&#39; 
+    UNION ALL
+		  SELECT  LTRIM(RTRIM(tArtikel.cUPC)) AS Nummer, tArtikel.kArtikel, 3 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft UPC&#39;
+			 WHERE tArtikel.cUPC IS NOT NULL 
+				AND tArtikel.cUPC &lt;&gt; &#39;&#39; 
+    UNION ALL
+		  SELECT  LTRIM(RTRIM(tArtikel.cISBN)) AS Nummer, tArtikel.kArtikel, 4 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft ISBN&#39;
+			 WHERE tArtikel.cISBN IS NOT NULL 
+				AND tArtikel.cISBN &lt;&gt; &#39;&#39; 
+    UNION ALL
+		  SELECT LTRIM(RTRIM(tGebinde.cEAN)) AS Nummer, dbo.tGebinde.kArtikel, 6 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM dbo.tGebinde 
+			 JOIN tArtikel ON tArtikel.kArtikel = dbo.tGebinde.kArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft GebindeEAN&#39;
+			 WHERE dbo.tGebinde.cEAN IS NOT NULL 
+				AND dbo.tGebinde.cEAN &lt;&gt; &#39;&#39; 
+    UNION ALL
+		  SELECT LTRIM(RTRIM(tGebinde.cUPC)) AS Nummer, dbo.tGebinde.kArtikel, 9 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM dbo.tGebinde 
+			 JOIN tArtikel ON tArtikel.kArtikel = dbo.tGebinde.kArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft GebindeUPC&#39;
+			 WHERE dbo.tGebinde.cUPC IS NOT NULL 
+				AND dbo.tGebinde.cUPC &lt;&gt; &#39;&#39; 
+    UNION ALL
+		  SELECT  LTRIM(RTRIM(tArtikel.cAmazonFNSKU)) AS Nummer, tArtikel.kArtikel, 10 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft FNSKU&#39;
+			 WHERE tArtikel.cAmazonFNSKU IS NOT NULL 
+		     AND tArtikel.cAmazonFNSKU &lt;&gt; &#39;&#39; 
+			 UNION
+			 SELECT LTRIM(RTRIM(pf_amazon_angebot_mapping.cSellerSKU)), pf_amazon_angebot_mapping.kArtikel,10 AS Art,CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM pf_amazon_angebot_mapping
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft FNSKU&#39;
+			 GROUP BY pf_amazon_angebot_mapping.kArtikel, pf_amazon_angebot_mapping.cSellerSKU, dbo.tOptions.cValue
+
+	UNION ALL
+		  SELECT  LTRIM(RTRIM(tProductRef.cJfsku)) AS Nummer, tArtikel.kArtikel, 11 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM tArtikel 
+			 JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = tArtikel.kArtikel
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft JTLFPID&#39;
+
+    UNION ALL
+		SELECT  LTRIM(RTRIM(Artikel.tArtikelAsin.cASIN)) AS Nummer, Artikel.tArtikelAsin.kArtikel, 7 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			FROM Artikel.tArtikelAsin
+			LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft ASIN&#39;
+			WHERE Artikel.tArtikelAsin.cAsin IS NOT NULL 
+			AND Artikel.tArtikelAsin.cAsin &lt;&gt; &#39;&#39;	
+    UNION ALL
+		  SELECT LTRIM(RTRIM(tLiefArtikel.cLiefArtNr)) AS Nummer, dbo.tLiefArtikel.tArtikel_kArtikel, 8 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM dbo.tLiefArtikel
+			 JOIN tArtikel ON tArtikel.kArtikel = dbo.tLiefArtikel.tArtikel_kArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft LieferantenArtNummer&#39;
+		  WHERE dbo.tLiefArtikel.cLiefArtNr IS NOT NULL 
+			 AND dbo.tLiefArtikel.cLiefArtNr &lt;&gt; &#39;&#39; 
+
+    UNION ALL
+
+    SELECT LTRIM(RTRIM(dbo.tArtikelBeschreibung.cName)) AS Nummer, dbo.tArtikelBeschreibung.kArtikel, 5 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM dbo.tArtikelBeschreibung
+			 JOIN tArtikel ON tArtikel.kArtikel = dbo.tArtikelBeschreibung.kArtikel 
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft Artikelname&#39;
+			 JOIN tSpracheUsed ON dbo.tArtikelBeschreibung.kSprache = tSpracheUsed.kSprache AND tSpracheUsed.nStandard = 1 
+		  WHERE dbo.tArtikelBeschreibung.cName IS NOT NULL 
+		  AND dbo.tArtikelBeschreibung.kPlattform = 1
+	       AND dbo.tArtikelBeschreibung.cName &lt;&gt; &#39;&#39; 
+
+	UNION ALL
+		  SELECT LTRIM(RTRIM(tWarenLagerEingangSubsets.cSubsetNumber)) AS Nummer, tWarenLagerEingang.kArtikel, 12 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			 FROM dbo.tWarenLagerEingangSubsets
+			 JOIN dbo.tWarenLagerEingang ON tWarenLagerEingangSubsets.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+			 LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft SubsetNumber&#39;
+
+)
+INSERT INTO dbo.tArtikelSpeicher WITH(ROWLOCK) (kArtikel,cNummer,nID,nAktiv)
+    SELECT DISTINCT Alle.kArtikel, Alle.Nummer, Alle.Art ,Alle.nAktiv
+		  FROM Alle;
+
+		  
+	IF(EXISTS (SELECT * FROM dbo.tOptions WHERE cKey = &#39;ArtikelEigenschaftNotStuecklisten-EAN&#39; AND cValue = &#39;1&#39;))
+	BEGIN
+
+		UPDATE tArtikelSpeicher
+		SET tArtikelSpeicher.nAktiv = 0
+		FROM dbo.tArtikelSpeicher
+		JOIN dbo.tArtikel on tArtikel.kArtikel = tArtikelSpeicher.kArtikel
+		WHERE tArtikel.kStueckliste &gt; 0;
+
+	END;
+
+
+END;</code></pre>
+</body>
+</html>

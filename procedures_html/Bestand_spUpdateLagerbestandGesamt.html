@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bestand.spUpdateLagerbestandGesamt</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Bestand.spUpdateLagerbestandGesamt</h1>
+    <p><strong>Description:</strong> Berechnet für mehrere Artikel sowohl Lagerbestand als auch LagerbestandProLager neu</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Bestand.spUpdateLagerbestandGesamt
+    @Artikel AS dbo.TYPE_spUpdateLagerbestand READONLY, -- Liste von Artikeln
+	@Debug BIT = 0 -- = 1, um Debug
+AS
+/*************************************************************************************************************
+Beschreibung:	Berechnet f&#252;r mehrere Artikel sowohl Lagerbestand als auch LagerbestandProLager neu
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+DECLARE @Artikel dbo.TYPE_spUpdateLagerbestand;
+INSERT INTO @Artikel (kArtikel) SELECT TOP(100) kArtikel FROM dbo.tArtikel ORDER BY kArtikel DESC;
+EXEC Bestand.spUpdateLagerbestandGesamt @Artikel = @Artikel;
+*************************************************************************************************************/
+
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+	DECLARE @ArtikelUndWarenlager dbo.TYPE_spUpdateLagerbestandProLager;
+
+	-- Lagerbestand neu berechnen
+	EXEC dbo.spUpdateLagerbestand
+		@Artikel = @Artikel,
+		@Debug = @Debug;
+
+	-- LagerbestandProLager neu berechnen
+	INSERT INTO @ArtikelUndWarenlager (kArtikel, kWarenlager)
+	SELECT		Input.kArtikel, WL.kWarenlager
+	FROM		@Artikel AS Input
+	CROSS JOIN	dbo.tWarenlager AS WL
+
+	EXEC dbo.spUpdateLagerbestandProLager @Artikel = @ArtikelUndWarenlager
+END</code></pre>
+</body>
+</html>

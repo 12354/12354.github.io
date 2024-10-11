@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spKundeUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spKundeUpdate</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure Kunde.spKundeUpdate werden die Daten der Tabelle dbo.tKunde aktualisiert.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Kunde].[spKundeUpdate] 
+	@Daten AS TYPE_spkundeUpdate READONLY,
+	@kBenutzer AS INT
+AS 
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @ReturnValue INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	-- Context Info
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	DECLARE @hash VARBINARY(128);
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;Kunde.spKundeUpdate&#39;);
+	SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+		   SET @CreatedTransaction = 1;
+		   BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION Savepoint0;
+		END;
+			IF(OBJECT_ID(&#39;tempdb..#Daten_spkundeUpdate&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Daten_spkundeUpdate;
+		END
+		CREATE TABLE #Daten_spkundeUpdate(kKunde INT, kInetKunde INT, kKundenKategorie INT, cKundenNr NVARCHAR(30), 
+			dErstellt DATETIME,  
+			fRabatt DECIMAL(25,13), cNewsletter CHAR(1), 
+			cEbayName NVARCHAR(60), kBuyer INT,
+			cGeburtstag NVARCHAR(10), cWWW NVARCHAR(255), cSperre CHAR(1), kKundenGruppe INT,
+			nZahlungsziel INT, kSprache INT,
+			cHerkunft NVARCHAR(255), cKassenKunde CHAR(1), cHRNr NVARCHAR(255), kZahlungsart INT, 
+			nDebitorennr INT, cSteuerNr NVARCHAR(255), nKreditlimit INT,	kKundenDrucktext INT, nMahnstopp TINYINT, 
+			nMahnrhythmus INT, kFirma TINYINT, fProvision DECIMAL(25,13), nVertreter TINYINT, 
+			fSkonto DECIMAL(25,13), nSkontoInTagen INT);
+		INSERT INTO #Daten_spkundeUpdate(kKunde, kInetKunde, kKundenKategorie, cKundenNr, 
+			dErstellt,  
+			fRabatt, cNewsletter, cEbayName, kBuyer, cGeburtstag, cWWW, cSperre, 
+			kKundenGruppe, nZahlungsziel, kSprache, cHerkunft, cKassenKunde, 
+			cHRNr, kZahlungsart, nDebitorennr, cSteuerNr, nKreditlimit, kKundenDrucktext, nMahnstopp, nMahnrhythmus, 
+			kFirma, fProvision, nVertreter, fSkonto, nSkontoInTagen)
+			SELECT Daten.kKunde, 
+				CASE WHEN Daten.kInetKunde IS NOT NULL OR Daten.xFlag_kInetKunde = 1
+					THEN Daten.kInetKunde
+					ELSE tkunde.kInetKunde
+				END, 
+				CASE WHEN Daten.kKundenKategorie IS NOT NULL OR Daten.xFlag_kKundenKategorie = 1
+					THEN Daten.kKundenKategorie
+					ELSE tkunde.kKundenKategorie
+				END, 
+				CASE WHEN Daten.cKundenNr IS NOT NULL OR Daten.xFlag_cKundenNr = 1
+					THEN Daten.cKundenNr
+					ELSE tkunde.cKundenNr
+				END, 
+				CASE WHEN Daten.dErstellt IS NOT NULL OR Daten.xFlag_dErstellt = 1
+					THEN Daten.dErstellt
+					ELSE tkunde.dErstellt
+				END, 
+				CASE WHEN Daten.fRabatt IS NOT NULL OR Daten.xFlag_fRabatt = 1
+					THEN Daten.fRabatt
+					ELSE tkunde.fRabatt
+				END, 
+				CASE WHEN Daten.cNewsletter IS NOT NULL OR Daten.xFlag_cNewsletter = 1
+					THEN Daten.cNewsletter
+					ELSE tkunde.cNewsletter
+				END, 
+				CASE WHEN Daten.cEbayName IS NOT NULL OR Daten.xFlag_cEbayName = 1
+					THEN Daten.cEbayName
+					ELSE tkunde.cEbayName
+				END, 
+				CASE WHEN Daten.kBuyer IS NOT NULL OR Daten.xFlag_kBuyer = 1
+					THEN Daten.kBuyer
+					ELSE tkunde.kBuyer
+				END,
+				CASE WHEN Daten.cGeburtstag IS NOT NULL OR Daten.xFlag_cGeburtstag = 1
+					THEN Daten.cGeburtstag
+					ELSE tkunde.cGeburtstag
+				END, 
+				CASE WHEN Daten.cWWW IS NOT NULL OR Daten.xFlag_cWWW = 1
+					THEN Daten.cWWW
+					ELSE tkunde.cWWW
+				END, 
+				CASE WHEN Daten.cSperre IS NOT NULL OR Daten.xFlag_cSperre = 1
+					THEN Daten.cSperre
+					ELSE tkunde.cSperre
+				END, 
+				CASE WHEN Daten.kKundenGruppe IS NOT NULL OR Daten.xFlag_kKundenGruppe = 1
+					THEN Daten.kKundenGruppe
+					ELSE tkunde.kKundenGruppe
+				END, 
+				CASE WHEN Daten.nZahlungsziel IS NOT NULL OR Daten.xFlag_nZahlungsziel = 1
+					THEN Daten.nZahlungsziel
+					ELSE tkunde.nZahlungsziel
+				END, 
+				CASE WHEN Daten.kSprache IS NOT NULL OR Daten.xFlag_kSprache = 1
+					THEN Daten.kSprache
+					ELSE tkunde.kSprache
+				END, 
+				CASE WHEN Daten.cHerkunft IS NOT NULL OR Daten.xFlag_cHerkunft = 1
+					THEN Daten.cHerkunft
+					ELSE tkunde.cHerkunft
+				END, 
+				CASE WHEN Daten.cKassenKunde IS NOT NULL OR Daten.xFlag_cKassenKunde = 1
+					THEN Daten.cKassenKunde
+					ELSE tkunde.cKassenKunde
+				END, 
+				CASE WHEN Daten.cHRNr IS NOT NULL OR Daten.xFlag_cHRNr = 1
+					THEN Daten.cHRNr
+					ELSE tkunde.cHRNr
+				END, 
+				CASE WHEN Daten.kZahlungsart IS NOT NULL OR Daten.xFlag_kZahlungsart = 1
+					THEN Daten.kZahlungsart
+					ELSE tkunde.kZahlungsart
+				END, 
+				CASE WHEN Daten.nDebitorennr IS NOT NULL OR Daten.xFlag_nDebitorennr = 1
+					THEN Daten.nDebitorennr
+					ELSE tkunde.nDebitorennr
+				END, 
+				CASE WHEN Daten.cSteuerNr IS NOT NULL OR Daten.xFlag_cSteuerNr = 1
+					THEN Daten.cSteuerNr
+					ELSE tkunde.cSteuerNr
+				END, 
+				CASE WHEN Daten.nKreditlimit IS NOT NULL OR Daten.xFlag_nKreditlimit = 1
+					THEN Daten.nKreditlimit
+					ELSE tkunde.nKreditlimit
+				END, 
+				CASE WHEN Daten.kKundenDrucktext IS NOT NULL OR Daten.xFlag_kKundenDrucktext = 1
+					THEN Daten.kKundenDrucktext
+					ELSE tkunde.kKundenDrucktext
+				END, 
+				CASE WHEN Daten.nMahnstopp IS NOT NULL OR Daten.xFlag_nMahnstopp = 1
+					THEN Daten.nMahnstopp
+					ELSE tkunde.nMahnstopp
+				END, 
+				CASE WHEN Daten.nMahnrhythmus IS NOT NULL OR Daten.xFlag_nMahnrhythmus = 1
+					THEN Daten.nMahnrhythmus
+					ELSE tkunde.nMahnrhythmus
+				END,
+				CASE WHEN Daten.kFirma IS NOT NULL OR Daten.xFlag_kFirma = 1
+					THEN Daten.kFirma
+					ELSE tkunde.kFirma
+				END,
+				CASE WHEN Daten.fProvision IS NOT NULL OR Daten.xFlag_fProvision = 1
+					THEN Daten.fProvision
+					ELSE tkunde.fProvision
+				END,
+				CASE WHEN Daten.nVertreter IS NOT NULL OR Daten.xFlag_nVertreter = 1
+					THEN Daten.nVertreter
+					ELSE tkunde.nVertreter
+				END,
+				CASE WHEN Daten.fSkonto IS NOT NULL OR Daten.xFlag_fSkonto = 1
+					THEN Daten.fSkonto
+					ELSE tkunde.fSkonto
+				END,
+				CASE WHEN Daten.nSkontoInTagen IS NOT NULL OR Daten.xFlag_nSkontoInTagen = 1
+					THEN Daten.nSkontoInTagen
+					ELSE tkunde.nSkontoInTagen
+				END
+			FROM @Daten AS Daten
+				JOIN dbo.tkunde ON Daten.kKunde = tkunde.kKunde
+	--
+	-- Hier kommt der Code rein vor dem INSERT/UPDATE/DELETE
+	--
+	IF(OBJECT_ID(&#39;tempdb..#Temp_spkundeUpdate&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Temp_spkundeUpdate;
+	END
+	CREATE TABLE #Temp_spkundeUpdate(InternalId INT IDENTITY(1,1), kKunde INT);
+		-- Update schreiben
+		UPDATE dbo.tkunde			
+			SET kInetKunde = Daten.kInetKunde, 
+				kKundenKategorie = Daten.kKundenKategorie, 
+				cKundenNr = Daten.cKundenNr, 
+				dErstellt = Daten.dErstellt, 
+				fRabatt = Daten.fRabatt, 
+				cNewsletter = Daten.cNewsletter, 
+				cEbayName = Daten.cEbayName, 
+				kBuyer = Daten.kBuyer, 
+				cGeburtstag = Daten.cGeburtstag, 
+				cWWW = Daten.cWWW, 
+				cSperre = Daten.cSperre, 
+				kKundenGruppe = Daten.kKundenGruppe, 
+				nZahlungsziel = Daten.nZahlungsziel, 
+				kSprache = Daten.kSprache, 
+				cHerkunft = Daten.cHerkunft, 
+				cKassenKunde = Daten.cKassenKunde, 
+				cHRNr = Daten.cHRNr, 
+				kZahlungsart = Daten.kZahlungsart, 
+				nDebitorennr = Daten.nDebitorennr, 
+				cSteuerNr = Daten.cSteuerNr, 
+				nKreditlimit = Daten.nKreditlimit, 
+				kKundenDrucktext = Daten.kKundenDrucktext, 
+				nMahnstopp = Daten.nMahnstopp, 
+				nMahnrhythmus = Daten.nMahnrhythmus,
+				kFirma = Daten.kFirma,
+				fProvision = Daten.fProvision,
+				nVertreter = Daten.nVertreter,
+				fSkonto = Daten.fSkonto,
+				nSkontoInTagen = Daten.nSkontoInTagen
+			OUTPUT INSERTED.kKunde INTO #Temp_spkundeUpdate 
+			FROM dbo.tkunde
+			JOIN #Daten_spkundeUpdate AS Daten ON Daten.kKunde = tkunde.kKunde;
+
+	--
+	-- Hier kommt der Code nach dem INSERT/UPDATE/DELETE rein
+	--
+	
+	-- tKunde_suche aktualisieren
+	DECLARE @KundenToUpdate AS TYPE_spUpdateKundeSuche;
+
+	INSERT INTO @KundenToUpdate (kKunde)
+	SELECT DISTINCT kKunde
+	FROM #Daten_spkundeUpdate;
+	
+	EXEC Kunde.spUpdateKundeSuche @Kunden = @KundenToUpdate;
+
+	-- R&#252;ckgabe Anzahl der Datens&#228;tze
+	SELECT @ReturnValue = COUNT(1)
+		FROM #Temp_spkundeUpdate;
+		IF(@CreatedTransaction = 1)
+		BEGIN
+			COMMIT-- Nur wenn kein Savepoint gesetzt
+		END
+		RETURN @ReturnValue;
+	END TRY
+	BEGIN CATCH
+	-- Dedlock Catch
+		IF(ERROR_NUMBER() = 1205)
+		BEGIN
+			SET @retry = @retry - 1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			IF(@retry = 0)
+			BEGIN
+				SET CONTEXT_INFO 0x0;
+				THROW;
+				RETURN 0;
+			END
+			EXEC dbo.spWaitRandom;
+		END
+		ELSE
+		BEGIN
+			SET @retry = -1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			SET CONTEXT_INFO @OldContextInfo;
+			THROW;
+			RETURN 0;
+		END
+	END CATCH
+END</code></pre>
+</body>
+</html>

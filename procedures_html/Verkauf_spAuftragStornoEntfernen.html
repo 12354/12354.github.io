@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verkauf.spAuftragStornoEntfernen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Verkauf.spAuftragStornoEntfernen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Verkauf].[spAuftragStornoEntfernen]
+	@kAuftrag INT = NULL,
+	@kBenutzer INT = NULL,
+	@nValidate BIT,
+	@returnValue INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @ErrorExists BIT = 0;
+SET @returnValue = -1;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	IF(@nValidate = 1)
+	BEGIN
+		SET @returnValue = Verkauf.ifStornoRueckgaengig(@kAuftrag);
+		IF(@returnValue &gt; 0)
+			RETURN;
+	END
+		
+	IF(OBJECT_ID(&#39;tempdb..#StornoRueckgaengigAmazon&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #StornoRueckgaengigAmazon;
+		END
+		CREATE TABLE #StornoRueckgaengigAmazon(
+			kAuftrag INT,
+			kAmazonBestellung INT,
+			cOrderId VARCHAR(30)
+		);
+	INSERT INTO #StornoRueckgaengigAmazon (kAuftrag, kAmazonBestellung, cOrderId)
+	SELECT DISTINCT kAuftrag, pf_amazon_bestellung.kAmazonBestellung, pf_amazon_bestellung.cOrderId
+	FROM Verkauf.tAuftragPosition
+	JOIN pf_amazon_bestellungpos ON pf_amazon_bestellungpos.kAmazonBestellungPos = tAuftragPosition.kAmazonBestellungPos AND tAuftragPosition.kAmazonBestellungPos &gt; 0
+	JOIN pf_amazon_bestellung ON pf_amazon_bestellung.kAmazonBestellung = pf_amazon_bestellungpos.kAmazonBestellung
+	WHERE tAuftragPosition.kAuftrag = @kAuftrag AND pf_amazon_bestellung.kAmazonBestellung &gt; 0	
+		
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	DECLARE @hash VARBINARY(128);
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;Verkauf.spAuftragStornoEntfernen&#39;);
+	SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+			SET @CreatedTransaction = 1;
+			BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION SpAuftragStornoEntfernen;
+		END;
+
+		--Verkauf Tabellen
+		UPDATE Verkauf.tAuftrag SET tAuftrag.nStorno = 0 WHERE tAuftrag.kAuftrag = @kAuftrag;
+		
+		DELETE FROM Verkauf.tAuftragStorno WHERE tAuftragStorno.kAuftrag = @kAuftrag;
+		
+		--SCX
+		UPDATE SCX.tOrder SET tOrder.nCancellationUpload = 0 WHERE tOrder.kAuftrag = @kAuftrag;
+
+		--Ausgangszahlungen entfernen
+		IF(OBJECT_ID(&#39;tempdb..#Ausgangszahlungen&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Ausgangszahlungen;
+		END
+		CREATE TABLE #Ausgangszahlungen(kZahlung INT, kZahlungsabgleichAusgang INT);
+		
+		INSERT INTO #Ausgangszahlungen(kZahlung, kZahlungsabgleichAusgang)
+		SELECT tZahlung.kZahlung, tZahlungsabgleichAusgang.kZahlungsabgleichAusgang
+		FROM dbo.tZahlung
+		JOIN dbo.tZahlungsabgleichAusgang 
+			ON tZahlungsabgleichAusgang.kZahlungAusgang = tZahlung.kZahlung 
+			AND tZahlungsabgleichAusgang.kBuchungsbenutzer = 0
+		WHERE tZahlung.kBestellung = @kAuftrag
+
+		DELETE FROM dbo.tZahlungsabgleichAusgang
+		WHERE tZahlungsabgleichAusgang.kZahlungsabgleichAusgang 
+			IN (SELECT DISTINCT kZahlungsabgleichAusgang FROM #Ausgangszahlungen)
+
+		DELETE FROM dbo.tZahlung
+		WHERE tZahlung.kZahlung IN (SELECT DISTINCT kZahlung FROM #Ausgangszahlungen)
+								   
+		--Amazon-Stornos entfernen
+		DELETE FROM dbo.pf_amazon_bestellung_storno 
+		WHERE pf_amazon_bestellung_storno.cOrderID 
+			IN(SELECT #StornoRueckgaengigAmazon.cOrderId 
+			   FROM #StornoRueckgaengigAmazon) 
+			AND pf_amazon_bestellung_storno.dBearbeitet IS NULL
+		
+		UPDATE dbo.pf_amazon_bestellung 
+		SET nStatus = 0 
+		WHERE pf_amazon_bestellung.kAmazonBestellung IN(SELECT kAmazonBestellung FROM #StornoRueckgaengigAmazon)
+		
+		--Historie Storno r&#252;ckg&#228;ngig gemacht
+		
+		INSERT INTO [Kunde].[tHistorie]
+		(
+			 [kKunde]
+			,[kAuftrag]
+			,[kVorgang]
+			,[kKey]
+			,[cValue1]
+			,[cValue2]
+			,[cValue3]
+			,[dErstellt]
+			,[kBenutzer]
+			,[fValue1]
+			,[fValue2]
+		)
+		SELECT
+			tAuftrag.kKunde,
+			@kAuftrag,
+			30,
+			@kAuftrag,
+			tAuftrag.cAuftragsNr,
+			NULL,
+			NULL,
+			GETDATE(),
+			@kBenutzer,
+			NULL,
+			NULL
+		FROM Verkauf.tAuftrag
+		WHERE tAuftrag.kAuftrag = @kAuftrag AND tAuftrag.kKunde IS NOT NULL;
+		
+		-- 
+		-- tQueue schreiben
+		--
+		
+		-- Connector-Bestellungen
+		
+		-- Bisherige Queue-Eintr&#228;ge entfernen
+		DELETE dbo.tQueue
+		FROM dbo.tQueue
+		JOIN dbo.tShop ON tQueue.kShop = tShop.kShop
+		WHERE tQueue.cName = &#39;tBestellung&#39; AND tShop.nTyp = 1 AND tQueue.kOption1 = @kAuftrag;
+		
+		INSERT INTO dbo.tQueue (kShop, kPlattform, cName, kWert, nAction, kOption1, kOption2, nInBearbeitung)
+		SELECT
+			tAuftrag.kShop,
+			tAuftrag.kPlattform,
+			&#39;tBestellung&#39;,
+			0,
+			6,
+			tAuftrag.kAuftrag,
+			0,
+			0
+		FROM Verkauf.tAuftrag
+		JOIN dbo.tShop ON tAuftrag.kShop = tShop.kShop
+		WHERE tAuftrag.kAuftrag = @kAuftrag AND tShop.nTyp = 1;
+		
+		-- JTL-Shop-Bestellungen
+		
+		-- Bisherige Queue-Eintr&#228;ge entfernen
+		DELETE dbo.tQueue
+		FROM dbo.tQueue
+		JOIN Verkauf.tAuftrag ON (tQueue.kWert = tAuftrag.kShopauftrag AND tQueue.nAction IN(2, 5, 6)) 
+			OR (tQueue.kWert = tAuftrag.kAuftrag AND tQueue.nAction IN(1))
+		JOIN dbo.tShop ON tQueue.kShop = tShop.kShop
+		WHERE dbo.tQueue.cName = &#39;tBestellung&#39; AND tShop.nTyp = 0 AND tAuftrag.kAuftrag = @kAuftrag;
+		
+		INSERT INTO dbo.tQueue (kShop, kPlattform, cName, kWert, nAction, kOption1, kOption2, nInBearbeitung)
+		SELECT
+			tAuftrag.kShop,
+			tAuftrag.kPlattform,
+			&#39;tBestellung&#39;,
+			tAuftrag.kShopauftrag,
+			6,
+			0,
+			0,
+			0
+		FROM Verkauf.tAuftrag
+		JOIN dbo.tShop ON tAuftrag.kShop = tShop.kShop
+		WHERE tAuftrag.kAuftrag = @kAuftrag AND tShop.nTyp = 0;
+		
+		--EckdatenBerechnen
+		DECLARE @Eckdaten AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+		INSERT INTO @Eckdaten ( kAuftrag ) VALUES (@kAuftrag);
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Eckdaten;
+
+		IF(@CreatedTransaction = 1)
+		BEGIN
+			COMMIT-- Nur wenn kein Savepoint gesetzt
+		END
+		SET @retry = -1;
+		SET @returnValue = 0;
+	END TRY
+	BEGIN CATCH
+		-- Deadlock Catch
+		IF(ERROR_NUMBER() = 1205)
+		BEGIN
+			SET @retry = @retry - 1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+				ROLLBACK TRANSACTION SpAuftragStornoEntfernen;
+			END
+			IF(@retry = 0)
+			BEGIN
+				SET CONTEXT_INFO 0x0;
+				THROW;
+				RETURN 0;
+			END
+			EXEC dbo.spWaitRandom;
+		END
+		ELSE
+		BEGIN
+			SET @retry = - 1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+				ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION SpAuftragStornoEntfernen;
+			END
+			SET CONTEXT_INFO @OldContextInfo;
+			THROW
+			RETURN 0;
+		END
+	END CATCH
+END</code></pre>
+</body>
+</html>

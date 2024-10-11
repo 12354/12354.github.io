@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spWMSBestandUndPicklisteBuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spWMSBestandUndPicklisteBuchen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROC [WMS].[spWMSBestandUndPicklisteBuchen]
+
+
+@kBestellung INT,
+@kPickliste INT,
+@kPlattform INT,
+@kBenutzer INT,
+@cKommentar VARCHAR(255), --&#39;Versand mit EazyShipping&#39;    
+@kBuchungsart INT,
+@kLieferschein INT,
+@nVerpackModus INT	     -- 0 = Standard,  1 = Packtisch , 2 = BoxenStandard , 3 = TeillieferungBoxen
+
+---
+--- Bucht alle Warenlagerausg&#228;nge f&#252;r eine Bestellung. Und die dazugeh&#246;rigen Abh&#228;ngigkeiten. Setzten den Picklistenstatus hoch.
+--- VORSICHT : ES WERDEN KEINE SERIENNUMMERN GEBUCHT !!!
+---
+
+AS
+
+     DECLARE @IsNowDate DATETIME;
+	 DECLARE @ErrorMessage NVARCHAR(4000);
+	 DECLARE @ErrorSeverity INT;
+	 DECLARE @ErrorState INT;
+	 DECLARE @IsBoxenPickiste TINYINT;
+	 DECLARE @BoxenAuftragSplitVerbieten INT;
+	 DECLARE @ErrorLoggingAktiv TINYINT = 0;
+
+     SET NOCOUNT ON;
+	 SET ANSI_NULLS ON;
+	 SET ANSI_NULL_DFLT_ON ON;
+	 SET ANSI_PADDING ON;
+	 SET CONCAT_NULL_YIELDS_NULL ON;
+	 SET XACT_ABORT OFF;
+BEGIN
+
+	 SELECT @ErrorLoggingAktiv = 1
+	 FROM WMS.tWMSErrorLogController
+	 WHERE tWMSErrorLogController.nProzess = 1
+	 AND GETDATE() BETWEEN tWMSErrorLogController.dStartZeit AND tWMSErrorLogController.dEndZeit
+	 AND tWMSErrorLogController.nAktiv = 1
+	 AND (tWMSErrorLogController.kBenutzer = @kBenutzer OR ISNULL(tWMSErrorLogController.kBenutzer,0) = 0)
+	 AND (tWMSErrorLogController.cQuelle = N&#39;WMS_spWMSVerpackeEazyshipping&#39; OR ISNULL(tWMSErrorLogController.cQuelle,&#39;&#39;) = &#39;&#39;)
+	 AND EXISTS (SELECT kWarenlager FROM dbo.tPickliste WHERE kPickliste = @kPickliste AND kWarenlager = tWMSErrorLogController.kWarenlager)
+
+     SET @IsNowDate = GETDATE();
+
+
+	IF(object_id(&#39;tempdb..#WarenlagerEingaengeZumUpdate&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE ##WarenlagerEingaengeZumUpdate
+	END
+     CREATE TABLE #WarenlagerEingaengeZumUpdate (kWarenLagerEingang INT,fAnzahlAktuell DECIMAL(25,13),kPicklistePos INT,
+	                                             kLieferscheinPos INT,kArtikel INT, kWarenLagerPlatz INT,kStueckliste INT,cLagerVariation CHAR(1),nIstVater INT,fEKNetto DECIMAL(25,13),cLagerAktiv CHAR(1),kBestellPos INT);
+
+										  
+
+	IF(@nVerpackModus IN (0,1,2))
+	BEGIN
+											 
+         -- Tempor&#228;re Tabelle f&#252;llen, mit allen Warenlagereing&#228;ngen die gebucht werden sollen
+        INSERT INTO #WarenlagerEingaengeZumUpdate
+			     (
+				 kWarenLagerEingang,
+			      fAnzahlAktuell,
+			      kPicklistePos,
+			      kLieferscheinPos,
+			      kArtikel,
+			      kWarenLagerPlatz,
+			      kStueckliste,
+			      cLagerVariation,
+			      nIstVater,
+			      fEKNetto,
+			      cLagerAktiv,
+			      kBestellPos
+			     )
+       SELECT dbo.tWarenLagerEingang.kWarenLagerEingang,
+              tPicklistePos.fAnzahl AS fAnzahlAktuell,
+              dbo.tPicklistePos.kPicklistePos,
+              Lieferschein.kLieferscheinPos,
+              dbo.tWarenLagerEingang.kArtikel,
+              dbo.tWarenLagerEingang.kWarenLagerPlatz,
+              dbo.tArtikel.kStueckliste,
+              dbo.tArtikel.cLagerVariation,
+              dbo.tArtikel.nIstVater,
+              dbo.tartikel.fEKNetto,
+              dbo.tartikel.cLagerAktiv,
+               Verkauf.tAuftragPosition.kAuftragPosition
+       FROM dbo.tWarenLagerEingang 
+       JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kWarenLagerEingang = dbo.tWarenLagerEingang.kWarenLagerEingang
+       JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+	   CROSS APPLY 
+	   ( 
+	     SELECT TOP 1 kLieferscheinPos 
+		 FROM  dbo.tLieferscheinPos
+		 JOIN Verkauf.tAuftragPosition AS LiefAuftragPos ON LiefAuftragPos.kAuftragPosition = tLieferscheinPos.kBestellPos
+	     WHERE tLieferscheinPos.kLieferschein = @kLieferschein
+		 AND LiefAuftragPos.kArtikel =  Verkauf.tAuftragPosition.kArtikel
+		 ORDER BY CASE WHEN tLieferscheinPos.kBestellPos =  Verkauf.tAuftragPosition.kAuftragPosition THEN 0 ELSE 1 END --Es kann durch MHD/Chargentausch eine andere Pos gepickt worden sein
+	   ) AS Lieferschein                                       
+       JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = dbo.tWarenLagerEingang.kArtikel
+       WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+       AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+       AND dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0
+       AND dbo.tPicklistePos.nStatus = 30
+       GROUP BY dbo.tWarenLagerEingang.kWarenLagerEingang,
+                dbo.tPicklistePos.kPicklistePos,
+                Lieferschein.kLieferscheinPos,
+                dbo.tWarenLagerEingang.kArtikel,
+                dbo.tWarenLagerEingang.kWarenLagerPlatz,
+                dbo.tArtikel.kStueckliste,
+                dbo.tArtikel.cLagerVariation,
+                dbo.tArtikel.nIstVater,
+                dbo.tartikel.fEKNetto,
+                dbo.tartikel.cLagerAktiv,
+                Verkauf.tAuftragPosition.kAuftragPosition,
+				tPicklistePos.fAnzahl;
+
+	END;
+    ELSE IF( @nVerpackModus IN (3)) 
+	BEGIN
+
+
+	    -- Bei Boxenteillieferung ohne Split, m&#252;&#223;en wir die Pickliste splitten anhand des Lieferscheins.
+		EXEC WMS.spSplitPicklisteByLieferschein
+              @kLieferschein = @kLieferschein,
+	         @kPickliste =  @kPickliste;
+
+
+	    -- Da wir hier die Pickliste gesplittet haben, stehen die LieferscheinPos schon in den gesplitteten PicklistePos
+	    INSERT INTO #WarenlagerEingaengeZumUpdate
+	    (
+	     kWarenLagerEingang,
+	     fAnzahlAktuell,
+	     kPicklistePos,
+	     kLieferscheinPos,
+	     kArtikel,
+	     kWarenLagerPlatz,
+	     kStueckliste,
+	     cLagerVariation,
+	     nIstVater,
+	     fEKNetto,
+	     cLagerAktiv,
+	     kBestellPos
+	    )
+        SELECT dbo.tWarenLagerEingang.kWarenLagerEingang,
+              tPicklistePos.fAnzahl AS fAnzahlAktuell,
+              dbo.tPicklistePos.kPicklistePos,
+              dbo.tLieferscheinPos.kLieferscheinPos,
+              dbo.tWarenLagerEingang.kArtikel,
+              dbo.tWarenLagerEingang.kWarenLagerPlatz,
+              dbo.tArtikel.kStueckliste,
+              dbo.tArtikel.cLagerVariation,
+              dbo.tArtikel.nIstVater,
+              dbo.tartikel.fEKNetto,
+              dbo.tartikel.cLagerAktiv,
+              Verkauf.tAuftragPosition.kAuftragPosition
+        FROM dbo.tWarenLagerEingang
+        JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kWarenLagerEingang = dbo.tWarenLagerEingang.kWarenLagerEingang
+        JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+        JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+                                                   AND dbo.tLieferscheinPos.kLieferschein = @kLieferschein
+        JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = dbo.tWarenLagerEingang.kArtikel
+        WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+        AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+        AND dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0
+        AND dbo.tPicklistePos.nStatus = 30
+        AND tPicklistePos.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+        GROUP BY dbo.tWarenLagerEingang.kWarenLagerEingang,
+                dbo.tPicklistePos.kPicklistePos,
+                dbo.tLieferscheinPos.kLieferscheinPos,
+                dbo.tWarenLagerEingang.kArtikel,
+                dbo.tWarenLagerEingang.kWarenLagerPlatz,
+                dbo.tArtikel.kStueckliste,
+                dbo.tArtikel.cLagerVariation,
+                dbo.tArtikel.nIstVater,
+                dbo.tartikel.fEKNetto,
+                dbo.tartikel.cLagerAktiv,
+                Verkauf.tAuftragPosition.kAuftragPosition,
+                tPicklistePos.fAnzahl;
+
+
+    END;
+
+
+    IF(EXISTS (SELECT * FROM #WarenlagerEingaengeZumUpdate)) -- Es k&#246;nnt sein das gar keine Warenlagereing&#228;nge gefunden werden (Packtisch).
+    BEGIN
+
+	   DECLARE @xWarenlagerAusgaenge XML;
+	   SET @xWarenlagerAusgaenge = (
+		    SELECT kWarenLagerEingang AS kWarenLagerEingang,
+				    kLieferscheinPos AS kLieferscheinPos,
+				    fAnzahlAktuell AS fAnzahl,
+				    @cKommentar AS cKommentar,
+				    @kBenutzer AS kBenutzer,
+				    @kBuchungsart AS kBuchungsart
+			    FROM #WarenlagerEingaengeZumUpdate
+			    FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+		    );
+
+
+		IF(@ErrorLoggingAktiv = 1)
+		BEGIN
+			INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			VALUES(N&#39;spWMSBestandUndPicklisteBuchen_Buchen&#39;, 1,N&#39;WMS_spWMSBestandUndPicklisteBuchen&#39;,1, 0, GETDATE(), @kBenutzer, null, N&#39;&#39;, @xWarenlagerAusgaenge,@kBestellung,@kPickliste);
+		END;
+
+	    EXEC spWarenlagerAusgangSchreiben
+	    @xWarenlagerAusgaenge = @xWarenlagerAusgaenge
+
+	END;
+
+     DECLARE @retry INT;
+     SET @retry = 10;
+     WHILE @retry &gt; 0
+     BEGIN TRY
+  
+  		-- Status der Pickpos auf 40 setzten
+  	    INSERT INTO dbo.tPicklistePosStatus WITH(ROWLOCK) (kPicklistePos,kBenutzer,nStatus,dZeitstempel) 
+  	    SELECT DISTINCT kPicklistePos,@kBenutzer,40,@IsNowDate
+  	    FROM #WarenlagerEingaengeZumUpdate;
+  
+  	    -- LieferscheinPos in der PicklistePos setzen
+  	    UPDATE dbo.tPicklistePos WITH(ROWLOCK) 
+  	    SET dbo.tPicklistePos.kLieferscheinpos = #WarenlagerEingaengeZumUpdate.kLieferscheinPos,dbo.tPicklistePos.nStatus = 40
+  	    FROM  dbo.tPicklistePos WITH(ROWLOCK) 
+  	    JOIN #WarenlagerEingaengeZumUpdate ON #WarenlagerEingaengeZumUpdate.kPicklistePos = dbo.tPicklistePos.kPicklistePos;
+  
+  	    SET @retry = -1;
+     END TRY
+     BEGIN CATCH
+  	   IF(ERROR_NUMBER() = 1205 AND @retry &gt; 1)
+  	    BEGIN
+  		    SET @retry = @retry - 1;
+  		    WAITFOR DELAY &#39;00:00:00:9&#39;;
+  	    END;
+  	    ELSE 
+  	    BEGIN
+  
+  		   SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+  
+		   IF(@ErrorLoggingAktiv = 1)
+			   INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			   VALUES(N&#39;spWMSBestandUndPicklisteBuchen_Error&#39;, 1,N&#39;WMS_spWMSBestandUndPicklisteBuchen&#39;,1, 0, GETDATE(), @kBenutzer, @ErrorMessage, N&#39;&#39;, null,@kBestellung,@kPickliste);
+
+
+  		    SET @retry = -1;
+  		    RAISERROR (	@ErrorMessage, 
+  					    @ErrorSeverity,
+  					    @ErrorState);
+  
+  		    RETURN;
+  	    END;
+     END CATCH;
+
+
+END;</code></pre>
+</body>
+</html>

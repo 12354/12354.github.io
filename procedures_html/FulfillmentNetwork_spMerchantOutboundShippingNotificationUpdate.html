@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spMerchantOutboundShippingNotificationUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spMerchantOutboundShippingNotificationUpdate</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spMerchantOutboundShippingNotificationUpdate]
+@kLieferschein INT,
+    @OutboundShippingNotifications AS FulfillmentNetwork.[TYPE_spMerchantOutboundShippingNotificationUpdate] READONLY
+                  , @kBenutzer INT
+				  , @kVorgang INT
+                  , @cSessionId VARCHAR(100)
+AS
+BEGIN
+    If(OBJECT_ID(&#39;tempdb..#Positions&#39;) Is Not Null)
+        Begin
+            Drop Table #Positions
+        END
+    If(OBJECT_ID(&#39;tempdb..#PositionsOrig&#39;) Is Not Null)
+        Begin
+            Drop Table #PositionsOrig
+        END
+	IF(OBJECT_ID(&#39;tempdb..#ProductQuantity&#39;) Is Not Null)
+        Begin
+            Drop Table #ProductQuantity
+        END       
+
+		SELECT &#39;@OutboundShippingNotifications &#39;,*, @kLieferschein FROM @OutboundShippingNotifications 
+	
+
+	DECLARE @OutboundShippingNotificationsUpdate AS FulfillmentNetwork.[TYPE_spMerchantOutboundShippingNotificationUpdate]
+	INSERT INTO @OutboundShippingNotificationsUpdate
+	SELECT kWarenlager, cJfsku, fQuantity AS fQuantity, cNote, dBestBefore, cBatch, cSerialnumbers, kMerchantStockChange
+	FROM @OutboundShippingNotifications 
+	
+
+	
+	SELECT  PicklistePos.kWarenLager,
+        PicklistePos.fAnzahl AS fQuantity,
+        Eingang.dMHD AS dBestBefore,
+        ISNULL(Eingang.cChargenNr ,&#39;&#39;) AS cBatch,
+        PicklistePos.kArtikel AS kArtikel,
+        PicklistePos.kPicklistePos,
+        PicklistePos.kLieferscheinPos,
+        PicklistePos.kPickliste,
+        Lieferschein.cLieferscheinNr, 
+		tProductRef.cJfsku, 
+		Ausgang.kWarenLagerAusgang,
+		CASE WHEN Artikel.cLagerArtikel = &#39;N&#39; THEN 0 ELSE 1 END nSeriennummern,
+        Artikel.nCharge,
+        Artikel.nMHD,
+		Ausgang.cKommentar AS cNote,
+		Ausgang.kWarenLagerPlatz,
+		Warenlager.cName AS cWarenlagerName
+	INTO #Positions
+    FROM dbo.tWarenLagerAusgang AS Ausgang
+             JOIN dbo.tWarenLagerEingang AS Eingang ON Eingang.kWarenLagerEingang = Ausgang.kWarenLagerEingang
+             JOIN dbo.tLieferscheinPos AS LieferscheinPos ON LieferscheinPos.kLieferscheinPos = Ausgang.kLieferscheinPos            
+             JOIN dbo.tLieferschein AS Lieferschein ON Lieferschein.kLieferschein = LieferscheinPos.kLieferschein
+			 JOIN dbo.tPicklistePos AS PicklistePos ON PicklistePos.kWarenLagerEingang = Eingang.kWarenLagerEingang
+			 JOIN Verkauf.tAuftragPosition AS Bestellpos ON Bestellpos.kAuftragPosition = LieferscheinPos.kBestellPos AND PicklistePos.kBestellPos = Bestellpos.kAuftragPosition
+			 JOIN dbo.tArtikel AS Artikel ON Eingang.kArtikel = Artikel.kArtikel
+			 LEFT JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = Artikel.kArtikel
+			 JOIN @OutboundShippingNotifications AS OuShiNots ON OuShiNots.cJfsku = tProductRef.cJfsku
+			 JOIN dbo.tWarenLager AS Warenlager ON Warenlager.kWarenLager = PicklistePos.kWarenLager																						
+			 LEFT JOIN FulfillmentNetwork.tMerchantStockChangeRef Ref ON Ref.kWarenlagerAusgang = Ausgang.kWarenLagerAusgang
+    WHERE 
+	LieferscheinPos.kLieferschein = @kLieferschein 
+	--AND (Artikel.nCharge  = 1 OR Artikel.nMHD = 1) 
+	AND PicklistePos.fAnzahl = Ausgang.fAnzahl AND Ref.kMerchantStockChangeRef IS NULL;
+
+
+	SELECT kArtikel, SUM(fQuantity) AS fQuantity
+	INTO #ProductQuantity
+	FROM #Positions GROUP BY kArtikel
+
+	SELECT * INTO #PositionsOrig FROM #Positions 
+
+    DECLARE @differentRows AS INT = 0;
+    WITH OutboundShippingNotifications AS (
+        SELECT
+            Daten.kWarenlager,
+            SUM(Daten.fQuantity) AS fQuantity,
+            Daten.dBestBefore,
+            ISNULL(Daten.cBatch , &#39;&#39;) AS cBatch,
+            ProductRef.kArtikel
+        FROM  @OutboundShippingNotificationsUpdate AS Daten
+                  JOIN FulfillmentNetwork.tProductRef AS ProductRef ON ProductRef.cJfsku = Daten.cJfsku
+				  JOIN dbo.tArtikel AS Artikel ON ProductRef.kArtikel = Artikel.kArtikel
+		--WHERE (Artikel.nCharge  = 1 OR Artikel.nMHD = 1)
+        GROUP BY
+            Daten.kWarenlager,
+            Daten.dBestBefore,
+            Daten.cBatch,
+            Daten.cSerialnumbers,
+            ProductRef.kArtikel),
+         PicklistenPos AS (
+             SELECT	Positions.kWarenLager,
+                       SUM(Positions.fQuantity) AS fQuantity,
+                       Positions.dBestBefore,
+                       Positions.cBatch,
+                       Positions.kArtikel
+             FROM #Positions AS Positions
+             GROUP BY
+                 Positions.kWarenlager,
+                 Positions.dBestBefore,
+                 Positions.cBatch,
+                 Positions.kArtikel
+         )
+
+    SELECT @differentRows = COUNT(*)
+    FROM PicklistenPos
+             LEFT JOIN OutboundShippingNotifications
+                       ON  
+						  (OutboundShippingNotifications.cBatch = PicklistenPos.cBatch OR (OutboundShippingNotifications.cBatch IS NULL AND PicklistenPos.cBatch IS NULL )) AND
+                          (OutboundShippingNotifications.dBestBefore = PicklistenPos.dBestBefore OR (OutboundShippingNotifications.dBestBefore IS NULL AND PicklistenPos.dBestBefore IS NULL )) AND
+                          --OutboundShippingNotifications.fQuantity = PicklistenPos.fQuantity AND
+                          OutboundShippingNotifications.kArtikel = PicklistenPos.kArtikel AND
+                          OutboundShippingNotifications.kWarenlager = PicklistenPos.kWarenLager
+    WHERE OutboundShippingNotifications.kWarenLager IS NULL;
+	
+	
+
+    IF @differentRows &gt; 0
+        BEGIN
+
+            DECLARE @OldContextInfo VARBINARY(128);
+            DECLARE @ErrorMessage NVARCHAR(4000);
+            DECLARE @ErrorSeverity INT;
+            DECLARE @ErrorState INT;
+            DECLARE @retry INT;
+            SET @retry = 5;
+            WHILE @retry &gt; 0
+                BEGIN
+
+                    IF(CONTEXT_INFO() IS NOT NULL)
+                        BEGIN
+                            SET @OldContextInfo = CONTEXT_INFO();
+                        END;
+                    ELSE
+                        BEGIN
+                            SET @OldContextInfo = 0x0000;
+                        END;
+
+                    BEGIN TRY  
+				    DECLARE @TranCount INT = @@TRANCOUNT;
+				    IF(@TranCount = 0)
+				    BEGIN
+					   BEGIN TRANSACTION  
+				    END
+
+                        --
+                        -- Artikel und Wareneing&#228;nge deren Best&#228;nde aktualisiert werden m&#252;ssen
+                        --			
+                        DECLARE @GeloeschteWarenlagerausgangsinformatioen AS TABLE
+                                                                             (
+                                                                                 kWarenlagereingang INT,
+                                                                                 kArtikel INT,
+                                                                                 fAnzahl DECIMAL(28, 14),
+                                                                                 kLieferscheinPos INT,
+																				 kWarenlagerPlatz INT,
+																				 dMHD DATETIME,
+																				 cChargenNr VARCHAR(255)
+                                                                             );
+
+
+                        --
+                        -- Warenlagerausg&#228;nge l&#246;schen
+                        --
+                        SET CONTEXT_INFO 0x5089;
+                        DELETE dbo.tWarenLagerAusgang
+                        OUTPUT DELETED.kWarenLagerEingang, DELETED.kArtikel, DELETED.fAnzahl, DELETED.kLieferscheinPos, DELETED.kWarenlagerPlatz,wle.dMHD, wle.cChargenNr
+                            INTO @GeloeschteWarenlagerausgangsinformatioen(kWarenlagereingang, kArtikel, fAnzahl, kLieferscheinPos, kWarenlagerPlatz, dMHD, cChargenNr)
+                        FROM dbo.tWarenLagerAusgang
+                             JOIN dbo.tLieferscheinPos ON tWarenLagerAusgang.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+							 JOIN dbo.tWarenlagerEingang wle ON wle.kWarenlagerEingang = tWarenLagerAusgang.kWarenlagerEingang
+							 JOIN Verkauf.tAuftragPosition AS AuftragPos ON AuftragPos.kAuftragPosition = tLieferscheinPos.kBestellPos
+							 JOIN dbo.tArtikel ON tArtikel.kArtikel = AuftragPos.kArtikel
+							 JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = AuftragPos.kArtikel
+							 JOIN #Positions AS Pos ON Pos.cJfsku = tProductRef.cJfsku
+							 LEFT JOIN FulfillmentNetwork.tMerchantStockChangeRef AS Ref ON Ref.kWarenlagerAusgang = tWarenLagerAusgang.kWarenLagerAusgang
+                        WHERE tLieferscheinPos.kLieferschein = @kLieferschein AND Ref.kMerchantStockChangeRef IS NULL;
+
+				
+
+                        --
+                        -- fAnzahlAktuell in Wareneing&#228;ngen korrigieren
+                        --
+                        SET CONTEXT_INFO 0x5091;
+                        UPDATE dbo.tWarenLagerEingang
+                        SET fAnzahlAktuell = fAnzahlAktuell + WarenausgaengeKumuliert.fAnzahl
+                        FROM dbo.tWarenLagerEingang
+                                 JOIN
+                             (
+                                 SELECT	kWarenlagereingang,
+                                           SUM(Warenausgaenge.fAnzahl) AS fAnzahl
+                                 FROM @GeloeschteWarenlagerausgangsinformatioen AS Warenausgaenge
+                                 GROUP BY kWarenlagereingang
+                             ) AS WarenausgaengeKumuliert ON tWarenLagerEingang.kWarenLagerEingang = WarenausgaengeKumuliert.kWarenlagereingang;
+
+                        --
+                        -- Seriennummern wieder freigeben
+                        --
+                        UPDATE dbo.tLagerArtikel
+                        SET tLagerArtikel.kLieferscheinPos = 0,
+                            tLagerArtikel.kPicklistePos = 0
+                        FROM dbo.tLagerArtikel
+                                 JOIN dbo.tLieferscheinPos ON tLagerArtikel.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+							 JOIN Verkauf.tAuftragPosition AS AuftragPos ON AuftragPos.kAuftragPosition = tLieferscheinPos.kBestellPos
+							 JOIN @GeloeschteWarenlagerausgangsinformatioen AS Geloescht ON Geloescht.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+                        WHERE tLieferscheinPos.kLieferschein = @kLieferschein;
+
+                        --
+                        -- Picklistenpositionen Status l&#246;schen
+                        --
+                        DELETE dbo.tPicklistePosStatus
+                        FROM dbo.tPicklistePosStatus
+                                 JOIN dbo.tPicklistePos ON tPicklistePosStatus.kPicklistePos = tPicklistePos.kPicklistePos
+                                 JOIN dbo.tLieferscheinPos ON tPicklistePos.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+								 JOIN Verkauf.tAuftragPosition AS AuftragPos ON AuftragPos.kAuftragPosition = tLieferscheinPos.kBestellPos
+								 JOIN @GeloeschteWarenlagerausgangsinformatioen AS Geloescht ON Geloescht.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+                        WHERE tLieferscheinPos.kLieferschein = @kLieferschein;
+
+                        --
+                        -- Picklistenpositionen l&#246;schen
+                        --
+                        DELETE dbo.tPicklistePos
+                        FROM dbo.tPicklistePos
+                                 JOIN dbo.tLieferscheinPos ON tPicklistePos.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+								 JOIN Verkauf.tAuftragPosition AS AuftragPos ON AuftragPos.kAuftragPosition = tLieferscheinPos.kBestellPos
+								 JOIN @GeloeschteWarenlagerausgangsinformatioen AS Geloescht ON Geloescht.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+
+                        WHERE tLieferscheinPos.kLieferschein = @kLieferschein;
+						
+						DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+
+                        INSERT INTO @typeArtikel (kArtikel)
+                        SELECT DISTINCT kArtikel
+                        FROM @GeloeschteWarenlagerausgangsinformatioen;
+					
+										
+						SELECT Artikel.kArtikel, Bestand.fLagerbestand INTO #tmpBestand FROM tlagerbestand AS Bestand
+						JOIN @typeArtikel AS Artikel ON Bestand.kArtikel = Artikel.kArtikel
+					
+
+                        EXEC dbo.spUpdateLagerbestand @typeArtikel;
+                        --
+                        -- Best&#228;nde pro Warenlager aktualisieren
+                        --
+                        DECLARE @TYPE_spUpdateLagerbestandProLager AS TYPE_spUpdateLagerbestandProLager;
+
+                        INSERT INTO @TYPE_spUpdateLagerbestandProLager (kArtikel, kWarenlager)
+                        SELECT DISTINCT	tWarenLagerEingang.kArtikel AS kArtikel,
+                                  tWarenLagerPlatz.kWarenLager AS kWarenlager
+                        FROM dbo.tWarenLagerEingang
+                                 JOIN dbo.tWarenLagerPlatz ON tWarenLagerEingang.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+                        WHERE tWarenLagerEingang.kWarenLagerEingang IN (SELECT DISTINCT kWarenLagerEingang FROM @GeloeschteWarenlagerausgangsinformatioen);
+
+                        EXEC dbo.spUpdateLagerbestandProLager @TYPE_spUpdateLagerbestandProLager;
+																						
+
+
+						INSERT INTO dbo.tArtikelHistory
+						(
+							kWarenLagerPlatz,kArtikel,fAnzahl,dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+							fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert
+						)
+						SELECT DISTINCT geloeschte.kWarenLagerPlatz kWarenLagerPlatz,
+								geloeschte.kArtikel,
+								geloeschte.fAnzahl,
+								GETDATE() AS dErstellt,
+								@kBenutzer AS kBenutzer,
+								0 AS kWarenLagerEingang,
+								ISNULL(tLieferscheinPos.kBestellPos,0) AS  kBestellPos,
+								ISNULL(dbo.tGutschriftPos.kGutschriftPos,0) AS tGutschriftPos,
+								dbo.tArtikel.fEKNetto AS fEKEinzel,
+								&#39;Korrektur durch Fulfiller&#39; AS cKommentar,
+								70 AS kBuchungsart,
+								geloeschte.kLieferscheinPos,
+								tmpBestand.fLagerbestand AS fLagerBestandGesamt,
+								LagerBestandAufPlatz.fAnzahl  AS fLagerBestand,
+								0 AS kLieferantenBestellungPos,
+								tLieferschein.cLieferscheinNr,
+								geloeschte.cChargenNr AS cChargenNr,
+								geloeschte.dMHD AS dMHD,
+								ISNULL(dbo.tlagerbestand.fVerfuegbar, 0.0),
+								ISNULL(dbo.tlagerbestand.fInAuftraegen,0.0) -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+
+						FROM @GeloeschteWarenlagerausgangsinformatioen geloeschte
+									JOIN dbo.tLieferscheinPos ON tLieferscheinPos.kLieferscheinPos = geloeschte.kLieferscheinPos
+									JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = geloeschte.kArtikel
+									JOIN #tmpBestand AS tmpBestand ON tmpBestand.kArtikel = geloeschte.kArtikel
+									JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = geloeschte.kArtikel -- AND (tArtikel.nCharge  = 1 OR tArtikel.nMHD = 1)									
+									LEFT JOIN dbo.tGutschriftPos ON dbo.tGutschriftPos.kBestellPos = dbo.tLieferscheinPos.kBestellPos
+									LEFT JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = tLieferscheinPos.kLieferscheinPos
+									OUTER APPLY ( SELECT STUFF((
+																SELECT &#39;,&#39; + cSeriennr
+																FROM dbo.tLagerArtikel
+																WHERE dbo.tLagerArtikel.kLieferscheinPos = geloeschte.kLieferscheinPos
+																	AND dbo.tLagerArtikel.kLieferscheinPos &gt; 0
+																FOR XML PATH(&#39;&#39;)) ,1,1,&#39;&#39;) AS SerNos ) AS StuffedSerNos
+									OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fAnzahl
+												FROM dbo.tWarenLagerEingang
+												WHERE dbo.tWarenLagerEingang.kArtikel = geloeschte.kArtikel
+												AND dbo.tWarenLagerEingang.kWarenLagerPlatz = geloeschte.kWarenlagerPlatz) AS LagerBestandAufPlatz
+
+                        /* declare variables */
+                        DECLARE @kWarenlager INT;
+                        DECLARE @kArtikel INT;
+                        DECLARE @fQuantity DECIMAL(28,14);
+                        DECLARE @cNote VARCHAR(255);
+                        DECLARE @dBestBefore DATETIME;
+                        DECLARE @cBatch AS VARCHAR(255);
+						DECLARE @cWarenlagerName AS VARCHAR(255);
+                        DECLARE @cSerialnumbers AS NVARCHAR(MAX);
+                        DECLARE @nSeriennummern AS INT;
+                        DECLARE @nCharge AS INT;
+                        DECLARE @nMHD AS INT;
+                        DECLARE @kWarenlagerPlatz INT;
+						DECLARE @kMerchantStockChange INT;
+
+						
+						--SELECT &#39;POS&#39;, * FROM #Positions 
+
+                        DECLARE shippingNotificationCursor CURSOR FAST_FORWARD READ_ONLY FOR SELECT Platz.kWarenLagerPlatz,
+                                                                                                    ProductRef.kArtikel,
+                                                                                                    Daten.fQuantity,
+                                                                                                    Daten.cNote,
+                                                                                                    Daten.dBestBefore,
+                                                                                                    Daten.cBatch,
+                                                                                                    Daten.cSerialnumbers,
+                                                                                                    CASE WHEN Artikel.cLagerArtikel = &#39;N&#39; THEN 0 ELSE 1 END nSeriennummern,
+                                                                                                    Artikel.nCharge,
+                                                                                                    Artikel.nMHD,
+																									Daten.kMerchantStockChange,
+																									Warenlager.cName AS cWarenlagerName
+																								FROM @OutboundShippingNotificationsUpdate AS Daten
+                                                                                                      JOIN FulfillmentNetwork.tProductRef AS ProductRef ON ProductRef.cJfsku = Daten.cJfsku
+                                                                                                      JOIN dbo.tArtikel AS Artikel ON Artikel.kArtikel = ProductRef.kArtikel
+                                                                                                      JOIN dbo.tWarenLagerPlatz AS Platz ON Platz.kWarenLager = Daten.kWarenlager AND Platz.kWarenLagerPlatzTyp = 0
+																									  JOIN dbo.tWarenLager AS Warenlager ON Warenlager.kWarenLager = Platz.kWarenLager																						
+
+                        OPEN shippingNotificationCursor;
+
+                        FETCH NEXT FROM shippingNotificationCursor INTO @kWarenlagerPlatz,@kArtikel,@fQuantity,@cNote,@dBestBefore,@cBatch,@cSerialnumbers,@nSeriennummern,@nCharge,@nMHD,@kMerchantStockChange,@cWarenlagerName;
+
+                        WHILE (@@FETCH_STATUS = 0 OR @fQuantity &gt; 0)
+                            BEGIN
+
+								--SELECT &#39;ouShiNot&#39; , @kWarenlagerPlatz,@kArtikel,@fQuantity,@cNote,@dBestBefore,@cBatch,@cSerialnumbers,@nSeriennummern,@nCharge,@nMHD
+                                DECLARE @fAnzahlAuszubuchen DECIMAL(28,14);
+                                DECLARE @kPickliste AS INT;
+                                DECLARE @kPicklistePos AS INT;
+                                DECLARE @kLieferscheinPos AS INT;
+								DECLARE @kWarenlagerPlatzAlt AS INT;
+								DECLARE @cBatchAlt AS VARCHAR(255);
+								DECLARE @dBestBeforeAlt AS DATETIME;
+								DECLARE @cWarenlagerNameAlt AS VARCHAR(255);
+
+
+                                IF(@cNote &lt;&gt; &#39;&#39; AND @cNote &lt;&gt; &#39;Auslieferung&#39;)
+                                    BEGIN
+                                        SET @cNote = &#39;Auslieferung Fulfiller: &#39; + @cNote;
+                                    END;
+                                ELSE
+                                    BEGIN
+                                        SET @cNote = &#39;Auslieferung&#39;;
+                                    END;
+
+									SET @cNote = &#39;FFN-&#39; + @cNote
+									--SET @cNote = &#39;Auslieferung: OuShiNot&#39;;
+								IF(EXISTS (SELECT * FROM #Positions WHERE kArtikel = @kArtikel AND fQuantity = @fQuantity  ))
+								BEGIN
+									SELECT
+											@fAnzahlAuszubuchen = fQuantity,
+											@kPickliste = kPickliste,
+											@kLieferscheinPos = kLieferscheinPos,
+											@kPicklistePos = kPicklistePos,
+											@kWarenlagerPlatzAlt = kWarenLagerPlatz,
+											@cBatchAlt = cBatch,
+											@dBestBeforeAlt = dBestBefore,
+											@cWarenlagerNameAlt = cWarenlagerName
+									FROM
+										#Positions
+									WHERE kArtikel = @kArtikel AND fQuantity = @fQuantity
+								END
+								ELSE
+								BEGIN
+									SELECT
+											@fAnzahlAuszubuchen = fQuantity,
+											@kPickliste = kPickliste,
+											@kLieferscheinPos = kLieferscheinPos,
+											@kPicklistePos = kPicklistePos,
+											@kWarenlagerPlatzAlt = kWarenLagerPlatz,
+											@cBatchAlt = cBatch,
+											@dBestBeforeAlt = dBestBefore,
+											@cWarenlagerNameAlt = cWarenlagerName
+									FROM
+										#Positions
+									WHERE kArtikel = @kArtikel AND fQuantity &gt; 0;
+								END
+                                						
+                                IF(@fAnzahlAuszubuchen &gt; @fQuantity)
+                                    BEGIN
+                                        SET @fAnzahlAuszubuchen = @fQuantity
+                                    END
+
+								DECLARE @cLogMeldung AS VARCHAR(8000) = &#39;&#39;
+						
+								IF(@kWarenlagerPlatz &lt;&gt; @kWarenlagerPlatzAlt)
+								BEGIN
+									SET @cLogMeldung = &#39;Auslieferung aus anderem Warenlager (&#39; + @cWarenlagerNameAlt + &#39; -&gt; &#39; + @cWarenlagerName + &#39;).&#39;
+								END
+
+								IF(NOT @cBatch IS NULL AND NOT @cBatchAlt IS NULL AND NOT @cBatch = @cBatchAlt)
+								BEGIN
+									SET @cLogMeldung = LTRIM(@cLogMeldung + &#39; &#39; + &#39;Charge Korrektur nach Auslieferung (&#39; + @cBatchAlt + &#39; -&gt; &#39; + @cBatch + &#39;).&#39;)
+								END
+
+								IF (NOT @dBestBefore IS NULL AND NOT @dBestBeforeAlt IS NULL AND NOT @dBestBefore = @dBestBeforeAlt)
+								BEGIN
+									SET @cLogMeldung = LTRIM(@cLogMeldung + &#39; &#39; + &#39;MHD Korrektur nach Auslieferung (&#39; + CAST(CAST(@dBestBeforeAlt AS DATE) AS NVARCHAR(255)) + &#39; -&gt; &#39; + CAST(CAST(@dBestBefore AS DATE) AS NVARCHAR(255)) + &#39;).&#39;)
+								END
+
+
+								
+
+                                EXEC FulfillmentNetwork.spMinusbuchung @kArtikel = @kArtikel,                 -- int
+                                     @nSeriennummern = @nSeriennummern,           -- int
+                                     @nCharge = @nCharge,                  -- int
+                                     @nMHD = @nMHD,                     -- int
+                                     @kWarenlagerPlatz = @kWarenlagerPlatz,         -- int
+                                     @fAnzahlAuszubuchen = @fAnzahlAuszubuchen,    -- decimal(28, 14)
+                                     @kBenutzer = @kBenutzer,                -- int
+                                     @cKommentar = @cNote,              -- varchar(255)
+                                     @cChargenNr = @cBatch,              -- varchar(255)
+                                     @dMHD = @dBestBefore, -- datetime
+                                     @kUmlagerung = NULL,              -- int
+									 @kMerchantStockChange = @kMerchantStockChange,
+									 @kVorgang = @kVorgang,
+                                     @cSeriennummer = &#39;&#39;,           -- varchar(128)
+                                     @cSessionId = &#39;&#39;,              -- varchar(100)
+                                     @cLogMeldung = @cLogMeldung,             -- varchar(8000)
+                                     @kLieferscheinPos = @kLieferscheinPos,         -- int
+                                     @kPickliste = @kPickliste,                -- int
+                                     @nHistorieNichtSchreiben = 1;
+								UPDATE #Positions SET fQuantity = fQuantity - @fAnzahlAuszubuchen WHERE kPicklistePos = @kPicklistePos
+                                UPDATE #ProductQuantity SET fQuantity = fQuantity - @fAnzahlAuszubuchen WHERE kArtikel = @kArtikel
+                                SET @fQuantity = @fQuantity - @fAnzahlAuszubuchen;
+								
+								-- ArtikelHistory schreiben
+								INSERT INTO dbo.tArtikelHistory
+								(
+									kWarenLagerPlatz,kArtikel,fAnzahl,dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+									fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert
+								)
+								SELECT DISTINCT @kWarenlagerPlatz kWarenLagerPlatz,
+										Position.kArtikel,
+										SUM (@fAnzahlAuszubuchen) * -1 AS fAnzahl,
+										GETDATE() AS dErstellt,
+										@kBenutzer AS kBenutzer,
+										0 AS kWarenLagerEingang,
+										ISNULL(dbo.tLieferscheinPos.kBestellPos,0) AS  kBestellPos,
+										ISNULL(dbo.tGutschriftPos.kGutschriftPos,0) AS tGutschriftPos,
+										dbo.tArtikel.fEKNetto AS fEKEinzel,
+										@cLogMeldung AS cKommentar,
+										70 AS kBuchungsart,
+										Position.kLieferscheinPos,
+										tmpBestand.fLagerbestand AS fLagerBestandGesamt,
+										ISNULL(LagerBestandAufPlatz.fAnzahl,0)  AS fLagerBestand,
+										0 AS kLieferantenBestellungPos,
+										Position.cLieferscheinNr,
+										@cBatch AS cChargenNr,
+										@dBestBefore AS dMHD,
+										ISNULL(dbo.tlagerbestand.fVerfuegbar + @fQuantity,0.0),
+										ISNULL(dbo.tlagerbestand.fInAuftraegen,0.0) -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+
+								FROM #Positions AS Position
+											JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = Position.kArtikel
+											JOIN #tmpBestand AS tmpBestand ON tmpBestand.kArtikel = Position.kArtikel
+											JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = @kArtikel --AND (tArtikel.nCharge  = 1 OR tArtikel.nMHD = 1)
+											LEFT JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kLieferscheinPos = Position.kLieferscheinPos
+											LEFT JOIN dbo.tGutschriftPos ON dbo.tGutschriftPos.kBestellPos = dbo.tLieferscheinPos.kBestellPos
+											OUTER APPLY ( SELECT STUFF((
+																		SELECT &#39;,&#39; + cSeriennr
+																		FROM dbo.tLagerArtikel
+																		WHERE dbo.tLagerArtikel.kLieferscheinPos = Position.kLieferscheinPos
+																			AND dbo.tLagerArtikel.kLieferscheinPos &gt; 0
+																		FOR XML PATH(&#39;&#39;)) ,1,1,&#39;&#39;) AS SerNos ) AS StuffedSerNos
+											OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fAnzahl
+														FROM dbo.tWarenLagerEingang
+														WHERE dbo.tWarenLagerEingang.kArtikel = @kArtikel
+														AND dbo.tWarenLagerEingang.kWarenLagerPlatz = @kWarenlagerPlatz) AS LagerBestandAufPlatz
+								WHERE Position.kArtikel = @kArtikel
+								GROUP BY Position.kArtikel, tLieferscheinPos.kBestellPos, tGutschriftPos.kGutschriftPos,tArtikel.fEKNetto,
+										 Position.kLieferscheinPos,Position.cBatch, Position.dBestBefore, tmpBestand.fLagerbestand,LagerBestandAufPlatz.fAnzahl,
+										 Position.cLieferscheinNr, dbo.tlagerbestand.fVerfuegbar, dbo.tlagerbestand.fInAuftraegen
+
+								IF(@fQuantity &lt;=0)
+								BEGIN
+									FETCH NEXT FROM shippingNotificationCursor INTO @kWarenlagerPlatz,@kArtikel,@fQuantity,@cNote,@dBestBefore,@cBatch,@cSerialnumbers,@nSeriennummern,@nCharge,@nMHD,@kMerchantStockChange,@cWarenlagerName;
+								END
+                            END;
+
+                        CLOSE shippingNotificationCursor;
+                        DEALLOCATE shippingNotificationCursor;
+
+
+						DECLARE notBookedPositionsCursor CURSOR FAST_FORWARD READ_ONLY FOR SELECT   Positions.kWarenLagerPlatz,
+                                                                                                    Positions.kArtikel,
+                                                                                                    Positions.fQuantity,
+                                                                                                    Positions.cNote,
+                                                                                                    Positions.dBestBefore,
+                                                                                                    Positions.cBatch,
+                                                                                                    &#39;&#39; AS cSerialnumbers,
+                                                                                                    Positions.nSeriennummern,
+                                                                                                    Positions.nCharge,
+                                                                                                    Positions.nMHD,
+																									Positions.kPickliste,
+																									Positions.kPicklistePos,
+																									Positions.kLieferscheinPos
+                                                                                             FROM #PositionsOrig AS Positions ORDER BY Positions.kWarenLagerAusgang 
+
+                        OPEN notBookedPositionsCursor;
+
+                        FETCH NEXT FROM notBookedPositionsCursor INTO @kWarenlagerPlatz,@kArtikel,@fQuantity,@cNote,@dBestBefore,@cBatch,@cSerialnumbers,@nSeriennummern,@nCharge,@nMHD, @kPickliste, @kPicklistePos, @kLieferscheinPos;
+
+                        WHILE (@@FETCH_STATUS = 0)
+                            BEGIN
+
+								--SELECT  &#39;pos&#39;, @kWarenlagerPlatz,@kArtikel,@fQuantity,@cNote,@dBestBefore,@cBatch,@cSerialnumbers,@nSeriennummern,@nCharge,@nMHD
+								--SET @cNote = &#39;Auslieferung: Pos&#39;;
+								--DECLARE @fProductQuantityOpen AS DECIMAL(28,14);
+								SELECT @fAnzahlAuszubuchen = fQuantity FROM #ProductQuantity WHERE kArtikel = @kArtikel 
+								
+								IF(@fAnzahlAuszubuchen &gt; @fQuantity)
+                                BEGIN
+                                    SET @fAnzahlAuszubuchen = @fQuantity
+                                END
+								IF(@fAnzahlAuszubuchen &gt; 0)
+                                BEGIN
+									EXEC FulfillmentNetwork.spMinusbuchung @kArtikel = @kArtikel,                 -- int
+										 @nSeriennummern = @nSeriennummern,           -- int
+										 @nCharge = @nCharge,                  -- int
+										 @nMHD = @nMHD,                     -- int
+										 @kWarenlagerPlatz = @kWarenlagerPlatz,         -- int
+										 @fAnzahlAuszubuchen = @fAnzahlAuszubuchen,    -- decimal(28, 14)
+										 @kBenutzer = @kBenutzer,                -- int
+										 @cKommentar = @cNote,              -- varchar(255)
+										 @cChargenNr = @cBatch,              -- varchar(255)
+										 @dMHD = @dBestBefore, -- datetime
+										 @kUmlagerung = NULL,              -- int
+										 @kMerchantStockChange = 0,
+										 @kVorgang = @kVorgang,
+										 @cSeriennummer = &#39;&#39;,           -- varchar(128)
+										 @cSessionId = &#39;&#39;,              -- varchar(100)
+										 @cLogMeldung = NULL,             -- varchar(8000)
+										 @kLieferscheinPos = @kLieferscheinPos,         -- int
+										 @kPickliste = @kPickliste,                -- int
+										 @nHistorieNichtSchreiben = 0;
+
+									UPDATE #ProductQuantity SET fQuantity = fQuantity - @fAnzahlAuszubuchen WHERE kArtikel = @kArtikel
+								END
+
+							   
+                               FETCH NEXT FROM notBookedPositionsCursor INTO @kWarenlagerPlatz,@kArtikel,@fQuantity,@cNote,@dBestBefore,@cBatch,@cSerialnumbers,@nSeriennummern,@nCharge,@nMHD, @kPickliste, @kPicklistePos, @kLieferscheinPos;
+                            END;
+
+                        CLOSE notBookedPositionsCursor;
+                        DEALLOCATE notBookedPositionsCursor; 
+
+
+                        --
+                        -- Best&#228;nde aktualisieren
+                        --                     
+                        EXEC dbo.spUpdateLagerbestand @typeArtikel;
+                      
+                        EXEC dbo.spUpdateLagerbestandProLager @TYPE_spUpdateLagerbestandProLager;
+
+
+                        SET @retry = 0;
+                        SET CONTEXT_INFO @OldContextInfo;
+                        IF(@TranCount = 0)
+				    BEGIN           
+					   COMMIT TRANSACTION      
+				    END
+				END TRY       
+				BEGIN CATCH           
+				    IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+				    BEGIN              
+					   SET @retry = @retry - 1;               
+					   ROLLBACK       
+				    END          
+				    ELSE          
+				    BEGIN              
+					   SET @retry = 0;               
+					   THROW;           
+				    END      
+				END CATCH
+			 END
+        END;
+    DROP TABLE #Positions;
+	DROP TABLE #PositionsOrig;
+	DROP TABLE #ProductQuantity;
+END;</code></pre>
+</body>
+</html>

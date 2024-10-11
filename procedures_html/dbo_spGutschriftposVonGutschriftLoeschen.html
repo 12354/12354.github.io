@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGutschriftposVonGutschriftLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGutschriftposVonGutschriftLoeschen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Gutschriftpositionen gelöscht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGutschriftposVonGutschriftLoeschen]
+	@xGutschrift XML = NULL,
+	@kGutschrift INT = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x0;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			IF(OBJECT_ID(&#39;tempdb..#Gutschrift&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #Gutschrift;
+			END
+			CREATE TABLE #Gutschrift (kGutschrift INT);
+			IF(@xGutschrift IS NOT NULL)
+			BEGIN
+				INSERT INTO #Gutschrift(kGutschrift)
+					SELECT Gutschrift.ID.value(&#39;kGutschrift[1]&#39;, &#39;INT&#39;)
+						FROM @xGutschrift.nodes(&#39;Gutschrift&#39;) AS Gutschrift(ID);
+			END
+			ELSE
+			BEGIN
+				INSERT INTO #Gutschrift(kGutschrift)
+					VALUES(@kGutschrift);
+			END
+			DECLARE @xGutschriftpos XML;
+			SET @xGutschriftpos = (
+				SELECT dbo.tGutschriftpos.kGutschriftPos
+					FROM #Gutschrift
+					JOIN dbo.tGutschriftpos ON dbo.tGutschriftpos.tGutschrift_kGutschrift = #Gutschrift.kGutschrift
+					FOR XML PATH(&#39;Gutschriftpos&#39;), TYPE
+				);
+			IF(@xGutschriftpos IS NOT NULL)
+			BEGIN
+				EXEC Gutschrift.spGutschriftposLoeschen @xGutschriftpos;
+			END			
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

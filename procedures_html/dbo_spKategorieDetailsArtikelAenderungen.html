@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spKategorieDetailsArtikelAenderungen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spKategorieDetailsArtikelAenderungen</h1>
+    <p><strong>Description:</strong> Die Stored Procedure wird intern für die Anpassungen an Kategorien verwendet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spKategorieDetailsArtikelAenderungen]
+
+-- setzt Versandklasse und Warengruppe und erh&#246;ht prozentual oder absolut die Bruttopreise
+--		f&#252;r alle Artikel und Kind-Artikel einer Kategorie und auf Wunsch auch f&#252;r die Artikel und Kind-Artikel aller Unterkategorien
+	@kRoot INT,									-- PK (Wurzel-)Kategorie
+	@nVersandklasse INT,						-- Wert Versandklasse;							-1 = ignorieren
+	@nWarengruppe INT,							-- Wert Warengruppe;							-1 = ignorieren	
+	@dProzent DECIMAL(25,13),					-- Prozentwert Bruttopreise (zB 34 f&#252;r 34%);	 0 = ignorieren
+	@dBetrag DECIMAL(25,13),					-- Absolutbetrag Bruttopreise;					 0 = ignorieren
+	@nRekursivVersandklasseWarengruppe TINYINT,	-- 0/1, ob die Unterkategorien f&#252;r Versandklasse/Warengruppe miteinbezogen werden sollen;
+												--		Achtung: = 1 =&gt; Unterkategorien + zugeh&#246;rige Artikel werden in jedem Fall berechnet!
+	@nRekursivBruttoPreise TINYINT,				-- 0/1, ob die Unterkategorien f&#252;r die Bruttopreise miteinbezogen werden sollen;
+												--		Achtung: = 1 =&gt; Unterkategorien + zugeh&#246;rige Artikel werden in jedem Fall berechnet!
+	@kSteuerzone INT							-- PK der Steuerzone des angemeldeten Benutzers (welchen die DB nicht kennt weil Session-abh&#228;ngig)
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+
+	DECLARE @tArtikelWurzel AS TABLE (kArtikel INT);
+	DECLARE @tArtikelRekursiv AS TABLE (kArtikel INT);
+	DECLARE @tArtikelRelevant AS TABLE (kArtikel INT);
+	DECLARE @tKategorien AS TABLE (kKategorie INT);
+	
+	-- Berechnung relevanter Artikel
+	-- Artikel der Wurzelkategorie
+	IF (@nRekursivVersandklasseWarengruppe = 0 OR @nRekursivBruttoPreise = 0)
+	BEGIN		
+		INSERT INTO @tArtikelWurzel
+		SELECT tkategorieartikel.kArtikel
+		FROM tkategorieartikel WITH(NOLOCK)
+		WHERE tkategorieartikel.kKategorie = @kRoot;
+
+	END;	
+	-- Artikel der Wurzelkategorie und der Unterkategorien
+	IF (@nRekursivVersandklasseWarengruppe = 1 OR @nRekursivBruttoPreise = 1)
+	BEGIN		
+		INSERT INTO @tKategorien VALUES (@kRoot);
+		INSERT INTO @tKategorien EXEC spGetSubCategories @kRoot;
+		INSERT INTO @tArtikelRekursiv
+			SELECT tkategorieartikel.kArtikel
+			FROM tkategorieartikel WITH(NOLOCK) JOIN @tKategorien AS tKategorien
+				ON tkategorieartikel.kKategorie = tKategorien.kKategorie;
+	END;
+		
+	-- Versandklasse/Warengruppe
+	IF (@nVersandklasse != -1 OR @nWarengruppe != -1)
+	BEGIN
+		IF (@nRekursivVersandklasseWarengruppe = 0)
+			INSERT INTO @tArtikelRelevant SELECT * FROM @tArtikelWurzel;
+		ELSE
+			INSERT INTO @tArtikelRelevant SELECT * FROM @tArtikelRekursiv;
+
+		IF (@nVersandklasse != -1)
+			UPDATE tartikel	WITH(ROWLOCK)	
+			SET kVersandklasse = @nVersandklasse
+			FROM tartikel WITH(ROWLOCK) JOIN @tArtikelRelevant AS tArtikelRelevant
+				ON tartikel.kArtikel = tArtikelRelevant.kArtikel;	
+
+		IF (@nWarengruppe != -1)
+			UPDATE tartikel	WITH(ROWLOCK)	
+			SET kWarengruppe = @nWarengruppe
+			FROM tartikel WITH(ROWLOCK) JOIN @tArtikelRelevant AS tArtikelRelevant
+				ON tartikel.kArtikel = tArtikelRelevant.kArtikel;	
+	END
+
+	-- Preise
+	IF (@dProzent != 0 OR @dBetrag != 0)
+	BEGIN
+		DELETE FROM @tArtikelRelevant;
+		IF (@nRekursivBruttoPreise = 0)
+			INSERT INTO @tArtikelRelevant SELECT * FROM @tArtikelWurzel;
+		ELSE
+			INSERT INTO @tArtikelRelevant SELECT * FROM @tArtikelRekursiv;
+
+		IF (@dProzent != 0)
+		BEGIN
+			UPDATE tartikel	WITH(ROWLOCK)
+			SET tartikel.fVKNetto = dbo.POSITIV(tartikel.fVKNetto * (1 + (@dProzent / 100.0)))
+			FROM tartikel WITH(ROWLOCK) JOIN @tArtikelRelevant AS tArtikelRelevant
+				ON tartikel.kArtikel = tArtikelRelevant.kArtikel;		
+						
+			UPDATE tPreisDetail WITH(ROWLOCK)
+			SET tPreisDetail.fNettoPreis = dbo.POSITIV(tPreisDetail.fNettoPreis * (1 + (@dProzent / 100.0)))
+			FROM tPreisDetail WITH(ROWLOCK) 
+				JOIN tPreis 
+					ON tPreis.kPreis = tPreisDetail.kPreis
+				JOIN @tArtikelRelevant AS tArtikelRelevant 
+					ON tPreis.kArtikel = tArtikelRelevant.kArtikel
+			WHERE tPreisDetail.nAnzahlAb = 0;				
+		END
+
+		IF (@dBetrag != 0)
+		BEGIN
+			UPDATE tartikel	WITH(ROWLOCK)
+			SET tartikel.fVKNetto = dbo.POSITIV(tartikel.fVKNetto + (@dBetrag / (1 + (tsteuersatz.fSteuersatz / 100))))
+			FROM tartikel WITH(ROWLOCK) 
+				JOIN @tArtikelRelevant AS tArtikelRelevant
+					ON tartikel.kArtikel = tArtikelRelevant.kArtikel
+				JOIN tsteuersatz WITH(NOLOCK)
+					ON tsteuersatz.kSteuerklasse = tartikel.kSteuerklasse
+			WHERE tsteuersatz.kSteuerzone = @kSteuerzone;											
+				
+			UPDATE tPreisDetail WITH(ROWLOCK)
+			SET tPreisDetail.fNettoPreis = dbo.POSITIV(tPreisDetail.fNettoPreis + @dBetrag / (1 + (tsteuersatz.fSteuersatz / 100)))
+			FROM @tArtikelRelevant AS tArtikelRelevant 
+				JOIN tPreis
+					ON tPreis.kArtikel = tArtikelRelevant.kArtikel 
+				JOIN tPreisDetail WITH(ROWLOCK)
+				     ON tPreis.kPreis = tPreisDetail.kPreis
+				JOIN tartikel WITH(NOLOCK)
+					ON tartikel.kArtikel = tArtikelRelevant.kArtikel 
+				JOIN tsteuersatz WITH(NOLOCK)
+					ON tsteuersatz.kSteuerklasse = tartikel.kSteuerklasse
+			WHERE tsteuersatz.kSteuerzone = @kSteuerzone
+			  AND tPreisDetail.nAnzahlAb = 0;		
+		END	
+	END
+END</code></pre>
+</body>
+</html>

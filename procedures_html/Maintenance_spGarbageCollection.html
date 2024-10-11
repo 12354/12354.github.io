@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spGarbageCollection</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spGarbageCollection</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spGarbageCollection]
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+BEGIN
+    IF OBJECT_ID(&#39;dbo.tOptions&#39;) IS NOT NULL
+    BEGIN
+        MERGE INTO dbo.tOptions
+        USING (VALUES(&#39;Maintenance.LastGarbageCollection&#39;, CONVERT(CHAR(10), GETUTCDATE(), 120))) AS Source(cKey, cValue) ON tOptions.cKey = Source.cKey
+        WHEN MATCHED AND tOptions.cValue &lt; Source.cValue THEN
+            UPDATE SET tOptions.cValue = Source.cValue
+        WHEN NOT MATCHED BY TARGET THEN
+            INSERT (cKey, cValue) VALUES (Source.cKey, Source.cValue);
+        IF @@ROWCOUNT &gt; 0
+        BEGIN
+            -- Garbage Collection beginnen
+            DECLARE @spName NVARCHAR(255);
+            DECLARE SpCursor CURSOR FAST_FORWARD FOR 
+                SELECT QUOTENAME(SCHEMA_NAME(procedures.schema_id))+&#39;.&#39;+QUOTENAME(procedures.name) FROM sys.procedures WHERE SCHEMA_NAME(procedures.schema_id) = &#39;Maintenance&#39; AND name LIKE &#39;spGarbageCollection_%&#39;;
+            OPEN SpCursor;
+            FETCH NEXT FROM SpCursor INTO @spName;
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+                EXEC @spName;
+                FETCH NEXT FROM SpCursor INTO @spName;
+            END
+            CLOSE SpCursor;
+            DEALLOCATE SpCursor;
+        END
+    END
+END</code></pre>
+</body>
+</html>

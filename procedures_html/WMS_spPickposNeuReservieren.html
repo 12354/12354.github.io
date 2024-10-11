@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPickposNeuReservieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPickposNeuReservieren</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden Picklistenpositionen neu Wareneingängen zugeordnet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>--- 
+--- spPickposNeuReservieren
+---
+
+CREATE PROCEDURE [WMS].[spPickposNeuReservieren]
+@kPicklistePos BIGINT , 
+@kBenutzer INT , 
+@cSubsetNumberNeuReservieren NVARCHAR(100),
+@cWarenlagerPlatz nvarchar(3000) , 
+@nRet INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @kArtikel BIGINT;
+DECLARE @kWarenlager INT;
+DECLARE @fAnzahl DECIMAL(25,13);
+DECLARE @fNochZuReservierendeMenge DECIMAL(25,13);
+DECLARE @fWLEAnzahlAktuell DECIMAL(25,13);
+DECLARE @fPickposReservierungsMenge DECIMAL(25,13);
+DECLARE @kWarenlagerPlatz INT;
+DECLARE @kWarenlagerPlatzNeu INT;
+DECLARE @kPickliste BIGINT;
+DECLARE @nSortierung INT;
+DECLARE @kWarenlagerEingang INT;
+DECLARE @kBestellPos INT;
+DECLARE @kOldPickpos INT;
+DECLARE @kBestellung INT;
+DECLARE @cLagerBereiche NVARCHAR(MAX);
+DECLARE @tempLagerbereiche TABLE (kWMSLagerbereich INT);
+DECLARE @nStuecklisteNurWennAlleAufPlatz TINYINT = 0;
+DECLARE @nStuecklisteVonGleichenPlatz INT;
+DECLARE @nNachschubPickenLast TINYINT;
+DECLARE @PicklistenVorlage INT;
+DECLARE @nAnzahlReservierteBestellung INT;
+DECLARE @BestellungZuReservieren TYPE_spBestellungReservieren_BestellungZuReservieren;
+DECLARE @AnzahlNeuReserviert DECIMAL(25,13) = 0;
+DECLARE @WarenLagerPlatzZuReservieren WMS.TYPE_spBestellungReservieren_WarenLagerPlatzZuReservieren;
+
+
+BEGIN TRY
+    SET @nRet = 0;
+
+    -- Infos aus der alten Pickpos holen
+    SELECT @kArtikel = tPicklistePos.kArtikel , 
+           @kWarenlager = tPicklistePos.kWarenlager ,
+		   -- bei Teilmengen nur das neu reservieren was f&#252;r Auftrag ben&#246;tigt wird, da immer mehr reserviert wird
+           @fAnzahl = ISNULL(AuftragTeilmengen.fLagerFactor, tPicklistePos.fAnzahl),
+           @kWarenlagerPlatz = tPicklistePos.kWarenlagerPlatz , 
+           @kPickliste = tPicklistePos.kPickliste , 
+           @nSortierung = tpicklistevorlage.nSortierung , 
+           @kBestellPos = tPicklistePos.kBestellPos,
+		   @kOldPickpos = tPicklistePos.kPicklistePos,
+		   @kBestellung = tPicklistePos.kBestellung,
+	 	   @cLagerBereiche = tpicklistevorlage.cLagerbereiche,
+		   @nStuecklisteNurWennAlleAufPlatz = tpicklistevorlage.nStuecklisteNurWennAlleAufPlatz,
+		   @nStuecklisteVonGleichenPlatz = tpicklistevorlage.nStuecklisteVonGleichenPlatz,
+		   @nNachschubPickenLast = tpicklistevorlage.nNachschubPickenLast,
+		   @PicklistenVorlage = tPicklisteVorlage.kPicklisteVorlage
+
+    FROM
+         dbo.tPicklistePos WITH ( NOLOCK )
+         JOIN dbo.tpickliste WITH ( NOLOCK )ON dbo.tpickliste.kPickliste = dbo.tPicklistePos.kPickliste
+         LEFT JOIN dbo.tpicklistevorlage WITH ( NOLOCK )ON dbo.tpicklistevorlage.kpicklistevorlage = dbo.tpickliste.kpicklistenvorlage
+		 LEFT JOIN Verkauf.tAuftragPositionTeilmengen AS AuftragTeilmengen ON AuftragTeilmengen.kAuftragPosition = tPicklistePos.kBestellPos
+    WHERE kPicklistePos = @kPicklistePos;
+
+	INSERT INTO @WarenLagerPlatzZuReservieren (kWarenLagerPlatz)
+		SELECT kWarenLagerPlatz
+		FROM dbo.tWarenLagerPlatz
+		WHERE kWarenLagerPlatz IN (SELECT CAST(part as INT) FROM [dbo].[SplitString] (@cWarenlagerPlatz, &#39;,&#39;));
+			
+	EXEC [WMS].[spBestellungReservieren] 
+		@kWarenlager = @kWarenlager,
+		@kPicklisteVorlage = @PicklistenVorlage,
+		@kBenutzer = @kBenutzer,
+		@kSessionID = 0,
+		@BestellungZuReservieren = @BestellungZuReservieren,
+		@BestandReservieren = 1,
+		@kPickliste = @kPickliste,
+		@kPickPosNeuReservieren = @kPicklistePos,
+		@fAnzahlPickPosNeuReservieren = @fAnzahl,
+		@cSubsetNumberNeuReservieren = @cSubsetNumberNeuReservieren,
+		@nAnzahlReservierteBestellung = @nAnzahlReservierteBestellung OUT,
+		@WarenLagerPlatzZuReservieren = @WarenLagerPlatzZuReservieren;
+
+
+
+	SELECT @AnzahlNeuReserviert =  SUM(tPicklistePos.fAnzahl)
+	FROM dbo.tPicklistePos
+	WHERE tPicklistePos.kPicklistePos_Ursprung = @kPicklistePos;
+
+
+	IF(@nAnzahlReservierteBestellung = 0 OR @AnzahlNeuReserviert = 0)
+	BEGIN
+		 SET @nRet = -203000106; -- Es wurde nichts reserviert
+
+		-- Im Fehlerfall (evtl.) reserviertes l&#246;schen
+		DELETE FROM dbo.tPicklistePos 
+		WHERE tPicklistePos.kPicklistePos_Ursprung = @kOldPickpos;
+	END;
+	ELSE
+	BEGIN
+
+		-- Alte Pickpos l&#246;schen
+        DELETE FROM dbo.tPicklistePos WITH( ROWLOCK )
+        WHERE kPicklistePos = @kOldPickpos;
+
+
+		IF(@AnzahlNeuReserviert &lt; @fAnzahl)
+		BEGIN
+			 SET @nRet = 203000159; -- Dies ist nur ein hinweis
+		END;
+
+
+	END;
+
+    SELECT @nRet;
+END TRY
+BEGIN CATCH
+
+    -- Im Fehlerfall reserviertes l&#246;schen
+	DELETE FROM dbo.tPicklistePos 
+	WHERE tPicklistePos.kPicklistePos_Ursprung = @kOldPickpos;
+
+    SELECT -203000105; -- unbekannter Fehler
+
+    DECLARE @text NVARCHAR( MAX );
+    SET @text = ERROR_MESSAGE( );
+
+
+END CATCH;</code></pre>
+</body>
+</html>

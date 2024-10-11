@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spAmazonPosAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spAmazonPosAnlegen</h1>
+    <p><strong>Description:</strong> Positionen zu Amazon Bestellungen können nur über dieses Procedure angelegt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[spAmazonPosAnlegen]
+	@kAmazonBestellung INT,
+	@cArtNr NVARCHAR(100),
+	@cName NVARCHAR(255),
+	@nQuantityPurchased INT,
+	@fItemPrice DECIMAL(25,13),
+	@fItemTax DECIMAL(25,13),
+	@fShippingPrice DECIMAL(25,13),
+	@fShippingTax DECIMAL(25,13),
+	@cOrderItemId NVARCHAR(30), 
+	@nVersandt INT,
+	@cCarrier NVARCHAR(20),
+	@cTrackingNumber NVARCHAR(50),
+	@dEstimatedArrivalDate DATETIME,
+	@cFulfillmentCenterId NVARCHAR(20),
+	@cFullfillmentChannel NVARCHAR(20),
+	@cMerchantOrderItemid NVARCHAR(50),
+	@nErrorCode INT,
+	@cErrorMessage NVARCHAR(2000),
+	@dErrorErstellt DATETIME,
+	@fGeschenkverpackungKosten DECIMAL(25,13),
+	@cGeschenkverpackungTyp NVARCHAR(50),
+	@cGrusstext NVARCHAR(255),
+	@nGeschenk TINYINT,
+	@kFulfillmentAuftragPos INT,
+	@nCustom BIT,
+	@cCustomJson NVARCHAR(MAX),
+	@cCustomUrl NVARCHAR(255),
+	@cShipCountry NVARCHAR(5),
+    @cArchiveUrl NVARCHAR(512),
+	@kAmazonBestellungPos INT OUTPUT
+AS
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+    DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+
+    SET CONTEXT_INFO 0x5102;
+	DECLARE @kUser INT;
+	DECLARE @nFBA BIT;
+SELECT @kUser = pf_amazon_bestellung.kUser,
+       @nFBA = pf_amazon_bestellung.nFba
+FROM dbo.pf_amazon_bestellung
+WHERE pf_amazon_bestellung.kAmazonBestellung = @kAmazonBestellung;
+
+DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+        -- Start vom Code
+        INSERT INTO dbo.pf_amazon_bestellungpos(kAmazonBestellung, cArtNr, cName, nQuantityPurchased, fItemPrice, fItemTax, fShippingPrice,
+                                                fShippingTax, cOrderItemId, nVersandt, cCarrier, cTrackingNumber, dEstimatedArrivalDate,
+                                                cFulfillmentCenterId, cFulfillmentChannel, cMerchantOrderItemId, nErrorCode, cErrorMessage,
+                                                dErrorErstellt, fGeschenkverpackungKosten, cGeschenkverpackungTyp, cGrusstext,
+                                                nGeschenk, kFulfillmentAuftragPos, nCustom, cCustomJson, cCustomUrl, cShipCountry, cArchiveUrl)
+        VALUES(@kAmazonBestellung, @cArtNr, @cName, @nQuantityPurchased, @fItemPrice, @fItemTax, @fShippingPrice, @fShippingTax, @cOrderItemId,
+               @nVersandt, @cCarrier, @cTrackingNumber, @dEstimatedArrivalDate, @cFulfillmentCenterId, @cFullfillmentChannel,
+               @cMerchantOrderItemid, @nErrorCode, @cErrorMessage, @dErrorErstellt, @fGeschenkverpackungKosten,
+               @cGeschenkverpackungTyp, @cGrusstext, @nGeschenk, @kFulfillmentAuftragPos, @nCustom, @cCustomJson, @cCustomUrl, @cShipCountry, @cArchiveUrl);
+        SET @kAmazonBestellungPos = SCOPE_IDENTITY();
+        
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH
+    
+    IF ((@nFBA = 0) AND (@nQuantityPurchased &gt; 0.0))
+    BEGIN
+DeadlockRetry2:
+		SET @DeadlockRetries = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+        BEGIN TRY
+            IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+			-- Start vom Code
+
+			DECLARE @kArtikel INT;
+			DECLARE @kStueckliste INT;
+            SELECT
+                @kArtikel = pf_amazon_angebot_mapping.kArtikel
+            FROM dbo.pf_amazon_angebot_mapping
+            JOIN dbo.tArtikel ON tArtikel.kArtikel = pf_amazon_angebot_mapping.kArtikel
+            WHERE pf_amazon_angebot_mapping.kUser = @kUser AND pf_amazon_angebot_mapping.cSellerSKU = @cArtNr
+
+            IF(@kArtikel IS NOT NULL)
+            BEGIN
+                SELECT
+                    @kStueckliste = tArtikel.kStueckliste
+                FROM dbo.tArtikel
+                WHERE tArtikel.kArtikel = @kArtikel
+            END
+            ELSE IF(@kArtikel IS NULL)
+            BEGIN
+                SELECT
+                    @kArtikel = tArtikel.kArtikel,
+                    @kStueckliste = tArtikel.kStueckliste
+                FROM dbo.tArtikel
+                WHERE tArtikel.cArtNr = @cArtNr
+            END
+            
+            IF(@kArtikel IS NOT NULL)
+		    BEGIN
+                INSERT INTO dbo.tExterneReservierung (kKey, kArtikel, nTyp, fAnzahl) VALUES (@kAmazonBestellungPos, @kArtikel, 3, @nQuantityPurchased);
+            
+                IF (@kStueckliste IS NOT NULL AND @kStueckliste &lt;&gt; 0)
+                BEGIN
+                    INSERT INTO dbo.tExterneReservierung (kKey, kArtikel, nTyp, fAnzahl)
+                    SELECT @kAmazonBestellungPos, tStueckliste.kArtikel, 3, tStueckliste.fAnzahl * @nQuantityPurchased
+                    FROM dbo.tStueckliste
+                    WHERE tStueckliste.kStueckliste = @kStueckliste;
+                END
+                        
+                DECLARE @Type_spUpdateLagerbestand TYPE_spUpdateLagerbestand;
+                INSERT INTO @Type_spUpdateLagerbestand (kArtikel)
+                SELECT DISTINCT kArtikel
+                FROM dbo.tExterneReservierung
+                WHERE tExterneReservierung.kKey = @kAmazonBestellungPos AND tExterneReservierung.nTyp = 3
+        
+                EXEC dbo.spUpdateLagerbestand @Artikel = @Type_spUpdateLagerbestand;
+            END
+
+            -- Ende vom Code
+            IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+        END TRY
+        BEGIN CATCH
+            BEGIN TRY
+                EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+                IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry2;
+            END TRY
+            BEGIN CATCH
+                IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+            END CATCH;
+            THROW;
+        END CATCH
+    END
+ 
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH</code></pre>
+</body>
+</html>

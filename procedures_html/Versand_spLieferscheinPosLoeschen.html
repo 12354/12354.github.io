@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versand.spLieferscheinPosLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Versand.spLieferscheinPosLoeschen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tLieferscheinPos gelöscht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Versand].[spLieferscheinPosLoeschen]
+	@xLieferscheinPos TYPE_spLieferscheinPosLoeschen  READONLY,
+	@kLieferscheinPos INT = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+DECLARE @OldContextInfo varbinary(128);
+DECLARE @CreatedTransaction INT;
+IF(CONTEXT_INFO() IS NOT NULL)
+	SET @OldContextInfo = CONTEXT_INFO();
+ELSE
+	SET @OldContextInfo = 0x0;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5116;
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+			SET @CreatedTransaction = 1;
+			BEGIN TRANSACTION
+		END
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION SavePointLieferscheinPosLoeschen;
+		END
+			IF(OBJECT_ID(&#39;tempdb..#LieferscheinPos&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #Lieferscheinpos;
+			END
+			CREATE TABLE #LieferscheinPos (kLieferscheinPos INT, kBestellpos INT, kBestellung INT);
+			IF(EXISTS(SELECT * FROM @xLieferscheinPos))
+			BEGIN
+				INSERT INTO #LieferscheinPos(kLieferscheinPos, kBestellpos, kBestellung)
+					SELECT LieferscheinPos.kLieferscheinpos,
+							dbo.tlieferscheinPos.kBestellPos,
+							vAuftragPosition.kAuftrag
+						FROM @xLieferscheinPos AS LieferscheinPos
+						JOIN dbo.tlieferscheinPos ON dbo.tlieferscheinPos.kLieferscheinPos = LieferscheinPos.kLieferscheinpos
+						JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAuftragPosition = dbo.tlieferscheinPos.kBestellPos;
+			END
+			ELSE
+			BEGIN
+				INSERT INTO #LieferscheinPos(kLieferscheinPos, kBestellpos, kBestellung)
+					SELECT 
+							dbo.tLieferscheinPos.kLieferscheinPos,
+							dbo.tlieferscheinPos.kBestellPos,
+							vAuftragPosition.kAuftragPosition
+						FROM dbo.tLieferscheinPos
+						JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAuftragPosition = dbo.tlieferscheinPos.kBestellPos
+						WHERE dbo.tLieferscheinPos.kLieferscheinPos = @kLieferscheinPos
+			END
+
+			UPDATE Verkauf.tAuftrag SET tAuftrag.nKomplettAusgeliefert = 0
+			FROM Verkauf.tAuftrag
+			JOIN #LieferscheinPos ON #LieferscheinPos.kBestellung = tAuftrag.kAuftrag;
+			
+			SET CONTEXT_INFO  0x6002;
+			UPDATE dbo.tWarenLagerAusgang
+					SET dbo.tWarenLagerAusgang.kLieferscheinPos = 0
+				FROM dbo.tWarenLagerAusgang
+				JOIN dbo.tlieferscheinPos ON dbo.tlieferscheinPos.kLieferscheinPos = dbo.tWarenLagerAusgang.kLieferscheinPos
+				WHERE dbo.tWarenLagerAusgang.kLieferscheinPos IN (SELECT kLieferscheinPos FROM #LieferscheinPos); 
+			SET CONTEXT_INFO 0x5116;
+
+			-- Seriennummernartikel l&#246;schen - die k&#246;nnen sp&#228;ter neu eingebucht werden
+			DELETE dbo.tlagerartikel
+				FROM dbo.tlagerartikel
+				WHERE dbo.tlagerartikel.kLieferscheinPos IN (SELECT kLieferscheinPos FROM #LieferscheinPos);
+				
+			DELETE dbo.tPicklistePos
+				FROM dbo.tPicklistePos
+				WHERE dbo.tPicklistePos.kLieferscheinPos IN (SELECT kLieferscheinPos FROM #LieferscheinPos);
+
+			DELETE dbo.tLieferscheinPos
+				FROM dbo.tLieferscheinPos
+				WHERE dbo.tLieferscheinPos.kLieferscheinPos IN (SELECT kLieferscheinPos FROM #LieferscheinPos);
+			
+			DELETE Verkauf.tAuftragPosition
+			FROM Verkauf.tAuftragPosition
+			JOIN #LieferscheinPos ON #LieferscheinPos.kBestellpos = tAuftragPosition.kAuftragPosition
+			JOIN Verkauf.tAuftragPositionEckdaten ON tAuftragPositionEckdaten.kAuftragPosition = tAuftragPosition.kAuftragPosition
+			WHERE tAuftragPosition.nType = 15 AND tAuftragPositionEckdaten.fAnzahlAufRechnung = 0
+
+			DECLARE @Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+			
+			INSERT INTO @Auftrag ( kAuftrag )
+			SELECT DISTINCT #LieferscheinPos.kBestellung
+			FROM #LieferscheinPos;
+
+			EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftrag;
+			
+			SET @retry = -1;
+			SET CONTEXT_INFO @OldContextInfo;
+		IF(@CreatedTransaction = 1)
+			BEGIN				
+				COMMIT
+			END
+			SET @retry = -1;
+			SET CONTEXT_INFO @OldContextInfo;		
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				IF(@CreatedTransaction = 1)
+				BEGIN
+					ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+					ROLLBACK TRANSACTION SavePointLieferscheinPosLoeschen;
+				END
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				EXEC dbo.spWaitRandom;				
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				IF(@CreatedTransaction = 1)
+				BEGIN
+					ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+					ROLLBACK TRANSACTION SavePointLieferscheinPosLoeschen;
+				END
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO @OldContextInfo;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO @OldContextInfo;	
+END</code></pre>
+</body>
+</html>

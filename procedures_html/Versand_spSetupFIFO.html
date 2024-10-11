@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versand.spSetupFIFO</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Versand.spSetupFIFO</h1>
+    <p><strong>Description:</strong> Die Stored Procedure wird intern bei der Aktivierung oder Deaktivierung von FIFO verwendet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Versand.spSetupFIFO
+AS
+BEGIN
+
+	DECLARE @FIFOAktiv CHAR(1);
+	DECLARE @SQL NVARCHAR(MAX);
+
+	SELECT
+		@FIFOAktiv = tOptions.cValue
+	FROM
+		dbo.tOptions
+	WHERE
+		tOptions.cKey = &#39;FIFOAktiv&#39;
+	;
+
+	IF (ISNULL(@FIFOAktiv, &#39;0&#39;) = &#39;0&#39;) -- FIFO soll inaktiv sein
+	BEGIN
+
+		SELECT @SQL = OBJECT_DEFINITION(OBJECT_ID(&#39;VersandIntern.vBestellPosOffenNonFIFO&#39;));
+
+		SET @SQL = REPLACE(@SQL, &#39;CREATE&#39;, &#39;ALTER&#39;);
+
+		SET @SQL = REPLACE(@SQL, &#39;vBestellPosOffenNonFIFO&#39;, &#39;vBestellPosOffen&#39;);
+
+		EXECUTE sys.sp_executesql @SQL;
+
+		SELECT @SQL = OBJECT_DEFINITION(OBJECT_ID(&#39;[VersandIntern].[vBestellungLieferInfoProLagerNonFIFO]&#39;));
+		
+		SET @SQL = REPLACE(@SQL, &#39;CREATE&#39;, &#39;ALTER&#39;);
+
+		SET @SQL = REPLACE(@SQL, &#39;vBestellungLieferInfoProLagerNonFIFO&#39;, &#39;vBestellungLieferInfoProLager&#39;);
+
+		EXECUTE sys.sp_executesql @SQL;
+		
+	END
+	ELSE
+	BEGIN
+		
+		SELECT @SQL = OBJECT_DEFINITION(OBJECT_ID(&#39;VersandIntern.vBestellPosOffenFIFO2012&#39;));
+
+		SET @SQL = REPLACE(@SQL, &#39;CREATE&#39;, &#39;ALTER&#39;);
+
+		SET @SQL = REPLACE(@SQL, &#39;vBestellPosOffenFIFO2012&#39;, &#39;vBestellPosOffen&#39;);
+
+		EXECUTE sys.sp_executesql @SQL;
+		
+		SELECT @SQL = OBJECT_DEFINITION(OBJECT_ID(&#39;[VersandIntern].[vBestellungLieferInfoProLagerFIFO2012]&#39;));
+		
+		SET @SQL = REPLACE(@SQL, &#39;CREATE&#39;, &#39;ALTER&#39;);
+
+		SET @SQL = REPLACE(@SQL, &#39;vBestellungLieferInfoProLagerFIFO2012&#39;, &#39;vBestellungLieferInfoProLager&#39;);
+
+		EXECUTE sys.sp_executesql @SQL;
+
+	END
+
+END;</code></pre>
+</body>
+</html>

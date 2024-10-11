@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zahlungsabgleich.spZahlungErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Zahlungsabgleich.spZahlungErstellen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Zahlungsabgleich].[spZahlungErstellen]
+	@type AS Zahlungsabgleich.TYPE_spZahlungErstellen READONLY
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @ReturnValue INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	-- Context Info
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	SET CONTEXT_INFO 0x0; -- ContextInfo festlegen
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+		   SET @CreatedTransaction = 1;
+		   BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION Savepoint0;
+		END;
+		--
+		-- Start
+		--
+
+		IF(object_id(&#39;tempdb..#Zahlungen&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Zahlungen;
+		END
+
+		CREATE TABLE #Zahlungen
+		(
+			id INT IDENTITY(1,1),
+			cName NVARCHAR(255) NULL,
+			dDatum DATETIME NULL,
+			fBetrag DECIMAL(25,13) NOT NULL,
+			kBestellung INT NULL,
+			kBenutzer INT NULL,
+			nAnzahlung TINYINT NULL,
+			cHinweis NVARCHAR(255) NULL,
+			kZahlungsart INT NULL,
+			nKeinExport TINYINT NULL,
+			cSKRManuell NVARCHAR(255) NULL,
+			cExternalTransactionId NVARCHAR(255) NULL,
+			kZahlungsabgleichUmsatz INT NULL,
+			nZuweisungstyp TINYINT NULL,
+			nZahlungstyp TINYINT NULL,
+			cZuweisungsinfo NVARCHAR(128) NULL,
+			nZuweisungswertung INT NULL,
+			fOffenerBetrag DECIMAL(25,13) NULL
+		);		
+		
+		INSERT INTO #Zahlungen (cName, dDatum, fBetrag, kBestellung, kBenutzer, nAnzahlung, cHinweis, kZahlungsart, nKeinExport, 
+				cSKRManuell, cExternalTransactionId, kZahlungsabgleichUmsatz, nZuweisungstyp, nZahlungstyp, cZuweisungsinfo, nZuweisungswertung, 
+				fOffenerBetrag)
+		SELECT cName, dDatum, fBetrag, kBestellung, kBenutzer, nAnzahlung, cHinweis, kZahlungsart, nKeinExport, 
+			cSKRManuell, cExternalTransactionId, kZahlungsabgleichUmsatz, nZuweisungstyp, nZahlungstyp, cZuweisungsinfo, nZuweisungswertung, 
+			fOffenerBetrag 
+		FROM @type
+
+		IF EXISTS (
+			SELECT #Zahlungen.kBestellung, #Zahlungen.fOffenerBetrag FROM #Zahlungen
+			EXCEPT
+			SELECT vOffenerPosten.kBestellung, vOffenerPosten.fWertOffen FROM Zahlungsabgleich.vOffenerPosten
+			JOIN #Zahlungen ON #Zahlungen.kBestellung = vOffenerPosten.kBestellung
+			WHERE #Zahlungen.fOffenerBetrag = vOffenerPosten.fWertOffen
+		)
+		BEGIN
+			RAISERROR (&#39;Data has changed&#39;, 16, 1);
+		END
+		ELSE
+		BEGIN
+			DECLARE @zahlungID INT;
+			DECLARE @kId INT;
+			SELECT @kId = tpk.nummer FROM dbo.tpk WHERE tpk.cName = &#39;tZahlung&#39;
+
+			UPDATE dbo.tpk SET tpk.nummer = (SELECT COUNT(*) + @kId FROM #Zahlungen), tpk.dChanged = GETDATE()
+			WHERE tpk.cName = &#39;tZahlung&#39;
+
+			INSERT INTO dbo.tZahlung (kZahlung, cName, dDatum, fBetrag, kBestellung, kBenutzer, nAnzahlung, cHinweis, kZahlungsart, nKeinExport, 
+				cSKRManuell, cExternalTransactionId, kZahlungsabgleichUmsatz, nZuweisungstyp, nZahlungstyp, cZuweisungsinfo, nZuweisungswertung)		
+			SELECT @kId + ROW_NUMBER() OVER(ORDER BY #Zahlungen.cName) - 1, cName, dDatum, fBetrag, kBestellung, kBenutzer, nAnzahlung, cHinweis, kZahlungsart, nKeinExport, 
+				cSKRManuell, cExternalTransactionId, kZahlungsabgleichUmsatz, nZuweisungstyp, nZahlungstyp, cZuweisungsinfo, nZuweisungswertung
+			FROM #Zahlungen
+		END
+		--
+		-- Ende
+		--
+		SET @ReturnValue = @@ROWCOUNT;		
+		IF(@CreatedTransaction = 1)
+		BEGIN
+			COMMIT -- Nur wenn kein Savepoint gesetzt
+		END
+		RETURN @ReturnValue;
+	END TRY
+	BEGIN CATCH
+		-- Deadlock catch
+		IF (ERROR_NUMBER() = 1205)
+		BEGIN
+			SET @retry = @retry - 1;
+			IF (@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			IF (@retry = 0)
+			BEGIN
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+				SET CONTEXT_INFO 0x0;
+				RETURN 0;
+			END
+			EXEC dbo.spWaitRandom;
+		END
+		ELSE
+		BEGIN
+			SET @retry = -1;
+			SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+			IF (@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+			SET CONTEXT_INFO @OldContextInfo;
+			RETURN 0;
+		END
+	END CATCH
+END</code></pre>
+</body>
+</html>

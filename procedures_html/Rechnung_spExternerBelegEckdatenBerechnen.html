@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnung.spExternerBelegEckdatenBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Rechnung.spExternerBelegEckdatenBerechnen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Rechnung.spExternerBelegEckdatenBerechnen (@kExternerBeleg AS INT)
+AS
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+    DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+	--IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+    SET CONTEXT_INFO @MyContextInfo;
+	DECLARE @fVKBrutto DECIMAL(25,2);
+	DECLARE @fVkNetto DECIMAL(25, 2);
+	DECLARE @bIstStorniert BIT;
+	DECLARE @cBezugsbelegnr NVARCHAR(50);
+	DECLARE @kBezugsbeleg INT;
+	DECLARE @nBelegtyp INT;
+
+	SELECT @fVkBrutto = Positionen.fVkBrutto,
+		@fVkNetto = Positionen.fVkNetto,
+		@nBelegtyp = tExternerBeleg.nBelegtyp,
+		@cBezugsbelegnr = tExternerBeleg.cBezugsbelegnr,
+		@kBezugsbeleg = Bezugsbeleg.kExternerBeleg
+	FROM Rechnung.tExternerBeleg
+	CROSS APPLY (
+		SELECT ROUND(SUM(ISNULL(tExternerBelegPosition.fVkBrutto, 0.0)), 2) AS fVkBrutto,
+		ROUND(SUM(ISNULL(tExternerBelegPosition.fVkNetto, 0.0)), 2) AS fVkNetto
+
+		FROM Rechnung.tExternerBelegTransaktion 
+	JOIN Rechnung.tExternerBelegPosition ON tExternerBelegPosition.kExternerBelegTransaktion = tExternerBelegTransaktion.kExternerBelegTransaktion
+	WHERE tExternerBelegTransaktion.kExternerBeleg = tExternerBeleg.kExternerBeleg) AS Positionen
+	LEFT JOIN Rechnung.tExternerBeleg AS Bezugsbeleg ON Bezugsbeleg.cBelegnr = tExternerBeleg.cBezugsbelegnr
+
+	IF EXISTS (SELECT TOP(1) 1 FROM Rechnung.tExternerBeleg WHERE cBezugsbelegnr IS NOT NULL AND cBezugsbelegNr = @cBezugsbelegnr AND nBelegtyp &gt;= 100) SET @bIstStorniert = 1;
+
+DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+        -- Start vom Code
+
+		-- eigene Eckdaten aktualisieren
+		UPDATE Rechnung.tExternerBelegEckdaten 
+			SET fVkBrutto = @fVkBrutto,
+				fVkNetto = @fVkNetto,
+				bIstStorniert = @bIstStorniert
+		WHERE kExternerBeleg = @kExternerBeleg;
+
+		-- bei einem Stornobeleg den Ursprungsbeleg auf &quot;storniert&quot; setzen
+		IF (@nBelegtyp &gt;= 100 AND @kBezugsbeleg IS NOT NULL)
+		BEGIN
+			UPDATE Rechnung.tExternerBelegEckdaten
+				SET bIstStorniert = 1
+			WHERE kExternerBeleg = @kBezugsbeleg AND bIstStorniert = 0;
+		END
+
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH
+ 
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH</code></pre>
+</body>
+</html>

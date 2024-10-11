@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.sptLiefArtikelStandardsValidieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.sptLiefArtikelStandardsValidieren</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden Standards für Lieferantenartikel Einstellungen validiert und gesetzt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[sptLiefArtikelStandardsValidieren]
+@nFuerDropshippingAusfuehren INT = 0
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+
+	IF(@nFuerDropshippingAusfuehren = 0)
+	BEGIN
+
+	--
+	-- Schritt 1: Sicherstellen, dass nur ein Standardlieferant gesetzt ist.
+	--
+	    UPDATE tliefartikel WITH(ROWLOCK) SET tliefartikel.nStandard = 0 
+		FROM tliefartikel WITH (ROWLOCK)
+		WHERE tliefartikel.nStandard = 1
+		AND EXISTS (SELECT * FROM tliefartikel t2  WITH (NOLOCK)
+               WHERE t2.tArtikel_kArtikel = tliefartikel.tArtikel_kArtikel 
+			   AND t2.nStandard = 1
+			   AND t2.kLiefArtikel &gt; tliefartikel.kLiefArtikel)
+
+
+	--
+	-- Schritt 2: Sicherstellen, dass jeder Artikel einen Standard-Lieferanten hat.
+	--
+		UPDATE tliefartikel WITH(ROWLOCK) SET nStandard = 1
+		FROM tliefartikel WITH(ROWLOCK)
+		WHERE tliefartikel.kLiefArtikel IN
+		(
+			--
+			-- Den ersten Artikel einer Liste von ausschlie&#223;lich nicht Standard-Artikeln ermitteln.
+			--
+			SELECT MIN(ISNULL(t2.kLiefArtikel, 0)) 
+			FROM tliefartikel t2 WITH(NOLOCK)
+			WHERE t2.tArtikel_kArtikel = tliefartikel.tArtikel_kArtikel
+			GROUP BY t2.tArtikel_kArtikel
+			HAVING MAX(ISNULL(t2.nStandard, 0)) = 0
+		)
+
+	END;
+	ELSE IF(@nFuerDropshippingAusfuehren = 1)
+	BEGIN
+
+	    --
+	    -- Schritt 3: Sicherstellen, dass immmer nur 1 Standarddropshippinglieferant f&#252;r einen Dropshipping-Artikel gesetzt ist 
+	    --
+		UPDATE tliefartikel WITH(ROWLOCK) SET tliefartikel.nDropshippingStandard = 0 
+		FROM tliefartikel WITH(ROWLOCK)
+		WHERE tliefartikel.nDropshippingStandard = 1 AND
+		EXISTS
+		(		
+			--
+			-- Zum Ausschlu&#223; zu jedem kArtikel den ersten Standard Liefartikel Suchen.
+			--
+			SELECT * FROM tliefartikel t2  WITH (NOLOCK)
+               WHERE t2.tArtikel_kArtikel = tliefartikel.tArtikel_kArtikel 
+			   AND t2.nDropshippingStandard = 1
+			   AND t2.kLiefArtikel &gt; tliefartikel.kLiefArtikel
+		)
+
+	    --
+	    -- Schritt 4: Sicherstellen, dass genau ein Dropshipping-Liefartikel der Liste aller Dropshpping-Lieferartikel eines Artikels als Standard definiert ist.
+	    --
+		UPDATE tliefartikel WITH(ROWLOCK) SET nDropShippingStandard = 1
+		FROM tliefartikel WITH(ROWLOCK)
+		WHERE tliefartikel.kLiefArtikel IN
+		(
+			--
+			-- Den ersten Artikel einer Liste von ausschlie&#223;lich nicht Standard-Artikeln ermitteln.
+			--
+			SELECT MIN(ISNULL(t2.kLiefArtikel, 0)) 
+			FROM tliefartikel AS t2 WITH(NOLOCK)
+			WHERE t2.nDropShipping = 1
+			AND t2.tArtikel_kArtikel = tliefartikel.tArtikel_kArtikel
+			GROUP BY t2.tArtikel_kArtikel
+			HAVING MAX(ISNULL(t2.nDropShippingStandard, 0)) = 0
+		)
+		AND tliefartikel.nDropShipping = 1
+
+	END;
+END</code></pre>
+</body>
+</html>

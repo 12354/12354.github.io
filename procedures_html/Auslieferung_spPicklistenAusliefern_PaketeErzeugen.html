@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenAusliefern_PaketeErzeugen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenAusliefern_PaketeErzeugen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenAusliefern_PaketeErzeugen]
+
+-- Pakete f&#252;r Lieferscheine anlegen
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+
+@Pakete XML,
+-- &lt;Paket&gt;
+--   &lt;kBestellung&gt;1&lt;/kBestellung&gt;
+--   &lt;kVersandart&gt;5&lt;/kVersandart&gt;
+--   &lt;dVersanddatum&gt;foobar&lt;/dVersanddatum&gt;
+--   &lt;cTrackingId&gt;trackingid&lt;/cTrackingId&gt;
+--   &lt;cEnclosedReturnIdentCode&gt;enclosedReturnIdentCode&lt;/cEnclosedReturnIdentCode&gt;
+--   &lt;cHinweis&gt;Hinweis&lt;/cHinweis&gt;
+-- &lt;/Paket&gt;
+
+@nVersandSetzen INT,
+
+@kBenutzer INT,
+@kSessionId INT
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spPaketeErzeugen
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY
+	DECLARE @kLieferschein INT;
+	DECLARE @kBestellung INT;
+	DECLARE @kXmlPaket INT;
+	DECLARE @nAnzahlLieferscheine INT;
+	DECLARE @dVersendet DATETIME;
+	DECLARE @nLagertyp INT;
+	IF (@nVersandSetzen &gt; 0) 
+	BEGIN
+		SET @dVersendet = GETDATE();
+	END ELSE BEGIN
+		SET @dVersendet = NULL;
+	END
+
+	IF(object_id(&#39;tempdb..#XMLPAKET&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #XMLPAKET;
+	END
+    CREATE TABLE #XMLPAKET(
+		kXmlPaket INT IDENTITY(1,1) NOT NULL,
+		kBestellung INT NOT NULL,
+		kLieferschein INT NULL,
+		kVersandart INT NOT NULL,
+		dVersanddatum DATETIME NULL,
+		cTrackingId NVARCHAR(64) NULL,
+		cEnclosedReturnIdentCode NVARCHAR(255) NULL,
+		cHinweis NVARCHAR(64) NULL,
+		fGewicht DECIMAL(25,13) NULL,
+    )
+	INSERT INTO #XMLPAKET
+	(
+	    dbo.#XMLLAGER.kBestellung,
+	    dbo.#XMLLAGER.kLieferschein,
+	    dbo.#XMLLAGER.kVersandart,
+	    dbo.#XMLLAGER.dVersanddatum,
+		dbo.#XMLLAGER.cTrackingId,
+		dbo.#XMLLAGER.cEnclosedReturnIdentCode,
+		dbo.#XMLLAGER.cHinweis,
+		dbo.#XMLLAGER.fGewicht
+	)
+	SELECT
+		ParamValues.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) AS kBestellung,
+		NULL,
+		ParamValues.ID.value(&#39;kVersandart[1]&#39;, &#39;INT&#39;) AS kVersandart,
+		CASE 
+			WHEN(LEN(ISNULL(ParamValues.ID.value(&#39;dVersanddatum[1]&#39;, &#39;NVARCHAR(255)&#39;), &#39;&#39;)) &gt; 0) THEN ParamValues.ID.value(&#39;dVersanddatum[1]&#39;, &#39;DATETIME&#39;) 
+			ELSE NULL
+		END AS dVersanddatum,
+		ParamValues.ID.value(&#39;cTrackingId[1]&#39;, &#39;NVARCHAR(64)&#39;) AS cTrackingId,
+		ParamValues.ID.value(&#39;cEnclosedReturnIdentCode[1]&#39;, &#39;NVARCHAR(255)&#39;) AS cEnclosedReturnIdentCode,
+		ParamValues.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(64)&#39;) AS cHinweis,
+		ParamValues.ID.value(&#39;fGewicht[1]&#39;, &#39;DECIMAL(25,13)&#39;) AS fGewicht
+	FROM @Pakete.nodes(&#39;/Paket&#39;) AS ParamValues(ID)
+	
+	DECLARE cLieferschein CURSOR LOCAL FAST_FORWARD FOR
+		SELECT 
+		  dbo.tLieferschein.kLieferschein, 
+		  dbo.tLieferschein.kBestellung, 
+		  CASE 
+			 WHEN ISNULL(dbo.tLieferschein.nFulfillment, 0) &lt;&gt; 0 THEN 1
+			 WHEN ISNULL(dbo.tLieferschein.kLieferantenBestellung, 0) &lt;&gt; 0 THEN 2
+			 ELSE 0
+		  END AS nLagertyp
+		FROM dbo.tLieferschein 
+		JOIN #XMLPAKET ON #XMLPaket.kBestellung = dbo.tLieferschein.kBestellung
+		WHERE dbo.tLieferschein.kSessionId = @kSessionId
+		ORDER BY dbo.tLieferschein.kBestellung, dbo.tLieferschein.kLieferschein
+	OPEN cLieferschein;
+	FETCH NEXT FROM cLieferschein INTO @kLieferschein, @kBestellung, @nLagertyp;
+	WHILE (@@FETCH_STATUS = 0)
+	BEGIN
+		SELECT TOP(1)
+			@kXmlPaket = #XMLPAKET.kXmlPaket
+		FROM
+			#XMLPAKET 
+		WHERE 
+			#XMLPAKET.kBestellung = @kBestellung AND #XMLPAKET.kLieferschein IS NULL
+		
+		IF (@kXmlPaket IS NOT NULL)
+		BEGIN
+			INSERT INTO dbo.tVersand
+			(
+				dbo.tVersand.kLieferschein,
+				dbo.tVersand.kBenutzer,
+				dbo.tVersand.kLogistik,
+				dbo.tVersand.cIdentCode,
+				dbo.tVersand.cEnclosedReturnIdentCode,
+				dbo.tVersand.dErstellt,
+				dbo.tVersand.cHinweis,
+				dbo.tVersand.fGewicht,
+				dbo.tVersand.kVersandArt,
+				dbo.tVersand.cLogistiker,
+				dbo.tVersand.cFulfillmentCenter,
+				dbo.tVersand.dAnkunftszeit,
+				dbo.tVersand.nVerpackZeitSek,
+				dbo.tVersand.dVersendet
+			)
+			SELECT TOP(1)
+				@kLieferschein, -- kLieferschein - int
+				@kBenutzer, -- kBenutzer - int
+				0, -- kLogistik - int
+				#XMLPAKET.cTrackingId, -- cIdentCode - varchar
+				#XMLPAKET.cEnclosedReturnIdentCode, -- cEnclosedReturnIdentCode - varchar
+				GETDATE(), -- dErstellt - datetime
+				#XMLPAKET.cHinweis, -- cHinweis - varchar
+				#XMLPAKET.fGewicht, -- fGewicht - decimal
+				#XMLPAKET.kVersandart, -- kVersandArt - int
+				&#39;&#39;, -- cLogistiker - varchar
+				&#39;&#39;, -- cFulfillmentCenter - varchar
+				NULL, -- dAnkunftszeit - datetime
+				0, -- nVerpackZeitSek - int
+				CASE 
+				    WHEN #XMLPAKET.dVersanddatum IS NOT NULL THEN #XMLPAKET.dVersanddatum
+				    WHEN @nLagerTyp = 0 THEN @dVersendet
+				    ELSE NULL
+				END AS dVersendet -- dVersendet - datetime
+			FROM #XMLPAKET
+			WHERE #XMLPAKET.kXmlPaket = @kXmlPaket
+
+			UPDATE #XMLPAKET
+			SET #XMLPAKET.kLieferschein = @kLieferschein
+			WHERE #XMLPAKET.kXmlPaket = @kXmlPaket
+		END ELSE BEGIN
+			INSERT INTO dbo.tVersand
+			(
+			    dbo.tVersand.kLieferschein,
+			    dbo.tVersand.kBenutzer,
+			    dbo.tVersand.kLogistik,
+			    dbo.tVersand.cIdentCode,
+			    dbo.tVersand.dErstellt,
+			    dbo.tVersand.cHinweis,
+			    dbo.tVersand.fGewicht,
+			    dbo.tVersand.kVersandArt,
+			    dbo.tVersand.cLogistiker,
+			    dbo.tVersand.cFulfillmentCenter,
+			    dbo.tVersand.dAnkunftszeit,
+			    dbo.tVersand.nVerpackZeitSek,
+			    dbo.tVersand.dVersendet
+			)
+			VALUES
+			(
+			    @kLieferschein, -- kLieferschein - int
+			    @kBenutzer, -- kBenutzer - int
+			    0, -- kLogistik - int
+			    &#39;&#39;, -- cIdentCode - varchar
+			    GETDATE(), -- dErstellt - datetime
+			    &#39;&#39;, -- cHinweis - varchar
+			    0, -- fGewicht - decimal
+			    0, -- kVersandArt - int
+			    &#39;&#39;, -- cLogistiker - varchar
+			    &#39;&#39;, -- cFulfillmentCenter - varchar
+			    NULL, -- dAnkunftszeit - datetime
+			    0, -- nVerpackZeitSek - int
+			    CASE 
+				    WHEN @nLagerTyp = 0 THEN @dVersendet
+				    ELSE NULL
+  			   END -- dVersendet - datetime
+			)
+		END
+				
+		FETCH NEXT FROM cLieferschein INTO @kLieferschein, @kBestellung, @nLagertyp;
+	END
+	CLOSE cLieferschein;
+	DEALLOCATE cLieferschein;
+
+	INSERT INTO dbo.tVersand
+	(
+	    dbo.tVersand.kLieferschein,
+	    dbo.tVersand.kBenutzer,
+	    dbo.tVersand.kLogistik,
+	    dbo.tVersand.cIdentCode,
+		dbo.tVersand.cEnclosedReturnIdentCode,
+	    dbo.tVersand.dErstellt,
+	    dbo.tVersand.cHinweis,
+	    dbo.tVersand.fGewicht,
+	    dbo.tVersand.kVersandArt,
+	    dbo.tVersand.cLogistiker,
+	    dbo.tVersand.cFulfillmentCenter,
+	    dbo.tVersand.dAnkunftszeit,
+	    dbo.tVersand.nVerpackZeitSek,
+	    dbo.tVersand.dVersendet
+	)
+	SELECT
+	    LieferscheinId.kLieferschein, -- kLieferschein
+	    @kBenutzer, -- kBenutzer - int
+	    0, -- kLogistik - int
+	    #XMLPAKET.cTrackingId, -- cIdentCode - varchar
+		#XMLPAKET.cEnclosedReturnIdentCode, -- cEnclosedReturnIdentCode - varchar
+	    GETDATE(), -- dErstellt - datetime
+	    #XMLPAKET.cHinweis, -- cHinweis - varchar
+	    #XMLPAKET.fGewicht, -- fGewicht - decimal
+	    #XMLPAKET.kVersandart, -- kVersandArt - int
+	    &#39;&#39;, -- cLogistiker - varchar
+	    &#39;&#39;, -- cFulfillmentCenter - varchar
+	    NULL, -- dAnkunftszeit - datetime
+	    0, -- nVerpackZeitSek - int
+	    @dVersendet -- dVersendet - datetime
+	FROM #XMLPAKET	
+	JOIN (
+		SELECT
+			MIN(dbo.tLieferschein.kLieferschein) AS kLieferschein,
+			dbo.tLieferschein.kBestellung
+		FROM dbo.tLieferschein 
+		WHERE dbo.tLieferschein.kSessionId = @kSessionId
+		GROUP BY dbo.tLieferschein.kBestellung
+	) AS LieferscheinId ON LieferscheinId.kBestellung = #XMLPAKET.kBestellung
+	WHERE #XMLPAKET.kLieferschein IS NULL
+
+	DROP TABLE #XMLPAKET;
+
+	UPDATE dbo.tVersand
+		SET fGewicht = ROUND(CASE  WHEN Pakete.fAnzahl &gt; 0 
+								THEN (Positionsgewicht.fGewicht + tAuftrag.fZusatzGewicht - Pakete.fGewicht) / Pakete.fAnzahl 
+								ELSE 0
+							END, 3)
+		FROM dbo.tVersand
+		JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tVersand.kLieferschein AND dbo.tLieferschein.kSessionId = @kSessionId
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = dbo.tLieferschein.kBestellung
+		JOIN (
+			SELECT	dbo.tLieferscheinPos.kLieferschein AS kLieferschein,
+					SUM ((dbo.tArtikel.fGewicht + ISNULL(VariationsGewicht.fGewicht, 0.0)) * dbo.tLieferscheinPos.fAnzahl) AS fGewicht
+				FROM dbo.tLieferscheinPos
+				JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = dbo.tLieferscheinPos.kBestellPos
+				JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = tAuftragPosition.kArtikel
+				LEFT JOIN (
+						SELECT	vAuftragPositionEigenschaft.kAuftragPosition,
+							SUM(ISNULL(teigenschaftWert.fGewichtDiff, 0)) AS fGewicht
+						FROM Verkauf.vAuftragPositionEigenschaft
+						JOIN dbo.teigenschaftWert ON teigenschaftWert.kEigenschaftWert = vAuftragPositionEigenschaft.kEigenschaftWert
+						GROUP BY vAuftragPositionEigenschaft.kAuftragPosition
+				) AS VariationsGewicht ON VariationsGewicht.kAuftragPosition = dbo.tLieferscheinPos.kBestellPos
+				WHERE (ISNULL(tAuftragPosition.kAuftragStueckliste, 0) = 0 OR ISNULL(tAuftragPosition.kAuftragStueckliste, 0) = tAuftragPosition.kAuftragPosition)
+				GROUP BY dbo.tLieferscheinPos.kLieferschein
+		) AS Positionsgewicht ON Positionsgewicht.kLieferschein = dbo.tLieferschein.kLieferschein
+		JOIN (
+			SELECT	dbo.tVersand.kLieferschein AS kLieferschein, 
+					SUM(CASE WHEN dbo.tVersand.fGewicht &gt; 0 THEN 0 ELSE 1 END) AS fAnzahl,
+					SUM(dbo.tVersand.fGewicht) AS fGewicht
+				FROM dbo.tVersand
+				GROUP BY dbo.tVersand.kLieferschein
+		) AS Pakete ON Pakete.kLieferschein = dbo.tLieferschein.kLieferschein
+		WHERE dbo.tVersand.fGewicht = 0
+
+	UPDATE dbo.tVersand
+		SET dbo.tVersand.fGewicht = 0
+		FROM dbo.tVersand
+		JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tVersand.kLieferschein AND dbo.tLieferschein.kSessionId = @kSessionId
+		WHERE dbo.tVersand.fGewicht &lt; 0
+
+	-- Versand setzen f&#252;r Dropshipping und Fulfillment zur&#252;cknehmen
+	IF (@nVersandSetzen &gt; 0) 
+	BEGIN
+		UPDATE dbo.tVersand
+			SET dbo.tVersand.dVersendet = NULL
+		FROM dbo.tVersand
+		JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tVersand.kLieferschein AND dbo.tLieferschein.kSessionId = @kSessionId
+		WHERE dbo.tVersand.dVersendet = @dVersendet 
+			AND (dbo.tLieferschein.kLieferantenBestellung &gt; 0
+				OR dbo.tLieferschein.nFulfillment &gt; 0)
+	END 
+
+	-- wenn alle Pakete einer Bestellung die selbe Versandart haben, diese in die Bestellung zur&#252;ckschreiben
+	UPDATE Verkauf.tAuftrag
+	SET tAuftrag.kVersandArt = Versandarten.kVersandart
+    FROM Verkauf.tAuftrag 
+    JOIN (
+	   SELECT tAuftrag.kAuftrag AS kBestellung,
+			MIN(dbo.tVersand.kVersandart) AS kVersandart
+	   FROM dbo.tVersand
+	   JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tVersand.kLieferschein
+	   JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = dbo.tLieferschein.kBestellung
+	   WHERE dbo.tLieferschein.kSessionId = @kSessionId
+	   GROUP BY tAuftrag.kAuftrag, tAuftrag.kVersandArt
+	   HAVING COUNT(DISTINCT(dbo.tVersand.kVersandArt)) = 1 AND tAuftrag.kVersandArt != MIN(dbo.tVersand.kVersandArt)
+	) AS Versandarten ON Versandarten.kBestellung = tAuftrag.kAuftrag
+	WHERE Versandarten.kVersandart &lt;&gt; 0
+
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+	BEGIN
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION;
+	END
+	ELSE
+	BEGIN
+		IF XACT_STATE() &lt;&gt; -1
+		BEGIN
+			IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION spPaketeErzeugen;
+		END
+	END
+
+	DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

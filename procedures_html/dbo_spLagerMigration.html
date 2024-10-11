@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spLagerMigration</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spLagerMigration</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Daten aus alten Warenlagern in aktuelle Strukturen überführt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spLagerMigration]
+@kBenutzer SMALLINT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	UPDATE tOptions SET cValue = &#39;N&#39; WHERE cKey = &#39;MigrationErfolgreich&#39;	
+	BEGIN TRANSACTION			
+
+		--
+		-- In tOptions ist zu erkennen, ob die Migration erfolgreich durchgelaufen ist.
+		--
+	
+	
+		--
+		-- Pr&#252;fen ob Migration bereits ausgef&#252;hrt wurde
+		--
+		DECLARE @nErsteMigration BIGINT
+		SET @nErsteMigration = CASE WHEN ISNULL((SELECT COUNT(kWarenLagerEingang) FROM tWarenLagerEingang WITH(NOLOCK)), 0) &gt; 0 THEN 0 ELSE 1 END
+
+		--
+		-- Warenlager anlegen, wenn noch nicht vorhanden
+		--	
+		IF(ISNULL((SELECT COUNT(kWarenLager) FROM tWarenLager), 0) = 0)
+		BEGIN
+			IF(ISNULL((SELECT COUNT(kFirma) FROM tfirma), 0) &gt; 0)
+			BEGIN
+				INSERT INTO tWarenLager (cName, cKuerzel, cBeschreibung, nLagerplatzVerwaltung, nAuslieferungsPrio, nFulfillment, cStrasse, cPLZ, cOrt, cLand, kFirma)
+				SELECT TOP 1 &#39;Standardlager&#39;, &#39;STD_Lager&#39;, &#39;Standardlager&#39;, 0, 1, 0, ISNULL(tfirma.cStrasse, &#39;&#39;), ISNULL(tfirma.cPLZ, &#39;&#39;), ISNULL(tfirma.cOrt, &#39;&#39;), ISNULL(tfirma.cLand, &#39;&#39;), tfirma.kFirma FROM tfirma WITH(NOLOCK)
+			END		
+		END
+
+		DECLARE @kStandardWarenLager AS INT
+		SET @kStandardWarenLager = ISNULL((SELECT TOP 1 kWarenLager FROM tWarenLager WITH(NOLOCK)), 0)
+
+		--
+		-- Gibt es keine Firma in der Datenbank wird kein Lager angelegt, hier kann dann auch keine Migration erfolgen.
+		--
+		IF(@kStandardWarenLager &gt; 0)
+		BEGIN
+
+			--
+			-- Warenlagerplatz anlegen, wenn noch nicht vorhanden
+			--
+			IF(ISNULL((SELECT COUNT(kWarenLagerPlatz) FROM tWarenLagerPlatz WHERE kWarenLager = @kStandardWarenLager AND kWarenLagerPlatztyp != 10 AND cName != &#39;Standardlagerplatz&#39;), 0) = 0)
+			BEGIN
+				SELECT 1
+				INSERT INTO tWarenLagerPlatz WITH(ROWLOCK)(kWarenLager, cKommentar, cName, kWarenLagerPlatztyp)
+				VALUES(@kStandardWarenLager, &#39;Standardlagerplatz&#39;, &#39;Standardlagerplatz&#39;, 0)
+			END
+			
+			DECLARE @kStandardWarenLagerPlatz AS INT
+			SET @kStandardWarenLagerPlatz = ISNULL((SELECT TOP 1 kWarenLagerPlatz FROM tWarenLagerPlatz WHERE kWarenLager = @kStandardWarenLager AND ISNULL(kWarenLagerPlatztyp, 0) != 10 ), 0)
+
+			-- Artikel migrieren
+
+			-- Wareneing&#228;nge anlegen
+			DECLARE @kSessionIdTable AS TABLE (kSessionID BIGINT)
+			INSERT INTO @kSessionIdTable(kSessionID) EXEC spGetAndUpdatePK tWarenLagerEingangSessionID
+		
+			DECLARE @kSessionID AS BIGINT
+			SET @kSessionID = ISNULL((SELECT TOP 1 kSessionID FROM @kSessionIdTable), 0)
+
+			DECLARE @kWarenLagerEingaenge AS TABLE(kWarenLagerEingang INT, kArtikel INT, fAnzahl DECIMAL(28,14), cKommentar VARCHAR(255), fEkNetto FLOAT)
+
+			SET CONTEXT_INFO 0x5091;
+
+			INSERT INTO tWarenLagerEingang WITH(ROWLOCK)(kArtikel, kWarenLagerPlatz, kBenutzer, cKommentar, fAnzahl, fEKEinzel, dErstellt, dGeliefertAM, kSessionID, fAnzahlAktuell)
+			OUTPUT inserted.kWarenLagerEingang, inserted.kArtikel, inserted.fAnzahl, inserted.cKommentar, inserted.fEKEinzel INTO @kWarenLagerEingaenge
+			SElECT tartikel.kArtikel,
+				@kStandardWarenLagerPlatz,
+				@kBenutzer,
+				CASE
+					WHEN ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0)) &lt; 0.0 OR ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0)) &gt; 999999999.0 THEN
+					&#39;Migration - ung&#252;ltiger Bestand wurde auf 0 gesetzt&#39;
+					ELSE
+					&#39;Migration&#39;
+				END AS cKommentar,
+				ROUND(CASE
+					WHEN ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0)) &lt; 0.0 OR ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0)) &gt; 999999999.0 THEN
+						0.0
+					ELSE
+						ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0))
+				END, 4) AS fAnzahl,
+				-- fEKEinzel
+				ISNULL(tartikel.fEKNetto, 0.0) AS fEkNetto,
+				-- dErstellt
+				GETDATE(),
+				-- dGeliefertAm
+				GETDATE(),
+				@kSessionID,
+				ROUND(CASE
+					WHEN ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0)) &lt; 0.0 OR ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0)) &gt; 999999999.0 THEN
+						0.0
+					ELSE
+						ISNULL(tartikel.nLagerbestand, 0.0) + SUM(ISNULL(vAuftragPositionEckdaten.fAnzahlOffen, 0.0))
+				END, 4) AS fAnzahlAktuell
+			FROM tartikel WITH(NOLOCK)
+			LEFT JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kArtikel = tArtikel.kArtikel
+			LEFT JOIN Verkauf.vAuftragPositionEckdaten ON vAuftragPositionEckdaten.kAuftragPosition = vAuftragPosition.kAuftragPosition
+			LEFT JOIN tWarenLagerPlatzArtikel WITH(NOLOCK) ON tartikel.kArtikel = tWarenLagerPlatzArtikel.kArtikel
+			WHERE tartikel.cLagerAktiv = &#39;Y&#39;
+				AND tartikel.nIstVater = 0
+				AND tartikel.kStueckliste = 0
+				AND tartikel.cAktiv = &#39;Y&#39;
+				AND tartikel.cLagerVariation != &#39;Y&#39;
+			GROUP BY tArtikel.kArtikel, tArtikel.nLagerbestand, tartikel.cArtNr, ISNULL(tartikel.fEKNetto, 0.0)	
+			SET CONTEXT_INFO 0x000;
+			--
+			-- Angelegte Wareneing&#228;nge buchen
+			--			
+									
+			-- Warenlagerplatzartikel anlegen						
+			INSERT INTO tWarenLagerPlatzArtikel WITH(ROWLOCK)(kWarenLagerPlatz, kArtikel)
+			SELECT @kStandardWarenLagerPlatz, wareneingaenge.kArtikel 
+			FROM @kWarenLagerEingaenge AS wareneingaenge
+			LEFT JOIN dbo.tWarenLagerPlatzArtikel ON wareneingaenge.kArtikel = dbo.tWarenLagerPlatzArtikel.kArtikel
+				AND @kStandardWarenLagerPlatz = dbo.tWarenLagerPlatzArtikel.kWarenLagerPlatz
+			WHERE dbo.tWarenLagerPlatzArtikel.kArtikel IS NULL					
+
+		END
+
+		--
+		-- Standardlieferanten ermitteln und in Liefartikel setzen (nur bei erster Ausf&#252;hrung der Migration)
+		--
+		IF(@nErsteMigration &gt; 0)
+		BEGIN
+
+			--
+			-- Lieferanten ermitteln nach Menge der Liefartikel sortiert			
+			--
+			DECLARE @Lieferanten AS TABLE(kLieferant INT)
+
+			INSERT INTO @Lieferanten(kLieferant)
+			SELECT tliefartikel.tLieferant_kLieferant
+			FROM tliefartikel WITH(NOLOCK)
+			GROUP BY tliefartikel.tLieferant_kLieferant
+			-- Wer am meisten liefert kommt zuletzt und &#252;berschreibt andere Standardlieferanten
+			ORDER BY COUNT(tliefartikel.kLiefArtikel) ASC
+
+			DECLARE @kLieferant AS INT
+			SET @kLieferant = 0
+
+			DECLARE cLieferanten CURSOR LOCAL FAST_FORWARD FOR
+				SELECT kLieferant FROM @Lieferanten
+			
+			OPEN cLieferanten
+
+			FETCH NEXT FROM cLieferanten INTO @kLieferant
+			
+			WHILE (@@FETCH_STATUS = 0)
+			BEGIN	
+				--
+				-- Lieferant als Standardlieferant f&#252;r die Liefartikel setzen
+				--
+				IF(ISNULL(@kLieferant, 0) &gt; 0)
+				BEGIN
+					UPDATE tliefartikel SET nStandard = 0
+					FROM tliefartikel WITH(ROWLOCK)
+					JOIN
+					(
+						SELECT tliefartikel.tArtikel_kArtikel
+						FROM tliefartikel WITH(NOLOCK)
+						WHERE tliefartikel.tLieferant_kLieferant = @kLieferant
+						GROUP BY tliefartikel.tArtikel_kArtikel
+					) AS U1 ON tliefartikel.tArtikel_kArtikel = U1.tArtikel_kArtikel
+
+					UPDATE tliefartikel WITH(ROWLOCK) SET nStandard = 1				
+					WHERE tLieferant_kLieferant = @kLieferant
+				END
+				FETCH NEXT FROM cLieferanten INTO @kLieferant
+			END
+
+		END
+			
+	COMMIT
+
+	UPDATE tOptions WITH(ROWLOCK) SET cValue = &#39;Y&#39; WHERE cKey = &#39;MigrationErfolgreich&#39;
+END</code></pre>
+</body>
+</html>

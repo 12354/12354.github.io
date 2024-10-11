@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklistenPerformanceTest</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklistenPerformanceTest</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklistenPerformanceTest]
+@kWarenlager INT = 9
+
+--
+-- Diese SP f&#252;hrt versucht alle Picklistenvorlagen in der DB zu reservieren und gibt Statistiken &#252;ber die Reservierungszeit wieder.
+-- Die SP l&#246;scht alle nicht abgeschlo&#223;enen Picklisten, auf keinen Fall Produktiv verwenden.
+-- !!! DIESE SP WIRD DARF NICHT PRODUKTIV VERDENDET !!!!
+--
+
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @kPickliste INT;
+DECLARE @kPicklisteVorlage INT;
+DECLARE @kBenutzer INT = 1;
+DECLARE @kSessionID INT = 0;
+DECLARE @nDebug INT = 0;
+DECLARE @kRollendeKommissionierungWagen INT = 0;
+DECLARE @dStartTime DATETIME;
+DECLARE @dEndTime DATETIME;
+DECLARE @nAnzahlAuftraege INT;
+DECLARE @Plan XML;
+DECLARE @nLastPickliste INT = 0;
+DECLARE @dTimeStamp DATETIME = GETDATE();
+
+BEGIN TRY
+
+	DBCC FREEPROCCACHE;
+
+
+	DECLARE CUR_PicklisteVorlagen  CURSOR FAST_FORWARD LOCAL FOR
+	SELECT tPicklisteVorlage.kPicklisteVorlage 
+	FROM dbo.tPicklisteVorlage
+	WHERE nIstVorlage = 1
+
+
+	IF(object_id(&#39;tempdb..#PicklistenStatistik&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #PicklistenStatistik;
+	END;
+	CREATE TABLE #PicklistenStatistik(kPicklisteVorlage INT,dStartZeit DATETIME, dEndZeit DATETIME, nAnzahlAuftraege INT);
+
+
+	SELECT @nLastPickliste = MAX(kPickliste)
+	FROM dbo.tPickliste;
+	
+
+	
+	OPEN CUR_PicklisteVorlagen;
+	FETCH NEXT FROM CUR_PicklisteVorlagen INTO @kPicklisteVorlage
+
+	WHILE (@@FETCH_STATUS = 0 ) 
+	BEGIN
+
+		SET @dStartTime = GETDATE();
+
+		EXECUTE [WMS].[spPicklisteErstellen] 
+		   @kWarenlager
+		  ,@kPicklisteVorlage
+		  ,@kBenutzer
+		  ,@kSessionID
+		  ,@nDebug
+		  ,@kRollendeKommissionierungWagen
+
+		  SET @dEndTime = GETDATE();
+
+
+		  SELECT @nAnzahlAuftraege = COUNT(DISTINCT kBestellung) FROM tpicklistepos WHERE tPicklistePos.nStatus &lt; 40;
+		  INSERT INTO #PicklistenStatistik VALUES (@kPicklisteVorlage,@dStartTime,@dEndTime,@nAnzahlAuftraege);
+
+		  DELETE FROM dbo.tPicklistePos
+		  WHERE tPicklistePos.nStatus &lt; 40
+		  AND tPicklistePos.kPickliste &gt; @nLastPickliste;
+
+	FETCH NEXT FROM CUR_PicklisteVorlagen INTO @kPicklisteVorlage
+	END;
+
+	CLOSE CUR_PicklisteVorlagen;
+	DEALLOCATE CUR_PicklisteVorlagen;
+
+	SELECT tPicklisteVorlage.cName, #PicklistenStatistik.kPicklisteVorlage  ,dStartZeit , dEndZeit , nAnzahlAuftraege , DATEDIFF(SECOND,dStartZeit,dEndZeit) AS Sekunden ,DATEDIFF(MILLISECOND,dStartZeit,dEndZeit) AS MilliSec 
+	FROM #PicklistenStatistik
+	JOIN dbo.tPicklisteVorlage ON tPicklisteVorlage.kPicklisteVorlage = #PicklistenStatistik.kPicklisteVorlage;
+
+	
+	INSERT INTO WMS.tStatistikPicklisten(dTimeStamp , cName , kPicklisteVorlage , dStartZeit , dEndZeit , nAnzahlAuftraege ,dSekunden ,dMilliSec )
+	SELECT @dTimeStamp,tPicklisteVorlage.cName, #PicklistenStatistik.kPicklisteVorlage  ,dStartZeit , dEndZeit , nAnzahlAuftraege , DATEDIFF(SECOND,dStartZeit,dEndZeit) AS Sekunden ,DATEDIFF(MILLISECOND,dStartZeit,dEndZeit) AS MilliSec 
+	FROM #PicklistenStatistik
+	JOIN dbo.tPicklisteVorlage ON tPicklisteVorlage.kPicklisteVorlage = #PicklistenStatistik.kPicklisteVorlage;
+
+		
+
+END TRY
+
+BEGIN CATCH
+
+		    DELETE FROM dbo.tPicklistePos
+		    WHERE tPicklistePos.nStatus &lt; 40
+		    AND tPicklistePos.kPickliste &gt; @nLastPickliste;
+
+			SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+			RAISERROR (	@ErrorMessage, 
+						@ErrorSeverity,
+						@ErrorState);
+		
+END CATCH;</code></pre>
+</body>
+</html>

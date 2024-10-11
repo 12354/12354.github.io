@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lieferantenbestellung.spLieferantenBestellungEigeneBestellnummerAendern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Lieferantenbestellung.spLieferantenBestellungEigeneBestellnummerAendern</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Lieferantenbestellung].[spLieferantenBestellungEigeneBestellnummerAendern] 
+	@kLieferantenBestellung INT,
+	@cEigeneBestellnummer NVARCHAR(255)
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @kLieferant INT;
+DECLARE @kSprache INT;
+DECLARE @kLieferantenBestellungRA INT;
+DECLARE @kLieferantenBestellungLA INT;
+DECLARE @cWaehrungISO NVARCHAR(5);
+DECLARE @cInternerKommentar NVARCHAR(MAX);
+DECLARE @cDruckAnmerkung NVARCHAR(MAX);
+DECLARE @dGedruckt DATETIME;
+DECLARE @dGemailt DATETIME;
+DECLARE @dGefaxt DATETIME;
+DECLARE @dErstellt DATETIME;
+DECLARE @kFirma INT;
+DECLARE @kLager INT;
+DECLARE @kKunde INT;
+DECLARE @dLieferdatum DATETIME;
+DECLARE @nStatus INT;
+DECLARE @cBezugsAuftragsNummer NVARCHAR(255);
+DECLARE @nDropShipping INT;
+DECLARE @kLieferantenBestellungLieferant INT;
+DECLARE @kBenutzer INT;
+DECLARE @fFaktor DECIMAL(25,13);
+DECLARE @dAngemahnt DATETIME;
+DECLARE @dInBearbeitung DATETIME;
+DECLARE @nDeleted INT;
+DECLARE @nManuellAbgeschlossen TINYINT;
+DECLARE @cFremdbelegnummer NVARCHAR(255);
+DECLARE @kLieferschein INT;
+DECLARE @nBestaetigt TINYINT;
+DECLARE @dExportiert DATETIME;
+DECLARE @CreatedTransaction INT;
+
+IF (@@TRANCOUNT = 0)
+BEGIN
+   SET @CreatedTransaction = 1;
+   BEGIN TRANSACTION
+END;
+ELSE
+BEGIN
+	SET @CreatedTransaction = 0;
+	SAVE TRANSACTION Savepoint0;
+END;
+
+		SELECT	@kLieferant = dbo.tLieferantenBestellung.kLieferant,
+				@kSprache = dbo.tLieferantenBestellung.kSprache,
+				@kLieferantenBestellungRA = dbo.tLieferantenBestellung.kLieferantenBestellungRA,
+				@kLieferantenBestellungLA = dbo.tLieferantenBestellung.kLieferantenBestellungLA,
+				@cWaehrungISO = dbo.tLieferantenBestellung.cWaehrungISO,
+				@cInternerKommentar = dbo.tLieferantenBestellung.cInternerKommentar,
+				@cDruckAnmerkung = dbo.tLieferantenBestellung.cDruckAnmerkung,
+				@dGedruckt = dbo.tLieferantenBestellung.dGedruckt,
+				@dGemailt = dbo.tLieferantenBestellung.dGemailt,
+				@dGefaxt = dbo.tLieferantenBestellung.dGefaxt,
+				@dErstellt = dbo.tLieferantenBestellung.dErstellt,
+				@kFirma = dbo.tLieferantenBestellung.kFirma,
+				@kLager = dbo.tLieferantenBestellung.kLager,
+				@kKunde = dbo.tLieferantenBestellung.kKunde,
+				@dLieferdatum = dbo.tLieferantenBestellung.dLieferdatum,
+				@cBezugsAuftragsNummer = dbo.tLieferantenBestellung.cBezugsAuftragsNummer,
+				@nDropShipping = dbo.tLieferantenBestellung.nDropShipping,
+				@kLieferantenBestellungLieferant = dbo.tLieferantenBestellung.kLieferantenBestellungLieferant,
+				@kBenutzer = dbo.tLieferantenBestellung.kBenutzer,
+				@fFaktor = dbo.tLieferantenBestellung.fFaktor,
+				@dAngemahnt = dbo.tLieferantenBestellung.dAngemahnt,
+				@dInBearbeitung = dbo.tLieferantenBestellung.dInBearbeitung,
+				@nDeleted = dbo.tLieferantenBestellung.nDeleted,
+				@nManuellAbgeschlossen = dbo.tLieferantenBestellung.nManuellAbgeschlossen,
+				@cFremdbelegnummer = dbo.tLieferantenBestellung.cFremdbelegnummer,
+				@kLieferschein = dbo.tLieferantenBestellung.kLieferschein, 
+				@nBestaetigt = dbo.tLieferantenBestellung.nBestaetigt,
+				@dExportiert = dbo.tLieferantenBestellung.dExportiert,
+				@nStatus =  dbo.tLieferantenBestellung.nStatus
+			FROM dbo.tLieferantenBestellung
+			WHERE dbo.tLieferantenBestellung.kLieferantenBestellung = @kLieferantenBestellung;
+		EXEC Lieferantenbestellung.spLieferantenBestellungBearbeiten @kLieferantenBestellung, @kLieferant, @kSprache, @kLieferantenBestellungRA, @kLieferantenBestellungLA, @cWaehrungISO,
+				@cInternerKommentar, @cDruckAnmerkung, @dGedruckt, @dGemailt, @dGefaxt, @nStatus, @dErstellt, @kFirma, @kLager, @kKunde, @dLieferdatum,
+				@cEigeneBestellnummer, @cBezugsAuftragsNummer, @nDropShipping, @kLieferantenBestellungLieferant, @kBenutzer, @fFaktor, @dAngemahnt,
+				@dInBearbeitung, @nDeleted, @nManuellAbgeschlossen, @cFremdbelegnummer, @kLieferschein,@nBestaetigt, @dExportiert;
+
+
+IF(@CreatedTransaction = 1)
+BEGIN
+	COMMIT;
+END;</code></pre>
+</body>
+</html>

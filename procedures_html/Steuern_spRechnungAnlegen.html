@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steuern.spRechnungAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Steuern.spRechnungAnlegen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Steuern.spRechnungAnlegen
+    @AuftragKey AS INT,
+    @Rechnungen Steuern.TYPE_spRechnungAnlegen READONLY,
+    @RechnungLieferscheinPositionen Steuern.TYPE_spRechnungAnlegenLieferscheinPositionen READONLY,
+    @UstId AS NVARCHAR(25),
+    @BenutzerKey AS INT,
+    @Korrekturoptionen AS INT, --KorrigierenKorrekturdatum = 0, KorrigierenBelegdatum = 1
+    @RechnungMapping XML OUTPUT,
+    @RechnungPositionMapping XML OUTPUT
+AS
+BEGIN
+	IF(NOT EXISTS (SELECT * FROM @Rechnungen))
+	BEGIN
+	    RETURN;
+	END
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungMapping;
+	END
+	
+	CREATE TABLE #TempRechnungMapping
+	(
+	    kRechnung INT PRIMARY KEY NOT NULL,
+	    kNewRechnung INT NOT NULL
+	);
+	
+	MERGE INTO Rechnung.tRechnung AS Ziel
+	USING (SELECT 0 AS DummyKey,
+	              @BenutzerKey AS kBenutzer,
+	              tRechnung.kRechnung,
+	              tRechnung.kKunde,
+	              &#39;&#39; AS cRechnungsnr,
+	              IIF(@Korrekturoptionen = 0, GETDATE(), tRechnung.dErstellt) AS dErstellt,
+	              IIF(@Korrekturoptionen = 0, GETDATE(), tRechnung.dValutadatum) AS dValutadatum,
+	              tRechnung.cKundennr,
+	              tRechnung.cKundengruppe,
+	              tRechnung.kKundengruppe,
+	              tRechnung.cFirma,
+	              tRechnung.kFirmaHistory,
+	              tRechnung.nZahlungszielTage,
+	              tRechnung.fSkonto,
+	              tRechnung.nSkontoInTage,
+	              tRechnung.nMahnstop,
+	              tRechnung.nStatus,
+	              tRechnung.cVersandlandISO,
+	              tRechnung.cVersandlandBundeslandkuerzel,
+	              tRechnung.cVersandlandWaehrung,
+	              tRechnung.fVersandlandWaehrungsfaktor,
+	              tRechnung.cWaehrung,
+	              tRechnung.fWaehrungsfaktor,
+	              tRechnung.kZahlungsart,
+	              tRechnung.cZahlungsart,
+	              tRechnung.kSprache,
+	              tRechnung.kFarbe,
+	              tRechnung.nSteuereinstellung,
+	              @UstId AS cUstId,
+	              tRechnung.nIstExterneRechnung,
+	              tRechnung.nExistierendeRechnungDrucken,
+	              tRechnung.nArchiv,
+	              tRechnung.cVersandart,
+	              tRechnung.dLeistungsdatum,
+	              tRechnung.kPlattform,
+	              tRechnung.cExterneAuftragsnummer,
+	              tRechnung.kVersandArt,
+	              tRechnung.nIstProforma,
+	              0 AS nStorno,
+	              0 AS nIstEntwurf,
+	              tRechnung.cKundeUstId,
+	              tRechnung.kShop,
+	              tRechnung.cEbayUsername,
+	              tRechnung.nDebitorennr,
+	              GETDATE() AS dErstelltWawi,
+	              0 AS nRechnungStatus
+	       FROM Rechnung.tRechnung
+	       JOIN @Rechnungen ON [@Rechnungen].kRechnung = tRechnung.kRechnung) AS Quelle
+	    ON (Quelle.DummyKey = Ziel.kRechnung)
+	WHEN NOT MATCHED
+	    THEN INSERT (kBenutzer,
+	                kKunde,
+	                cRechnungsnr,
+	                dErstellt,
+	                dValutadatum,
+	                cKundennr,
+	                cKundengruppe,
+	                kKundengruppe,
+	                cFirma,
+	                kFirmaHistory,
+	                nZahlungszielTage,
+	                fSkonto,
+	                nSkontoInTage,
+	                nMahnstop,
+	                nStatus,
+	                cVersandlandISO,
+	                cVersandlandBundeslandkuerzel,
+	                cVersandlandWaehrung,
+	                fVersandlandWaehrungsfaktor,
+	                cWaehrung,
+	                fWaehrungsfaktor,
+	                kZahlungsart,
+	                cZahlungsart,
+	                kSprache,
+	                kFarbe,
+	                nSteuereinstellung,
+	                cUstId,
+	                nIstExterneRechnung,
+	                nExistierendeRechnungDrucken,
+	                nArchiv,
+	                cVersandart,
+	                dLeistungsdatum,
+	                nRechnungStatus,
+	                kPlattform,
+	                cExterneAuftragsnummer,
+	                kVersandArt,
+	                nIstProforma,
+	                nStorno,
+	                nIstEntwurf,
+	                cKundeUstId,
+	                kShop,
+	                cEbayUsername,
+	                nDebitorennr,
+	                dErstelltWawi)
+	        VALUES (Quelle.kBenutzer,
+	                Quelle.kKunde,
+	                Quelle.cRechnungsnr,
+	                Quelle.dErstellt,
+	                Quelle.dValutadatum,
+	                Quelle.cKundennr,
+	                Quelle.cKundengruppe,
+	                Quelle.kKundengruppe,
+	                Quelle.cFirma,
+	                Quelle.kFirmaHistory,
+	                Quelle.nZahlungszielTage,
+	                Quelle.fSkonto,
+	                Quelle.nSkontoInTage,
+	                Quelle.nMahnstop,
+	                Quelle.nStatus,
+	                Quelle.cVersandlandISO,
+	                Quelle.cVersandlandBundeslandkuerzel,
+	                Quelle.cVersandlandWaehrung,
+	                Quelle.fVersandlandWaehrungsfaktor,
+	                Quelle.cWaehrung,
+	                Quelle.fWaehrungsfaktor,
+	                Quelle.kZahlungsart,
+	                Quelle.cZahlungsart,
+	                Quelle.kSprache,
+	                Quelle.kFarbe,
+	                Quelle.nSteuereinstellung,
+	                Quelle.cUstId,
+	                Quelle.nIstExterneRechnung,
+	                Quelle.nExistierendeRechnungDrucken,
+	                Quelle.nArchiv,
+	                Quelle.cVersandart,
+	                Quelle.dLeistungsdatum,
+	                Quelle.nRechnungStatus,
+	                Quelle.kPlattform,
+	                Quelle.cExterneAuftragsnummer,
+	                Quelle.kVersandArt,
+	                Quelle.nIstProforma,
+	                Quelle.nStorno,
+	                Quelle.nIstEntwurf,
+	                Quelle.cKundeUstId,
+	                Quelle.kShop,
+	                Quelle.cEbayUsername,
+	                Quelle.nDebitorennr,
+	                Quelle.dErstelltWawi)
+	        OUTPUT Quelle.kRechnung, Inserted.kRechnung INTO #TempRechnungMapping(kRechnung, kNewRechnung);
+	
+	DECLARE @RechnungKey AS INT
+	DECLARE @NeueNummer NVARCHAR(100)
+	DECLARE @FirmaKey INT
+	
+	DECLARE Rechnung_CURSOR CURSOR LOCAL FAST_FORWARD
+	FOR
+	SELECT DISTINCT #TempRechnungMapping.kNewRechnung, tFirmaHistory.kFirma
+	FROM #TempRechnungMapping
+	JOIN Rechnung.tRechnung ON tRechnung.kRechnung = #TempRechnungMapping.kNewRechnung
+	JOIN dbo.tFirmaHistory ON tFirmaHistory.kFirmaHistory = tRechnung.kFirmaHistory
+	OPEN Rechnung_CURSOR
+	FETCH NEXT FROM Rechnung_CURSOR INTO @RechnungKey, @FirmaKey
+	
+	WHILE @@FETCH_STATUS = 0
+	BEGIN 
+	    EXECUTE dbo.spGetNextNummer 
+	        @cName = &#39;Rechnung&#39;, 
+	        @kFirma = @FirmaKey, 
+	        @nNoUpdate = 0, 
+	        @cNeueNummer = @NeueNummer OUTPUT
+	    
+	    UPDATE Rechnung.tRechnung
+	    SET tRechnung.cRechnungsnr = @NeueNummer
+	    WHERE tRechnung.kRechnung = @RechnungKey
+	
+	    FETCH NEXT FROM Rechnung_CURSOR INTO @RechnungKey, @FirmaKey
+	END
+	
+	CLOSE Rechnung_CURSOR
+	DEALLOCATE Rechnung_CURSOR
+	
+	INSERT INTO Verkauf.tAuftragRechnung(kAuftrag, kRechnung)
+	SELECT @AuftragKey, #TempRechnungMapping.kNewRechnung
+	FROM #TempRechnungMapping
+	
+	INSERT INTO Rechnung.tRechnungAdresse
+	(
+	    kRechnung,
+	    kKunde,
+	    cFirma,
+	    cAnrede,
+	    cTitel,
+	    cVorname,
+	    cName,
+	    cStrasse,
+	    cPLZ,
+	    cOrt,
+	    cLand,
+	    cTel,
+	    cZusatz,
+	    cAdresszusatz,
+	    cPostID,
+	    cMobil,
+	    cMail,
+	    cFax,
+	    cBundesland,
+	    cISO,
+	    nZolldokumenteErforderlich,
+	    nTyp
+	)
+	SELECT #TempRechnungMapping.kNewRechnung AS kRechnung,
+	       tRechnungAdresse.kKunde,
+	       tRechnungAdresse.cFirma,
+	       tRechnungAdresse.cAnrede,
+	       tRechnungAdresse.cTitel,
+	       tRechnungAdresse.cVorname,
+	       tRechnungAdresse.cName,
+	       tRechnungAdresse.cStrasse,
+	       tRechnungAdresse.cPLZ,
+	       tRechnungAdresse.cOrt,
+	       tRechnungAdresse.cLand,
+	       tRechnungAdresse.cTel,
+	       tRechnungAdresse.cZusatz,
+	       tRechnungAdresse.cAdresszusatz,
+	       tRechnungAdresse.cPostID,
+	       tRechnungAdresse.cMobil,
+	       tRechnungAdresse.cMail,
+	       tRechnungAdresse.cFax,
+	       tRechnungAdresse.cBundesland,
+	       tRechnungAdresse.cISO,
+	       tRechnungAdresse.nZolldokumenteErforderlich,
+	       tRechnungAdresse.nTyp
+	FROM Rechnung.tRechnungAdresse
+	JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tRechnungAdresse.kRechnung
+	
+	INSERT INTO Rechnung.tRechnungZahlungsinfo
+	(
+	    kRechnung,
+	    cKontoInhaber,
+	    cBankname,
+	    cIBAN,
+	    cBIC,
+	    cPuiZahlungsinfo,
+	    nTyp,
+	    dFaelligkeitsdatum,
+	    cVerwendungszweck,
+	    cReferenzEmail,
+	    cMandatsReferenz,
+	    cEndToEndID,
+	    cGlaeubigerID
+	)
+	SELECT #TempRechnungMapping.kNewRechnung AS kRechnung,
+	       tRechnungZahlungsinfo.cKontoInhaber,
+	       tRechnungZahlungsinfo.cBankname,
+	       tRechnungZahlungsinfo.cIBAN,
+	       tRechnungZahlungsinfo.cBIC,
+	       tRechnungZahlungsinfo.cPuiZahlungsinfo,
+	       tRechnungZahlungsinfo.nTyp,
+	       tRechnungZahlungsinfo.dFaelligkeitsdatum,
+	       tRechnungZahlungsinfo.cVerwendungszweck,
+	       tRechnungZahlungsinfo.cReferenzEmail,
+	       tRechnungZahlungsinfo.cMandatsReferenz,
+	       tRechnungZahlungsinfo.cEndToEndID,
+	       tRechnungZahlungsinfo.cGlaeubigerID
+	FROM Rechnung.tRechnungZahlungsinfo
+	JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tRechnungZahlungsinfo.kRechnung
+	
+	INSERT INTO Rechnung.tRechnungText
+	(
+	    kRechnung,
+	    cRechnungstext,
+	    cAnmerkung,
+	    cHinweis
+	)
+	SELECT #TempRechnungMapping.kNewRechnung AS kRechnung,
+	       tRechnungText.cRechnungstext,
+	       tRechnungText.cAnmerkung,
+	       tRechnungText.cHinweis
+	FROM Rechnung.tRechnungText
+	JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tRechnungText.kRechnung
+	
+	INSERT INTO Rechnung.tRechnungFile
+	(
+	    kRechnung,
+	    kFile,
+	    kBenutzer,
+	    cFilename,
+	    nDokumentTyp
+	)
+	SELECT #TempRechnungMapping.kNewRechnung AS kRechnung,
+	       tRechnungFile.kFile,
+	       tRechnungFile.kBenutzer,
+	       tRechnungFile.cFilename,
+	       tRechnungFile.nDokumentTyp
+	FROM Rechnung.tRechnungFile
+	JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tRechnungFile.kRechnung
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungPositionMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungPositionMapping;
+	END
+	
+	CREATE TABLE #TempRechnungPositionMapping
+	(
+	    kRechnungPosition INT PRIMARY KEY NOT NULL,
+	    kNewRechnungPosition INT NOT NULL
+	);
+	
+	MERGE INTO Rechnung.tRechnungPosition AS Ziel
+	USING (SELECT 0 AS DummyKey,
+	              tRechnungPosition.kRechnungPosition,
+	              #TempRechnungMapping.kNewRechnung AS kRechnung,
+	              tRechnungPosition.kAuftrag,
+	              tRechnungPosition.kAuftragPosition,
+	              tRechnungPosition.kArtikel,
+	              tRechnungPosition.cArtNr,
+	              tRechnungPosition.cName,
+	              tRechnungPosition.cEinheit,
+	              tRechnungPosition.fAnzahl,
+	              tRechnungPosition.fMwSt,
+	              tRechnungPosition.fVkNetto,
+	              tRechnungPosition.fRabatt,
+	              tRechnungPosition.nType,
+	              tRechnungPosition.kKonfigVaterRechnungPos,
+	              tRechnungPosition.kStuecklisteRechnungPos,
+	              tRechnungPosition.fGewicht,
+	              tRechnungPosition.fVersandgewicht,
+	              tRechnungPosition.fEkNetto,
+	              tRechnungPosition.nSort,
+	              tRechnungPosition.kSteuerschluessel,
+	              tRechnungPosition.kSteuerklasse,
+	              tRechnungPosition.fWertNettoGesamtFixiert,
+	              tRechnungPosition.fWertBruttoGesamtFixiert
+	       FROM Rechnung.tRechnungPosition
+	       JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tRechnungPosition.kRechnung) AS Quelle
+	ON (Quelle.DummyKey = Ziel.kRechnungPosition)
+	WHEN NOT MATCHED
+	    THEN INSERT (kRechnung,
+	                kAuftrag,
+	                kAuftragPosition,
+	                kArtikel,
+	                cArtNr,
+	                cName,
+	                cEinheit,
+	                fAnzahl,
+	                fMwSt,
+	                fVkNetto,
+	                fRabatt,
+	                nType,
+	                kKonfigVaterRechnungPos,
+	                kStuecklisteRechnungPos,
+	                fGewicht,
+	                fVersandgewicht,
+	                fEkNetto,
+	                nSort,
+	                kSteuerschluessel,
+	                kSteuerklasse,
+	                fWertNettoGesamtFixiert,
+	                fWertBruttoGesamtFixiert)
+	    VALUES (Quelle.kRechnung,
+	            Quelle.kAuftrag,
+	            Quelle.kAuftragPosition,
+	            Quelle.kArtikel,
+	            Quelle.cArtNr,
+	            Quelle.cName,
+	            Quelle.cEinheit,
+	            Quelle.fAnzahl,
+	            Quelle.fMwSt,
+	            Quelle.fVkNetto,
+	            Quelle.fRabatt,
+	            Quelle.nType,
+	            Quelle.kKonfigVaterRechnungPos,
+	            Quelle.kStuecklisteRechnungPos,
+	            Quelle.fGewicht,
+	            Quelle.fVersandgewicht,
+	            Quelle.fEkNetto,
+	            Quelle.nSort,
+	            Quelle.kSteuerschluessel,
+	            Quelle.kSteuerklasse,
+	            Quelle.fWertNettoGesamtFixiert,
+	            Quelle.fWertBruttoGesamtFixiert)
+	    OUTPUT Quelle.kRechnungPosition, Inserted.kRechnungPosition INTO #TempRechnungPositionMapping(kRechnungPosition, kNewRechnungPosition);
+	
+	UPDATE Rechnung.tRechnungPosition
+	SET tRechnungPosition.kStuecklisteRechnungPos = #TempRechnungPositionMapping.kNewRechnungPosition
+	FROM Rechnung.tRechnungPosition
+	JOIN #TempRechnungPositionMapping ON #TempRechnungPositionMapping.kRechnungPosition = tRechnungPosition.kStuecklisteRechnungPos
+	
+	UPDATE Rechnung.tRechnungPosition
+	SET tRechnungPosition.kKonfigVaterRechnungPos = #TempRechnungPositionMapping.kNewRechnungPosition
+	FROM Rechnung.tRechnungPosition
+	JOIN #TempRechnungPositionMapping ON #TempRechnungPositionMapping.kRechnungPosition = tRechnungPosition.kKonfigVaterRechnungPos
+	
+	INSERT INTO Rechnung.tRechnungPositionFile
+	(
+	    kRechnungPosition,
+	    kRechnung,
+	    kFile,
+	    kBenutzer,
+	    cFilename
+	)
+	SELECT #TempRechnungPositionMapping.kNewRechnungPosition AS kRechnungPosition,
+	       #TempRechnungMapping.kNewRechnung AS kRechnung,
+	       tRechnungPositionFile.kFile,
+	       tRechnungPositionFile.kBenutzer,
+	       tRechnungPositionFile.cFilename
+	FROM Rechnung.tRechnungPositionFile
+	JOIN #TempRechnungPositionMapping ON #TempRechnungPositionMapping.kRechnungPosition = tRechnungPositionFile.kRechnungPosition
+	JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tRechnungPositionFile.kRechnung
+	
+	INSERT INTO Rechnung.tRechnungPositionText
+	(
+	    kRechnungPosition,
+	    cHinweis
+	)
+	SELECT #TempRechnungPositionMapping.kNewRechnungPosition AS kRechnungPosition,
+	       tRechnungPositionText.cHinweis 
+	FROM Rechnung.tRechnungPositionText
+	JOIN #TempRechnungPositionMapping ON #TempRechnungPositionMapping.kRechnungPosition = tRechnungPositionText.kRechnungPosition
+	
+	INSERT INTO Rechnung.tRechnungPositionEigenschaft
+	(
+	    kEigenschaftWert,
+	    kRechnungPosition,
+	    kEigenschaft,
+	    fAufpreisNetto,
+	    fZusatzgewicht,
+	    cWert,
+	    cName
+	)
+	SELECT tRechnungPositionEigenschaft.kEigenschaftWert,
+	       #TempRechnungPositionMapping.kNewRechnungPosition AS kRechnungPosition,
+	       tRechnungPositionEigenschaft.kEigenschaft,
+	       tRechnungPositionEigenschaft.fAufpreisNetto,
+	       tRechnungPositionEigenschaft.fZusatzgewicht,
+	       tRechnungPositionEigenschaft.cWert,
+	       tRechnungPositionEigenschaft.cName
+	FROM Rechnung.tRechnungPositionEigenschaft
+	JOIN #TempRechnungPositionMapping ON #TempRechnungPositionMapping.kRechnungPosition = tRechnungPositionEigenschaft.kRechnungPosition
+	
+	INSERT INTO Rechnung.tRechnungLieferscheinPosition
+	(
+	    kRechnungPosition,
+	    kLieferscheinPosition,
+	    fAnzahlAufRechnung
+	)
+	SELECT #TempRechnungPositionMapping.kNewRechnungPosition,
+	       [@RechnungLieferscheinPositionen].kLieferscheinPosition,
+	       [@RechnungLieferscheinPositionen].fAnzahlAufRechnung
+	FROM @RechnungLieferscheinPositionen
+	JOIN #TempRechnungPositionMapping ON #TempRechnungPositionMapping.kRechnungPosition = [@RechnungLieferscheinPositionen].kRechnungPosition
+	
+	DECLARE @RechnungenEckdaten Rechnung.TYPE_spRechnungEckdatenBerechnen
+	
+	INSERT INTO @RechnungenEckdaten(kRechnung)
+	SELECT #TempRechnungMapping.kNewRechnung 
+	FROM #TempRechnungMapping
+	
+	EXECUTE Rechnung.spRechnungEckdatenBerechnen @Rechnungen = @RechnungenEckdaten
+	
+	SET @RechnungMapping = (
+	    SELECT
+	        #TempRechnungMapping.kRechnung,
+	        #TempRechnungMapping.kNewRechnung
+	    FROM #TempRechnungMapping
+	    FOR XML PATH(&#39;RechnungMapping&#39;), ROOT(&#39;RechnungMappings&#39;)
+	)
+	
+	SET @RechnungPositionMapping = (
+	    SELECT
+	        #TempRechnungPositionMapping.kRechnungPosition,
+	        #TempRechnungPositionMapping.kNewRechnungPosition
+	    FROM #TempRechnungPositionMapping
+	    FOR XML PATH(&#39;RechnungPositionMapping&#39;), ROOT(&#39;RechnungPositionMappings&#39;)
+	)
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungMapping;
+	END
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungPositionMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungPositionMapping;
+	END
+END</code></pre>
+</body>
+</html>

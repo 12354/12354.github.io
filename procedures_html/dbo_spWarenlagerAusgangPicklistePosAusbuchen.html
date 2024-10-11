@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWarenlagerAusgangPicklistePosAusbuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWarenlagerAusgangPicklistePosAusbuchen</h1>
+    <p><strong>Description:</strong> Über die Stored Procedure werden automatisch Positionen von einer Picklisten ausgebucht.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>--- 
+--- dbo.spWarenlagerAusgangPicklistePosAusbuchen
+---
+
+CREATE PROCEDURE [dbo].[spWarenlagerAusgangPicklistePosAusbuchen]
+@xPicklistePos XML = NULL,
+@kPicklistePos INT = NULL,
+@cKommentar NVARCHAR(255) = NULL,
+@kBenutzer INT = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	IF(OBJECT_ID(&#39;tempdb..#Pickpositionen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Pickpositionen;
+	END
+	CREATE TABLE #Pickpositionen(
+		kPickpos INT NOT NULL,
+		kBenutzer INT NOT NULL,
+		cKommentar VARCHAR(255) NULL
+	);
+	IF(@xPicklistePos IS NOT NULL)
+	BEGIN
+		INSERT INTO #Pickpositionen(kPickpos, kBenutzer, cKommentar)
+			SELECT DISTINCT ParamValues.ID.value(&#39;kPicklistePos[1]&#39;, &#39;NVARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kBenutzer[1]&#39;, &#39;NVARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;cKommentar[1]&#39;, &#39;NVARCHAR(255)&#39;)
+				FROM @xPicklistePos.nodes(&#39;/Pickposition&#39;) AS ParamValues(ID)
+	END
+	ELSE
+	BEGIN
+		INSERT INTO #Pickpositionen(kPickpos, kBenutzer, cKommentar)
+			VALUES(@kPicklistePos, @kBenutzer, @cKommentar)
+	END
+	IF(NOT EXISTS(SELECT * FROM #Pickpositionen))
+	BEGIN
+		RAISERROR(N&#39;Aufruf dbo.spWarenlagerAusgangPicklistePos ohne korrekte Parameter&#39;,15,1);
+		RETURN;
+	END 
+	IF(EXISTS(SELECT #Pickpositionen.kPickpos 
+				FROM #Pickpositionen 
+				WHERE #Pickpositionen.kPickpos NOT IN (SELECT kPickpos FROM dbo.tPicklistePos)))
+	BEGIN
+		RAISERROR(N&#39;Aufruf dbo.spWarenlagerAusgangPicklistePos mit ung&#252;ltiger Pickposition&#39;, 15,1);
+		RETURN;
+	END 
+	IF(EXISTS(SELECT #Pickpositionen.kPickpos
+				FROM #Pickpositionen
+				WHERE #Pickpositionen.kBenutzer NOT IN(SELECT kBenutzer FROM eazybusiness.dbo.tbenutzer)))
+	BEGIN
+		RAISERROR(N&#39;Aufruf dbo.spWarenLagerAusgangPicklistePos mit ung&#252;ltigem Benutzer&#39;, 15,1);
+		RETURN;
+	END
+	DECLARE @xWarenlagerAusgaenge XML;
+	SET @xWarenlagerAusgaenge = (
+		SELECT dbo.tPicklistePos.kWarenLagerEingang,
+				dbo.tPicklistePos.kLieferscheinPos,
+				dbo.tPicklistePos.fAnzahl,
+				dbo.tPicklistePos.kWarenlagerPlatz,
+				dbo.tPicklistePos.kArtikel,
+				#Pickpositionen.cKommentar,
+				#Pickpositionen.kBenutzer,
+				31 AS kBuchungsart -- entspricht Minusbuchung WMS
+			FROM #Pickpositionen 
+			JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kPicklistePos = #Pickpositionen.kPickpos
+			FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+		);
+	EXEC spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge;
+END</code></pre>
+</body>
+</html>

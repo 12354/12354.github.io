@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spKundenZusammenfuehren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spKundenZusammenfuehren</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Kunde].[spKundenZusammenfuehren]
+	@kBenutzer INT,
+
+    @idAlterKunde INT,   
+    @idNeuerKunde INT,
+
+	@titelNeuerKunde Nvarchar(64),
+	@anredeNeuerKunde Nvarchar(30),
+	@vornameNeuerKunde Nvarchar(255),
+	@nachnameNeuerKunde Nvarchar(255),
+	@strasseNeuerKunde Nvarchar(255),
+	@ortNeuerKunde Nvarchar(255),
+	@plzNeuerKunde Nvarchar(24),
+	@bundeslandNeuerKunde Nvarchar(255),
+	@landNeuerKunde Nvarchar(255),
+	@telefonNeuerKunde Nvarchar(30),
+	@faxNeuerKunde Nvarchar(30),
+	@mobilNeuerKunde Nvarchar(30),
+	@mailNeuerKunde Nvarchar(255),
+	
+	@adresszusatzNeuerKunde Nvarchar(255),
+	@firmaNeuerKunde Nvarchar(128),
+	@ustNeuerKunde Nvarchar(20),
+	
+	@firmenzusatzNeuerKunde Nvarchar(60),
+	@geburtstagNeuerKunde Nvarchar(10),
+	@herkunftNeuerKunde Nvarchar(255),
+	@websiteNeuerKunde Nvarchar(255),
+	@kundenNrNeuerKunde Nvarchar(30),
+	@Ergebnis INT OUT -- Prozedur gibt f&#252;r fehler 0 und f&#252;r erfolg 1 zur&#252;ck
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+-- Funktion: Diese Prozedur f&#252;hrt Kunden zusammen. 
+
+	BEGIN TRY
+		BEGIN TRANSACTION
+
+		IF(@idAlterKunde &gt; 0)
+		BEGIN
+			-- check ob es f&#252;r beide Kunden einen registrierten Shop account gibt
+			DECLARE @kundenAccountsImSelbenShopCount int
+			SET @kundenAccountsImSelbenShopCount = (SELECT COUNT(*) FROM dbo.tInetKundeShop as neuerIks
+				JOIN dbo.tInetKundeShop AS alterIks ON neuerIks.kShop = alterIks.kShop
+				WHERE neuerIks.kKunde = @idNeuerKunde AND neuerIks.nRegistriert = 1 AND alterIks.kKunde = @idAlterKunde AND alterIks.nRegistriert = 1)
+			IF (@kundenAccountsImSelbenShopCount &gt; 0)
+				THROW 1, &#39;Beide Kunden sind im gleichen Shop registriert&#39;, 1
+	
+			-- check ob das FFN zusammenfuehren erlaubt
+			DECLARE @ffnUserCount int
+			SET @ffnUserCount = (SELECT COUNT(*) FROM FulfillmentNetwork.tFulfillerEinstellungen WHERE kKunde IN (@idNeuerKunde, @idAlterKunde));
+			IF(@ffnUserCount &gt; 1)
+				THROW 1, &#39;Beide Kunden sind FFN Kunden&#39;, 1
+		END		
+
+		DECLARE @MyCursor CURSOR;
+		DECLARE @AktuelleAdresse INT;
+		DECLARE @typeAdresse AS TYPE_spAdresseUpdate;
+
+		IF(@idAlterKunde &gt; 0)
+		BEGIN
+			SET @MyCursor = CURSOR FOR
+				-- standard rechnungs-adresse des alten kunden deaktivieren
+				SELECT dbo.tAdresse.kAdresse
+				FROM dbo.tAdresse
+				WHERE dbo.tAdresse.kKunde = @idAlterKunde
+				AND dbo.tAdresse.nTyp = 1
+				AND dbo.tAdresse.nStandard = 1
+
+			OPEN @MyCursor; 
+			FETCH NEXT FROM @MyCursor 
+			INTO @AktuelleAdresse;
+
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+				INSERT INTO @typeAdresse 
+							(
+								kAdresse,
+								nStandard
+							)
+					SELECT @AktuelleAdresse as kAdresse,
+							0 as nStandard
+				EXEC dbo.spAdresseUpdate @typeAdresse;
+
+				FETCH NEXT FROM @MyCursor INTO @AktuelleAdresse;
+			END;
+
+			delete from @typeAdresse;
+		END;
+
+		BEGIN
+			SET @MyCursor = CURSOR FOR
+				-- standard rechnungsadresse des neuen kunden anpassen
+				SELECT dbo.tAdresse.kAdresse
+				FROM dbo.tAdresse
+				WHERE dbo.tAdresse.kKunde = @idNeuerKunde
+				AND dbo.tAdresse.nTyp = 1
+				AND dbo.tAdresse.nStandard = 1
+
+			OPEN @MyCursor; 
+			FETCH NEXT FROM @MyCursor 
+			INTO @AktuelleAdresse;
+
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+				INSERT INTO @typeAdresse 
+							(
+								kAdresse,
+								cTitel,
+								cAnrede,
+								cVorname,
+								cName,
+								cStrasse,
+								cOrt,
+								cPLZ,
+								cBundesland,
+								cLand,
+								cTel,
+								cFax,
+								cMobil,
+								cMail,
+								cAdressZusatz,
+								cFirma,
+								cUstId,
+								cZusatz
+							)
+					SELECT @AktuelleAdresse as kAdresse,
+							@titelNeuerKunde as cTitel,
+							@anredeNeuerKunde as cAnrede,
+							@vornameNeuerKunde as cVorname,
+							@nachnameNeuerKunde as cName,
+							@strasseNeuerKunde as cStrasse,
+							@ortNeuerKunde as cOrt,
+							@plzNeuerKunde as cPLZ,
+							@bundeslandNeuerKunde as cBundesland,
+							@landNeuerKunde as cLand,
+							@telefonNeuerKunde as cTel,
+							@faxNeuerKunde as cFax,
+							@mobilNeuerKunde as cMobil,
+							@mailNeuerKunde as cMail,
+	
+							@adresszusatzNeuerKunde as cAdressZusatz,
+							@firmaNeuerKunde as cFirma,
+							@ustNeuerKunde as cUstId,
+	
+							@firmenzusatzNeuerKunde as cZusatz
+				EXEC dbo.spAdresseUpdate @typeAdresse;
+
+				FETCH NEXT FROM @MyCursor INTO @AktuelleAdresse;
+			END;
+
+			delete from @typeAdresse;
+		END;
+
+		IF(@idAlterKunde &gt; 0)
+		BEGIN
+			SET @MyCursor = CURSOR FOR
+				-- standard rechnungs-adresse des alten kunden deaktivieren
+				SELECT dbo.tAdresse.kAdresse
+				FROM dbo.tAdresse
+				WHERE dbo.tAdresse.kKunde = @idAlterKunde
+
+			OPEN @MyCursor; 
+			FETCH NEXT FROM @MyCursor 
+			INTO @AktuelleAdresse;
+
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+				INSERT INTO @typeAdresse 
+							(
+								kAdresse,
+								kKunde
+							)
+					SELECT @AktuelleAdresse as kAdresse,
+							@idNeuerKunde as kKunde;
+				EXEC dbo.spAdresseUpdate @typeAdresse;
+
+				FETCH NEXT FROM @MyCursor INTO @AktuelleAdresse;
+			END;
+
+			delete from @typeAdresse;
+		END;
+
+		CLOSE @MyCursor;
+		DEALLOCATE @MyCursor;
+
+		--Standardlieferadresse = neuste Lieferadresse
+		DECLARE @idStandardLieferadresse int = (SELECT MAX(kAdresse) FROM dbo.tAdresse WHERE kKunde = @idNeuerKunde AND nTyp = 0 AND nStandard = 1)
+		UPDATE tAdresse SET nStandard = 0 WHERE kKunde = @idNeuerKunde AND nTyp = 0 AND nStandard = 1 AND kAdresse &lt;&gt; @idStandardLieferadresse;
+
+		IF(@idAlterKunde &gt; 0)
+		BEGIN
+			-- Ticketsystem updaten
+			UPDATE Ticketsystem.tTicket
+			SET Ticketsystem.tTicket.kKunde = @idNeuerKunde
+			WHERE Ticketsystem.tTicket.kKunde = @idAlterKunde;
+
+			-- FFN updaten
+			UPDATE FulfillmentNetwork.tFulfillerEinstellungen
+			SET FulfillmentNetwork.tFulfillerEinstellungen.kKunde = @idNeuerKunde
+			WHERE FulfillmentNetwork.tFulfillerEinstellungen.kKunde = @idAlterKunde;
+
+			-- ansprechpartner updaten
+			UPDATE dbo.tansprechpartner
+			SET dbo.tansprechpartner.kKunde = @idNeuerKunde
+			WHERE dbo.tansprechpartner.kKunde = @idAlterKunde;
+
+			-- kontodaten updaten
+			UPDATE dbo.tkontodaten
+			SET dbo.tkontodaten.kKunde = @idNeuerKunde
+			WHERE dbo.tkontodaten.kKunde = @idAlterKunde;
+
+			-- historien updaten
+			UPDATE Kunde.tHistorie
+			SET Kunde.tHistorie.kKunde = @idNeuerKunde
+			WHERE Kunde.tHistorie.kKunde = @idAlterKunde;
+
+			-- notizen updaten
+			UPDATE Kunde.tNotiz
+			SET Kunde.tNotiz.kKunde = @idNeuerKunde
+			WHERE Kunde.tNotiz.kKunde = @idAlterKunde;
+
+			-- Auftr&#228;ge updaten
+			-- Auftagkeys des alten Kunden werden in eine TempTable gespeichert
+			IF(OBJECT_ID(&#39;tempdb..#tmp_auftraege&#39;) IS NOT NULL)
+			BEGIN	  
+			   DROP TABLE #tmp_auftraege;
+			END;
+
+			SELECT kAuftrag INTO #tmp_auftraege 
+			FROM Verkauf.tAuftrag    
+			WHERE kKunde = @idAlterKunde;
+			
+			UPDATE Verkauf.tAuftrag
+			SET Verkauf.tAuftrag.kKunde = @idNeuerKunde
+			WHERE Verkauf.tAuftrag.kKunde = @idAlterKunde;
+
+			DECLARE @AuftragCursor CURSOR;
+			DECLARE @AuftragKey INT;
+			DECLARE @Auftrag [Verkauf].[TYPE_spAuftragEckdatenBerechnen]
+
+			SET @AuftragCursor = CURSOR FOR			
+				SELECT kAuftrag FROM #tmp_auftraege
+
+			OPEN @AuftragCursor; 
+			FETCH NEXT FROM @AuftragCursor 
+			INTO @AuftragKey;
+
+			-- F&#252;r alle Auftr&#228;ge des alten Kunden Eckdaten neu berechnen
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+				INSERT INTO @Auftrag SELECT @AuftragKey
+				EXEC [Verkauf].[spAuftragEckdatenBerechnen]  @Auftrag;
+				FETCH NEXT FROM @AuftragCursor INTO @AuftragKey;
+			END;
+			
+			CLOSE @AuftragCursor;
+			DEALLOCATE @AuftragCursor;
+
+			IF(OBJECT_ID(&#39;tempdb..#tmp_auftraege&#39;) IS NOT NULL)
+			BEGIN	  
+			   DROP TABLE #tmp_auftraege;
+			END;
+
+			-- gutscheine updaten
+			UPDATE dbo.tGutschein
+			SET dbo.tGutschein.kKunde = @idNeuerKunde
+			WHERE dbo.tGutschein.kKunde = @idAlterKunde;
+
+			-- gutschriften updaten
+			UPDATE dbo.tgutschrift
+			SET dbo.tgutschrift.kKunde = @idNeuerKunde
+			WHERE dbo.tgutschrift.kKunde = @idAlterKunde;
+
+			-- shop-kunden updaten
+			UPDATE dbo.tInetKundeShop
+			SET dbo.tInetKundeShop.kKunde = @idNeuerKunde
+			WHERE dbo.tInetKundeShop.kKunde = @idAlterKunde;
+
+			-- nachrichten updaten
+			UPDATE dbo.tMessages
+			SET dbo.tMessages.kKunde = @idNeuerKunde
+			WHERE dbo.tMessages.kKunde = @idAlterKunde;
+
+			-- rechnungen updaten
+			UPDATE Rechnung.tRechnung
+			SET Rechnung.tRechnung.kKunde = @idNeuerKunde
+			WHERE Rechnung.tRechnung.kKunde = @idAlterKunde;
+
+			-- retouren updaten
+			UPDATE dbo.tRMRetoure
+			SET dbo.tRMRetoure.kKunde = @idNeuerKunde
+			WHERE dbo.tRMRetoure.kKunde = @idAlterKunde;
+
+			-- retoure-AbholAdresse updaten
+			UPDATE dbo.tRMRetoureAbholAdresse
+			SET dbo.tRMRetoureAbholAdresse.kKunde = @idNeuerKunde
+			WHERE dbo.tRMRetoureAbholAdresse.kKunde = @idAlterKunde;
+
+		END
+
+		-- neuen kunden bearbeiten
+		DECLARE @typeKundeUpdate AS TYPE_spKundeUpdate;
+		INSERT INTO @typeKundeUpdate (kKunde, cGeburtstag, cHerkunft, cWWW, cKundenNr)
+		SELECT @idNeuerKunde as kKunde, @geburtstagNeuerKunde as cGeburtstag, @herkunftNeuerKunde as cHerkunft, @websiteNeuerKunde as cWWW, @kundenNrNeuerKunde as cKundenNr
+		EXEC Kunde.spKundeUpdate @typeKundeUpdate, @kBenutzer;
+
+		IF(@idAlterKunde &gt; 0)
+		BEGIN
+			-- alten kunden per sp entfernen
+			DECLARE @KundenToDeleteTemp AS [Maintenance].[TYPE_spKundenDatenDelete]
+			INSERT INTO @KundenToDeleteTemp (kKunde, nObfuskieren) SELECT @idAlterKunde, 0 AS nObfuskieren;		      
+			EXEC [Maintenance].[spKundenDatenDelete] @KundenToDeleteTemp;
+		END
+		
+		COMMIT;
+
+		SET @Ergebnis = 1;
+		
+	END TRY
+	
+	BEGIN CATCH
+		IF @@TRANCOUNT&gt; 0 -- falls fehler aufgetreten sind, rollback ausf&#252;hren
+		BEGIN
+			ROLLBACK;
+		END;
+
+		DECLARE @ErrorMessage NVARCHAR(4000);
+		DECLARE @ErrorSeverity INT;
+		DECLARE @ErrorState INT;
+
+		SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+		INSERT INTO dbo.tLog (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+	    VALUES (GETDATE(),  0,   @ErrorMessage,   97,  1);
+
+		SET @Ergebnis = 0;
+
+	END CATCH</code></pre>
+</body>
+</html>

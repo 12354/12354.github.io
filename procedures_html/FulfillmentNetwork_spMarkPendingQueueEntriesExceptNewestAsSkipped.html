@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spMarkPendingQueueEntriesExceptNewestAsSkipped</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spMarkPendingQueueEntriesExceptNewestAsSkipped</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE FulfillmentNetwork.spMarkPendingQueueEntriesExceptNewestAsSkipped
+    @targetParam INT,
+    @roleParam INT,
+    @kBenutzer INT,
+    @cSessionId VARCHAR(100),
+    @nLogLevel tinyint
+    AS
+BEGIN
+	--Creating a Temp Table for LogData
+CREATE TABLE #UpdatedData(kQueue INT NOT NULL, cFfnId VARCHAR(255) NOT NULL)
+
+-- Update set pending queue entries except newest as skipped
+UPDATE [FulfillmentNetwork].[tQueue]
+SET nState = 5 -- QueueState.Skipped	
+    OUTPUT -- Write Updated Data in Temp table
+    Inserted.kQueue,
+    Inserted.cFfnId
+INTO #UpdatedData
+FROM
+    [FulfillmentNetwork].[tQueue] AS Q
+    JOIN
+    (SELECT cFfnId, MAX(kQueue) AS kkey FROM [FulfillmentNetwork].[tQueue]
+    WHERE
+    nState = 2 AND -- QueueState.Waiting
+    nTarget = @targetParam  AND
+    nRole = @roleParam
+    GROUP BY cFfnId HAVING COUNT(cFfnId) &gt; 1) AS T ON Q.cFfnId = T.cFfnId AND Q.kQueue &lt;&gt; T.kkey
+WHERE
+    Q.nState = 2 AND -- QueueState.Waiting
+    Q.nTarget = @targetParam AND
+    Q.nRole = @roleParam
+
+DECLARE @updatedFfnId VARCHAR(255);
+	DECLARE @updatedCount INT;
+	DECLARE updatedData_cursor SCROLL CURSOR FOR
+SELECT cFfnId, COUNT(*) AS updatedCount
+FROM #UpdatedData
+GROUP BY cFfnId
+    FOR READ ONLY
+
+         -- open cursor
+    OPEN updatedData_cursor;
+
+-- loop through a cursor
+FETCH FIRST FROM updatedData_cursor INTO @updatedFfnId, @updatedCount;
+WHILE @@FETCH_STATUS = 0
+BEGIN	
+
+DECLARE @message VARCHAR(255);
+SET @message = &#39;Es wurden &#39;+ CONVERT(varchar(12), @updatedCount) +&#39; Eintr&#228;ge zu der FfnId &#39;&#39;&#39;+ CONVERT(varchar(12), @updatedFfnId) +&#39;&#39;&#39; in tUpdateQueue als &#39;&#39;Skipped&#39;&#39; markiert, da ein aktuellerer Eintrg vorliegt.&#39;;
+
+DECLARE @FulfillmentLogDaten AS FulfillmentNetwork.TYPE_spFulfillmentLogSchreiben				
+INSERT INTO @FulfillmentLogDaten
+SELECT
+    @kBenutzer,
+    GETDATE() AS dTimestamp,
+    @cSessionId AS cSessionId,
+    @nLogLevel AS nLogLevel,
+    1 AS [nMessageSource],
+		0 AS [kLieferant],
+		0 AS [kLieferschein],
+		0 AS [kArtikelHistory],
+		0 AS [kWarenlager],
+		0 AS [kBestellung],
+		0 AS [kLieferantenBestellung],
+		0 AS [kFulfillmentAuftrag],
+		0 AS [kArtikel],
+		@message AS [cMessage],
+		NULL AS cRequestId,
+		0 AS kKunde,
+		NULL AS cMessageDetails
+                
+		EXEC FulfillmentNetwork.spFulfillmentLogSchreiben @FulfillemntLogDaten = @FulfillmentLogDaten, @kVorgang = 0
+				
+		FETCH NEXT FROM updatedData_cursor INTO @updatedFfnId, @updatedCount;
+END;
+CLOSE updatedData_cursor;
+DEALLOCATE updatedData_cursor;
+END</code></pre>
+</body>
+</html>

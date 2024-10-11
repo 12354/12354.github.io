@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artikel.spAktualisiereVarkombivater</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Artikel.spAktualisiereVarkombivater</h1>
+    <p><strong>Description:</strong> Die Procedure berechnet den fEKNetto eines Varkombivaters aus den Daten der Kinder.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Artikel.spAktualisiereVarkombivater
+    @Artikel TYPE_spAktualisiereVarkombivater READONLY
+AS
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+    DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+    --IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+    SET CONTEXT_INFO @MyContextInfo;
+DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+        -- Start vom Code
+		
+			DECLARE @Result TABLE (kArtikel INT NOT NULL, fEkNetto DECIMAL(28,15) NOT NULL, cLagerAktiv CHAR(1) NOT NULL);
+			INSERT INTO @Result (kArtikel, fEkNetto, cLagerAktiv)
+			SELECT [@Artikel].kArtikel, Werte.fEkNetto, Werte.cLagerAktiv
+			FROM @Artikel
+			CROSS APPLY (
+				SELECT 
+					-- Durschnittseinkaufspreis des Vater aktualisieren
+					ISNULL(SUM(Kinder.fEkNetto) / CONVERT(DECIMAL(28, 15), COUNT(*)),0.0) AS fEKNetto,
+					-- Wenn mind. ein Kind Lageraktiv ist wird der Vater auch Lageraktiv
+					ISNULL(MAX(Kinder.cLagerAktiv),&#39;N&#39;) AS cLagerAktiv
+				FROM dbo.tArtikel AS Kinder WHERE Kinder.kVaterArtikel = [@Artikel].kArtikel
+			) AS Werte(fEKNetto, cLagerAktiv)
+			
+			DECLARE @Lagerbestand AS TYPE_spUpdateLagerbestand;
+			UPDATE 
+				dbo.tArtikel
+			SET
+				fEKNetto = [@Result].fEkNetto,
+				cLagerAktiv = [@Result].cLagerAktiv
+			OUTPUT INSERTED.kArtikel INTO @Lagerbestand
+			FROM 
+				dbo.tArtikel
+			JOIN @Result ON [@Result].kArtikel = tArtikel.kArtikel	
+			WHERE tArtikel.fEKNetto != [@Result].fEkNetto OR tArtikel.cLagerAktiv != [@Result].cLagerAktiv
+	
+			IF (@@ROWCOUNT &gt; 0)
+			BEGIN
+				-- wir aktualisieren hier auch Varkombiv&#228;ter bei denen sich nur der fEkNetto ge&#228;ndert hat, damit leben wir an dieser Stelle
+				EXEC dbo.spUpdateLagerbestand @Artikel = @Lagerbestand;
+			END
+			
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH
+ 
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH</code></pre>
+</body>
+</html>

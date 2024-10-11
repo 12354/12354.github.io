@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spSplitPicklisteByLieferschein</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spSplitPicklisteByLieferschein</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden Picklisten zu Lieferscheinen gesplittet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spSplitPicklisteByLieferschein]
+	@kLieferschein INT,
+	@kPickliste INT
+
+AS
+
+	DECLARE @nRet INT;
+	DECLARE @kArtikelOld INT;
+	DECLARE @nAnzahlLieferscheinPos DECIMAL(25,5);
+	DECLARE @TempPickPos INT;
+	DECLARE @TempMenge DECIMAL(25,5);
+	DECLARE @kPickposAktuell  INT;
+	DECLARE @fAnzahlPickposAktuell DECIMAL(25,5);
+	DECLARE @kBestellPosOld INT;
+	DECLARE @kBestellungNow INT;
+	DECLARE @kNewPickPos INT;
+	DECLARE @kLieferscheinPos INT;
+
+BEGIN
+
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+	SET @nRet = 0;
+
+
+	--
+	-- Die Pickpositionen zwischenspeichern. 
+	--
+	SELECT * INTO #TempPickpos  
+	FROM dbo.tPicklistePos
+	WHERE dbo.tpicklistePos.kPickliste = @kPickliste
+     AND dbo.tpicklistepos.nStatus &gt;= 30 AND dbo.tpicklistepos.nStatus &lt; 40
+
+	--
+	-- &#220;ber alle Bestellpositionen in dem Lieferschein vorkommen
+	--
+	DECLARE cur_GetBestellPosFromLieferschein CURSOR LOCAL FAST_FORWARD FOR   
+	SELECT Verkauf.tAuftragPosition.kAuftragPosition, tLieferscheinPos.fAnzahl, tLieferscheinPos.kLieferscheinPos
+	FROM Verkauf.tAuftragPosition
+	JOIN dbo.tLieferscheinPos ON tLieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+    WHERE tLieferscheinPos.kLieferschein = @kLieferschein
+	ORDER BY Verkauf.tAuftragPosition.kAuftragPosition, Verkauf.tAuftragPosition.fAnzahl DESC;
+
+	
+	
+	--
+	-- Geht alle Bestellpositionen durch und sucht die entsprechenden Mengen in den Pickpositionen. Die gefunden Pickpos werden evtl. gesplittet 
+	--
+	OPEN cur_GetBestellPosFromLieferschein    
+	FETCH NEXT FROM cur_GetBestellPosFromLieferschein INTO  @kBestellPosOld,@nAnzahlLieferscheinPos, @kLieferscheinPos
+	WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+	BEGIN
+
+
+
+	WHILE (@nAnzahlLieferscheinPos &gt; 0)
+	BEGIN
+	  
+		SET @kPickposAktuell = 0;
+		SET @TempPickPos = 0;
+		SET @TempMenge = 0;
+	  
+		SELECT TOP 1 @kPickposAktuell = tPicklistePos.kPicklistePos, @fAnzahlPickposAktuell = tPicklistePos.fAnzahl
+		FROM #TempPickpos tpicklistePos
+		WHERE tPicklistePos.kBestellPos = @kBestellPosOld
+		AND tPicklistePos.fAnzahl &gt; 0
+		ORDER BY  CASE WHEN fAnzahl = @nAnzahlLieferscheinPos THEN 0 ELSE 1 END,
+				CASE WHEN fAnzahl &lt; @nAnzahlLieferscheinPos THEN 0 ELSE 1 END,
+				 tPicklistePos.fAnzahl;
+
+		IF(@kPickposAktuell = 0 OR (@TempPickPos = @kPickposAktuell AND @TempMenge = @fAnzahlPickposAktuell))
+		BEGIN
+			SET @nAnzahlLieferscheinPos =  0;
+		END
+		ELSE
+		BEGIN
+		 
+			-- zum vermeiden von endlosschleifen
+			SET @TempPickPos = @kPickposAktuell;
+			SET @TempMenge = @fAnzahlPickposAktuell;
+		 
+			IF (@fAnzahlPickposAktuell &lt;= @nAnzahlLieferscheinPos)
+			BEGIN
+		    
+				SET @nAnzahlLieferscheinPos = @nAnzahlLieferscheinPos - @fAnzahlPickposAktuell;
+		      
+				
+				UPDATE dbo.tPicklistePos
+				SET kLieferscheinPos = @kLieferscheinPos
+				WHERE dbo.tPicklistePos.kPicklistePos = @kPickposAktuell;
+
+				DELETE FROM #TempPickpos
+				WHERE kPicklistePos = @kPickposAktuell;
+		    
+			END
+		ELSE
+			BEGIN
+		    
+				EXEC WMS.spPicklistePosSplitten
+				@kPicklistePos = @kPickposAktuell,
+				@nMenge = @nAnzahlLieferscheinPos,
+				@kNewPicklistePos = @kNewPickPos OUTPUT,
+				@nRet = @nRet OUTPUT;
+   		
+				UPDATE dbo.tPicklistePos
+				SET kLieferscheinPos = @kLieferscheinPos
+				WHERE dbo.tPicklistePos.kPicklistePos = @kNewPickPos;
+			 
+				UPDATE #TempPickpos SET fAnzahl = fAnzahl - @nAnzahlLieferscheinPos
+				WHERE kPicklistePos = @kPickposAktuell;
+			
+				SET @nAnzahlLieferscheinPos = 0;
+		    
+			END
+		END
+	END
+    
+	
+	FETCH NEXT FROM cur_GetBestellPosFromLieferschein INTO  @kBestellPosOld,@nAnzahlLieferscheinPos, @kLieferscheinPos
+	END;
+	CLOSE cur_GetBestellPosFromLieferschein;
+	DEALLOCATE cur_GetBestellPosFromLieferschein;
+
+END;</code></pre>
+</body>
+</html>

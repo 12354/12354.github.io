@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPlatzWarenlagerUmbuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPlatzWarenlagerUmbuchen</h1>
+    <p><strong>Description:</strong> Die Stored Procedure ruft dbo.spPlatzUmbuchen auf, kann aber zusätzlich auch warenlagerübergreifende Aktionen vornehmen.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPlatzWarenlagerUmbuchen]
+@kArtikel INT,
+@fAnzahl DECIMAL(25,13),
+@kWarenlagerPLatzNeu INT,
+@kWarenlagerPlatzAlt INT,
+@cKommentar NVARCHAR(255),
+@kBuchungsart INT,
+@kBenutzer INT,
+@kLHMNeu INT = NULL,
+@kLHMAlt INT = NULL,
+@dMhd DATETIME = NULL,
+@cChargenNr NVARCHAR(255) = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @kWarenlagerAlt INT;
+	DECLARE @kWarenlagerNeu INT;
+	SELECT @kWarenlagerAlt = WarenlagerPlatz.kWarenLager FROM dbo.tWarenLagerPlatz AS WarenlagerPlatz WHERE WarenlagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatzAlt;
+	SELECT @kWarenlagerNeu = WarenlagerPlatz.kWarenLager FROM dbo.tWarenLagerPlatz AS WarenlagerPlatz WHERE WarenlagerPlatz.kWarenLagerPlatz = @kWarenlagerPLatzNeu;
+	BEGIN TRY
+	IF(@kWarenlagerAlt = @kWarenlagerNeu)
+		BEGIN
+			EXEC dbo.spPlatzUmbuchen @kArtikel, @fAnzahl, @kWarenlagerPLatzNeu, @kWarenlagerPlatzAlt,@cKommentar,@kBuchungsart,@kBenutzer,@kLHMNeu,@kLHMAlt,@dMhd,@cChargenNr;		
+		END
+		ELSE		
+		BEGIN
+			IF ((SELECT COUNT(*)
+				FROM dbo.tliefartikel	AS LieferantenArtikel
+				-- Artikel, welche &#252;ber das JTL-Fulfillment Network verschickt werden, haben einen FulfillmentNetwork.tProductRef Eintrag
+				JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = LieferantenArtikel.tArtikel_kArtikel
+				-- Ist es ein Fremdartikel, welchen ich als Fulfillment Dienstleister einlager, ist mein Fulfillment-Kunde als Lieferant mit nJTLFulfillment angelegt
+				JOIN dbo.tlieferant		AS Lieferant			ON Lieferant.kLieferant = LieferantenArtikel.tLieferant_kLieferant AND LieferantenArtikel.tArtikel_kArtikel = @kArtikel AND Lieferant.nJtlFulfillment = 1) &gt; 0) 
+			BEGIN
+				RAISERROR(&#39;203000901&#39;,15,1, N&#39;JTL-Fulfillment Network Artikel k&#246;nnen nicht in ein anderes Lager umgelagert werden.&#39;);
+			END
+
+			EXEC dbo.spPlatzUmbuchen @kArtikel, @fAnzahl, @kWarenlagerPLatzNeu, @kWarenlagerPlatzAlt,@cKommentar,@kBuchungsart,@kBenutzer,@kLHMNeu,@kLHMAlt,@dMhd,@cChargenNr;
+			UPDATE tlagerbestandProLagerLagerartikel SET fBestand = fBestand - @fAnzahl WHERE kArtikel =  @kArtikel AND kWarenlager = @kWarenlagerAlt
+			UPDATE tlagerbestandProLagerLagerartikel SET fBestand = fBestand + @fAnzahl WHERE kArtikel =  @kArtikel AND kWarenlager = @kWarenlagerNeu
+		END
+	END TRY
+		BEGIN CATCH	
+			DECLARE @errorMessage Nvarchar(256) = ERROR_MESSAGE();
+			DECLARE @severity INT = ERROR_SEVERITY();
+			DECLARE @errorState INT = ERROR_STATE();
+			RAISERROR ( @errorMessage, @severity,@errorState );
+		END CATCH		
+END</code></pre>
+</body>
+</html>

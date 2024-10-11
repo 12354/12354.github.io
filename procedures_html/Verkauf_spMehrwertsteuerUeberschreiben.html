@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verkauf.spMehrwertsteuerUeberschreiben</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Verkauf.spMehrwertsteuerUeberschreiben</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Verkauf].[spMehrwertsteuerUeberschreiben]
+@AuftragKey INT,
+@MwStSatzAlt DECIMAL(28,14),
+@MwStSatzNeu DECIMAL(28,14),
+@BruttoNeuRechnen INT
+AS
+BEGIN
+
+IF EXISTS(
+	SELECT 1
+	FROM Verkauf.tAuftragEckdaten
+	WHERE tAuftragEckdaten.kAuftrag = @AuftragKey AND tAuftragEckdaten.nRechnungStatus &gt; 0
+)
+BEGIN
+	RAISERROR (N&#39;Der Auftrag wurde bereits abgerechnet. Die &#196;nderung der Mehrwertsteuer ist nicht mehr m&#246;glich.&#39;, 18, 1);
+	RETURN;
+END
+
+IF(@BruttoNeuRechnen = 1)
+BEGIN
+	UPDATE Verkauf.tAuftragPosition
+	SET fMwSt = @MwStSatzNeu
+	WHERE tAuftragPosition.kAuftrag = @AuftragKey AND tAuftragPosition.fMwSt = @MwStSatzAlt
+END
+ELSE
+BEGIN
+	UPDATE Verkauf.tAuftragPosition
+	SET fVkNetto = tAuftragPosition.fVkNetto * (@MwStSatzAlt / 100 + 1.0) / (@MwStSatzNeu / 100 + 1.0),
+		fMwSt = @MwStSatzNeu
+	WHERE tAuftragPosition.kAuftrag = @AuftragKey AND tAuftragPosition.fMwSt = @MwStSatzAlt
+END
+
+--Eckdaten neu berechnen
+DECLARE @Auftrag Verkauf.TYPE_spAuftragEckdatenBerechnen
+
+INSERT INTO @Auftrag (kAuftrag)
+VALUES(@AuftragKey)
+
+EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag
+
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spEazyShippingVerpackTest</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spEazyShippingVerpackTest</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spEazyShippingVerpackTest]
+@kWarenlager INT = 9,
+@RollbackNachVerpacken TINYINT = 1,
+@AnzahlLetzterBestellungenZumVerpacken INT = 200
+
+--
+-- Die SP Verpackt die letzten @AnzahlLetzterBestellungenZumVerpacken von Eazyshipping Bestellungen im Warenlager @kWarenlager. PL m&#252;&#223;en vorhanden sein.
+-- !!! DIESE SP WIRD DARF NICHT PRODUKTIV VERDENDET !!!!
+--
+
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @kAuftrag INT;
+DECLARE @kPickliste INT;
+DECLARE @TimeStamp DATETIME = GETDATE();
+DECLARE @dStartTime DATETIME;
+DECLARE @dEndTime DATETIME;
+DECLARE @nAnzahlWMSPackItem INT;
+DECLARE @nAnzahlWarenlagerAusgaenge INT;
+DECLARE @nAnzahlWMSPackItemData INT = 0;
+DECLARE @dTimeStamp DATETIME = GETDATE();
+
+BEGIN 
+
+	DBCC FREEPROCCACHE;
+
+	IF(object_id(&#39;tempdb..#EazyShippingStatistik&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #EazyShippingStatistik;
+	END;
+	CREATE TABLE #EazyShippingStatistik(kBestellung INT,dStartZeit DATETIME, dEndZeit DATETIME, nAnzahlWMSPackItem INT, nAnzahlWMSPackItemData INT, nAnzahlWarenlagerAusgaenge INT);
+
+
+	DECLARE CUR_OffeneAuftraege  CURSOR FAST_FORWARD LOCAL FOR
+	SELECT TOP (@AnzahlLetzterBestellungenZumVerpacken) Verkauf.tAuftrag.kAuftrag , tPicklistePos.kPickliste
+	FROM Verkauf.tAuftrag
+	JOIN dbo.tPicklistePos ON tPicklistePos.kBestellung = Verkauf.tAuftrag.kAuftrag
+	WHERE Verkauf.tAuftrag.nKomplettAusgeliefert = 0
+	AND tPicklistePos.nStatus = 10
+	GROUP BY Verkauf.tAuftrag.kAuftrag , tPicklistePos.kPickliste;
+	
+
+	OPEN CUR_OffeneAuftraege;
+	FETCH NEXT FROM CUR_OffeneAuftraege INTO @kAuftrag,@kPickliste
+
+	WHILE (@@FETCH_STATUS = 0 ) 
+	BEGIN
+
+
+		
+
+		IF(@RollbackNachVerpacken = 1)
+		BEGIN
+			BEGIN TRANSACTION EazyTest;
+		END;
+
+
+		DECLARE CUR_PackItem CURSOR FAST_FORWARD LOCAL FOR 
+		SELECT tPicklistePos.kArtikel, SUM(tPicklistePos.fAnzahl),CASE WHEN tArtikel.nCharge &gt; 0 OR tArtikel.nMHD &gt; 0 THEN 1 ELSE 0 END
+		FROM dbo.tPicklistePos
+		JOIN dbo.tArtikel ON tArtikel.kArtikel = tPicklistePos.kArtikel
+		WHERE tPicklistePos.kPickliste = @kPickliste
+		AND tPicklistePos.kBestellung = @kAuftrag
+		AND tPicklistePos.nStatus = 10
+		GROUP BY tPicklistePos.kArtikel,tPicklistePos.kPickliste,tPicklistePos.kBestellung,tArtikel.nCharge, tArtikel.nMHD 
+
+		DECLARE @kArtikel INT;
+		DECLARE @fMenge INT;
+		DECLARE @dMHD DATETIME;
+		DECLARE @cCharge NVARCHAR(255);
+		DECLARE @kWMSPackItem INT;
+		DECLARE @HasData TINYINT;
+
+
+        OPEN CUR_PackItem;
+        FETCH NEXT FROM CUR_PackItem INTO @kArtikel,@fMenge,@HasData
+        
+        WHILE (@@FETCH_STATUS = 0 ) 
+        BEGIN
+        
+			INSERT INTO dbo.tWMSPackItem (kArtikel, fMenge,kPickliste,kBestellung,kBestellpos,kBestellStueckliste)
+			VALUES (@kArtikel,@fMenge,@kPickliste,@kAuftrag,0,0);
+
+			IF(@HasData = 1)
+			BEGIN
+
+			   SET @kWMSPackItem = SCOPE_IDENTITY();
+
+			   INSERT INTO [dbo].[tWMSPackItemData] ([kWMSPackItem]   ,[cChargenNr] ,[dMHD]   ,[cSerNo]  ,[fMenge])
+			   SELECT @kWMSPackItem,tWarenLagerEingang.cChargenNr,tWarenLagerEingang.dMHD,NULL, SUM(tPicklistePos.fAnzahl)
+			   FROM dbo.tPicklistePos
+			   JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = tPicklistePos.kWarenLagerEingang
+			   WHERE tPicklistePos.kPickliste = @kPickliste
+			   AND tPicklistePos.kBestellung = @kAuftrag
+			   AND tPicklistePos.kArtikel = @kArtikel
+			   AND tPicklistePos.nStatus = 10
+			   GROUP BY tWarenLagerEingang.dMHD,tWarenLagerEingang.cChargenNr;
+			   
+			END;
+
+        
+        FETCH NEXT FROM CUR_PackItem INTO @kArtikel,@fMenge,@HasData
+        END;
+        
+        CLOSE CUR_PackItem;
+        DEALLOCATE CUR_PackItem;
+
+
+
+		SELECT @nAnzahlWMSPackItem = COUNT(*)
+		FROM tWMSPackItem
+		WHERE tWMSPackItem.kPickliste = @kPickliste
+		AND tWMSPackItem.kBestellung = @kAuftrag;
+
+		SELECT @nAnzahlWMSPackItemData = COUNT(*)
+		FROM tWMSPackItemData
+		JOIN tWMSPackItem ON tWMSPackItem.kWMSPackItem = tWMSPackItemData.kWMSPackItem
+		AND tWMSPackItem.kPickliste = @kPickliste
+		AND tWMSPackItem.kBestellung = @kAuftrag;
+
+
+		BEGIN TRY
+
+			SET @dStartTime = GETDATE();
+			DECLARE @nRet INT;
+			EXEC WMS.spWMSVerpackeEazyshipping @kPickliste = @kPickliste,          
+													 @kBenutzer = 1,                     
+													 @kBestellung = @kAuftrag,                   
+													 @dTimestamp = @TimeStamp,
+													 @kWarenlager = @kWarenlager,                   
+													 @cLieferscheinNr = &#39;123&#39;,              
+													 @nVerpackModus = 0,                 
+													 @cKommentar = &#39;EazyShippingVerpackTest&#39;,                   
+													 @nRet = @nRet OUTPUT;                
+		
+
+		END TRY
+		BEGIN CATCH
+			PRINT &#39;ERROR Auftrag : &#39; + CAST(@kAuftrag AS NVARCHAR(55));
+		END CATCH
+
+		SELECT @nAnzahlWarenlagerAusgaenge = COUNT(tWarenLagerAusgang.kWarenLagerAusgang)
+		FROM dbo.tWarenLagerAusgang
+		JOIN dbo.tLieferscheinPos ON tLieferscheinPos.kLieferscheinPos = tWarenLagerAusgang.kLieferscheinPos
+		JOIN dbo.tLieferschein ON tLieferschein.kLieferschein = tLieferscheinPos.kLieferschein
+		WHERE tLieferschein.kBestellung = @kAuftrag;
+		
+		SET @dEndTime = GETDATE();
+
+
+		IF(@RollbackNachVerpacken = 1)
+		BEGIN
+			ROLLBACK TRANSACTION EazyTest;
+		END;
+
+
+		INSERT INTO #EazyShippingStatistik(kBestellung ,dStartZeit , dEndZeit , nAnzahlWMSPackItem, nAnzahlWMSPackItemData, nAnzahlWarenlagerAusgaenge )
+		SELECT @kAuftrag,@dStartTime,@dEndTime,@nAnzahlWMSPackItem, @nAnzahlWMSPackItemData, @nAnzahlWarenlagerAusgaenge;
+
+	FETCH NEXT FROM CUR_OffeneAuftraege INTO @kAuftrag,@kPickliste
+	END;
+
+	CLOSE CUR_OffeneAuftraege;
+	DEALLOCATE CUR_OffeneAuftraege;
+
+	SELECT #EazyShippingStatistik.kBestellung  ,dStartZeit , dEndZeit , nAnzahlWMSPackItem , nAnzahlWMSPackItemData, nAnzahlWarenlagerAusgaenge, DATEDIFF(SECOND,dStartZeit,dEndZeit) AS Sekunden ,DATEDIFF(MILLISECOND,dStartZeit,dEndZeit) AS MilliSec 
+	FROM #EazyShippingStatistik;
+	
+	
+	INSERT INTO  WMS.tStatistikEazyShipping (dTimeStamp , kBestellung  ,dStartZeit , dEndZeit , nAnzahlWMSPackItem , nAnzahlWMSPackItemData , nAnzahlWarenlagerAusgaenge , dSekunden ,dMilliSec )
+	SELECT @dTimeStamp,#EazyShippingStatistik.kBestellung  ,dStartZeit , dEndZeit , nAnzahlWMSPackItem , nAnzahlWMSPackItemData, nAnzahlWarenlagerAusgaenge, DATEDIFF(SECOND,dStartZeit,dEndZeit) AS Sekunden ,DATEDIFF(MILLISECOND,dStartZeit,dEndZeit) AS MilliSec 
+	FROM #EazyShippingStatistik;
+
+
+END;</code></pre>
+</body>
+</html>

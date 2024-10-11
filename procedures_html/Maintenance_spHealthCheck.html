@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spHealthCheck</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spHealthCheck</h1>
+    <p><strong>Description:</strong> Führt einen "HealthCheck" für die eazybusiness durch. Dabei wird das Schema gegen eine Referenz geprüft (DevDB) und es werden diverse Checks für unterschiedlichste Fehler / Probleme mit der DB durchgeführt</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spHealthCheck]
+	@nShowResults AS BIT = 1 -- Am Ende Ergebnisse zur&#252;ckgeben?
+AS
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+/*************************************************************************************************************
+Beschreibung:	F&#252;hrt einen &quot;HealthCheck&quot; f&#252;r die eazybusiness durch.
+                Dabei wird das Schema gegen eine Referenz gepr&#252;ft (DevDB) und es werden diverse Checks
+				f&#252;r unterschiedlichste Fehler / Probleme mit der DB durchgef&#252;hrt
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+EXEC Maintenance.spHealthCheck;
+*************************************************************************************************************/
+
+	BEGIN TRY
+		DECLARE
+			@cMe NVARCHAR(255),
+			@cCR CHAR(2) = CHAR(13) + CHAR(10),
+			@cMsg NVARCHAR(2048),
+			@cModuleName NVARCHAR(255),
+			@nResult INT,
+			@cSql NVARCHAR(MAX);
+
+		-- Error-Handling
+		DECLARE
+			@cErrMsg NVARCHAR(2048), -- RAISERROR-Messages max. 2048 characters
+			@cErrStelle NVARCHAR(255),
+			@nDeadlockRetries TINYINT = 1, -- nur 1x
+			@nErrSeverity TINYINT,
+			@nErrState TINYINT,
+			@cErrProc NVARCHAR(128);
+
+			-------------------------------------------------------------------------------------------------------
+		-- Definition der Severities / Fehler-Status siehe: https://confluence.jtl-software.de/pages/viewpage.action?pageId=93816975
+		DECLARE
+			@SEVERITY_CRITICAL VARCHAR(10) = &#39;1-CRITICAL&#39;,
+			@SEVERITY_HIGH VARCHAR(10) = &#39;2-HIGH&#39;,
+			@SEVERITY_MEDIUM VARCHAR(10) = &#39;3-MEDIUM&#39;,
+			@SEVERITY_INFO VARCHAR(10) = &#39;4-INFO&#39;,
+			@JTL_LINK1 VARCHAR(255) = &#39;https://confluence.jtl-software.de/pages/viewpage.action?pageId=93816975&#39;;
+
+		-- Variablen initialisieren
+		SET @cMe = OBJECT_SCHEMA_NAME(@@PROCID) + &#39;.&#39; + OBJECT_NAME(@@PROCID);
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cME + &#39; (START)&#39;;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-------------------------------------------------------------------------------------------------------
+		-- Inhalt der HealthCheck-Tabelle l&#246;schen (Tabelle enth&#228;lt immer nur Details zum letzten Check)
+		-------------------------------------------------------------------------------------------------------
+		TRUNCATE TABLE Maintenance.tHealthCheck;
+	
+		-------------------------------------------------------------------------------------------------------
+		-- dbo.tOptions - wenn diese Tabelle nicht vorhanden ist, werden alle weiteren Checks abgebrochen
+		-- weil es sich im Normalfall nicht um eine eazybusiness-DB handelt
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;1: dbo.tOptions&#39;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		IF OBJECT_ID(&#39;dbo.tOptions&#39;, &#39;U&#39;) IS NULL
+		BEGIN
+			INSERT INTO Maintenance.tHealthCheck
+						(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektReparatur, cLink)
+			SELECT 
+					@SEVERITY_CRITICAL AS cSchweregrad,
+					N&#39;MISSING_TOPTIONS&#39; AS cFehlercode,
+					@cMe AS cHerkunft,
+					1 AS nCheckID,
+					N&#39;Tabelle dbo.tOptions fehlt - handelt es sich bei der aktuellen DB um eine JTL-DB?&#39; AS cMeldung,
+					N&#39;[dbo].[tOptions]&#39; AS cObjekt,
+					N&#39;[dbo].[tOptions]&#39; AS cBezugsObjekt,
+					N&#39;# Manuelle Reparatur: DB &#252;berpr&#252;fen / dbo.tOptions-Eintr&#228;ge ggf. per Hand nachpflegen #&#39; AS cObjektReparatur,
+					@JTL_LINK1 AS cLink;
+
+			SET @cMsg = &#39;dbo.tOptions fehlt - wahrscheinlich keine eazybusiness-DB!&#39;;
+			RAISERROR (@cMsg, 15, 1);
+		END
+
+		-------------------------------------------------------------------------------------------------------
+		-- Vergleicht das Schema der aktuellen DB mit dem Reference-Schema
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;200: EXEC Maintenance.spHealthCheck_CompareSchema&#39;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		EXEC Maintenance.spHealthCheck_CompareSchema @nHealthCheckCheckID = 200
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;2: INVALID_DB_COLLATION&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_HIGH AS cSchweregrad,
+				N&#39;INVALID_DB_COLLATION&#39; AS cFehlercode,
+				@cMe AS cHerkunft,
+				2 AS nCheckID,
+				N&#39;Die Server-Collation (&#39;&#39;&#39; + CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;)) + N&#39;&#39;&#39;) ist case-sensitive.&#39; AS cMeldung,
+				N&#39;Server-Collation&#39; AS cObjekt,
+				N&#39;DB-Server&#39; AS cBezugsObjekt,
+				CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;)) COLLATE DATABASE_DEFAULT AS cObjektDetailIst,
+				N&#39;Latin1_General_CI_AS&#39; AS cObjektDetailSoll,
+				N&#39;# Server-Collation umstellen, Collation-Reparatur-Script ausf&#252;hren #&#39; AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+
+		WHERE	CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;)) COLLATE DATABASE_DEFAULT NOT LIKE &#39;%_CI%&#39;
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;3: DB_COLLATION&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_HIGH AS ErrorSeverity,
+				N&#39;DB_COLLATION&#39; AS ErrorCode,
+				@cMe AS cHerkunft,
+				3 AS nCheckID,
+				N&#39;Die Datenbank-Kollation (&quot;&#39; + CONVERT(NVARCHAR(255), DATABASEPROPERTYEX(DB_NAME(), &#39;Collation&#39;))
+					+ N&#39;&quot;) von Datenbank &quot;&#39; + DB_NAME() COLLATE DATABASE_DEFAULT
+					+ N&#39;&quot; weicht von der Server-Kollation (&quot;&#39; + CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;))
+					+ N&#39;&quot;) ab&#39; AS cMeldung,
+				DB_NAME() COLLATE DATABASE_DEFAULT AS cObjekt,
+				NULL AS cBezugsObjekt,
+				CONVERT(NVARCHAR(255), DATABASEPROPERTYEX(DB_NAME(), &#39;Collation&#39;)) COLLATE DATABASE_DEFAULT AS cObjektDetailIst,
+				CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;)) COLLATE DATABASE_DEFAULT AS cObjektDetailSoll,
+				N&#39;# Database-Collation umstellen, Collation-Reparatur-Script ausf&#252;hren #&#39; AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+		WHERE	CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;)) COLLATE DATABASE_DEFAULT
+					&lt;&gt; CONVERT(NVARCHAR(255), DATABASEPROPERTYEX(DB_NAME(), &#39;Collation&#39;)) COLLATE DATABASE_DEFAULT
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;4: BROKEN_MODULE&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		DECLARE curCommand CURSOR LOCAL FAST_FORWARD FOR
+		SELECT		QUOTENAME(SCHEMA_NAME(SyObj.schema_id)) + &#39;.&#39; + QUOTENAME(SyObj.name COLLATE DATABASE_DEFAULT) AS cModuleName,
+					N&#39;EXEC sys.sp_refreshsqlmodule &#39;&#39;&#39; + SCHEMA_NAME(SyObj.schema_id)+ &#39;.&#39; + SyObj.name + &#39;&#39;&#39;;&#39; AS cSql
+		FROM		sys.objects AS SyObj
+		LEFT JOIN	sys.sql_modules AS SyMod ON SyMod.object_id = SyObj.object_id
+		WHERE		SyObj.type IN (&#39;V&#39;, &#39;SP&#39;, &#39;FN&#39;, &#39;FS&#39;, &#39;FT&#39;, &#39;IF&#39;, &#39;TF&#39;, &#39;P&#39;) 
+					AND SyObj.is_ms_shipped = 0 
+					AND ISNULL(SyMod.is_schema_bound, 0) = 0
+					AND NOT (QUOTENAME(SCHEMA_NAME(SyObj.schema_id)) = &#39;[Maintenance]&#39; AND QUOTENAME(SyObj.name COLLATE DATABASE_DEFAULT) = &#39;[spHealthCheck]&#39;);
+
+		OPEN curCommand;
+		FETCH NEXT FROM curCommand INTO @cModuleName, @cSql;
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;Checking Module &#39; + @cModuleName;
+			RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+			
+			BEGIN TRY
+				EXEC @nResult = sp_executesql @cSql;
+				IF @nResult &lt;&gt; 0 -- Failure
+				BEGIN
+					SET @cMsg = @cModuleName + &#39; - Refresh failed&#39;
+					RAISERROR (@cMsg, 15, 1);
+				END
+			END TRY
+			BEGIN CATCH
+				INSERT INTO Maintenance.tHealthCheck
+							(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektReparatur, cLink)
+				SELECT		@SEVERITY_CRITICAL AS cSchweregrad,
+							N&#39;BROKEN_MODULE&#39; AS cFehlercode,
+							@cMe AS cHerkunft,
+							4 AS nCheckID,
+							N&#39;SQL-Modul ist nicht mehr g&#252;ltig (Fehler = &#39;&#39;&#39; + ERROR_MESSAGE() + N&#39;&#39;&#39;)&#39; AS cMeldung,
+							@cModuleName AS cObjekt,
+							ERROR_MESSAGE() AS cBezugsObjekt,
+							N&#39;# Entwickler zur L&#246;sung des Problems heranziehen #&#39; + @cCR + @cSql AS cObjektReparatur,
+							@JTL_LINK1 AS cLink;
+				SET @nResult = 0;
+
+			END CATCH
+
+			FETCH NEXT FROM curCommand INTO @cModuleName, @cSql;
+		END
+		CLOSE curCommand;
+		DEALLOCATE curCommand;
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;5: BROKEN_MODULE&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektReparatur, cLink)
+		SELECT
+					@SEVERITY_INFO AS cSchweregrad,
+					N&#39;BROKEN_MODULE&#39; AS cFehlercode,
+					@cMe AS Herkunft,
+					5 AS nCheckID,
+					N&#39;SQL-Modul verweist auf fehlendes Objekt &#39;&#39;&#39; + NN.MissingObject + N&#39;&#39;&#39;. (evtl. funktioniert das SQL-Modul trotzdem oder der Sourcecode erstellt die fehlende Referenz bei der Ausf&#252;hrung)&#39; AS cMeldung,
+					NN.ObjectName AS cObjekt,
+					NN.MissingObject AS cBezugsObjekt,
+					N&#39;# Entwickler zur L&#246;sung des Problems heranziehen #&#39; + @cCR
+						+ CASE WHEN SyObj.type IN (&#39;P&#39;, &#39;FN&#39;, &#39;IF&#39;, &#39;TF&#39;, &#39;TR&#39;, &#39;V&#39;) THEN N&#39;EXEC sys.sp_refreshsqlmodule &#39;&#39;&#39; + NN.ObjectName + N&#39;&#39;&#39;;&#39; ELSE NULL END AS cObjektReparatur,
+					@JTL_LINK1 AS cLink
+
+		FROM		sys.sql_expression_dependencies AS SySED
+		LEFT JOIN	sys.objects AS SyObj ON SySED.referencing_id = SyObj.object_id
+		CROSS APPLY (SELECT	QUOTENAME(OBJECT_SCHEMA_NAME(SySED.referencing_id)) + &#39;.&#39; + QUOTENAME(OBJECT_NAME(SySED.referencing_id)) AS ObjectName,
+							ISNULL(QUOTENAME(referenced_server_name) + &#39;.&#39;, &#39;&#39;)
+								+ ISNULL(QUOTENAME(SySED.referenced_database_name) + &#39;.&#39;, &#39;&#39;)
+								+ ISNULL(QUOTENAME(SySED.referenced_schema_name) + &#39;.&#39;, &#39;&#39;)
+								+ QUOTENAME(SySED.referenced_entity_name) AS MissingObject
+					) AS NN
+		WHERE		SySED.is_ambiguous = 0
+					AND SySED.referenced_entity_name NOT IN (&#39;deleted&#39;, &#39;inserted&#39;) -- Falsch-Positiv-Meldung bei Triggern verhindern
+					AND SySED.referenced_entity_name NOT IN (SELECT SyTp.name FROM sys.types AS SyTp WHERE SyTp.is_user_defined = 1) -- Falsch-Positiv-Meldung bei TableTypes verhindern
+					AND OBJECT_NAME(SySED.referencing_id) NOT IN (&#39;sp_Blitz&#39;, &#39;sp_BlitzFirst&#39;, &#39;sp_BlitzCache&#39;, &#39;sp_BlitzIndex&#39;, &#39;sp_BlitzLock&#39;, &#39;sp_WhoIsActive&#39;, &#39;sp_upgraddiagrams&#39;) -- Falsch-Positiv-Meldung f&#252;r bestimmte SPs verhindern
+					AND OBJECT_ID(ISNULL(QUOTENAME(SySED.referenced_server_name) + &#39;.&#39;, &#39;&#39;) + ISNULL(QUOTENAME(SySED.referenced_database_name) + &#39;.&#39;, &#39;&#39;)
+							+ ISNULL(QUOTENAME(SySED.referenced_schema_name) + &#39;.&#39;, &#39;&#39;) + QUOTENAME(SySED.referenced_entity_name)
+							) IS NULL  -- Referenziertes Objekt nicht vorhanden
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;6: COLUMN_COLLATION&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_HIGH AS cSchweregrad,
+				N&#39;COLUMN_COLLATION&#39; AS cFehlercode,
+				@cMe AS Herkunft,
+				6 AS nCheckID,
+				N&#39;Die Kollation der DB-Spalte &quot;&#39;
+					+ QUOTENAME(OBJECT_SCHEMA_NAME(SyCol.object_id)) + N&#39;.&#39; + QUOTENAME(OBJECT_NAME(SyCol.object_id)) + N&#39;.&#39; + QUOTENAME(SyCol.name)
+					+ N&#39;&quot; weicht von der Server-Kollation &quot;&#39; + CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;))
+					+ N&#39;&quot; ab&#39; AS cMeldung,
+				QUOTENAME(SyCol.name) COLLATE DATABASE_DEFAULT AS cObjekt,
+				QUOTENAME(OBJECT_SCHEMA_NAME(SyCol.object_id)) + N&#39;.&#39; + QUOTENAME(OBJECT_NAME(SyCol.object_id)) AS cBezugsObjekt,
+				SyCol.collation_name COLLATE DATABASE_DEFAULT AS cObjektDetailIst,
+				CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;)) AS cObjektDetailSoll,
+				
+				N&#39;# Entwickler hinzuziehen #&#39; + @cCR
+				+ CASE
+					WHEN SyType.name IN (&#39;char&#39;, &#39;varchar&#39;, &#39;nchar&#39;, &#39;nvarchar&#39;, &#39;text&#39;, &#39;ntext&#39;) THEN
+						N&#39;ALTER TABLE &#39; + QUOTENAME(SCHEMA_NAME(SyTbl.schema_id)) + &#39;.&#39; + QUOTENAME(SyTbl.name COLLATE DATABASE_DEFAULT)
+						+ N&#39; ALTER COLUMN &#39; + QUOTENAME(SyCol.name COLLATE DATABASE_DEFAULT)
+						+ N&#39; &#39; + UPPER(SyType.name COLLATE DATABASE_DEFAULT)
+						+ CASE
+							WHEN SyType.name IN (&#39;char&#39;, &#39;varchar&#39;, &#39;nchar&#39;, &#39;nvarchar&#39;)
+								THEN N&#39;(&#39; + CASE WHEN SyCol.max_length &gt; 0 THEN CAST(SyCol.max_length / CASE WHEN SyType.name IN (&#39;nchar&#39;, &#39;nvarchar&#39;)  THEN 2 ELSE 1 END AS NVARCHAR(20)) ELSE N&#39;MAX&#39; END + N&#39;)&#39;
+							ELSE &#39;&#39;
+						END 
+						+ N&#39; COLLATE DATABASE_DEFAULT&#39;
+						+ N&#39;;&#39;
+					ELSE NULL
+				END AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+		FROM	sys.columns AS SyCol
+		JOIN	sys.tables AS SyTbl ON SyTbl.object_id = SyCol.object_id
+		JOIN	sys.types AS SyType ON SyType.system_type_id = SyCol.system_type_id AND SyType.user_type_id = SyCol.user_type_id
+		WHERE	SyCol.collation_name COLLATE DATABASE_DEFAULT &lt;&gt; CONVERT(NVARCHAR(255), SERVERPROPERTY(&#39;Collation&#39;))
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;7: ANSI_PADDING_COLUMN&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt,
+					cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+					@SEVERITY_MEDIUM AS cSchweregrad,
+					N&#39;ANSI_PADDING_COLUMN&#39; AS cFehlercode,
+					@cMe AS Herkunft,
+					7 AS nCheckID,
+					N&#39;Spalte hat die ung&#252;ltige ANSI PADDING-Einstellung &quot;0&quot;&#39; AS cMeldung,
+					QUOTENAME(SyCol.name COLLATE DATABASE_DEFAULT) AS cObjekt,
+					QUOTENAME(SCHEMA_NAME(SyTbl.schema_id) COLLATE DATABASE_DEFAULT) + &#39;.&#39; + QUOTENAME(SyTbl.name COLLATE DATABASE_DEFAULT) AS cBezugsObjekt,
+					CONVERT(NVARCHAR(10), SyCol.is_ansi_padded) AS cObjektDetailIst,
+					N&#39;1&#39; AS cObjektDetailSoll,
+
+					CASE WHEN SyCol.is_computed = 1 THEN NULL
+					ELSE
+						N&#39;# Entwickler hinzuziehen #&#39; + @cCR
+						+ N&#39;SET ANSI_PADDING ON&#39; + NCHAR(10)
+						+ N&#39;ALTER TABLE &#39; + QUOTENAME(SCHEMA_NAME(SyTbl.schema_id)) + &#39;.&#39; + QUOTENAME(SyTbl.name COLLATE DATABASE_DEFAULT)
+						+ N&#39; ALTER COLUMN &#39; + QUOTENAME(SyCol.name COLLATE DATABASE_DEFAULT)
+						+ N&#39; &#39; + UPPER(SyType.name COLLATE DATABASE_DEFAULT)
+						+ CASE 
+							WHEN SyType.name = &#39;decimal&#39;
+								THEN N&#39;(&#39; + CAST(SyCol.precision AS NVARCHAR(20)) + N&#39;,&#39; + CAST(SyCol.scale AS NVARCHAR(20)) + N&#39;)&#39;
+							WHEN SyType.name IN (&#39;binary&#39;, &#39;varbinary&#39;, &#39;char&#39;, &#39;varchar&#39;, &#39;nchar&#39;, &#39;nvarchar&#39;)
+								THEN N&#39;(&#39; + CASE WHEN SyCol.max_length &gt; 0 THEN CAST(SyCol.max_length / CASE WHEN SyType.name IN (&#39;nchar&#39;, &#39;nvarchar&#39;)  THEN 2 ELSE 1 END AS NVARCHAR(20)) ELSE N&#39;MAX&#39; END + N&#39;)&#39;
+							ELSE &#39;&#39;
+						END 
+					END
+					+ N&#39;;&#39; AS cObjektReparatur,
+					@JTL_LINK1 AS cLink
+		FROM		sys.columns AS SyCol
+		JOIN		sys.tables AS SyTbl ON SyTbl.object_id = SyCol.object_id
+		JOIN		sys.types AS SyType ON SyType.user_type_id = SyCol.user_type_id AND SyType.system_type_id = SyCol.system_type_id
+		WHERE		SCHEMA_NAME(SyTbl.schema_id) NOT IN (&#39;DEV&#39;, &#39;SYS&#39;)
+					AND SyCol.is_ansi_padded = 0
+					AND SyType.name IN (&#39;varchar&#39;, &#39;char&#39;, &#39;nvarchar&#39;, &#39;nchar&#39;, &#39;binary&#39;, &#39;varbinary&#39;)
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;8: MAINTENANCE_CANCELLED&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt,
+					cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_CRITICAL AS cSchweregrad,
+				@cErrStelle AS cFehlercode,
+				@cMe AS cHerkunft,
+				8 AS nCheckID,
+				N&#39;Update oder Wartung wurde abgebrochen&#39; AS cMeldung,
+				N&#39;cKey = &#39;&#39;UpdateGestartet&#39;&#39;&#39; AS cObjekt,
+				N&#39;[dbo].[tOptions]&#39; AS cBezugsObjekt,
+				cValue AS cObjektDetailIst,
+				N&#39;&#39; AS cObjektDetailSoll,
+				N&#39;# Backup einspielen / Entwickler zur L&#246;sung der urspr&#252;nglichen Problems heranziehen #&#39; AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+
+		FROM	dbo.tOptions
+		WHERE	cKey = &#39;UpdateGestartet&#39;
+				AND ISNULL(cValue, &#39;&#39;) &lt;&gt; &#39;&#39;
+
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;9: ANSI_NULL_TABLE&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_MEDIUM AS cSchweregrad,
+				N&#39;ANSI_NULL_TABLE&#39; AS cFehlercode,
+				@cMe AS Herkunft,
+				9 AS nCheckID,
+				N&#39;Tabelle hat die ung&#252;ltige ANSI NULL-Einstellung &quot;0&quot;&#39; AS cMeldung,
+				QUOTENAME(SCHEMA_NAME(SyTbl.schema_id)) + &#39;.&#39; + QUOTENAME(SyTbl.name COLLATE DATABASE_DEFAULT) AS cObjekt,
+				QUOTENAME(SCHEMA_NAME(SyTbl.schema_id)) + &#39;.&#39; + QUOTENAME(SyTbl.name COLLATE DATABASE_DEFAULT) AS cBezugsObjekt,
+				CONVERT(NVARCHAR(10), SyTbl.uses_ansi_nulls) AS cObjektDetailIst,
+				N&#39;0&#39; AS cObjektDetailSoll,
+				N&#39;# Entwickler zu Hilfe rufen #&#39; AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+
+		FROM	sys.tables AS SyTbl
+		WHERE	SCHEMA_NAME(SyTbl.schema_id) NOT IN (&#39;DEV&#39;, &#39;SYS&#39;)
+				AND SyTbl.uses_ansi_nulls = 0
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;10: ANSI_NULL_MODULE&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_MEDIUM AS cSchweregrad,
+				N&#39;ANSI_NULL_MODULE&#39; AS cFehlercode,
+				@cMe AS Herkunft,
+				11 AS nCheckID,
+				N&#39;Das SQL-Modul hat eine ung&#252;ltige ANSI NULL Einstellung&#39; AS cMeldung,
+				QUOTENAME(SCHEMA_NAME(SyObj.schema_id) COLLATE DATABASE_DEFAULT) + &#39;.&#39; + QUOTENAME(SyObj.name COLLATE DATABASE_DEFAULT) AS cObjekt,
+				QUOTENAME(SCHEMA_NAME(SyObj.schema_id) COLLATE DATABASE_DEFAULT) + &#39;.&#39; + QUOTENAME(SyObj.name COLLATE DATABASE_DEFAULT) AS cBezugsObjekt,
+				CONVERT(NVARCHAR(10), SyMod.uses_ansi_nulls) AS cObjektDetailIst,
+				N&#39;1&#39; AS cObjektDetailSoll,
+				N&#39;# Modul neu erstellen #&#39; AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+		FROM	sys.objects AS SyObj
+		JOIN	sys.sql_modules AS SyMod ON SyMod.object_id = SyObj.object_id
+		WHERE	SCHEMA_NAME(SyObj.schema_id) NOT IN (&#39;DEV&#39;, &#39;SYS&#39;)
+				AND SyMod.uses_ansi_nulls = 0
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;12: QUOTED_IDENTIFIER_MODULE&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+				@SEVERITY_MEDIUM AS cSchweregrad,
+				N&#39;ANSI_NULL_MODULE&#39; AS cFehlercode,
+				@cMe AS Herkunft,
+				12 AS nCheckID,
+				N&#39;Das SQL-Modul hat eine ung&#252;ltige QUOTED IDENTIFIER Einstellung&#39; AS cMeldung,
+				QUOTENAME(SCHEMA_NAME(SyObj.schema_id) COLLATE DATABASE_DEFAULT) + &#39;.&#39; + QUOTENAME(SyObj.name COLLATE DATABASE_DEFAULT) AS cObjekt,
+				QUOTENAME(SCHEMA_NAME(SyObj.schema_id) COLLATE DATABASE_DEFAULT) + &#39;.&#39; + QUOTENAME(SyObj.name COLLATE DATABASE_DEFAULT) AS cBezugsObjekt,
+				CONVERT(NVARCHAR(10), SyMod.uses_quoted_identifier) AS cObjektDetailIst,
+				N&#39;1&#39; AS cObjektDetailSoll,
+				N&#39;# Modul neu erstellen #&#39; AS cObjektReparatur,
+				@JTL_LINK1 AS cLink
+		FROM	sys.objects AS SyObj
+		JOIN	sys.sql_modules AS SyMod ON SyMod.object_id = SyObj.object_id
+		WHERE	SCHEMA_NAME(SyObj.schema_id) NOT IN (&#39;DEV&#39;, &#39;SYS&#39;)
+				AND SyMod.uses_quoted_identifier = 0
+
+		-------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = N&#39;13: SP_BLITZ&#39;;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39;CHECK &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Alte Temptable l&#246;schen
+		IF OBJECT_ID(&#39;tempdb.dbo.tBlitzResults&#39;, &#39;U&#39;) IS NOT NULL
+		BEGIN
+		   DROP TABLE tempdb.dbo.tBlitzResults;
+		END
+
+		-- Ausgabe der sp_Blitz-Ergebnisse in Temp-Tabelle
+		SET @cSql = &#39;EXECUTE &#39; + CASE WHEN OBJECT_ID(&#39;DBA.sp_Blitz&#39;, &#39;P&#39;) IS NULL THEN &#39;dbo.&#39; ELSE &#39;DBA.&#39; END
+			+ &#39;sp_Blitz&#39; + @cCR
+			+ &#39;   @CheckServerInfo = 1,&#39; + @cCR
+			+ &#39;   @OutputDatabaseName = &#39;&#39;tempdb&#39;&#39;,&#39; + @cCR
+			+ &#39;   @OutputSchemaName = &#39;&#39;dbo&#39;&#39;,&#39; + @cCR
+			+ &#39;   @OutputTableName = &#39;&#39;tBlitzResults&#39;&#39;,&#39; + @cCR
+			+ &#39;   @OutputType = &#39;&#39;None&#39;&#39;&#39;;
+
+		EXEC @nResult = sp_executesql @cSql;
+
+		INSERT INTO Maintenance.tHealthCheck
+					(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cObjekt, cObjektTyp, cBezugsObjekt,
+					cMeldung, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+		SELECT
+					-- Mit nachfolgendem Code k&#246;nnte man einbauen, wenn bestimmte Meldungen im HealthCheck einen anderen Schweregrad bekommen sollen (aktuell: INFO)
+					/*
+					CASE
+						WHEN T.Priority BETWEEN 0 AND 49 THEN @SEVERITY_HIGH
+						WHEN T.Priority BETWEEN 50 AND 199 THEN @SEVERITY_MEDIUM
+						ELSE @SEVERITY_INFO
+					END AS cSchweregrad,
+					*/
+					@SEVERITY_INFO AS cSchweregrad,
+					N&#39;SP_BLITZ&#39; AS cFehlercode,
+					&#39;dbo.sp_Blitz&#39; AS cHerkunft,
+					T.CheckID AS nCheckID,
+					NULL AS cObjekt,
+					NULL AS cObjektTyp,
+					T.FindingsGroup AS cBezugsObjekt,
+					T.Finding AS cMeldung,
+					T.Details AS cObjektDetailIst,
+					NULL AS cObjektDetailSoll,
+					NULL AS cObjektReparatur,
+					T.URL AS cLink
+
+		FROM		tempdb.dbo.tBlitzResults AS T
+		WHERE		ISNULL(DatabaseName, DB_NAME()) = DB_NAME() -- Allgemeine ~ und Meldungen bezogen auf eazybusiness-DB
+					AND T.CheckID NOT IN (-1, 32, 38, 39, 155, 156, 221) -- Jeder Test bei sp_Blitz hat eine bestimmte CheckID =&gt; bestimmte Tests nicht anzeigen (Details siehe sp_Blitz-Sourcecode)
+
+		-------------------------------------------------------------------------------------------------------
+		IF @nShowResults = 1
+		BEGIN
+			SELECT		*
+			FROM		Maintenance.vHealthCheck AS HC
+			ORDER BY	HC.cSchweregrad, HC.cObjekt, HC.cFehlerCode
+        END
+	END TRY
+
+	BEGIN CATCH
+		SELECT @cErrMsg = ERROR_MESSAGE(), @nErrSeverity = ERROR_SEVERITY(), @nErrState = ERROR_STATE(), @cErrProc = ERROR_PROCEDURE();
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION
+
+        EXEC dbo.spErrorHandler @DeadlockRetries = @nDeadlockRetries OUTPUT;
+
+		SELECT @cErrMsg = QUOTENAME(ISNULL(@cErrProc, &#39;&#39;))
+			+ CASE WHEN ISNULL(@cErrStelle, &#39;&#39;) = &#39;&#39; THEN &#39;&#39; ELSE &#39; [@&#39;+ @cErrStelle +&#39;]&#39; END
+			+ &#39;, Line &#39; + LTRIM(STR(ERROR_LINE())) + &#39;. ErrNo &#39;
+			+ LTRIM(STR(ERROR_NUMBER())) + &#39;: &#39; + ISNULL(@cErrMsg, &#39;&#39;);
+
+		RAISERROR(&#39;%s&#39;, @nErrSeverity, @nErrState,  @cErrMsg)
+		RETURN -ERROR_NUMBER();
+	END CATCH
+
+END</code></pre>
+</body>
+</html>

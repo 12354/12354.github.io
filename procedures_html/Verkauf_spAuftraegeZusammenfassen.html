@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verkauf.spAuftraegeZusammenfassen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Verkauf.spAuftraegeZusammenfassen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Verkauf].[spAuftraegeZusammenfassen]
+	@kAuftragZiel AS INT,
+	@Auftraege AS Verkauf.TYPE_spAuftraegeZusammenfassen READONLY,
+	@doppelteVersandpositionEntfernen AS BIT,
+	@versandkostenfreigrenzeBeachten AS BIT,
+	@unterschiedlichePlattformenIgnorieren AS BIT,
+	@ausgelieferteIgnorieren AS BIT
+
+-- returncodes
+-- 0 - alles ok
+-- 1 - kein Zielauftrag uebergeben
+-- 2 - keine Auftraege uebergeben
+-- 3 - Auftraege nicht zusammenfassbar
+-- 4 - Fehlgeschlagen
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET XACT_ABORT ON;
+
+	-- Zielauftrag uebergeben
+	IF (ISNULL(@kAuftragZiel, 0) &lt;= 0)
+	BEGIN
+		RETURN 1;
+	END
+
+	IF(OBJECT_ID(N&#39;tempdb..#AuftraegeEntfernen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #AuftraegeEntfernen;
+	END
+
+	-- enth&#228;lt zusammenzufassende Auftr&#228;ge ohne den Zielauftrag
+	CREATE TABLE #AuftraegeEntfernen
+	(
+		kAuftrag INT PRIMARY KEY NOT NULL
+	);
+
+	INSERT INTO #AuftraegeEntfernen (kAuftrag)
+	SELECT DISTINCT [@Auftraege].kAuftrag
+	FROM @Auftraege
+	WHERE [@Auftraege].kAuftrag &lt;&gt; @kAuftragZiel
+
+
+	-- keine Auftraege
+	IF NOT EXISTS(SELECT * FROM #AuftraegeEntfernen)
+	BEGIN
+		RETURN 2;
+	END
+
+	-- Ist jeder uebergebene Auftrag in der Liste der zusammenfassbaren Auftraege
+	IF EXISTS
+	(
+		SELECT * FROM #AuftraegeEntfernen
+		LEFT JOIN Verkauf.ifZusammenfassbareAuftraege(@kAuftragZiel, @unterschiedlichePlattformenIgnorieren, @ausgelieferteIgnorieren) AS Zusammenfassbar
+			ON Zusammenfassbar.kAuftrag = #AuftraegeEntfernen.kAuftrag
+		WHERE Zusammenfassbar.kAuftrag IS NULL
+	)
+	BEGIN
+		RETURN 3;
+	END
+
+	BEGIN TRY
+
+		BEGIN TRANSACTION;
+
+		-- Bei eBay-Auftr&#228;gen verschiedener Plattformen als eBay-Auftrag zusammenfassen
+		IF EXISTS
+		(
+			SELECT *
+			FROM Verkauf.tAuftrag AS ZielAuftrag
+			JOIN dbo.tPlattform ON tPlattform.nPlattform = ZielAuftrag.kPlattform
+			WHERE ZielAuftrag.kAuftrag = @kAuftragZiel
+				AND tPlattform.nTyp = 5
+				AND EXISTS
+				(
+					SELECT *
+					FROM #AuftraegeEntfernen
+					JOIN Verkauf.tAuftrag AS subAuftrag ON subAuftrag.kAuftrag = #AuftraegeEntfernen.kAuftrag
+					WHERE subAuftrag.kPlattform &lt;&gt; ZielAuftrag.kPlattform
+				)
+		)
+		BEGIN
+			UPDATE Verkauf.tAuftrag
+			SET tAuftrag.kPlattform = 30
+			WHERE tAuftrag.kAuftrag = @kAuftragZiel;
+		END
+
+		-- Texte zusammenfassen
+		DECLARE @auftragTexteHinweis NVARCHAR(MAX) = NULL;
+		DECLARE @auftragTexteAnmerkung NVARCHAR(MAX) = NULL;
+		DECLARE @auftragTexteDruckText NVARCHAR(MAX) = NULL;
+
+		SELECT
+			@auftragTexteHinweis =
+				CASE
+					WHEN NULLIF(tAuftragText.cHinweis, &#39;&#39;) IS NULL
+						THEN @auftragTexteHinweis
+					WHEN NULLIF(@auftragTexteHinweis, &#39;&#39;) IS NULL
+						THEN tAuftragText.cHinweis
+					ELSE CONCAT(@auftragTexteHinweis, CHAR(13), CHAR(10), tAuftragText.cHinweis)
+				END,
+			@auftragTexteAnmerkung =
+				CASE
+					WHEN NULLIF(tAuftragText.cAnmerkung, &#39;&#39;) IS NULL
+						THEN @auftragTexteAnmerkung
+					WHEN NULLIF(@auftragTexteAnmerkung, &#39;&#39;) IS NULL
+						THEN tAuftragText.cAnmerkung
+					ELSE CONCAT(@auftragTexteAnmerkung, CHAR(13), CHAR(10), tAuftragText.cAnmerkung)
+				END,
+			@auftragTexteDruckText =
+				CASE
+					WHEN NULLIF(tAuftragText.cDrucktext, &#39;&#39;) IS NULL
+						THEN @auftragTexteDruckText
+					WHEN NULLIF(@auftragTexteDruckText, &#39;&#39;) IS NULL
+						THEN tAuftragText.cDrucktext
+					ELSE CONCAT(@auftragTexteDruckText, CHAR(13), CHAR(10), tAuftragText.cDrucktext)
+				END
+		FROM Verkauf.tAuftragText
+		LEFT JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragText.kAuftrag
+		WHERE #AuftraegeEntfernen.kAuftrag IS NOT NULL OR tAuftragText.kAuftrag = @kAuftragZiel;
+
+		-- Upsert Pattern
+		UPDATE Verkauf.tAuftragText WITH (UPDLOCK, SERIALIZABLE)
+		SET cAnmerkung = @auftragTexteAnmerkung,
+			cHinweis = @auftragTexteHinweis,
+			cDrucktext = @auftragTexteDruckText
+		WHERE kAuftrag = @kAuftragZiel;
+
+		IF @@ROWCOUNT = 0
+		BEGIN
+			INSERT Verkauf.tAuftragText (kAuftrag, cAnmerkung, cHinweis, cDruckText)
+			VALUES (@kAuftragZiel, @auftragTexteAnmerkung, @auftragTexteHinweis, @auftragTexteDruckText);
+		END
+
+		DELETE Verkauf.tAuftragText
+		FROM Verkauf.tAuftragText
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragText.kAuftrag;
+
+		-- Historie und Notizen uebernehmen
+		UPDATE Kunde.tHistorie
+		SET tHistorie.kAuftrag = @kAuftragZiel
+		FROM Kunde.tHistorie
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tHistorie.kAuftrag;
+
+		--Rechnungen ebenfalls updaten
+		UPDATE Rechnung.tRechnungPosition
+		SET kAuftrag = @kAuftragZiel
+		FROM Rechnung.tRechnungPosition
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tRechnungPosition.kAuftrag;
+
+		UPDATE Verkauf.tAuftragRechnung
+		SET kAuftrag = @kAuftragZiel
+		FROM Verkauf.tAuftragRechnung
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragRechnung.kAuftrag;
+
+		UPDATE Kunde.tNotiz
+		SET tNotiz.kAuftrag = @kAuftragZiel
+		FROM Kunde.tNotiz
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tNotiz.kAuftrag;
+
+		-- Retouren
+		UPDATE dbo.tRMRetoure
+		SET kBestellung = @kAuftragZiel
+		FROM dbo.tRMRetoure
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tRMRetoure.kBestellung;
+
+		UPDATE dbo.tRMRetoure
+		SET kBestellungUmtausch = @kAuftragZiel
+		FROM dbo.tRMRetoure
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tRMRetoure.kBestellungUmtausch;
+
+		-- Picklisten
+		UPDATE dbo.tPicklistePos
+		SET kBestellung = @kAuftragZiel
+		FROM dbo.tPicklistePos
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tPicklistePos.kBestellung;
+
+		-- Auftragsattribute l&#246;schen
+		DELETE Verkauf.tAuftragAttributSprache
+		FROM Verkauf.tAuftragAttributSprache
+		JOIN Verkauf.tAuftragAttribut ON tAuftragAttribut.kAuftragAttribut = tAuftragAttributSprache.kAuftragAttribut
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragAttribut.kAuftrag;
+
+		DELETE Verkauf.tAuftragAttribut
+		FROM Verkauf.tAuftragAttribut
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragAttribut.kAuftrag;
+
+		-- Anhaenge die noch nicht hinterlegt sind uebernehmen
+		UPDATE Verkauf.tAuftragFile
+		SET tAuftragFile.kAuftrag = @kAuftragZiel
+		WHERE tAuftragFile.kAuftrag IN (SELECT kAuftrag FROM #AuftraegeEntfernen) AND tAuftragFile.kFile NOT IN (SELECT kFile FROM Verkauf.tAuftragFile WHERE kAuftrag = @kAuftragZiel);
+
+		-- Auftragspositionen
+		UPDATE Verkauf.tAuftragPosition
+		SET kAuftrag = @kAuftragZiel
+		FROM Verkauf.tAuftragPosition
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragPosition.kAuftrag;
+
+		-- AuftragPositionIntervall
+		UPDATE Verkauf.tAuftragPositionIntervall
+		SET kAuftrag = @kAuftragZiel
+		FROM Verkauf.tAuftragPositionIntervall
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftragPositionIntervall.kAuftrag;
+
+		-- Picklistenpositionen
+		UPDATE dbo.tPicklistePos
+		SET kBestellung = @kAuftragZiel
+		FROM dbo.tPicklistePos
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tPicklistePos.kBestellung;
+
+		-- Zahlungen
+		UPDATE dbo.tZahlung
+		SET kBestellung = @kAuftragZiel
+		FROM dbo.tZahlung
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tZahlung.kBestellung;
+
+		--Lieferschein
+		UPDATE dbo.tLieferschein
+		SET tLieferschein.kBestellung = @kAuftragZiel
+		FROM dbo.tLieferschein
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tLieferschein.kBestellung;
+
+		-- Versandpositionen verarbeiten
+		IF(@doppelteVersandpositionEntfernen = 1)
+		BEGIN
+			DELETE Verkauf.tAuftragposition
+			FROM Verkauf.tAuftragposition
+			JOIN Verkauf.tAuftragposition AS Vergleich ON Vergleich.kAuftrag = tAuftragposition.kAuftrag AND Vergleich.cName = tauftragposition.cName AND Vergleich.fVkNetto = tauftragposition.fVkNetto AND Vergleich.kAuftragposition &lt; tAuftragposition.kAuftragposition
+			WHERE tAuftragposition.kAuftrag = @kAuftragZiel and tAuftragposition.nType = 2
+		END
+
+		IF NOT EXISTS(SELECT * FROM Verkauf.tAuftrag WHERE tAuftrag.kAuftrag = @kAuftragZiel AND kVersandArt &gt; 0)
+		BEGIN
+			UPDATE Verkauf.tAuftrag
+			SET kVersandart = (
+				SELECT MIN(tAuftrag.kVersandArt)
+				FROM Verkauf.tAuftrag
+				JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftrag.kAuftrag
+				JOIN dbo.tversandart ON tversandart.kVersandArt = tAuftrag.kVersandArt
+				WHERE tAuftrag.kVersandArt &gt; 0 AND tversandart.cAktiv = &#39;Y&#39;)
+			WHERE tAuftrag.kAuftrag = @kAuftragZiel
+		END
+
+		-- Zusatzgewicht
+		UPDATE Verkauf.tAuftrag SET fZusatzGewicht = fZusatzGewicht + AuftragJoin.fZusatzGewichtNeu
+		FROM
+		(
+			SELECT SUM(tAuftrag.fZusatzGewicht) AS fZusatzGewichtNeu
+			FROM Verkauf.tAuftrag
+			JOIN #AuftraegeEntfernen AS Auftraege ON Auftraege.kAuftrag = tAuftrag.kAuftrag
+		) AS AuftragJoin
+		WHERE tAuftrag.kAuftrag = @kAuftragZiel
+
+		-- nSort neu sortieren, Versandpositionen ans Ende
+		UPDATE Verkauf.tAuftragPosition
+		SET nSort = positionen.nSortNeu
+		FROM Verkauf.tAuftragPosition
+		JOIN
+		(
+			SELECT
+				kAuftragPosition,
+				nSort,
+				RANK() OVER (ORDER BY CASE WHEN nType = 2 THEN 1 ELSE 0 END, kAuftragposition) AS nSortNeu
+			FROM Verkauf.tAuftragposition
+			WHERE kAuftrag = @kAuftragZiel
+		) AS positionen ON positionen.kAuftragPosition = tAuftragPosition.kAuftragPosition
+
+		--
+		-- tQueue schreiben
+		--
+
+		-- Ziel WebShop Bestellung (falls vorhanden) updaten
+		INSERT INTO dbo.tQueue(kShop, kPlattform, cName, kWert, nAction, kOption1, kOption2)
+		SELECT
+			tAuftrag.kShop,
+			0,
+			&#39;tBestellung&#39;,
+			tAuftrag.kAuftrag,
+			1,
+			0,
+			0
+		FROM Verkauf.tAuftrag
+		WHERE tAuftrag.kAuftrag = @kAuftragZiel AND tAuftrag.kShopauftrag &gt; 0;
+
+		-- WebShop Bestellung (falls vorhanden) l&#246;schen
+		INSERT INTO dbo.tQueue(kShop, kPlattform, cName, kWert, nAction, kOption1, kOption2)
+		SELECT
+			tAuftrag.kShop,
+			tAuftrag.kPlattform,
+			&#39;tBestellung&#39;,
+			tAuftrag.kShopauftrag,
+			2,
+			0,
+			0
+		FROM #AuftraegeEntfernen AS Auftraege
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = Auftraege.kAuftrag
+		WHERE tAuftrag.kShopauftrag &gt; 0;
+
+		-- zusammengefasste Auftraege loeschen
+		DECLARE @ZusammengefassteAuftraege AS TABLE (kAuftrag INT NOT NULL, cAuftragsNr NVARCHAR(50) NOT NULL)
+
+		INSERT INTO @ZusammengefassteAuftraege (kAuftrag, cAuftragsNr)
+		SELECT DISTINCT tAuftrag.kAuftrag, tAuftrag.cAuftragsNr
+		FROM #AuftraegeEntfernen AS Auftraege
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = Auftraege.kAuftrag
+
+		DELETE Verkauf.tAuftrag
+		FROM Verkauf.tAuftrag
+		JOIN #AuftraegeEntfernen ON #AuftraegeEntfernen.kAuftrag = tAuftrag.kAuftrag;
+
+		-- Eckdaten vom Auftrag neu berechnen
+		DECLARE @Eckdaten AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+
+		INSERT INTO @Eckdaten (kAuftrag)
+		SELECT @kAuftragZiel;
+
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Eckdaten;
+
+		-- Versandkostenfrei-Grenze
+		IF(@versandkostenfreigrenzeBeachten = 1)
+		BEGIN
+			DECLARE @kVersandart INT = 0;
+			SELECT @kVersandart = kVersandart FROM Verkauf.tAuftrag WHERE kAuftrag = @kAuftragZiel;
+
+			IF(@kVersandart &gt; 0)
+			BEGIN
+				DECLARE @fFreigrenze DECIMAL(28, 14) = 0.0;
+				SELECT @fFreigrenze = fVKFreiAB FROM dbo.tVersandart WHERE kVersandart = @kVersandart;
+
+				IF(@fFreigrenze &gt; 0)
+				BEGIN
+					DECLARE @fBruttowert DECIMAL (28, 14) = 0.0;
+					SELECT @fBruttowert = fWertBrutto FROM Verkauf.tAuftragEckdaten WHERE kAuftrag = @kAuftragZiel
+
+					DECLARE @fVersandkosten DECIMAL (28, 14) = 0.0;
+					SELECT @fVersandkosten = SUM(fAnzahl * fVkNetto * ((fMwSt / 100) + 1))
+					FROM Verkauf.tAuftragposition
+					WHERE kAuftrag = @kAuftragZiel AND nType = 2
+
+					IF((@fBruttowert - @fVersandkosten) &gt;= @fFreigrenze)
+					BEGIN
+						-- Versandkosten nullen
+						UPDATE Verkauf.tAuftragposition
+						SET fVkNetto = 0.0
+						WHERE tAuftragposition.kAuftrag = @kAuftragZiel AND nType = 2
+
+						-- Eckdaten neu berechnen
+						EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Eckdaten;
+					END
+				END
+			END
+		END
+
+		-- Eckdaten der Rechnungen neu berechnen
+		DECLARE @RechnungEckdaten AS Rechnung.Type_spRechnungEckdatenBerechnen;
+
+		INSERT INTO @RechnungEckdaten (kRechnung)
+		SELECT kRechnung
+		FROM Verkauf.tAuftragRechnung
+		WHERE kAuftrag = @kAuftragZiel;
+
+		EXEC Rechnung.spRechnungEckdatenBerechnen @Rechnungen = @RechnungEckdaten;
+
+		DECLARE @kBenutzer INT = NULL;
+		SET @kBenutzer = TRY_CAST(SUBSTRING(APP_NAME(), 0, CHARINDEX(&#39; &#39;, APP_NAME())) AS INT);
+
+		INSERT INTO Verkauf.tAuftragMerge_Log (kAuftrag, kAuftragAlt, dMerge, kBenutzer)
+		SELECT @kAuftragZiel, Auftraege.kAuftrag, GETDATE(), ISNULL(@kBenutzer, 0)
+		FROM #AuftraegeEntfernen AS Auftraege
+
+		-- Kundenhistorie schreiben
+		INSERT INTO Kunde.tHistorie (kKunde, kAuftrag, kVorgang, kKey, cValue1, cValue2, cValue3, dErstellt, kBenutzer, fValue1, fValue2)
+		SELECT
+			tZielAuftrag.kKunde,
+			tZielAuftrag.kAuftrag,
+			CASE
+				WHEN tZielAuftrag.nType = 0 THEN 43 --Angebot
+				WHEN tZielAuftrag.nType = 3 THEN 45 --Abonnement
+				ELSE 42 --Auftrag
+			END,
+			AuftragDaten.kAuftrag,
+			tZielAuftrag.cAuftragsNr,
+			AuftragDaten.cAuftragsNr,
+			NULL,
+			GETDATE(),
+			ISNULL(@kBenutzer, 0),
+			NULL,
+			NULL
+		FROM @ZusammengefassteAuftraege AS AuftragDaten
+		JOIN Verkauf.tAuftrag AS tZielAuftrag ON tZielAuftrag.kAuftrag = @kAuftragZiel AND tZielAuftrag.nType IN (0, 1, 3);
+
+
+		COMMIT TRANSACTION;
+
+		RETURN 0;
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT &gt; 0 AND XACT_STATE() &lt;&gt; 0
+			ROLLBACK TRANSACTION;
+		;THROW;
+	END CATCH
+
+	RETURN 4;
+END</code></pre>
+</body>
+</html>

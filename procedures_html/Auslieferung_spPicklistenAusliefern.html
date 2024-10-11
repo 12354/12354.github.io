@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenAusliefern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenAusliefern</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenAusliefern]
+
+-- M&#246;gliche Fehler:
+-- Im Fehlerfall enth&#228;lt der Messagetext XML-Informationen zum Fehler
+-- Code = 50000, Severity = 18, State = 2: Es wurden Pickpositionen &#252;bergeben die bereits ausgeliefert wurden
+-- Code = 50000, Severity = 18, State = 3: Die Anzahl der reservierten Seriennummern stimmt nicht
+-- Code = 50000, Severity = 18, State = 6: Es wurden leere Seriennummern ausgeliefert
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+@xHinweise AS XML,
+-- &lt;Hinweis&gt;
+--   &lt;kBestellPos&gt;5&lt;/kBestellPos&gt;
+--   &lt;cHinweis&gt;blah&lt;/cHinweis&gt;
+-- &lt;/Hinweis&gt;,
+@Pakete XML,
+-- &lt;Paket&gt;
+--   &lt;kBestellung&gt;1&lt;/kBestellung&gt;
+--   &lt;kVersandart&gt;5&lt;/kVersandart&gt;
+--   &lt;dVersanddatum&gt;foobar&lt;/dVersanddatum&gt;
+--   &lt;cTrackingId&gt;trackingid&lt;/cTrackingId&gt;
+--   &lt;cEnclosedReturnIdentCode&gt;enclosedReturnIdentCode&lt;/cEnclosedReturnIdentCode&gt;
+--   &lt;cHinweis&gt;Hinweis&lt;/cHinweis&gt;
+-- &lt;/Paket&gt;
+@nOptions AS INT,
+-- Flags:
+-- 0x0001 Pro lokalem Lager ein einzelner Lieferschein
+-- 0x0002 Versand setzen bei lokalen Lagern
+@kBenutzer AS INT,
+@kSessionId AS INT,
+@xResult XML OUTPUT
+
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spPicklistenAusliefern
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY	
+	DECLARE @xErrorInfo XML;
+	DECLARE @cError VARCHAR(MAX);
+    DECLARE @dNow AS DATETIME;
+    SET @dNow = (SELECT GETDATE());
+	DECLARE @xLieferschein XML;
+	DECLARE @xLieferscheinPos XML;
+	DECLARE @nLieferscheinProLager INT;
+	DECLARE @nVersandSetzen INT;
+
+	SET @nLieferscheinProLager = @nOptions &amp; 0x0001;
+	SET @nVersandSetzen = @nOptions &amp; 0x0002;
+	
+		-- Seriennummern pr&#252;fen
+		SET @xErrorInfo = (
+			SELECT 
+				 tAuftragPosition.kAuftragPosition AS kBestellPos,
+				 tArtikel.kArtikel AS kArtikel,
+				 tPicklistePos.fAnzahl AS fAnzahlPickliste,
+				 ISNULL(Zugeordnet.fAnzahl, 0) AS fAnzahlZugeordnet
+			FROM dbo.tPicklistePos
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tPicklistePos.kBestellPos
+			JOIN dbo.tArtikel ON tArtikel.kArtikel = tPicklistePos.kArtikel
+			JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+			JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = tPicklistePos.kWarenlager
+			LEFT JOIN (
+				SELECT
+					tlagerartikel.kPicklistePos,
+					COUNT(*) AS fAnzahl
+				FROM
+					dbo.tlagerartikel
+				WHERE
+					tlagerartikel.kPicklistePos &gt; 0
+				GROUP BY
+					tlagerartikel.kPicklistePos
+			) AS Zugeordnet ON Zugeordnet.kPicklistePos = tPicklistePos.kPicklistePos
+			WHERE tAuftragPosition.nType IN(1, 17, 18, 19, 20) 
+				AND tArtikel.cLagerArtikel = &#39;Y&#39; 
+				AND tPicklistePos.fAnzahl &lt;&gt; ISNULL(Zugeordnet.fAnzahl, 0) 
+				AND tPickliste.kSessionId = @kSessionId
+				AND (tPickliste.kLieferant IS NULL OR tPickliste.kLieferant = 0)
+				AND tWarenLager.nFulfillment = 0
+			FOR XML PATH(&#39;BrokenSeriennummern&#39;), TYPE
+	   ) 
+	   IF (@xErrorInfo IS NOT NULL)
+	   BEGIN
+		  SET @cError = CAST(@xErrorInfo AS VARCHAR(MAX))
+		  RAISERROR(@cError, 18, 3);
+	   END
+
+	-- Auf leere Seriennummern pr&#252;fen
+	SET @xErrorInfo = (
+		SELECT 
+			dbo.tlagerartikel.kLagerArtikel,
+			dbo.tlagerartikel.kArtikel,
+			dbo.tlagerartikel.cSeriennr
+		FROM dbo.tPicklistePos
+		JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+		JOIN dbo.tlagerartikel ON dbo.tlagerartikel.kPicklistePos = dbo.tPicklistePos.kPicklistePos
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tPicklistePos.kBestellung
+		WHERE ISNULL(dbo.tlagerartikel.cSeriennr, &#39;&#39;) = &#39;&#39; OR dbo.tlagerartikel.cSeriennr = &#39;#$KEINE$#&#39; 
+			AND tAuftrag.nType = 2
+		FOR XML PATH(&#39;LeereSeriennummern&#39;), TYPE
+	) 
+	IF (@xErrorInfo IS NOT NULL)
+	BEGIN
+		SET @cError = CAST(@xErrorInfo AS VARCHAR(MAX))
+		RAISERROR(@cError, 18, 6);
+	END
+	
+	EXEC [Auslieferung].[spPicklistenAusliefern_LokaleLager]
+	   @nLieferscheinProLager = @nLieferscheinProLager,
+	   @kBenutzer = @kBenutzer,
+	   @kSessionId = @kSessionId
+        
+	EXEC [Auslieferung].[spPicklistenAusliefern_Fulfillment]
+	   @kBenutzer = @kBenutzer,
+	   @kSessionId = @kSessionId
+
+	EXEC [Auslieferung].[spPicklistenAusliefern_Dropshipping]
+	   @kBenutzer = @kBenutzer,
+	   @kSessionId = @kSessionId
+	
+	-- Seriennummern ausbuchen
+    UPDATE dbo.tlagerartikel
+    SET
+        tlagerartikel.kBestellPos = tPicklistePos.kBestellPos,
+        tlagerartikel.kLieferscheinPos = tPicklistePos.kLieferscheinPos
+    FROM dbo.tlagerartikel 
+    JOIN dbo.tPicklistePos ON tPicklistePos.kPicklistePos = tlagerartikel.kPicklistePos
+    JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.kSessionId = @kSessionId AND tPickliste.kWarenLager &gt; 0
+      
+	-- Warenlagerausg&#228;nge f&#252;r Lagerartikel schreiben
+	DECLARE @xPicklistePos XML;
+	SET @xPicklistePos = 
+		(
+			SELECT DISTINCT
+				tPicklistePos.kPicklistePos AS kPicklistePos,
+				@kBenutzer AS kBenutzer,
+				CASE WHEN tAuftrag.nType = 2 THEN &#39;Auslieferung Umlagerung&#39; ELSE &#39;Auslieferung&#39; END AS cKommentar
+			FROM dbo.tPicklistePos 
+			JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.kSessionId = @kSessionId AND tPickliste.kWarenLager &gt; 0
+			LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tPicklistePos.kBestellPos
+			LEFT JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragPosition.kAuftrag
+			JOIN dbo.tArtikel ON tArtikel.kArtikel = tPicklistePos.kArtikel
+			WHERE tPicklistePos.kWarenLagerEingang &gt; 0 -- nur echte Lagerartikel 
+				AND tArtikel.cLagerAktiv = &#39;Y&#39;
+				AND tArtikel.cLagerVariation = &#39;N&#39;
+				AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			FOR XML PATH(&#39;Pickposition&#39;), TYPE
+		);
+	IF (@xPicklistePos IS NOT NULL)
+	BEGIN
+		EXEC dbo.spWarenlagerAusgangPicklistePos
+			@xPicklistePos = @xPicklistePos,
+			@kPicklistePos = NULL,
+			@cKommentar = &#39;Auslieferung&#39;,
+			@kBenutzer = @kBenutzer
+	END
+		       
+    -- Pickpositionenstatus &#228;ndern
+    INSERT INTO dbo.tPicklistePosStatus
+    (
+        tPicklistePosStatus.kPicklistePos,
+        tPicklistePosStatus.kbenutzer,
+        tPicklistePosStatus.dZeitstempel,
+        tPicklistePosStatus.nStatus
+    )
+    SELECT
+        dbo.tPicklistePos.kPicklistePos,
+        @kBenutzer,
+        @dNow,
+        40
+    FROM dbo.tPicklistePos 
+    JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+	LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tPicklistePos.kBestellPos
+	WHERE tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20)
+
+    -- Hinweise f&#252;r die Lieferscheinposition &#252;bernehmen
+	UPDATE dbo.tLieferscheinPos
+	SET
+	    dbo.tLieferscheinPos.cHinweis = ParamValues.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(MAX)&#39;)
+	FROM dbo.tLieferscheinPos 
+	JOIN @xHinweise.nodes(&#39;/Hinweis&#39;) AS ParamValues(ID) ON ParamValues.ID.value(&#39;kBestellPos[1]&#39;, &#39;INT&#39;) = dbo.tLieferscheinPos.kBestellPos
+	JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tLieferscheinPos.kLieferschein
+	WHERE dbo.tLieferschein.kSessionId = @kSessionId
+
+	-- Hinweise f&#252;r die Lieferscheine &#252;bernehmen
+	UPDATE dbo.tLieferschein
+	SET
+	    dbo.tLieferschein.cHinweis = ParamValues.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(MAX)&#39;)
+	FROM dbo.tLieferschein
+	JOIN @xHinweise.nodes(&#39;/Hinweis&#39;) AS ParamValues(ID) ON ParamValues.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) = dbo.tLieferschein.kBestellung	
+	WHERE dbo.tLieferschein.kSessionId = @kSessionId
+
+	-- Hinweise in Fulfillment Auftragspositionen &#252;bernehmen
+	UPDATE dbo.tFulfillmentAuftragPos
+	SET dbo.tFulFillmentAuftragPos.cArtikelHinweis = dbo.tLieferscheinPos.cHinweis
+	FROM dbo.tFulfillmentAuftragPos
+	JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kLieferscheinPos = dbo.tFulfillmentAuftragPos.kLieferscheinPos
+	JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tLieferscheinPos.kLieferschein
+	WHERE dbo.tLieferschein.kSessionId = @kSessionId
+
+	EXEC [Auslieferung].[spPicklistenAusliefern_PaketeErzeugen]
+	   @kBenutzer = @kBenutzer,
+	   @kSessionId = @kSessionId,
+	   @Pakete = @Pakete,
+	   @nVersandSetzen = @nVersandSetzen
+	   
+	EXEC [Auslieferung].[spPicklistenAusliefern_Umlagerungen]
+	   @kBenutzer = @kBenutzer,
+	   @kSessionId = @kSessionId
+
+	SET @xResult = (
+				SELECT
+					(
+						SELECT 
+							kLieferschein AS kLieferschein
+						FROM
+							dbo.tlieferschein
+						WHERE
+							dbo.tlieferschein.kSessionId = @kSessionId
+						FOR XML PATH(&#39;DeliveryNote&#39;), ROOT(&#39;NewDeliveryNotes&#39;), ELEMENTS, TYPE
+					),
+					(
+						SELECT						
+							kPickliste AS kPickliste
+						FROM
+							dbo.tPickliste
+						WHERE dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.nStatus &gt; 10
+						FOR XML PATH(&#39;Pickliste&#39;), ROOT(&#39;ProcessedPicklisten&#39;), ELEMENTS, TYPE
+					),
+					(
+						SELECT						
+							kFulfillmentAuftrag AS kFulfillmentauftrag
+						FROM
+							dbo.tFulfillmentAuftrag 
+					     JOIN
+						     dbo.tLieferschein ON dbo.tLieferschein.kLieferschein =  dbo.tFulfillmentAuftrag.kLieferschein
+						WHERE dbo.tLieferschein.kSessionId = @kSessionId
+						FOR XML PATH(&#39;Fulfillmentauftrag&#39;), ROOT(&#39;NewFulfillmentauftraege&#39;), ELEMENTS, TYPE
+					),
+					(
+						SELECT						
+							dbo.tLieferschein.kLieferantenBestellung AS kLieferantenbestellung
+						FROM
+							dbo.tLieferschein 
+						WHERE dbo.tLieferschein.kSessionId = @kSessionId AND dbo.tLieferschein.kLieferantenBestellung != 0
+						FOR XML PATH(&#39;Lieferantenbestellung&#39;), ROOT(&#39;NewLieferantenbestellungen&#39;), ELEMENTS, TYPE
+					),
+					(
+						SELECT DISTINCT
+							tAuftrag.kAuftrag AS kBestellung
+						FROM Verkauf.tAuftrag
+						JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+						JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition
+						JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+						JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste			
+						JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tLieferscheinPos.kLieferschein AND dbo.tLieferschein.kSessionId = @kSessionId		
+						WHERE tAuftrag.nKomplettAusgeliefert &gt; 0 
+							AND dbo.tPickliste.kSessionId = @kSessionId 
+							AND tAuftrag.nType &lt; 2
+						FOR XML PATH(&#39;Order&#39;), ROOT(&#39;DeliveredOrders&#39;), ELEMENTS, TYPE
+					),
+					(
+						SELECT DISTINCT
+							tUmlagerung.kUmlagerung AS kUmlagerung
+						FROM Verkauf.tAuftrag
+						JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+						JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition
+						JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+						JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste			
+						JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tLieferscheinPos.kLieferschein AND dbo.tLieferschein.kSessionId = @kSessionId		
+						JOIN dbo.tUmlagerung ON tUmlagerung.kBestellung = tAuftrag.kAuftrag
+						WHERE tAuftrag.nKomplettAusgeliefert &gt; 0 AND dbo.tPickliste.kSessionId = @kSessionId AND tAuftrag.nType = 2
+						FOR XML PATH(&#39;Umlagerung&#39;), ROOT(&#39;DeliveredUmlagerungen&#39;), ELEMENTS, TYPE
+					)
+				FOR XML PATH(&#39;Result&#39;)
+			)
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+	BEGIN
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION;
+	END
+	ELSE
+	BEGIN
+		IF XACT_STATE() &lt;&gt; -1
+		BEGIN
+			IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION spPicklistenAusliefern;
+		END
+	END
+
+	DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

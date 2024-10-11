@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spApplyVisibilityRebateToSubCategories</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spApplyVisibilityRebateToSubCategories</h1>
+    <p><strong>Description:</strong> Mit der Procedure wird die Sichtbarkeit von Kategorien auf Unterkategorien vererbt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spApplyVisibilityRebateToSubCategories]
+
+	@kRoot INT,						-- PK Wurzel-Kategorie
+	@nProcessVisibility TINYINT,	-- 0/1, ob Sichtbarkeit verarbeitet werden soll
+	@nProcessRebate TINYINT			-- 0/1, ob Rabatt verarbeitet werden soll
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+    SET NOCOUNT ON;
+	--
+    -- wendet Sichtbarkeits- und/oder Rabatt-Einstellungen f&#252;r eine gegebene Wurzel-Kategorie auf alle Unterkategorien inkl. Artikel und Kind-Artikel an
+    -- (auch f&#252;r Artikel und Kind-Artikel der Wurzel-Kategorie)
+	--
+    -- Berechnung Unterkategorien
+	--
+    DECLARE @tUnterkategorien AS TABLE (kKategorie INT); -- EXklusive Wurzel!
+    INSERT INTO @tUnterkategorien EXEC spGetSubCategories @kRoot;
+	--
+    -- Sichtbarkeit
+	--
+    IF (@nProcessVisibility = 1)
+    BEGIN
+		--
+	    -- Kategorien
+		--
+	    -- alte Einstellungen l&#246;schen
+		--
+	    DELETE dbo.tKategorieSichtbarkeit WITH(ROWLOCK)
+	    FROM dbo.tKategorieSichtbarkeit WITH(ROWLOCK) 
+		JOIN @tUnterkategorien AS tUnterkategorien ON dbo.tKategorieSichtbarkeit.kKategorie = tUnterkategorien.kKategorie;
+		--
+	    -- Einstellungen von Wurzel-Kategorie &#252;bernehmen
+		--
+	    INSERT INTO dbo.tKategorieSichtbarkeit WITH(ROWLOCK)(kKategorie, kKundenGruppe, kShop)
+		SELECT DISTINCT tUnterkategorien.kKategorie, dbo.tKategorieSichtbarkeit.kKundenGruppe, dbo.tKategorieSichtbarkeit.kShop
+		FROM @tUnterkategorien AS tUnterkategorien, dbo.tKategorieSichtbarkeit
+		WHERE dbo.tKategorieSichtbarkeit.kKategorie = @kRoot;
+		--
+	    -- Artikel &amp; Kind-Artikel
+		--
+	    -- relevante Artikel bestimmen
+		--
+	    DECLARE @tArtikelRelevant AS TABLE (kArtikel INT);
+		--
+	    -- Artikel von Wurzel-Kategorie
+		--
+	    INSERT INTO @tArtikelRelevant
+		SELECT dbo.tkategorieartikel.kArtikel
+		FROM dbo.tkategorieartikel WITH(NOLOCK)
+		WHERE dbo.tkategorieartikel.kKategorie = @kRoot;
+		--
+	    -- Artikel von Unterkategorien
+		--
+	    INSERT INTO @tArtikelRelevant
+		SELECT dbo.tkategorieartikel.kArtikel
+		FROM @tUnterkategorien AS tUnterkategorien 
+		JOIN dbo.tkategorieartikel ON dbo.tkategorieartikel.kKategorie = tUnterkategorien.kKategorie;
+	
+		--
+	    -- alte Einstellungen l&#246;schen
+		--
+	    DELETE dbo.tArtikelSichtbarkeit WITH(ROWLOCK)
+		FROM dbo.tArtikelSichtbarkeit WITH(ROWLOCK) 
+		JOIN @tArtikelRelevant AS tArtikelRelevant ON dbo.tArtikelSichtbarkeit.kArtikel = tArtikelRelevant.kArtikel;		
+		--
+	    -- Einstellungen von Wurzel-Kategorie &#252;bernehmen
+		--
+	    INSERT INTO dbo.tArtikelSichtbarkeit WITH(ROWLOCK)(kArtikel, kKundenGruppe, kShop)
+		SELECT DISTINCT tArtikelRelevant.kArtikel, dbo.tKategorieSichtbarkeit.kKundenGruppe, dbo.tKategorieSichtbarkeit.kShop
+		FROM @tArtikelRelevant AS tArtikelRelevant, dbo.tKategorieSichtbarkeit
+		WHERE dbo.tKategorieSichtbarkeit.kKategorie = @kRoot;
+    END
+	--
+    -- Rabatt (nur Kategorien)
+	--
+    IF (@nProcessRebate = 1)
+    BEGIN
+		--
+	    -- alte Einstellungen l&#246;schen
+		--
+	    DELETE dbo.tKategorieRabatt WITH(ROWLOCK)
+		FROM dbo.tKategorieRabatt WITH(ROWLOCK)
+		JOIN @tUnterkategorien AS tUnterkategorien ON dbo.tKategorieRabatt.kKategorie = tUnterkategorien.kKategorie;
+		--
+		-- Einstellungen von Wurzel-Kategorie &#252;bernehmen
+		--
+		INSERT INTO dbo.tKategorieRabatt (kKategorie, kKundenGruppe, kShop, fRabatt)
+		SELECT DISTINCT tUnterkategorien.kKategorie, dbo.tKategorieRabatt.kKundenGruppe, dbo.tKategorieRabatt.kShop, dbo.tKategorieRabatt.fRabatt
+		FROM @tUnterkategorien AS tUnterkategorien, dbo.tKategorieRabatt
+		WHERE dbo.tKategorieRabatt.kKategorie = @kRoot;
+    END
+	--
+	-- Kategorien f&#252;r WebShop-Abgleich vormerken
+	--
+	UPDATE dbo.tKategorieShop WITH(ROWLOCK)
+	SET cInet = &#39;Y&#39;
+	FROM dbo.tKategorieShop WITH(ROWLOCK) 
+	JOIN @tUnterkategorien AS UnterKategorien ON dbo.tKategorieShop.kKategorie = UnterKategorien.kKategorie;	
+END</code></pre>
+</body>
+</html>

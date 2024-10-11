@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spGarbageCollection_UnreferenzierteFilesLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spGarbageCollection_UnreferenzierteFilesLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spGarbageCollection_UnreferenzierteFilesLoeschen]
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+BEGIN
+
+	-- Deaktiviert in WAWI-51742
+	RETURN 0;
+	
+		DELETE FROM dbo.tFile
+		WHERE tFile.kFile IN ( SELECT kFile FROM dbo.vDeletableFiles );
+END</code></pre>
+</body>
+</html>

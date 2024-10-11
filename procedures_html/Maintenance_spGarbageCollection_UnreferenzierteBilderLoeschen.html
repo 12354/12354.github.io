@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spGarbageCollection_UnreferenzierteBilderLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spGarbageCollection_UnreferenzierteBilderLoeschen</h1>
+    <p><strong>Description:</strong> Diese SP löscht nicht referenzierte Bilder und kann aus der JTL-Datenbankverwaltung aufgerufen werden</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spGarbageCollection_UnreferenzierteBilderLoeschen]
+AS
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+/*************************************************************************************************************
+Beschreibung:	Diese SP l&#246;scht nicht referenzierte Bilder und wird aus der JTL-Datenbankverwaltung
+				aufgerufen (Mandanten bearbeiten =&gt; Bereinigung =&gt; nicht referenzierte Bilder l&#246;schen)
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+EXEC Maintenance.spGarbageCollection_UnreferenzierteBilderLoeschen
+*************************************************************************************************************/
+	DECLARE
+		@nBATCH_SIZE INT = 10000, -- Pro Durchlauf werden max. @nBATCH_SIZE Bilder gel&#246;scht, damit das Transaktionslog nicht zu gro&#223; wird (siehe WAWI-64561)
+		@cMsg NVARCHAR(2048);
+	
+	DECLARE
+		@nAnzahl INT = @nBATCH_SIZE, -- Damit die WHILE-Schleife mind. 1x durchlaufen wird
+		@nDurchlauf INT = 0;
+
+	-- Alle Bilder l&#246;schen, die nicht referenziert werden
+	-- Sobald @nAnzahl &lt; @nBATCH_SIZE ist, sind alle verwaisten Bilder gel&#246;scht worden
+	WHILE (@nAnzahl &gt;= @nBATCH_SIZE)
+	BEGIN
+		SET @nDurchlauf = @nDurchlauf + 1;
+
+		WITH AlleBildReferenzen
+		AS	(
+				SELECT kBild FROM dbo.tArtikelbildPlattform
+				UNION
+				SELECT kBild FROM dbo.tEigenschaftWertPict
+				UNION
+				SELECT kBild FROM dbo.tMerkmalBildPlattform
+				UNION
+				SELECT kBild FROM dbo.tMerkmalWertBildPlattform
+				UNION
+				SELECT kBild FROM dbo.tKategoriebildPlattform
+				UNION
+				SELECT kBild FROM dbo.tHerstellerBildPlattform
+				UNION
+				SELECT kBild FROM FulfillmentNetwork.tProductPictureRef
+		)
+		DELETE	TOP(@nBATCH_SIZE) B
+		FROM	dbo.tBild AS B
+		WHERE	B.kBild NOT IN (SELECT kBild FROM AlleBildReferenzen);
+
+		SELECT @nAnzahl = @@ROWCOUNT;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + &#39; @nBATCH_SIZE = &#39; + CAST(@nBATCH_SIZE AS VARCHAR(20)) + &#39; | @nDurchlauf = &#39; + CAST(@nDurchlauf AS VARCHAR(20)) + &#39; | @@ROWCOUNT = &#39; + CAST(@nAnzahl AS VARCHAR(20));
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+	END
+
+	-- In umgekehrter Richtung auch l&#246;schen: Fehlende Verweise auf Bilder entfernen
+
+	-- Tabelle dbo.tArtikelbildPlattform
+	DELETE	Ref
+	FROM	dbo.tArtikelbildPlattform AS Ref
+	WHERE	NOT EXISTS(SELECT 1 FROM dbo.tBild AS B WHERE B.kBild = Ref.kBild);
+
+	-- Tabelle dbo.tEigenschaftWertPict
+	DELETE	Ref
+	FROM	dbo.tEigenschaftWertPict AS Ref
+	WHERE	NOT EXISTS(SELECT 1 FROM dbo.tBild AS B WHERE B.kBild = Ref.kBild);
+
+	-- Tabelle dbo.tMerkmalBildPlattform
+	DELETE	Ref
+	FROM	dbo.tMerkmalBildPlattform AS Ref
+	WHERE	NOT EXISTS(SELECT 1 FROM dbo.tBild AS B WHERE B.kBild = Ref.kBild);
+	
+	-- Tabelle dbo.tMerkmalWertBildPlattform
+	DELETE	Ref
+	FROM	dbo.tMerkmalWertBildPlattform AS Ref
+	WHERE	NOT EXISTS(SELECT 1 FROM dbo.tBild AS B WHERE B.kBild = Ref.kBild);
+
+	-- Tabelle dbo.tKategoriebildPlattform
+	DELETE	Ref
+	FROM	dbo.tKategoriebildPlattform AS Ref
+	WHERE	NOT EXISTS(SELECT 1 FROM dbo.tBild AS B WHERE B.kBild = Ref.kBild);
+
+	-- Tabelle dbo.tHerstellerBildPlattform
+	DELETE	Ref
+	FROM	dbo.tHerstellerBildPlattform AS Ref
+	WHERE	NOT EXISTS(SELECT 1 FROM dbo.tBild AS B WHERE B.kBild = Ref.kBild);
+
+	-- Tabelle dbo.tHerstellerBildPlattform =&gt; wird durch kaskadierenden FK auf dbo.tArtikelbildPlattform automatisch bereinigt
+
+END</code></pre>
+</body>
+</html>

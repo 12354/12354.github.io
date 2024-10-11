@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spKundenEigenesFeldLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spKundenEigenesFeldLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Kunde].[spKundenEigenesFeldLoeschen]
+@KundenEigenesFeldAnpassen Kunde.TYPE_KundenEigenesFeldAnpassen READONLY
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+
+BEGIN TRY
+
+
+    -- Input Type Parameter in Temp Speichern
+    IF(object_id(&#39;tempdb..#EigeneFelderZuLoeschen&#39;) IS NOT NULL)
+    BEGIN
+	  DROP TABLE #EigeneFelderZuLoeschen;
+    END;
+    CREATE TABLE #EigeneFelderZuLoeschen(kKunde INT,cKey varchar(255),cValue NVARCHAR(MAX));
+    CREATE CLUSTERED INDEX IX_EigeneFelderZuLoeschen_kKunde_cKey ON #EigeneFelderZuLoeschen(kKunde,cKey);
+
+    INSERT INTO #EigeneFelderZuLoeschen(kKunde,cKey,cValue)
+    SELECT kKunde,cKey,cValue
+    FROM @KundenEigenesFeldAnpassen;
+
+
+    ---
+    --- L&#246;scht Alle Eintr&#228;ge in tKundeEigenesFeld mit den &#220;bergebenen Kunden und Key
+    ---
+    DELETE Kunde.tKundeEigenesFeld 
+    FROM Kunde.tKundeEigenesFeld 
+    JOIN #EigeneFelderZuLoeschen ON #EigeneFelderZuLoeschen.kKunde = tKundeEigenesFeld.kKunde
+    CROSS APPLY (  SELECT tattribut.kAttribut 
+			    FROM dbo.tattribut
+			    JOIN tAttributSprache on tAttributSprache.kAttribut = tAttribut.kAttribut
+			    WHERE tAttribut.nIstFreifeld= 1 AND tAttribut.nAusgabeweg = 2 and tAttributSprache.cName = #EigeneFelderZuLoeschen.cKey ) AS Attribute
+    WHERE Attribute.kAttribut = Kunde.tKundeEigenesFeld.kAttribut;
+
+
+END TRY
+BEGIN CATCH
+
+    DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

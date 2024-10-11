@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spFulfillmentStockUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spFulfillmentStockUpdate</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können für das Fulfillment Netzwerk Bestandsupdates ausgeführt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>--
+-- spFulfillmentStockUpdate
+--
+CREATE PROCEDURE [dbo].[spFulfillmentStockUpdate] @xFulfillmentWarenlagerEingaenge XML
+,                                                @kBenutzer INT
+,	@cSessionId VARCHAR(100)
+AS
+BEGIN
+	IF NOT @xFulfillmentWarenlagerEingaenge IS NULL
+	BEGIN
+
+		
+
+		DECLARE @BestandsUpdateDaten AS FulfillmentNetwork.[TYPE_spBestandsUpdate];
+
+		INSERT INTO @BestandsUpdateDaten
+		SELECT Artikel.kArtikel                                 AS kArtikel
+		,      Artikel.cArtNr                                   AS cArtNr
+		,      CASE WHEN Artikel.cLagerArtikel = &#39;Y&#39; THEN 1
+		                                             ELSE 0 END AS nSeriennummern
+		,      Artikel.nCharge                                  AS nCharge
+		,      Artikel.nMHD                                     AS nMHD
+		,	   Artikel.fEKNetto									AS fEKNetto
+		,      Eingang.kBuchungsart                             AS kBuchungsart
+		,      Eingang.fAnzahl                                  AS fAnzahl
+		,      Eingang.cChargenNr                               AS cChargenNr
+		,      Eingang.dMHD                                     AS dMHD
+		,      Eingang.cKommentar                               AS cKommentar
+		,      Eingang.cLieferscheinNr                          AS cLieferscheinNr
+		,      Eingang.dGebucht                                 AS dGebucht
+		,      Eingang.cSeriennummer                            AS cSeriennummer
+		,      WarenlagerPlatz.kWarenLager                      AS kWarenlager
+		,      WarenlagerPlatz.kWarenLagerPlatz                 AS kWarenlagerPlatz
+		,      Umlagerung.kUmlagerung                           AS kUmlagerung
+		,      Umlagerung.kWarenLagerPlatz                      AS kStreckenlagerPlatz
+		,      Umlagerung.kAuftragPosition                           AS kBestellPosUmlagerung
+		,      Lieferantenbestellung.kLieferantenBestellung     AS kLieferantenBestellung
+        ,      Eingang.cJfsku		        				    AS cJfsku
+		,      Eingang.nStockVersion						    AS nStockVersion
+		,	   NULL
+		,	   NULL
+		,		0
+		,		0
+		FROM      (
+		SELECT ParamValues.ID.value(&#39;cJfsku[1]&#39;,&#39;VARCHAR(50)&#39;)                                                                                               AS cJfsku
+		,      ParamValues.ID.value(&#39;cWarehouseId[1]&#39;,&#39;VARCHAR(50)&#39;)                                                                                         AS cFfnWarehouseId
+		,      ParamValues.ID.value(&#39;fAnzahl[1]&#39;, &#39;DECIMAL(28,14)&#39;)                                                                                          AS fAnzahl
+		,      ParamValues.ID.value(&#39;cLieferscheinNr[1]&#39;, &#39;VARCHAR(255)&#39;)                                                                                    AS cLieferscheinNr
+		,      CASE WHEN ParamValues.ID.value(&#39;cChargenNr[1]&#39;, &#39;VARCHAR(255)&#39;) = &#39;&#39; THEN NULL
+		                                                                            ELSE ParamValues.ID.value(&#39;cChargenNr[1]&#39;, &#39;VARCHAR(255)&#39;) END           AS cChargenNr
+		,      CASE WHEN ParamValues.ID.value(&#39;dMHD[1]&#39;, &#39;VARCHAR(50)&#39;) = &#39;&#39; THEN NULL
+		                                                                     ELSE CONVERT ( datetime,ParamValues.ID.value(&#39;dMHD[1]&#39;, &#39;datetime&#39;) ,13) END AS dMHD
+		,      CONVERT ( datetime,ParamValues.ID.value(&#39;dGebucht[1]&#39;,&#39;datetime&#39;),13)                                                                         AS dGebucht
+		,      LTRIM(RTRIM( ParamValues.ID.value(&#39;cKommentar[1]&#39;, &#39;VARCHAR(255)&#39;) + &#39; [Fulfillment]&#39;))                                                       AS cKommentar
+		,      ParamValues.ID.value(&#39;kBuchungsart[1]&#39;, &#39;VARCHAR(20)&#39;)                                                                                        AS kBuchungsart
+		,      ParamValues.ID.value(&#39;cFremdbelegnummer[1]&#39;, &#39;VARCHAR(255)&#39;)                                                                                  AS cFremdbelegnummer
+		,      ParamValues.ID.value(&#39;cSeriennummer[1]&#39;, &#39;VARCHAR(128)&#39;)																						 AS cSeriennummer
+		,      ParamValues.ID.value(&#39;nStockVersion[1]&#39;, &#39;int&#39;)																						         AS nStockVersion
+		FROM @xFulfillmentWarenlagerEingaenge.nodes(&#39;/StockBookingEntry&#39;) AS ParamValues(ID)
+		)                                    AS Eingang              
+		JOIN	 FulfillmentNetwork.tProductRef						ON tProductRef.cJfsku = Eingang.cJfsku
+		JOIN      dbo.tArtikel               AS Artikel               ON Artikel.kArtikel = tProductRef.kArtikel
+		JOIN      dbo.tWarenLager            AS Warenlager            ON Warenlager.cFfnWarehouseId = Eingang.cFfnWarehouseId AND Warenlager.nAktiv = 1
+		JOIN      dbo.tWarenLagerPlatz       AS WarenlagerPlatz       ON WarenlagerPlatz.kWarenLager = Warenlager.kWarenLager AND WarenlagerPlatz.nStatus = 0 
+		LEFT JOIN dbo.tLieferantenBestellung AS LieferantenBestellung ON LieferantenBestellung.cEigeneBestellnummer = Eingang.cFremdbelegnummer
+		LEFT JOIN (
+			SELECT Umlagerung.kUmlagerung             
+			,      Umlagerung.kLieferantenBestellung  
+			,      BestellPos.kAuftragPosition             
+			,      StreckenlagerPlatz.kWarenLagerPlatz
+			,      BestellPos.kArtikel        AS kArtikel
+			FROM      dbo.tUmlagerung      AS Umlagerung        
+			LEFT JOIN Verkauf.tAuftragPosition      AS BestellPos         ON BestellPos.kAuftrag = Umlagerung.kBestellung
+			LEFT JOIN dbo.tWarenLagerPlatz AS StreckenlagerPlatz ON StreckenlagerPlatz.kWarenLager = Umlagerung.kStreckenLager AND StreckenlagerPlatz.kWarenLagerPlatzTyp = 0
+			)                               
+			AS                                  Umlagerung            ON Umlagerung.kLieferantenBestellung = Lieferantenbestellung.kLieferantenBestellung AND Umlagerung.kArtikel = Artikel.kArtikel
+			BEGIN TRANSACTION
+			
+			BEGIN TRY
+				EXEC FulfillmentNetwork.[spBestandsUpdate] @BestandsUpdateDaten, @kBenutzer	,@cSessionId
+				COMMIT;
+			END TRY
+			BEGIN CATCH
+
+				IF(@@TRANCOUNT &gt; 0)
+				BEGIN
+				   ROLLBACK;
+				END;
+				 
+				DECLARE @ErrorMessage NVARCHAR(4000);
+				DECLARE @ErrorSeverity INT;
+				DECLARE @ErrorState INT;
+				SELECT @ErrorMessage = ERROR_MESSAGE()
+				,      @ErrorSeverity = ERROR_SEVERITY()
+				,      @ErrorState = ERROR_STATE();
+
+
+				RAISERROR ( @ErrorMessage,
+				@ErrorSeverity,
+				@ErrorState);
+				
+			END CATCH;
+	END	
+	
+END</code></pre>
+</body>
+</html>

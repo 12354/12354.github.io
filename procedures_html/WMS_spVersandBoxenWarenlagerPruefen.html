@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spVersandBoxenWarenlagerPruefen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spVersandBoxenWarenlagerPruefen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spVersandBoxenWarenlagerPruefen]
+	@kBestellung INT
+AS  
+BEGIN	  
+	SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;  
+	DECLARE @kWarenLager INT;
+
+	--
+	-- &#220;ber alle nicht verpackten Boxen f&#252;r die Bestellung
+	--
+  	DECLARE cur_kBestellung CURSOR LOCAL FAST_FORWARD FOR  
+	SELECT dbo.tlhm.kWarenlager
+	FROM dbo.tlhm WITH(NOLOCK)
+	JOIN dbo.tlhmstatus WITH(NOLOCK) ON dbo.tlhmstatus.klhmstatus = dbo.tlhm.klhmstatus
+	WHERE dbo.tlhmstatus.nstatus = 20
+	AND dbo.tlhm.klhmtyp = 4
+	AND dbo.tlhmstatus.kBestellung = @kBestellung;
+	   
+	OPEN cur_kBestellung    
+	FETCH NEXT FROM cur_kBestellung INTO @kWarenLager;     	   
+	WHILE @@FETCH_STATUS = 0    
+	BEGIN    
+		EXEC WMS.spVersandBoxBestellungPruefen @kWarenlager = @kWarenlager, @kBestellung = @kBestellung;
+		FETCH NEXT FROM cur_kBestellung INTO @kWarenLager;
+	END  	
+	CLOSE cur_kBestellung;    
+	DEALLOCATE cur_kBestellung;  
+END</code></pre>
+</body>
+</html>

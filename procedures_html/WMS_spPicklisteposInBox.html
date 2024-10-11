@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklisteposInBox</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklisteposInBox</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklisteposInBox]
+  @kPicklistePos INT,               -- Die Pickposition die in Box gepackt werden soll
+  @kLhm INT,               -- Das LHM auf das die Warenlagereinheit der Pickposition gestellt werden soll
+  @kBenutzer INT,               
+  @fPickMenge DECIMAL(25,13),     -- Die Menge die von dieser Pickposition in die Bos gepackt werden soll
+  @dTimestamp DATETIME,          -- Falls nicht aus der DB aufgerufen, dann leer lassen
+  @cMhd NVARCHAR(255),      -- Falls eine MHD f&#252;r die Pickposition erfasst wurde
+  @cCharge NVARCHAR(255),      -- Falls eine Charge f&#252;r die Pickposition erfasst wurde
+  @nPickposStatus INT,               -- Der Status ab welchen die Pickpositionen betrachtet werden. 20 = Pick, 30 = InBoxlegen. 
+  @nRet INT OUT            -- FehlerCode
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+	DECLARE @fPPAnzahl          DECIMAL(25,13);
+	DECLARE @fAufPlatzAnzahl    DECIMAL(25,13);
+	DECLARE @cPPChargenNr       NVARCHAR(255);
+	DECLARE @cPPMHD             NVARCHAR(255);
+	DECLARE @kPPWarenLagerPlatz BIGINT;
+	DECLARE @kArtikel           INT;
+	DECLARE @dIsTimestamp       DATETIME;
+	DECLARE @CreatedTransaction INT;
+  
+	IF (@@TRANCOUNT = 0)
+	BEGIN
+		SET @CreatedTransaction = 1;
+		BEGIN TRAN T1
+	END;
+	ELSE
+	BEGIN
+		SET @CreatedTransaction = 0;
+		SAVE TRAN Savepoint1;
+	END;
+
+		BEGIN TRY
+			SET @nRet = 0;
+
+			IF(LEN(@cMhd) &gt; 0)
+			BEGIN
+			  SET @cMhd = CONVERT(NVARCHAR,CONVERT(DATETIME,@cMhd,104), 104);
+			END;
+  
+			-- Holen der Daten der Pickposition und deren Warenlagereingang
+			SELECT @fPPAnzahl = dbo.tPicklistePos.fAnzahl,@cPPChargenNr = dbo.tWarenLagerEingang.cChargenNr,@cPPMHD = CONVERT(NVARCHAR,dbo.tWarenlagerEingang.dMHD, 104),@kPPWarenLagerPlatz = dbo.tWarenLagerEingang.kWarenLagerPlatz,@kArtikel = dbo.tWarenLagerEingang.kArtikel
+			FROM dbo.tPicklistePos WITH(NOLOCK) 
+			JOIN dbo.tWarenLagerEingang WITH(NOLOCK) on dbo.tWarenLagerEingang.kWarenLagerEingang = dbo.tPicklistePos.kWarenLagerEingang
+			WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePos 
+			AND dbo.tPicklistePos.nStatus &lt; @nPickposStatus;
+
+			IF(@kArtikel is not null)
+			BEGIN	
+				IF(@dTimestamp is null)   -- Falls kein Timestamp &#252;bergeben holen wir uns systemzeit
+					SET @dIsTimestamp = GETDATE();
+				ELSE
+					SET @dIsTimestamp = @dTimestamp;
+
+			-- Falls die &#252;bergebene Charge/MHD nicht mit der der Warenlagereingang der Pickpos &#252;bereinstimmt, m&#252;&#223;en wir die Warenlagereing&#228;nge tauschen
+			IF((@cPPChargenNr != @cCharge and @cCharge is not null) or (@cPPMHD != @cMhd  and @cMhd is not null ))
+			BEGIN
+				IF(@fPPAnzahl &gt; @fPickMenge) -- Wenn PP mehr Menge hat als wir noch wollen, PP splitten
+				BEGIN
+					SET @fPPAnzahl = @fPickMenge;
+
+					EXEC WMS.spPicklistePosSplitten
+						@kPicklistePos  = @kPicklistePos,
+						@nMenge  = @fPickMenge,
+						@kNewPicklistePos = @kPicklistePos OUTPUT,
+						@nRet = @nRet OUTPUT;
+				END;
+
+
+			    -- Hole Anzahl der Menge der passenden Artikel vom Platz wo die Pickpos drauf zeigt
+			    SELECT @fAufPlatzAnzahl = ISNULL(SUM(ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell,0)),0)
+		         FROM dbo.tWarenLagerEingang WITH(NOLOCK) 
+		         WHERE dbo.tWarenLagerEingang.kArtikel = @kArtikel
+		         AND dbo.tWarenLagerEingang.kWarenlagerplatz = @kPPWarenLagerPlatz
+		         AND (dbo.tWarenLagerEingang.cChargenNr = @cCharge or @cCharge is null)
+		         AND (CONVERT(VARCHAR,dbo.tWarenlagerEingang.dMHD, 104) = @cMhd or @cMhd is null);
+
+			    -- Sind auf Platz nicht genug Artikel ? Wenn nicht Picken wir &#252;ber Pl&#228;tze
+			    IF(@fAufPlatzAnzahl &lt; @fPickMenge) 
+			    BEGIN
+				    -- Tausche und Pick der Pickpos mit einer auf einen anderen Platz (der selben Pickliste) wo es die Menge mit der Charge/MHD gibt
+				    EXEC WMS.spTauschePicklistePosUeberPlaetze
+							    @kPicklistePos  = @kPicklistePos,
+							    @fPickMenge  = @fPickMenge,
+							    @cMhd = @cMhd,
+							    @cCharge = @cCharge,
+							    @kLhm    =   @kLhm,  
+							    @kBenutzer=  @kBenutzer,
+							    @nStatusNachPick  = @nPickposStatus,
+							    @nRet = @nRet OUTPUT;    
+			    END;
+			    ELSE
+			    BEGIN
+
+				    SELECT @fAufPlatzAnzahl = ISNULL(SUM(ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell,0)),0)
+				    FROM dbo.tWarenLagerEingang WITH(NOLOCK) 
+				    WHERE dbo.tWarenLagerEingang.kArtikel = @kArtikel
+				    AND dbo.tWarenLagerEingang.kWarenlagerplatz = @kPPWarenLagerPlatz
+				    AND (dbo.tWarenLagerEingang.cChargenNr = @cCharge or @cCharge is null)
+				    AND (CONVERT(VARCHAR,dbo.tWarenlagerEingang.dMHD, 104) = @cMhd or @cMhd is null);
+
+				    -- Sind auf Platz genug Artikel um das &#252;berhaupt zu picken ?
+				    IF(@fAufPlatzAnzahl &gt;= @fPickMenge) 
+				    BEGIN
+       
+				      IF(@nRet &gt;= 0) -- Falls keinen Fehler bisher, dann tauschen
+				      BEGIN
+					      EXEC WMS.spTauscheUndPicke
+					      @kPicklistePos   = @kPicklistePos,  -- F&#252;r die Pickliste suchen wir einen Tauschpartner
+					      @nMenge   =  @fPickMenge, -- die Menge die getaucht werden soll
+					      @cCharge  = @cCharge, -- die Charge die wir suchen
+					      @cMHD     = @cMhd , -- das MHD das wir suchen
+					      @kLhm    =   @kLhm,  
+					      @kBenutzer=  @kBenutzer,
+					      @nStatusNachPick  = @nPickposStatus,
+					      @nRestmengeLoeschen = 0,
+					      @nRet  = @nRet OUTPUT; -- Tausch ok ?     
+				      END;
+			         END;
+			    ELSE
+			      SET @nRet = -203000005; -- nicht genug Menge auf den Platz
+		         END;
+               END;
+               ELSE  -- Falls keine MHD oder Charge, picke die Pickposition
+               BEGIN
+		          IF(@fPPAnzahl &gt;= @fPickMenge)  -- &#220;bersteigt die eingegebene Menge nicht die Menge der Pickposition ?
+		          BEGIN
+		               -- Pickpos Picken
+			          EXEC @nRet = WMS.spPicklisteposPicken
+				          @kPicklistePos  = @kPicklistePos,
+				          @kLhm  = @kLhm,
+				          @kBenutzer  = @kBenutzer,
+				          @fPickMenge = @fPickMenge,
+				          @dTimestamp = @dTimestamp,
+				          @nRestmengeLoeschen = 0,
+				          @nStatusNachPick = @nPickposStatus;
+
+		          END
+		          ELSE
+			          SET @nRet = -203000006; -- mehr Menge angegeben als in Pickposition vorhanden
+		          END
+               END
+               ELSE
+		          SET @nRet = -203000007; -- Pickpostition nicht gefunden
+
+
+	           IF @nRet &gt;= 0
+			   BEGIN
+			     IF(@CreatedTransaction = 1)   -- Kein Fehler im durchlauf ? TRANSACTION commiten
+			   		   COMMIT TRAN T1;
+			   END;
+			   ELSE
+			   BEGIN
+			   	  IF(@CreatedTransaction = 1)
+			       	  ROLLBACK TRAN T1;
+			       ELSE
+			       	  ROLLBACK TRAN Savepoint1;
+			   END;	        
+
+
+             
+	     END TRY
+	BEGIN CATCH
+		SELECT -203000008; -- unbekannter Fehler
+
+		DECLARE @ErrorMessage VARCHAR(4000)
+	    SET @ErrorMessage = N&#39;DB-Error: (&#39; + CAST(ERROR_NUMBER() AS NVARCHAR) + &#39; - &#39; +  CAST(ERROR_SEVERITY() AS NVARCHAR) + &#39; - &#39; + CAST(ERROR_STATE() AS NVARCHAR) + &#39; ) &#39; + &#39; Zeile:&#39; + CAST(ERROR_LINE() AS NVARCHAR) + &#39; - SP: &#39; +  ISNULL(ERROR_PROCEDURE(), &#39;none&#39;) + &#39; - Text: &#39; + ERROR_MESSAGE();
+		
+	    IF(@CreatedTransaction = 1)
+			ROLLBACK TRAN T1;
+		ELSE
+		BEGIN
+		    BEGIN TRY
+		      ROLLBACK TRAN Savepoint1;
+			  RAISERROR(@ErrorMessage, 15,1);
+		    END TRY
+		    BEGIN CATCH
+		      	RAISERROR(@ErrorMessage, 15,1);
+		    END CATCH
+		END;
+
+
+		RAISERROR(@ErrorMessage, 15,1);
+
+	END CATCH</code></pre>
+</body>
+</html>

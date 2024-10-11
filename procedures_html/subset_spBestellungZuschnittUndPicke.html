@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>subset.spBestellungZuschnittUndPicke</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>subset.spBestellungZuschnittUndPicke</h1>
+    <p><strong>Description:</strong> Mit dieser Stored Procedure wird eine Teilmengen Dimension zugeschnitten und gepickt</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>-- =============================================
+-- Author:		&lt;Author,,Name&gt;
+-- Create date: &lt;Create Date,,&gt;
+-- Description:	&lt;Description,,&gt;
+-- =============================================
+CREATE PROCEDURE [subset].[spBestellungZuschnittUndPicke]
+	-- Add the parameters for the stored procedure here
+	@cSelectedSubsetNumber NVARCHAR(100),                              -- Teimengennummer die Zugeschnitten werden soll
+	@fGesQuantity DECIMAL(25, 13),                                     -- Anzahl der Zugeschnitten Teile
+	@Subsets AS subset.TYPE_spBestellungSubsets READONLY,              -- Teilmengen die f&#252;r Bestellung eingebucht werden
+	@SubsetsDetails AS subset.TYPE_spBestellungSubsetDetails READONLY, -- Teilmengendetails
+	@kWarenLagerPlatz INT,                                             -- Der Platz von dem gepickt werden soll
+	@kArtikel INT,                                                     -- Der Artikel der zugeschnitten und gepickt werden soll
+	@kBenutzer INT,						                               
+	@kBuchungsart INT,                                                 -- Buchungsart
+	@kLhm INT,                                                         -- Die Box
+	@nPickposStatus INT,                                               -- Der Status ab welchen die Pickpositionen betrachtet werden. 20 = Pick, 30 = InBoxlegen.
+	@cChargenNr NVARCHAR(255) = NULL,                                  -- Falls MHDs erfasst wurden, sonst NULL
+	@dMhd DATETIME = NULL, 			                                   -- Falls Chargen erfasst wurden, sonst NULL
+	@nNeuReservieren BIT = 1, 			                               -- fehlende Pickpos neu reservieren 
+	@cWarenlagerPlatz NVARCHAR(3000) = NULL 			               -- festgelegte Pl&#228;tze von denen ggf. neu Reserviert werden soll
+AS
+BEGIN TRAN
+	BEGIN TRY
+		DECLARE
+			@kWarenLagerEingangUrsprung INT,
+			@nWarenEingangIndex INT = 1,
+			@dTimestamp DATETIME = GETDATE(),
+			@nRet INT = 0,
+			@hash VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, &#39;subset.spBestellungZuschnittUndPicke&#39;);
+
+		-- Picklistenpositionen in Temp Speichern
+		IF(object_id(&#39;tempdb..#PickPosZuPicken&#39;) IS NOT NULL)
+		BEGIN
+		  DROP TABLE #PickPosZuPicken;
+		END;
+		CREATE TABLE #PickPosZuPicken(kPicklistePos INT NOT NULL, kPickliste INT NOT NULL PRIMARY KEY (kPicklistePos));
+
+		DECLARE cur_GetEingang CURSOR LOCAL FAST_FORWARD FOR  
+		SELECT DISTINCT
+			Eingang.kWarenLagerEingang,
+			Subsets.kWarenLagerEingangSubset,
+			Subsets.fFactor
+		FROM dbo.tWarenLagerEingang AS Eingang
+			JOIN dbo.tWarenLagerEingangSubsets AS Subsets ON Subsets.kWarenLagerEingang = Eingang.kWarenLagerEingang
+			JOIN dbo.tPicklistePos AS PicklistePos ON PicklistePos.kWarenLagerEingang = Eingang.kWarenLagerEingang
+		WHERE
+			Subsets.cSubsetNumber = @cSelectedSubsetNumber
+			AND EXISTS(SELECT kPicklistePos FROM @Subsets AS Subsets WHERE PicklistePos.kPicklistePos = Subsets.kPicklistePos)
+			AND Subsets.fQuantity &gt; 0
+			AND Eingang.kWarenLagerPlatz = @kWarenLagerPlatz
+			AND Eingang.kArtikel = @kArtikel
+			AND (@dMhd IS NULL OR Eingang.dMHD = @dMhd)
+			AND (@cChargenNr IS NULL OR Eingang.cChargenNr = @cChargenNr)
+
+		OPEN cur_GetEingang
+
+		WHILE @fGesQuantity &gt; 0
+		BEGIN
+			DECLARE 
+				@kWarenLagerEingangSubsetUrsprung INT,
+				@fSubsetFactorUrsprung DECIMAL(25,13);
+
+			-- Menge einzeln aus WE ausbuchen
+			FETCH NEXT FROM cur_GetEingang INTO @kWarenLagerEingangUrsprung, @kWarenLagerEingangSubsetUrsprung, @fSubsetFactorUrsprung
+
+			-- Es wird versucht mehr Menge auszubuchen als vorhanden
+			IF(@@FETCH_STATUS &lt;&gt; 0)
+			BEGIN
+				SET @nRet = -203000004
+				SELECT @nRet
+				RETURN @nRet
+			END
+
+			INSERT INTO #PickPosZuPicken (kPicklistePos, kPickliste)
+			SELECT PicklistePos.kPicklistePos, PicklistePos.kPickliste
+			FROM dbo.tWarenlagerEingang AS Eingang
+				JOIN dbo.tPicklistePos AS PicklistePos ON PicklistePos.kWarenLagerEingang = Eingang.kWarenLagerEingang
+			WHERE Eingang.kWarenLagerEingang = @kWarenLagerEingangUrsprung
+
+			SET CONTEXT_INFO @hash;
+
+			UPDATE dbo.tWarenLagerEingang
+			SET fAnzahl = fAnzahl - @fSubsetFactorUrsprung,
+				fAnzahlAktuell = fAnzahlAktuell - @fSubsetFactorUrsprung
+			WHERE kWarenLagerEingang = @kWarenLagerEingangUrsprung;
+
+			UPDATE dbo.tWarenLagerEingangSubsets
+			SET fQuantity = fQuantity - 1
+			WHERE kWarenLagerEingangSubset = @kWarenLagerEingangSubsetUrsprung;
+
+			SET CONTEXT_INFO 0x0;
+
+			SET @fGesQuantity = @fGesQuantity - 1;
+
+			DECLARE
+				@kSubset INT,
+				@kPicklistePos INT,
+				@fQuantity DECIMAL(25, 13),
+				@fSubsetFactor DECIMAL(25, 13),
+				@cSubsetNumber NVARCHAR(100);
+
+			DECLARE cur_GetNewSubset CURSOR LOCAL FAST_FORWARD FOR
+			SELECT kSubset,kPicklistePos,fQuantity,fSubsetFactor,cSubsetNumber
+			FROM @Subsets
+			WHERE nWarenEingangIndex = @nWarenEingangIndex
+
+			SET @nWarenEingangIndex = @nWarenEingangIndex + 1;
+
+			OPEN cur_GetNewSubset;
+			FETCH NEXT FROM cur_GetNewSubset INTO @kSubset, @kPicklistePos, @fQuantity, @fSubsetFactor, @cSubsetNumber
+
+			WHILE @@FETCH_STATUS = 0 AND @nRet = 0
+			BEGIN
+				-- Neue Teilmenge einbuchen
+				DECLARE
+					@kLieferantenBestellungPos INT,
+					@fEKNetto DECIMAL(25,13),
+					@cLieferscheinNr NVARCHAR(255),
+					@dGeliefertAm DATETIME,
+					@kGutschriftPos INT,
+					@kLHMOriginal INT,
+					@kSessionId INT,
+					@kWarenlagerEingang INT,
+					@SubsetEingang AS subset.TYPE_spSubsetDetails;
+
+				SELECT
+					@kLieferantenBestellungPos = Eingang.kLieferantenBestellungPos,
+					@fEKNetto = Eingang.fEKEinzel,
+					@cLieferscheinNr = Eingang.cLieferscheinNr,
+					@dGeliefertAm = Eingang.dGeliefertAm,
+					@kGutschriftPos = Eingang.kGutschriftPos,
+					@kLHMOriginal = Eingang.kLHM,
+					@kSessionId = Eingang.kSessionId
+				FROM dbo.tWarenLagerEingang AS Eingang
+				WHERE Eingang.kWarenLagerEingang = @kWarenLagerEingangUrsprung
+
+				DELETE @SubsetEingang
+				INSERT INTO @SubsetEingang SELECT kDimension,fValue,fGroundValue,kMassEinheit FROM @SubsetsDetails WHERE kSubset = @kSubset
+
+				EXEC subset.spWarenlagerEingangSchreiben
+					 @kArtikel
+					,@kWarenLagerPlatz
+					,@kLieferantenBestellungPos
+					,@kBenutzer
+					,@fEKNetto
+					,@cLieferscheinNr
+					,@fQuantity
+					,@fSubsetFactor
+					,@cSubsetNumber
+					,@cChargenNr
+					,@dMHD
+					,@dGeliefertAm
+					,&#39;Teilmengen Splitt f&#252;r Pickliste&#39; -- @cKommentar
+					,@kGutschriftPos
+					,@kLHMOriginal
+					,@kSessionId
+					,@kBuchungsart
+					,NULL -- @kBestellPosUmlagerung
+					,NULL -- @kRMRetourePos
+					,0 -- @nHistorieNichtSchreiben
+					,@SubsetEingang
+					,@kWarenlagerEingang OUTPUT
+
+				-- Eingang Update
+				SET CONTEXT_INFO @hash;
+
+				UPDATE dbo.tWarenlagerEingang
+				SET kWarenLagerEingang_Ursprung = @kWarenLagerEingangUrsprung
+				WHERE kWarenLagerEingang = @kWarenlagerEingang
+
+				SET CONTEXT_INFO 0x0;
+
+				-- Reservierung umlenken und picken
+				IF(@kPicklistePos &gt; 0)
+				BEGIN
+					DECLARE
+						@fAnzahl DECIMAL(25,13) = @fQuantity * @fSubsetFactor,
+						@fAnzahlPickpos DECIMAL(25,13),
+						@kWarenlagerEingangReservierung INT;
+
+					SELECT
+						@kWarenlagerEingangReservierung = PicklistePos.kWarenLagerEingang,
+						@fAnzahlPickpos = PicklistePos.fAnzahl
+					FROM dbo.tPicklistePos AS PicklistePos
+					WHERE PicklistePos.kPicklistePos = @kPicklistePos
+
+					SET CONTEXT_INFO @hash;
+
+					UPDATE dbo.tWarenlagerEingang
+					SET fAnzahlReserviertPickpos = fAnzahlReserviertPickpos + @fAnzahl
+					WHERE kWarenLagerEingang = @kWarenlagerEingang
+
+					UPDATE dbo.tWarenLagerEingang
+					SET fAnzahlReserviertPickpos = fAnzahlReserviertPickpos - @fAnzahl
+					WHERE kWarenLagerEingang = @kWarenlagerEingangReservierung;
+
+					SET CONTEXT_INFO 0x0;
+
+					IF(@fAnzahlPickpos != @fAnzahl)
+					BEGIN
+						-- Pickpos splitten
+						EXEC WMS.spPicklistePosSplitten
+							 @kPicklistePos = @kPicklistePos
+							,@nMenge = @fAnzahl
+							,@kNewPicklistePos = @kPicklistePos OUT
+							,@nRet = @nRet OUT
+
+						IF(@nRet != 0)
+						BEGIN
+							ROLLBACK TRAN
+							SELECT @nRet
+							RETURN @nRet
+						END
+					END
+					
+					UPDATE dbo.tPicklistePos
+					SET kWarenLagerEingang = @kWarenLagerEingang
+					WHERE kPicklistePos = @kPicklistePos
+
+					DECLARE @cMHD NVARCHAR(255) = CONVERT(NVARCHAR, @dMHD, 104)
+
+					-- Pickpos in Box legen
+					EXEC WMS.spPicklisteposInBox
+						 @kPicklistePos
+						,@kLhm
+						,@kBenutzer
+						,@fAnzahl
+						,@dTimestamp
+						,@cMhd
+						,@cChargenNr
+						,@nPickPosStatus
+						,@nRet OUTPUT;
+
+					IF(@nRet != 0)
+					BEGIN
+						ROLLBACK TRAN
+						SELECT @nRet
+						RETURN @nRet
+					END
+
+					DELETE #PickPosZuPicken WHERE kPicklistePos = @kPicklistePos
+				END
+
+				FETCH NEXT FROM cur_GetNewSubset INTO @kSubset, @kPicklistePos, @fQuantity, @fSubsetFactor, @cSubsetNumber
+			END
+
+			CLOSE cur_GetNewSubset;
+			DEALLOCATE cur_GetNewSubset;
+		END
+
+		CLOSE cur_GetEingang
+		DEALLOCATE cur_GetEingang;
+
+		IF(@nNeuReservieren = 1)
+		BEGIN
+			-- Pickpositionen m&#252;ssen neu reserviert werden
+			DECLARE cur_WeiterePickPos CURSOR LOCAL FAST_FORWARD FOR
+			SELECT kPicklistePos FROM #PickPosZuPicken
+
+			OPEN cur_WeiterePickPos;
+			FETCH NEXT FROM cur_WeiterePickPos INTO @kPicklistePos
+
+			WHILE @@FETCH_STATUS = 0 AND @nRet = 0
+			BEGIN
+				EXEC WMS.spPickposNeuReservieren @kPicklistePos = @kPicklistePos,
+												 @kBenutzer = @kBenutzer,
+												 @cSubsetNumberNeuReservieren = &#39;&#39;, -- nvarchar(100)
+												 @cWarenlagerPlatz = @cWarenlagerPlatz,            -- nvarchar(3000)
+												 @nRet = @nRet OUTPUT                -- int
+				IF(@nRet &lt;&gt; 0)
+				BEGIN
+					-- es konnten nicht alle Pickpositionen neu reserviert werden
+					ROLLBACK TRAN
+					SELECT @nRet
+					RETURN @nRet
+				END
+
+				FETCH NEXT FROM cur_WeiterePickPos INTO @kPicklistePos
+			END
+
+			CLOSE cur_WeiterePickPos;
+			DEALLOCATE cur_WeiterePickPos;
+		END
+		ELSE
+		BEGIN
+			-- Pickpositionen l&#246;schen
+			DELETE PicklistePos FROM dbo.tPicklistePos AS PicklistePos
+			WHERE EXISTS(SELECT * FROM #PickPosZuPicken AS PickPosZuPicken WHERE PickPosZuPicken.kPicklistePos = PicklistePos.kPicklistePos)
+		END
+
+	END TRY
+	BEGIN CATCH
+		SELECT -203000004; -- unbekannter Fehler
+
+		ROLLBACK TRAN
+
+		SET @nRet = -203000004;
+
+		INSERT INTO dbo.tLog (dDatum, kBenutzer, cLog, nTyp, nVorgang)
+		VALUES (GETDATE(), @kBenutzer, ERROR_MESSAGE(), 14, 9);
+
+		RETURN @nRet
+	END CATCH
+COMMIT</code></pre>
+</body>
+</html>

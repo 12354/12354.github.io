@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM.spRetourePositionZusammenfassen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>RM.spRetourePositionZusammenfassen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [RM].[spRetourePositionZusammenfassen]
+@kBenutzer INT,         -- Der Benutzer der den Vorgang ausf&#252;hrt
+@kWarenlager INT,		 -- Warenlager auf dem wir arbeiten
+@kRmRetourePositionZiel INT, -- Zielposition f&#252;r das Zusammenfassen, diese Retoureposition bleibt erhalten
+@kRmRetourePositionQuelle INT, -- Quellposition, diese Position wird gel&#246;scht und alle Warenlagereing&#228;nge dieser Position verweisen anschlie&#223;end auf die Zielposition
+@fAnzahl DECIMAL(25,13)
+
+-- Funktion: Mit dieser Prozedur k&#246;nnen Retourepositionen zusammengefasst werden
+	
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+   
+BEGIN TRY
+
+	SET CONTEXT_INFO  0x5130;
+	BEGIN TRAN T0;
+	--neue Anzahl auf die Zielposition buchen
+    UPDATE dbo.tRMRetourePos SET fAnzahl = fAnzahl + @fAnzahl WHERE kRMRetourePos = @kRmRetourePositionZiel;
+	
+	--Warenlagereingang auf Zielposition updaten
+	UPDATE dbo.tWarenLagerEingang SET kRMRetourePos = @kRmRetourePositionZiel WHERE kRMRetourePos = @kRmRetourePositionQuelle;
+
+	DELETE FROM dbo.tRMRetourePos WHERE kRMRetourePos = @kRmRetourePositionQuelle;
+	
+	COMMIT TRAN T0;
+
+END TRY
+BEGIN CATCH
+
+    ROLLBACK TRAN T0;
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SET @ErrorMessage =  ERROR_MESSAGE();
+    SET @ErrorSeverity =  ERROR_SEVERITY();
+    SET @ErrorState =  ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, 
+		  @ErrorSeverity,
+		  @ErrorState);
+END CATCH</code></pre>
+</body>
+</html>

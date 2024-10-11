@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPlatzUmlagern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPlatzUmlagern</h1>
+    <p><strong>Description:</strong> Mit der Stored procedure können Artikel von einem Warenlagerplatz auf den anderen umgelagert werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPlatzUmlagern] 
+	@kWarenLagerPlatzStart INT, 
+	@kWarenLagerPlatzZiel INT,
+	@kBenutzer INT,
+	@cKommentar NVARCHAR(255)
+
+-- Funktion: Lagert alle Artikel von einem WarenLagerPlatz auf einen anderen um
+--
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @nTestWert INT;
+DECLARE @kUmlagArtikel INT;
+DECLARE @fUmlagAnzahl DECIMAL(25,13);
+DECLARE @kUmlagWarenlagerPlatzAlt INT;
+
+DECLARE @temp_ArtikelZumUmbuchen TABLE(kArtikel INT, fMenge DECIMAL(25,13));
+
+BEGIN TRANSACTION
+	SET @nTestWert = 0;
+
+	--Pr&#252;fen, ob reservierte Artikel auf Start Platz
+	SELECT @nTestWert = COUNT(kWarenLagerEingang)
+	FROM dbo.twarenlagereingang WITH(NOLOCK)
+	WHERE dbo.tWarenlagerEingang.kWarenlagerPlatz = @kWarenLagerPlatzStart
+	AND fAnzahlReserviertPickpos &gt; 0;
+
+	IF (@nTestWert &gt; 0)
+	BEGIN
+		--SELECT - 204000015; --Platz konnte nicht umgelagert werden, da reservierte Artikel auf dem Platz liegen
+		RAISERROR(N&#39;204000015&#39;,15,1);
+	END
+	ELSE
+	BEGIN
+		DECLARE @kArtikel AS INT, @cCharge AS NVARCHAR(255), @dMHD AS DATETIME
+
+		DECLARE cur_ChargeMHD CURSOR LOCAL FAST_FORWARD FOR
+		SELECT dbo.tartikel.kArtikel, dbo.twarenlagereingang.cChargenNr, dbo.twarenlagereingang.dMHD
+			FROM dbo.twarenlagereingang WITH(NOLOCK)
+			JOIN dbo.tartikel WITH(NOLOCK) ON dbo.tWarenLagerEingang.kArtikel = dbo.tartikel.kArtikel
+			WHERE kWarenLagerPlatz = @kWarenLagerPlatzStart
+				AND (
+					tartikel.nCharge = 1
+					OR tartikel.nMHD = 1
+					)
+			GROUP BY dbo.tartikel.kArtikel, dbo.twarenlagereingang.cChargenNr, dbo.twarenlagereingang.dMHD;
+
+		OPEN cur_ChargeMHD
+		FETCH NEXT FROM cur_ChargeMHD INTO @kArtikel, @cCharge, @dMHD;
+
+		--Durchl&#228;uft alle Chargen, bzw. MHD Artikel und pr&#252;ft, ob der Zielplatz ok ist
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			--Hat die Pickliste noch Positionen mit der gleichen Artikel+Charge/MHD auf anderen Pl&#228;tzen?
+			SELECT @nTestWert = COUNT(tartikel.kArtikel)
+				FROM dbo.tartikel WITH(NOLOCK)
+				JOIN dbo.tpicklistepos WITH(NOLOCK) ON dbo.tpicklistepos.kartikel = dbo.tartikel.kartikel
+				JOIN dbo.twarenlagerplatz WITH(NOLOCK) ON dbo.tpicklistepos.kwarenlagerplatz = dbo.twarenlagerplatz.kwarenlagerplatz
+				JOIN dbo.tpicklistepos tPP2 WITH(NOLOCK) ON tpicklistepos.kPickliste = tPP2.kPickliste
+				JOIN dbo.twarenlagereingang tWE2 WITH(NOLOCK) ON tWE2.kwarenlagereingang = tPP2.kwarenlagereingang
+				WHERE dbo.tPicklistePos.nStatus &lt; 20
+					AND dbo.tpicklistepos.kwarenlagerplatz = @kWarenLagerPlatzZiel --Es gibt eine Pickliste wo von dem zu pr&#252;fenden Platz
+					AND dbo.tpicklistepos.kArtikel = @kArtikel -- der zu pr&#252;fende Artikel gepickt werden soll
+					AND tPP2.kArtikel = dbo.tArtikel.kArtikel --und der gleiche Artikel soll
+					AND tPP2.kWarenlagerplatz &lt;&gt; dbo.tpicklistepos.kwarenlagerplatz --noch von einen andere Platz in der gleichen Pickliste gepickt werden
+					AND tPP2.nStatus &lt; 20
+					AND (
+							(
+							dbo.tArtikel.nCharge &gt; 0
+							AND tWE2.cChargennr = @cCharge
+							)
+						OR (
+							dbo.tArtikel.nMHD &gt; 0
+							AND CONVERT(DATETIME, tWE2.dMHD, 104) = CONVERT(DATETIME, @dMHD, 104)
+							)
+						)
+
+			IF (@nTestWert &gt; 0)
+			BEGIN
+				SELECT - 202000049;
+				BREAK;
+			END
+			ELSE
+			BEGIN
+				FETCH NEXT FROM cur_ChargeMHD INTO @kArtikel, @cCharge, @dMHD;
+			END;
+		END;
+		CLOSE cur_ChargeMHD;
+		DEALLOCATE cur_ChargeMHD;
+		IF (@nTestWert = 0)
+		BEGIN
+			INSERT INTO @temp_ArtikelZumUmbuchen(kArtikel,fMenge)
+			SELECT dbo.twarenlagereingang.kArtikel, SUM(dbo.twarenlagereingang.fAnzahlAktuell)
+			FROM dbo.twarenlagereingang WITH(NOLOCK)
+			WHERE dbo.tWarenlagerEingang.kWarenlagerPlatz = @kWarenLagerPlatzStart
+			AND fAnzahlAktuell &gt; 0
+			GROUP BY dbo.twarenlagereingang.kArtikel
+
+
+			DECLARE cur_WarenLagerEingang CURSOR LOCAL FAST_FORWARD FOR
+			SELECT kArtikel,fMenge FROM @temp_ArtikelZumUmbuchen;
+
+
+			OPEN cur_WarenLagerEingang
+			FETCH NEXT FROM cur_WarenLagerEingang INTO @kUmlagArtikel,@fUmlagAnzahl
+
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+
+
+			 EXEC [dbo].[spPlatzUmbuchen]
+			 @kArtikel = @kUmlagArtikel,
+			 @fAnzahl = @fUmlagAnzahl,
+			 @kWarenlagerPLatzNeu = @kWarenlagerPlatzZiel,
+			 @kWarenlagerPlatzAlt = @kWarenLagerPlatzStart,
+			 @cKommentar = @cKommentar,
+			 @kBuchungsart = 120,
+			 @kBenutzer= @kBenutzer;
+
+
+			 FETCH NEXT FROM cur_WarenLagerEingang INTO @kUmlagArtikel,@fUmlagAnzahl;
+		END;
+
+		CLOSE cur_WarenLagerEingang;
+		DEALLOCATE cur_WarenLagerEingang;
+	END;
+END;
+
+SELECT @nTestWert;
+
+IF (@nTestWert = 0)
+BEGIN
+	COMMIT TRANSACTION;
+END;
+ELSE
+BEGIN
+	ROLLBACK TRANSACTION;
+END;</code></pre>
+</body>
+</html>

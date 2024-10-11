@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spRefreshLaufendeNummern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spRefreshLaufendeNummern</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden die Werte in der Tabelle tLaufendeNummern neu gesetzt falls dort Inkonsistenzen auftreten.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spRefreshLaufendeNummern]  
+
+-- Info: Diese SP kann entfernt werden, sobald alles auf tLaufendeNummern umgestellt wurde  
+--   
+AS   
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN TRANSACTION   
+   
+	-- Kunde   
+	IF((SELECT COUNT(NAME) FROM sys.tables WHERE name = &#39;tLfdnrKunde&#39;) &gt; 0)  
+	BEGIN  
+		UPDATE tLaufendeNummern WITH(ROWLOCK)   
+		SET tLaufendeNummern.nNummer = ISNULL((SELECT TOP 1 ISNULL(tLfdnrKunde.nNummer, 1) FROM tLfdnrKunde WITH(NOLOCK)), 1),   
+			tLaufendeNummern.cPrefix = (SELECT TOP 1 tAnfangsNr.sKPre FROM tAnfangsNr WITH(NOLOCK)),   
+			tLaufendeNummern.cSuffix = (SELECT TOP 1 tAnfangsNr.sKPost FROM tAnfangsNr WITH(NOLOCK))   
+		WHERE tLaufendeNummern.cName = &#39;Kunde&#39;   
+	END  
+COMMIT</code></pre>
+</body>
+</html>

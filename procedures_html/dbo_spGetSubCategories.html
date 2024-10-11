@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGetSubCategories</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGetSubCategories</h1>
+    <p><strong>Description:</strong> Die Stored Procedure gibt alle Unterkategorien zu einer Kategorie zurück.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGetSubCategories] @kRoot INT -- PK Wurzel-Kategorie
+AS
+BEGIN	
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+-- liefert die PKs aller Unterkategorien zu einer gegebenen Wurzel-Kategorie EXklusive des PKs der Wurzel-Kategorie
+-- (in der Reihenfolge einer Breitensuche)
+
+-- Ergebnis-Tabelle
+DECLARE @tUnterkategorien AS TABLE (kKategorie INT)
+
+-- Hilfs-Tabelle (klassische Breitensuche)
+DECLARE @tQueue AS TABLE (kKategorie INT)
+INSERT INTO @tQueue VALUES (@kRoot)
+
+-- Hilfs-Tabelle (Zwischenspeicherung)
+DECLARE @tKinder AS TABLE (kKategorie INT)
+
+-- aktueller Knoten
+DECLARE @kCurrent INT
+
+WHILE ((SELECT COUNT(*) FROM @tQueue) != 0)
+BEGIN
+	SET @kCurrent = (SELECT TOP 1 * FROM @tQueue);
+	DELETE FROM @tKinder
+	INSERT INTO @tKinder
+		SELECT kKategorie
+		FROM tkategorie WITH(NOLOCK)
+		WHERE kOberKategorie = @kCurrent;
+	INSERT INTO @tUnterkategorien
+		SELECT * FROM @tKinder;
+	INSERT INTO @tQueue
+		SELECT * FROM @tKinder;
+	DELETE FROM @tQueue WHERE kKategorie = @kCurrent; -- Achtung: NICHT DELETE TOP(1), weil sonst neue Datens&#228;tze oben statt unten eingef&#252;gt != Queue !!! =&gt; Absturz
+END
+
+SELECT * FROM @tUnterkategorien
+
+END</code></pre>
+</body>
+</html>

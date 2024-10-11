@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spUpdateLieferantenBestellungPosToFreiPosForStuecklistenVaeter</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spUpdateLieferantenBestellungPosToFreiPosForStuecklistenVaeter</h1>
+    <p><strong>Description:</strong> Die Stored Procedure ändert Stücklistenväter zu Freipositionen um.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spUpdateLieferantenBestellungPosToFreiPosForStuecklistenVaeter]
+	@StuecklistenVaterArtikelKeys TYPE_spUpdateLieferantenBestellungPosToFreiPosForStuecklistenVaeter READONLY 
+AS
+BEGIN
+
+	DECLARE @ContexInfo VARBINARY(128)
+	SELECT @ContexInfo = HASHBYTES(&#39;SHA1&#39;, &#39;spUpdateLieferantenBestellungPosToFreiPosForStuecklistenVaeter&#39;);
+	SET CONTEXT_INFO @ContexInfo 
+
+	BEGIN TRANSACTION UpdateLieferantenBestellungPos;
+		
+	BEGIN TRY
+
+		DECLARE @updateLagerbestand dbo.TYPE_spUpdateLagerbestand
+		INSERT INTO @updateLagerbestand (kArtikel) 
+		SELECT kArtikel 
+		FROM @StuecklistenVaterArtikelKeys
+
+		UPDATE dbo.tLieferantenBestellungPos
+		SET tLieferantenBestellungPos.nPosTyp = 0, tLieferantenBestellungPos.kArtikel = 0
+		FROM dbo.tLieferantenBestellungPos
+		WHERE tLieferantenBestellungPos.kArtikel IN 
+		(
+			SELECT kArtikel 
+			FROM @StuecklistenVaterArtikelKeys
+		)
+		AND NOT EXISTS
+		(
+			SELECT 1 
+			FROM @StuecklistenVaterArtikelKeys StuecklistenVaterArtikelKeys
+			LEFT JOIN dbo.tArtikel ON StuecklistenVaterArtikelKeys.kArtikel = tArtikel.kArtikel
+			WHERE tArtikel.kArtikel IS NULL
+		)
+		AND NOT EXISTS
+		(
+			SELECT 1 
+			FROM @StuecklistenVaterArtikelKeys StuecklistenVaterArtikelKeys
+			JOIN dbo.tArtikel ON StuecklistenVaterArtikelKeys.kArtikel = tArtikel.kArtikel
+			WHERE tArtikel.kStueckliste &lt;= 0
+		)
+		
+		COMMIT TRANSACTION UpdateLieferantenBestellungPos;
+
+		EXEC dbo.spUpdateLagerbestand @updateLagerbestand
+
+	END TRY
+	BEGIN CATCH
+
+		DECLARE @ErrorData XML;
+		SET @ErrorData =
+			(
+					SELECT ERROR_NUMBER() AS ErrorId, ERROR_MESSAGE()
+					FOR 
+						XML PATH(&#39;Error&#39;)
+			)
+		EXEC dbo.spRaiseError 13, @ErrorData, 1
+
+	END CATCH
+
+END</code></pre>
+</body>
+</html>

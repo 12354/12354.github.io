@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lieferantenbestellung.spLieferantenBestellungPosBearbeiten</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Lieferantenbestellung.spLieferantenBestellungPosBearbeiten</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tLieferantenbestellungpos bearbeitet werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Lieferantenbestellung].[spLieferantenBestellungPosBearbeiten]
+		@xLieferantenbestellungPos XML = NULL,
+		@kLieferantenbestellungPos INT = NULL,
+		@kLieferantenbestellung INT = NULL,
+		@kArtikel INT = NULL,
+		@cArtNr NVARCHAR(255) = NULL,
+		@cLieferantenArtNr NVARCHAR(255) = NULL,
+		@cName NVARCHAR(255) = NULL,
+		@cLieferantenBezeichnung NVARCHAR(255) = NULL,
+		@fUST DECIMAL(25,13) = NULL,
+		@fMenge DECIMAL(25,13) = NULL,
+		@cHinweis NVARCHAR(2000) = NULL,
+		@fEKNetto DECIMAL(25,13) = NULL,
+		@nPosTyp INT = NULL,
+		@cNameLieferant NVARCHAR(255) = NULL,
+		@nLiefertage INT = NULL,
+		@dLieferdatum DATETIME = NULL,
+		@nSort INT = NULL,
+		@kLieferscheinPos INT = NULL,
+		@fMengeGeliefert DECIMAL(25,13) = NULL,
+		@cVPEEinheit NVARCHAR(255) = NULL,
+		@nVPEMenge DECIMAL(25,13) = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5123;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			IF(OBJECT_ID(&#39;tempdb..#LieferantenbestellungPos&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #LieferantenbestellungPos;
+			END
+			CREATE TABLE #LieferantenbestellungPos(
+				kLieferantenbestellungPos INT,
+				kLieferantenbestellung INT,
+				kArtikel INT,
+				cArtNr NVARCHAR(255),
+				cLieferantenArtNr NVARCHAR(255),
+				cName NVARCHAR(255),
+				cLieferantenBezeichnung NVARCHAR(255),
+				fUST DECIMAL(25,13),
+				fMenge DECIMAL(25,13),
+				cHinweis NVARCHAR(2000),
+				fEKNetto DECIMAL(25,13),
+				nPosTyp INT,
+				cNameLieferant NVARCHAR(255),
+				nLiefertage INT,
+				dLieferdatum DATETIME,
+				nSort INT,
+				kLieferscheinPos INT,
+				fMengeGeliefert DECIMAL(25,13),
+				cVPEEinheit NVARCHAR(255),
+				nVPEMenge DECIMAL(25,13),
+				fMengeGeliefertOld DECIMAL(25,13),
+				nStatus INT,
+				fMengeOld DECIMAL(25,13)
+				);
+			IF(@xLieferantenbestellungPos IS NOT NULL)
+			BEGIN
+				INSERT INTO #LieferantenbestellungPos(kLieferantenbestellungPos, kLieferantenbestellung, kArtikel, cArtNr, cLieferantenArtNr, cName, cLieferantenBezeichnung, fUST,
+														fMenge, cHinweis, fEKNetto, nPosTyp, cNameLieferant, nLiefertage, dLieferdatum, nSort, kLieferscheinPos,
+														fMengeGeliefert, cVPEEinheit, nVPEMenge, fMengeGeliefertOld, nStatus, fMengeOld)
+					SELECT	LieferantenbestellungPos.ID.value(&#39;kLieferantenbestellungPos[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;kLieferantenbestellung[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;kArtikel[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cArtNr[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cLieferantenArtNr[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cName[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cLieferantenBezeichnung[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;fUST[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;fMenge[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(2000)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;fEKNetto[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;nPosTyp[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cNameLieferant[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;nLiefertage[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;dLieferdatum[1]&#39;, &#39;DATETIME&#39;),
+							LieferantenbestellungPos.ID.value(&#39;nSort[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;kLieferscheinPos[1]&#39;, &#39;INT&#39;),
+							LieferantenbestellungPos.ID.value(&#39;fMengeGeliefert[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;cVPEEinheit[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenbestellungPos.ID.value(&#39;nVPEMenge[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							dbo.tLieferantenBestellungPos.fMengeGeliefert,
+							dbo.tLieferantenBestellung.nStatus,
+							dbo.tLieferantenBestellungPos.fMenge
+						FROM @xLieferantenbestellungPos.nodes(&#39;LieferantenbestellungPos&#39;) AS LieferantenbestellungPos(ID)
+						JOIN dbo.tLieferantenBestellungPos ON dbo.tlieferantenBestellungPos.kLieferantenBestellungPos = LieferantenbestellungPos.ID.value(&#39;kLieferantenbestellungPos[1]&#39;, &#39;INT&#39;)
+						JOIN dbo.tLieferantenBestellung ON dbo.tLieferantenBestellung.kLieferantenBestellung = dbo.tLieferantenBestellungPos.kLieferantenBestellung;
+			END
+			ELSE
+			BEGIN
+				DECLARE @fMengeGeliefertOld DECIMAL(28,14);
+				DECLARE @nStatus INT;
+				DECLARE @fMengeOld DECIMAL(28,14);
+				SELECT @fMengeGeliefertOld = dbo.tLieferantenBestellungPos.fMengeGeliefert,
+					@nStatus = dbo.tLieferantenBestellung.nStatus,
+					@fMengeOld = dbo.tlieferantenBestellungPos.fMenge
+					FROM dbo.tLieferantenBestellung
+					JOIN dbo.tLieferantenBestellungPos ON dbo.tlieferantenBestellung.kLieferantenBestellung = dbo.tLieferantenBestellungPos.kLieferantenBestellung
+					WHERE dbo.tLieferantenBestellungPos.kLieferantenBestellungPos = @kLieferantenbestellungPos;
+				
+				INSERT INTO #LieferantenbestellungPos(kLieferantenbestellungPos, kLieferantenbestellung, kArtikel, cArtNr, cLieferantenArtNr, cName, cLieferantenBezeichnung, fUST,
+														fMenge, cHinweis, fEKNetto, nPosTyp, cNameLieferant, nLiefertage, dLieferdatum, nSort, kLieferscheinPos,
+														fMengeGeliefert, cVPEEinheit, nVPEMenge, fMengeGeliefertOld, nStatus, fMengeOld)
+					VALUES(@kLieferantenbestellungPos, @kLieferantenbestellung, @kArtikel, @cArtNr, @cLieferantenArtNr, @cName, @cLieferantenBezeichnung, @fUST, 
+							@fMenge, @cHinweis, @fEKNetto, @nPosTyp, @cNameLieferant, @nLiefertage, @dLieferdatum, @nSort, @kLieferscheinPos,
+							@fMengeGeliefert, @cVPEEinheit, @nVpeMenge, @fMengeGeliefertOld, @nStatus, @fMengeOld);
+			END			
+
+			UPDATE dbo.tLieferantenBestellungPos
+				SET kLieferantenBestellung = #LieferantenbestellungPos.kLieferantenbestellung,
+					kArtikel = #LieferantenbestellungPos.kArtikel, 
+					cArtNr = #LieferantenbestellungPos.cArtNr,
+					cLieferantenArtNr = #LieferantenbestellungPos.cLieferantenArtNr,
+					cName = #LieferantenbestellungPos.cName,
+					cLieferantenBezeichnung = #LieferantenbestellungPos.cLieferantenBezeichnung,
+					fUST = #LieferantenbestellungPos.fUST,
+					fMenge = #LieferantenbestellungPos.fMenge,
+					cHinweis = #LieferantenbestellungPos.cHinweis,
+					fEKNetto = #LieferantenbestellungPos.fEKNetto,
+					nPosTyp = #LieferantenbestellungPos.nPosTyp,
+					cNameLieferant = #LieferantenbestellungPos.cNameLieferant,
+					nLiefertage = #LieferantenbestellungPos.nLiefertage,
+					dLieferdatum = #LieferantenbestellungPos.dLieferdatum,
+					nSort = #LieferantenbestellungPos.nSort,
+					kLieferscheinPos = #LieferantenbestellungPos.kLieferscheinPos,
+					fMengeGeliefert = #LieferantenbestellungPos.fMengeGeliefert,
+					cVPEEinheit = #LieferantenbestellungPos.cVPEEinheit,
+					nVPEMenge = #LieferantenbestellungPos.nVPEMenge,
+					fAnzahlOffen = CASE WHEN #LieferantenbestellungPos.fMenge - #LieferantenbestellungPos.fMengeGeliefert &lt; 0.0 THEN 0.0
+										ELSE #LieferantenbestellungPos.fMenge - #LieferantenbestellungPos.fMengeGeliefert
+									END
+				FROM dbo.tLieferantenBestellungPos 
+				JOIN #LieferantenbestellungPos ON #LieferantenbestellungPos.kLieferantenbestellungPos = dbo.tLieferantenBestellungPos.kLieferantenBestellungPos;
+			
+
+			IF(EXISTS(SELECT * FROM #LieferantenbestellungPos 
+						WHERE(nStatus &gt; 5 AND nStatus &lt; 50)
+							AND (#LieferantenbestellungPos.fMengeGeliefert &lt;&gt; #LieferantenbestellungPos.fMengeGeliefertOld)						
+				))
+			BEGIN
+
+				UPDATE dbo.tlagerbestand
+						SET fZulauf = fZulauf + fMengeDifferenz
+					FROM dbo.tlagerbestand 
+					JOIN(SELECT #LieferantenbestellungPos.kArtikel,
+								 SUM(fMengeGeliefertOld - fMengeGeliefert)  AS fMengeDifferenz 
+							FROM #LieferantenbestellungPos 
+							WHERE fMengeGeliefertOld &lt;&gt; fMengeGeliefert
+								AND (nStatus &gt; 5 AND nStatus &lt; 50)
+							GROUP BY #LieferantenbestellungPos.kArtikel
+					) AS Result ON Result.kArtikel = dbo.tlagerbestand.kArtikel
+
+
+				-- St&#252;cklistenV&#228;ter updaten
+			     UPDATE dbo.tlagerbestand SET fZulauf = ISNULL(FLOOR(StuecklistenZulauf.fStuecklistenImZulauf),0)
+				FROM dbo.tlagerbestand 
+				JOIN (
+			
+				SELECT dbo.tArtikel.kArtikel , MIN(KompomentenImWE.fAnteileAnStueckliste) AS fStuecklistenImZulauf
+				FROM dbo.tArtikel
+				OUTER APPLY ( SELECT KomArt.kArtikel AS Komponente, SUM(ISNULL(tStueckliste.fAnzahl,0)) AS fAnzahlKomponente,  SUM(ISNULL(dbo.tlagerbestand.fZulauf,0)) AS  fAnzahlKomponenteOffen, (SUM(ISNULL(dbo.tlagerbestand.fZulauf,0)) /  SUM(ISNULL(tStueckliste.fAnzahl,0)) ) AS fAnteileAnStueckliste
+				       FROM tStueckliste
+					  JOIN dbo.tArtikel AS KomArt ON KomArt.kArtikel = tStueckliste.kArtikel
+					  JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = KomArt.kArtikel
+					  WHERE tStueckliste.kStueckliste = tArtikel.kStueckliste
+					  AND tStueckliste.fAnzahl &gt; 0
+					  GROUP BY KomArt.kArtikel ) AS KompomentenImWE
+				WHERE dbo.tArtikel.kStueckliste &gt; 0 
+				AND EXISTS (SELECT * FROM #LieferantenbestellungPos WHERE #LieferantenbestellungPos.kArtikel = KompomentenImWE.Komponente) -- Nur die betrachten, wo wir was anpassen
+				GROUP BY  dbo.tArtikel.kArtikel ) AS StuecklistenZulauf ON StuecklistenZulauf.kArtikel = tlagerbestand.kArtikel
+				
+
+				-- VarKombi Vater mit Updaten
+				UPDATE dbo.tlagerbestand SET fZulauf = fZulauf + VarKombiKind.fMengeDifferenz
+				FROM dbo.tlagerbestand 
+				JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = dbo.tlagerbestand.kArtikel
+				JOIN ( SELECT tArtikel.kVaterArtikel , SUM(fMengeGeliefertOld - fMengeGeliefert) AS fMengeDifferenz 
+				       FROM tArtikel  
+					  JOIN #LieferantenbestellungPos ON  #LieferantenbestellungPos.kArtikel = tArtikel.kArtikel
+					  WHERE fMengeGeliefertOld &lt;&gt; fMengeGeliefert
+					  AND (nStatus &gt; 5 AND nStatus &lt; 50)
+					  group by tArtikel.kVaterArtikel) AS VarKombiKind ON VarKombiKind.kVaterArtikel = dbo.tArtikel.kArtikel
+				WHERE dbo.tArtikel.nIstVater = 1;
+
+			END;
+			IF(EXISTS(SELECT * FROM #LieferantenbestellungPos WHERE fMenge &lt;&gt; fMengeOld))
+			BEGIN
+				DECLARE @typeLagerbestand TYPE_spUpdateLagerbestand;
+				INSERT INTO @typeLagerbestand(kArtikel)
+					SELECT kArtikel
+						FROM #LieferantenbestellungPos
+						WHERE fMenge &lt;&gt; fMengeOld;
+				EXEC dbo.spUpdateLagerbestand @typeLagerbestand;
+			END
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;			
+END</code></pre>
+</body>
+</html>

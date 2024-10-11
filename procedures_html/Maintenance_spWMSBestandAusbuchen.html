@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spWMSBestandAusbuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spWMSBestandAusbuchen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Artikel von Warenlagerplaetzen ausgebucht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>-- F&#252;r Support gebraucht. 
+-----------------------------------------------------------------
+-- VOR DER NUTZUNG BEI KUNDEN EIN DB-BACKUP ERSTELLEN !!!!!!
+-----------------------------------------------------------------
+-- Bucht Artikel von einem Warenlagerplatz aus.
+-- ACHTUNG, vor dem gebraucht die Parameter lesen, es ist m&#246;glich GANZE Pl&#228;tze/L&#228;ger leerzubuchen.
+
+CREATE PROCEDURE [Maintenance].[spWMSBestandAusbuchen]
+	@kWarenlagerPlatz INT,  -- Der PK des Platzes von dem ausgebucht werden soll. Zu finden in (SELECT kWarenlagerplatz FROM twarenlagerplatz WHERE cName = &#39;MeinPlatz&#39; AND kWarenlager = @PKWarenlager)
+	@kArtikel INT = NULL,  -- ACHTUNG, wenn dieser Wert NULL ist werden ALLE artikel vom Platz ausgebucht. Der PK des Artikels der ausgebucht werden soll, falls leer werden ALLE Artikel auf dem Platz ausgebucht. Zu finden in (SELECT kArtikel FROM tArtikel WHERE cArtNr = &#39;MeineArtikelNummer&#39;)
+	@Kommentar NVARCHAR(50) = NULL, -- Ein Kommentar zu der Ausbuchung, zB. &#39;JTL-Support&#39;
+	@AuchNichtWMSLagerAusbuchen INT = 0 -- Zur sicherheit, damit nicht aus versehen ein StandardLager leergebucht wird. 
+	
+AS
+BEGIN
+
+
+IF @AuchNichtWMSLagerAusbuchen = 0 AND EXISTS(
+									 SELECT * 
+									 FROM dbo.tWarenLager
+									 JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLager = tWarenLager.kWarenLager
+									 WHERE tWarenLagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatz
+									 AND tWarenLager.nLagerplatzVerwaltung != 1)
+BEGIN
+    RAISERROR(N&#39;Warenlager ist ein kein WMS-Lager&#39;,15,1);
+    RETURN;
+END
+
+
+DECLARE @WarenlagerAusgang XML;
+
+IF(@kArtikel IS NOT NULL)
+BEGIN
+
+    SELECT @WarenlagerAusgang = (
+        SELECT  tWarenLagerEingang.kWarenLagerEingang,
+                0 AS kLieferscheinPos,
+                tWarenLagerEingang.fAnzahlAktuell AS fAnzahl,
+                @Kommentar AS cKommentar,
+                1 AS kBenutzer,
+                30 AS kBuchungsart
+        from tWarenLagerEingang where kwarenlagerplatz = @kWarenlagerPlatz
+                                  AND tWarenLagerEingang.kArtikel = @kArtikel
+                                  and fAnzahlAktuell &gt; 0
+            FOR XML PATH(&#39;WarenAusgang&#39;), TYPE);
+
+
+
+END;
+ELSE
+BEGIN
+
+    SELECT @WarenlagerAusgang = (
+        SELECT  tWarenLagerEingang.kWarenLagerEingang,
+                0 AS kLieferscheinPos,
+                tWarenLagerEingang.fAnzahlAktuell AS fAnzahl,
+                @Kommentar AS cKommentar,
+                1 AS kBenutzer,
+                30 AS kBuchungsart
+        from tWarenLagerEingang where kwarenlagerplatz = @kWarenlagerPlatz
+                                  and fAnzahlAktuell &gt; 0
+            FOR XML PATH(&#39;WarenAusgang&#39;), TYPE);
+
+
+END;
+
+EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = @WarenlagerAusgang;
+
+END;</code></pre>
+</body>
+</html>

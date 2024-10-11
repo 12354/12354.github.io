@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklisteInBox</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklisteInBox</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklisteInBox]
+	@kPickliste INT,              -- Die Pickliste &#252;ber die der Prozess l&#228;uft
+	@kArtikel INT,                -- Die Artikel der Pickliste die din die Box gebucht werden sollen
+	@cMhd NVARCHAR(255),          -- Falls MHDs erfasst wurden, sonst NULL
+	@cCharge NVARCHAR(255),       -- Falls Chargen erfasst wurden, sonst NULL
+	@cSubsetNumber NVARCHAR(255), -- Falls Teilmenge erfasst wurden, sonst NULL
+	@nMenge DECIMAL(25,13),       -- Die Menge der Artikel die in die Box gebucht werden sollen
+	@kBestellung INT,             -- Die Bestellung &#252;ber die der Prozess l&#228;uft (0 = keine Bestellung beschr&#228;nkung)
+	@kBenutzer INT,
+	@kLhm INT,                    -- Die Box
+	@kWarenlagerPlatz INT,        -- Der Platz von dem gepickt werden soll (0 = keine Platz beschr&#228;nkung)
+	@nPickPosStatus INT,          -- Der Status ab welchen die Pickpositionen betrachtet werden. 20 = Pick, 30 = InBoxlegen. 
+	@kLieferschein INT = 0,
+	@nRet INT OUT
+
+-- Funktion: Mit dieser Procedur werden alle Artikel (mit MHD/Charge) einer Bestellung in auf eine Box gebucht.
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	DECLARE @kPicklistePos  BIGINT;
+	DECLARE @fPPAnzahl      DECIMAL(25,13);
+	DECLARE @fGesAnzahl     DECIMAL(25,13);
+	--DECLARE @nRet           INT
+	DECLARE @dPLTimestamp   DATETIME;
+	DECLARE @cPPChargenNr   NVARCHAR(255);
+	DECLARE @cPPMHD			    NVARCHAR(255);
+	DECLARE @kPPWarenLagerPlatz	INT;
+	DECLARE @fAufPlatzAnzahl DECIMAL(25,13);
+	DECLARE @kNewPicklistePos INT;
+	DECLARE @kPicklistePosOld INT;
+	DECLARE @CreatedTransaction INT;
+
+	BEGIN TRY
+
+		-- Alte Locks l&#246;schen (&#228;lter als 1 min). K&#246;nnen durch absturz der DB verursacht worden sein.
+		DELETE WMS.tPicklisteInBoxLock 
+		FROM WMS.tPicklisteInBoxLock  
+		WHERE WMS.tPicklisteInBoxLock .dZeitstempel &lt; DateADD(mi, -1,   getdate())
+
+		IF(@kLhm &gt; 0 AND EXISTS(SELECT * FROM WMS.tPicklisteInBoxLock  WHERE kLHM = @kLhm AND kBenutzer = @kBenutzer))
+		BEGIN
+			SET @nRet = -1;
+			RETURN;
+		END
+		ELSE IF (@kLhm &gt; 0 AND @kBenutzer &gt; 0)
+		BEGIN
+			INSERT INTO WMS.tPicklisteInBoxLock  (kLHM,kBenutzer,dZeitstempel) VALUES (@kLhm,@kBenutzer,GETDATE());
+		END;
+
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+			SET @CreatedTransaction = 1;
+			BEGIN TRAN
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRAN Savepoint1;
+		END;
+
+
+		SET @nRet = 0;
+		SET @fGesAnzahl = @nMenge;
+		SET @dPLTimestamp = GETDATE();
+		
+		IF(LEN(@cMhd) = 0)
+			SET @cMhd = NULL;
+			
+		IF(LEN(@cCharge) = 0)
+			SET @cCharge = null;
+
+		IF(LEN(@cSubsetNumber) = 0)
+			SET @cSubsetNumber = NULL;
+
+		IF(@kBestellung &gt; 0) -- Nur wenn ganze Bestellung gepickt wird
+		BEGIN
+		IF(CONTEXT_INFO() IS NULL) -- Falls wir von Eazyshipping kommen, nicht setzten
+			SET CONTEXT_INFO 0x5052; -- Sonst setzten, damit die BestandsUpdates nicht gemacht werden
+		END;
+
+		-- DerCursor holt alle Pickpositionen von den Artikel zu der Bestellung
+		-- Sortierung: zuerst alle Pickpositionen wo die Charge und MHD &#252;bereinstimmt, dann die wo die Menge genau der pickmenge ist, dann die Menge aufsteigend
+
+	    IF(@cCharge IS NULL AND @cMhd IS NULL) -- Ohne Chargen/MHD Priorisierung, fuer bessere Performance. Evtl. sp&#228;ter auf dynamisches SQL umstellen.
+		BEGIN
+
+			DECLARE cur_GetPickPos CURSOR LOCAL FAST_FORWARD FOR  
+			SELECT dbo.tPicklistePos.kPicklistePos,dbo.tPicklistePos.fAnzahl,dbo.tWarenLagerEingang.cChargenNr,CONVERT(NVARCHAR,dbo.tWarenlagerEingang.dMHD, 104) dMHD,dbo.tWarenLagerEingang.kWarenLagerPlatz
+				FROM dbo.tPicklistePos 
+				JOIN dbo.tWarenLagerEingang  ON dbo.tWarenLagerEingang.kWarenLagerEingang = dbo.tPicklistePos.kWarenLagerEingang
+				LEFT JOIN dbo.tWarenLagerEingangSubsets AS Subsets ON tWarenLagerEingang.kWarenLagerEingang = Subsets.kWarenLagerEingang
+				JOIN Verkauf.tAuftragPosition ON dbo.tPicklistePos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+				LEFT JOIN (SELECT tLieferscheinPos.kBestellPos, SUM(tLieferscheinPos.fAnzahl) fAnzahl 
+						FROM tLieferscheinPos
+							JOIN tLieferschein ON tLieferschein.kLieferschein = tLieferscheinPos.kLieferschein
+							WHERE (tLieferschein.kLieferschein = @kLieferschein OR @kLieferschein = 0)
+							GROUP BY tLieferscheinPos.kBestellPos ) AS LieferscheinPos ON LieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+	
+				LEFT JOIN (SELECT  SUM(ISNULL(tPicklistePos.fAnzahl,0)) AS fAnzahl , tLieferscheinPos.kBestellPos 
+							 FROM tLieferscheinPos
+							 JOIN tPicklistePos ON tPicklistePos.kBestellPos = tLieferscheinPos.kBestellPos
+							 AND tPicklistePos.nStatus = 30
+							 AND tLieferscheinPos.kLieferschein = @kLieferschein
+							 group by  tLieferscheinPos.kBestellPos 
+							 ) AS PickedFromLieferschein ON PickedFromLieferschein.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+
+				WHERE dbo.tPicklistePos.kPickliste = @kPickliste 
+					AND dbo.tPicklistePos.nStatus &lt; @nPickPosStatus 
+					AND dbo.tPicklistePos.kArtikel = @kArtikel
+					AND dbo.tPicklistePos.fAnzahl &gt; 0
+					AND (
+						@kBestellung = 0 
+						OR Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+						)
+					AND (
+						@kWarenlagerPlatz = 0 
+						OR dbo.tPicklistePos.kWarenlagerPlatz = @kWarenlagerPlatz
+						)
+					AND (@cSubsetNumber IS NULL OR Subsets.cSubsetNumber = @cSubsetNumber)
+				ORDER BY 
+					CASE WHEN dbo.tPicklistePos.nStatus = 20 THEN 0 ELSE 1 END,  --Gepickte zuerst
+					CASE WHEN CONVERT(NVARCHAR, tWarenLagerEingang.dMHD, 104) = @cMhd THEN 0 ELSE 1 END, -- Zuerst die, wo MHD...
+					CASE WHEN tWarenLagerEingang.cChargenNr = @cCharge THEN 0 ELSE 1 END, -- ...und Charge &#252;bereinstimmt
+						CASE WHEN LieferscheinPos.kBestellPos IS NOT NULL THEN 0 ELSE 1 END, -- erst alle die Lieferschein haben
+						CASE WHEN LieferscheinPos.kBestellPos IS NOT NULL AND  LieferscheinPos.fAnzahl - PickedFromLieferschein.fAnzahl = 0 THEN 1 ELSE 0 END, -- erst alle die nicht komplett vom lieferschein weggepickt sind
+						CASE WHEN (LieferscheinPos.kBestellPos IS NOT NULL AND LieferscheinPos.fAnzahl = Verkauf.tAuftragPosition.fAnzahl ) THEN 0 ELSE 1 END, --zuert die mit kompletten LieferscheinPos
+						CASE WHEN dbo.tPicklistePos.fAnzahl = @fGesAnzahl 
+							THEN 0 
+							ELSE 1 
+						END,
+						dbo.tPicklistePos.fAnzahl;
+
+		END
+		ELSE
+		BEGIN
+
+			DECLARE cur_GetPickPos CURSOR LOCAL FAST_FORWARD FOR  
+			SELECT dbo.tPicklistePos.kPicklistePos,dbo.tPicklistePos.fAnzahl,dbo.tWarenLagerEingang.cChargenNr,CONVERT(NVARCHAR,dbo.tWarenlagerEingang.dMHD, 104) dMHD,dbo.tWarenLagerEingang.kWarenLagerPlatz
+				FROM dbo.tPicklistePos 
+				JOIN dbo.tWarenLagerEingang  ON dbo.tWarenLagerEingang.kWarenLagerEingang = dbo.tPicklistePos.kWarenLagerEingang
+				LEFT JOIN dbo.tWarenLagerEingangSubsets AS Subsets ON tWarenLagerEingang.kWarenLagerEingang = Subsets.kWarenLagerEingang
+				JOIN Verkauf.tAuftragPosition ON dbo.tPicklistePos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+				OUTER APPLY (SELECT count(*) AS AnzahlMatches
+							FROM dbo.tWarenLagerEingang AS InnerWLE
+							WHERE (CONVERT(NVARCHAR,InnerWLE.dMHD, 104) =@cMhd OR InnerWLE.cChargenNr= @cCharge)
+							AND InnerWLE.fAnzahlAktuell &gt; 0
+							AND InnerWLE.kWarenlagerplatz = dbo.tPicklistePos.kWarenlagerplatz) AS HasChargeOrMHD
+			
+				OUTER APPLY (SELECT count(*) AS AnzahlMatches
+							FROM dbo.tWarenLagerEingang AS InnerWLE2
+							WHERE (CONVERT(NVARCHAR,InnerWLE2.dMHD, 104) = @cMhd AND InnerWLE2.cChargenNr= @cCharge)
+							AND InnerWLE2.fAnzahlAktuell &gt; 0
+							AND InnerWLE2.kWarenlagerplatz = dbo.tPicklistePos.kWarenlagerplatz) AS HasChargeANDMHD
+
+				LEFT JOIN (SELECT tLieferscheinPos.kBestellPos, SUM(tLieferscheinPos.fAnzahl) fAnzahl 
+						FROM tLieferscheinPos
+							JOIN tLieferschein ON tLieferschein.kLieferschein = tLieferscheinPos.kLieferschein
+							WHERE (tLieferschein.kLieferschein = @kLieferschein OR @kLieferschein = 0)
+							GROUP BY tLieferscheinPos.kBestellPos ) AS LieferscheinPos ON LieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+	
+				LEFT JOIN (SELECT  SUM(ISNULL(tPicklistePos.fAnzahl,0)) AS fAnzahl , tLieferscheinPos.kBestellPos 
+							 FROM tLieferscheinPos
+							 JOIN tPicklistePos ON tPicklistePos.kBestellPos = tLieferscheinPos.kBestellPos
+							 AND tPicklistePos.nStatus = 30
+							 AND tLieferscheinPos.kLieferschein = @kLieferschein
+							 group by  tLieferscheinPos.kBestellPos 
+							 ) AS PickedFromLieferschein ON PickedFromLieferschein.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+
+				WHERE dbo.tPicklistePos.kPickliste = @kPickliste 
+					AND dbo.tPicklistePos.nStatus &lt; @nPickPosStatus 
+					AND dbo.tPicklistePos.kArtikel = @kArtikel
+					AND dbo.tPicklistePos.fAnzahl &gt; 0
+					AND (
+						@kBestellung = 0 
+						OR Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+						)
+					AND (
+						@kWarenlagerPlatz = 0 
+						OR dbo.tPicklistePos.kWarenlagerPlatz = @kWarenlagerPlatz
+						)
+					AND (@cSubsetNumber IS NULL OR Subsets.cSubsetNumber = @cSubsetNumber)
+				ORDER BY 
+					CASE WHEN dbo.tPicklistePos.nStatus = 20 THEN 0 ELSE 1 END,  --Gepickte zuerst
+					CASE WHEN CONVERT(NVARCHAR, tWarenLagerEingang.dMHD, 104) = @cMhd THEN 0 ELSE 1 END, -- Zuerst die, wo MHD...
+					CASE WHEN tWarenLagerEingang.cChargenNr = @cCharge THEN 0 ELSE 1 END, -- ...und Charge &#252;bereinstimmt
+						CASE WHEN HasChargeANDMHD.AnzahlMatches &gt; 0 THEN 0 ELSE 1 END,
+						CASE WHEN HasChargeOrMHD.AnzahlMatches &gt; 0 THEN 0 ELSE 1 END,
+						CASE WHEN LieferscheinPos.kBestellPos IS NOT NULL THEN 0 ELSE 1 END, -- erst alle die Lieferschein haben
+						CASE WHEN LieferscheinPos.kBestellPos IS NOT NULL AND  LieferscheinPos.fAnzahl - PickedFromLieferschein.fAnzahl = 0 THEN 1 ELSE 0 END, -- erst alle die nicht komplett vom lieferschein weggepickt sind
+						CASE WHEN (LieferscheinPos.kBestellPos IS NOT NULL AND LieferscheinPos.fAnzahl = Verkauf.tAuftragPosition.fAnzahl ) THEN 0 ELSE 1 END, --zuert die mit kompletten LieferscheinPos
+						CASE WHEN dbo.tPicklistePos.fAnzahl = @fGesAnzahl 
+							THEN 0 
+							ELSE 1 
+						END,
+						dbo.tPicklistePos.fAnzahl;
+
+		END;
+
+
+		-- Solange kein Fehler und die gesammte pickmenge noch nicht erreicht -&gt; weiter
+		WHILE @nRet &gt;= 0 AND @fGesAnzahl &gt; 0
+		BEGIN  
+
+			-- Hole n&#228;chste Pickpos
+			OPEN cur_GetPickPos;
+			FETCH NEXT FROM cur_GetPickPos INTO @kPicklistePos,@fPPAnzahl,@cPPChargenNr,@cPPMHD,@kPPWarenLagerPlatz;
+			CLOSE cur_GetPickPos;
+
+
+			IF(@kPicklistePosOld = @kPicklistePos)  
+				SET @nRet = -203000001; -- Wenn sich die Pickpos wiederholt mu&#223; beim picken was falsch gelaufen sein, abbruch um endlosschleife zu verhindern
+
+			IF(@kPicklistePos is null)
+				SET @nRet = -203000002; -- Keine Pickpos gefunden im cursor, kann nicht weiterpicken
+
+
+			IF(@fPPAnzahl &gt; @fGesAnzahl AND (@fPPAnzahl - @fGesAnzahl) &gt; 0.0001)
+			BEGIN
+				SET @fPPAnzahl = @fGesAnzahl;
+			END
+			
+
+			IF(@nRet &lt; 0)
+				BREAK;
+
+			-- Pickpos in Box legen
+			EXEC WMS.spPicklisteposInBox
+			     @kPicklistePos  = @kPicklistePos,
+			     @kLhm           = @kLhm,
+			     @kBenutzer      = @kBenutzer,
+			     @fPickMenge     = @fPPAnzahl,
+			     @dTimestamp	 = @dPLTimestamp,
+			     @cMhd           = @cMhd,
+			     @cCharge        = @cCharge,
+			     @nPickposStatus = @nPickPosStatus,
+			     @nRet           = @nRet OUTPUT;
+
+			SET @kPicklistePosOld = @kPicklistePos;
+			SET @fGesAnzahl = @fGesAnzahl - @fPPAnzahl;
+		END;
+
+		DEALLOCATE cur_GetPickPos; 
+
+		IF(@fGesAnzahl &gt; 0) 
+			SET @nRet = -203000003; -- Ganze Menge konnte nicht erfasst werden
+
+		IF(@nRet &lt; 0)  -- Bei einen Fehler im prozess, gesammter rollback
+		BEGIN
+			IF(@CreatedTransaction = 1)
+				ROLLBACK TRAN;
+			ELSE
+				ROLLBACK TRAN Savepoint1;
+		END;
+			
+		ELSE
+		BEGIN
+			IF(CONTEXT_INFO() = 0x5052)
+			BEGIN
+				SET CONTEXT_INFO 0x0000; 
+
+				--
+				-- Wir aktualisieren den Bestand den wir gebucht haben
+				--
+				DECLARE @Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+
+				INSERT INTO @Auftrag ( kAuftrag )
+				VALUES (@kBestellung)
+				
+				EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftrag;
+				
+			END;
+
+			IF(@CreatedTransaction = 1)
+				COMMIT TRAN T2;
+		END;
+
+		IF (@kLhm &gt; 0 AND @kBenutzer &gt; 0)
+		BEGIN
+			DELETE FROM WMS.tPicklisteInBoxLock WHERE klhm = @kLhm AND kBenutzer = @kBenutzer;
+		END;
+
+	END TRY
+	BEGIN CATCH
+		SELECT -203000004; -- unbekannter Fehler
+
+		DECLARE @ErrorMessage VARCHAR(4000)
+	    SET @ErrorMessage = N&#39;DB-Error: (&#39; + CAST(ERROR_NUMBER() AS NVARCHAR) + &#39; - &#39; +  CAST(ERROR_SEVERITY() AS NVARCHAR) + &#39; - &#39; + CAST(ERROR_STATE() AS NVARCHAR) + &#39; ) &#39; + &#39; Zeile:&#39; + CAST(ERROR_LINE() AS NVARCHAR) + &#39; - SP: &#39; +  ISNULL(ERROR_PROCEDURE(), &#39;none&#39;) + &#39; - Text: &#39; + ERROR_MESSAGE();
+		
+
+		IF(@CreatedTransaction = 1)
+			ROLLBACK TRAN;
+		ELSE
+		BEGIN
+		    BEGIN TRY
+		      ROLLBACK TRAN Savepoint1;
+			  RAISERROR(@ErrorMessage, 15,1);
+		    END TRY
+		    BEGIN CATCH
+		      	RAISERROR(@ErrorMessage, 15,1);
+		    END CATCH
+		END;
+
+
+		SET @nRet = -203000004; 
+
+		IF (@kLhm &gt; 0 AND @kBenutzer &gt; 0)
+		BEGIN
+			DELETE FROM WMS.tPicklisteInBoxLock WHERE klhm = @kLhm AND kBenutzer = @kBenutzer;
+		END;
+
+		INSERT INTO dbo.tLog
+		(dDatum, kBenutzer, cLog, nTyp, nVorgang)
+		VALUES
+		(GETDATE(), @kBenutzer, ERROR_MESSAGE(), 14, 9);
+
+
+		RAISERROR(@ErrorMessage, 15,1);
+
+	END CATCH</code></pre>
+</body>
+</html>

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lieferantenbestellung.spLieferantenBestellungStatusUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Lieferantenbestellung.spLieferantenBestellungStatusUpdate</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Lieferantenbestellung].[spLieferantenBestellungStatusUpdate]
+	@kLieferantenbestellung INT,
+	@nStatusAuchZuruecksetzten INT = 0,
+    @kArtikelForUpdate INT = 0 -- Artikel f&#252;r die LagebestandUpdate gemacht wird.  0 = alle in der Lieferantenbestllung
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5126;
+	BEGIN TRY
+		BEGIN TRANSACTION
+
+		  IF (@nStatusAuchZuruecksetzten = 0)
+		  BEGIN
+
+			 UPDATE tLieferantenBestellung SET 
+			 nStatus = CASE 
+			 WHEN jOffnePos.nNochOffen=0 THEN CASE WHEN tLieferantenBestellung.nStatus = 650 THEN 700 ELSE 500 END
+			 WHEN jOffnePos.nNochOffen&gt;0 AND jOffnePos.nBereitsGeliefert&gt;0 THEN  CASE WHEN tLieferantenBestellung.nStatus = 650 THEN 650 ELSE 30 END 
+			 WHEN jOffnePos.nNochOffen&gt;0 AND jOffnePos.nBereitsGeliefert=0 THEN  CASE WHEN tLieferantenBestellung.nStatus = 650 THEN 600 ELSE 20 END 
+			 ELSE nStatus
+			 END 
+			 FROM tLieferantenBestellung 
+			 JOIN
+			 (
+				 SELECT SUM(nPosSumOffen) AS nNochOffen, SUM(nPosGeliefert) AS nBereitsGeliefert FROM
+				 (
+					 select SUM(ISNULL(CASE WHEN fMenge - tLieferantenBestellungPos.fMengeGeliefert  &lt; 0 THEN 0 ELSE fMenge - tLieferantenBestellungPos.fMengeGeliefert END, fMenge)) as nPosSumOffen, 
+							 SUM(ISNULL(tLieferantenBestellungPos.fMengeGeliefert, 0)) AS nPosGeliefert  FROM tLieferantenBestellung
+					 JOIN tLieferantenBestellungPos ON tLieferantenBestellungPos.kLieferantenBestellung = tLieferantenBestellung.kLieferantenBestellung
+					 WHERE tLieferantenBestellung.kLieferantenBestellung= @kLieferantenbestellung
+					 AND tLieferantenBestellung.nStatus &lt; 100
+					 AND tLieferantenBestellungPos.nPosTyp IN (0, 1)
+					 GROUP BY tLieferantenbestellungpos.kLieferantenbestellungpos
+				 ) jPositionen
+			 ) jOffnePos ON 1=1
+			 WHERE tLieferantenBestellung.kLieferantenBestellung= @kLieferantenbestellung
+				 AND (tLieferantenBestellung.nStatus &lt; 100 OR tLieferantenBestellung.nStatus = 650);
+    
+    
+		  END;
+	       
+		  IF (@nStatusAuchZuruecksetzten = 1)
+		  BEGIN
+
+			 UPDATE tLieferantenBestellung SET 
+			 nStatus = CASE 
+			 WHEN jOffnePos.nNochOffen=0 THEN CASE WHEN tLieferantenBestellung.nStatus = 650 THEN 700 ELSE 500 END
+			 WHEN jOffnePos.nNochOffen&gt;0 AND jOffnePos.nBereitsGeliefert&gt;0 THEN  CASE WHEN tLieferantenBestellung.nStatus = 650 THEN 650 ELSE 30 END 
+			 WHEN jOffnePos.nNochOffen&gt;0 AND jOffnePos.nBereitsGeliefert=0 THEN  CASE WHEN tLieferantenBestellung.nStatus = 650 THEN 600 ELSE 20 END 
+			 ELSE nStatus
+			 END 
+			 FROM tLieferantenBestellung 
+			 JOIN
+			 (
+				 SELECT SUM(nPosSumOffen) AS nNochOffen, SUM(nPosGeliefert) AS nBereitsGeliefert FROM
+				 (
+					 select SUM(ISNULL(CASE WHEN fMenge - tLieferantenBestellungPos.fMengeGeliefert &lt; 0 THEN 0 ELSE fMenge - tLieferantenBestellungPos.fMengeGeliefert END, fMenge)) as nPosSumOffen, 
+							 SUM(ISNULL(tLieferantenBestellungPos.fMengeGeliefert, 0)) AS nPosGeliefert  FROM tLieferantenBestellung
+					 JOIN tLieferantenBestellungPos ON tLieferantenBestellungPos.kLieferantenBestellung = tLieferantenBestellung.kLieferantenBestellung
+					 WHERE tLieferantenBestellung.kLieferantenBestellung=@kLieferantenbestellung
+					 AND tLieferantenBestellungPos.nPosTyp IN (0, 1)
+					 GROUP BY tLieferantenbestellungpos.kLieferantenbestellungpos
+				 ) jPositionen
+			 ) jOffnePos ON 1=1
+			 WHERE tLieferantenBestellung.kLieferantenBestellung=@kLieferantenbestellung
+
+
+		  END;
+
+		 
+		  -- Wenn die Lieferantenebstellung f&#252;r eine Umlagerung war, dann ist letztere evtl. abgeschlo&#223;en
+		  UPDATE dbo.tUmlagerung SET dbo.tUmlagerung.nStatus = 3 
+		  FROM dbo.tUmlagerung
+		  JOIN dbo.tLieferantenBestellung ON dbo.tLieferantenBestellung.kLieferantenBestellung = tUmlagerung.kLieferantenBestellung
+		  WHERE dbo.tUmlagerung.nStatus = 2
+		  AND dbo.tLieferantenBestellung.nStatus = 500
+		  AND  dbo.tLieferantenBestellung.kLieferantenBestellung = @kLieferantenbestellung;
+
+            -- Bestand aktuelisieren
+            DECLARE @typeLagerbestandProLager AS TYPE_spUpdateLagerbestandProLager;
+			DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+		    
+
+			IF(@kArtikelForUpdate &gt; 0)
+            BEGIN
+            
+                INSERT INTO @typeLagerbestandProLager (kArtikel,kWarenlager)
+                SELECT @kArtikelForUpdate , tLieferantenBestellung.kLager
+                FROM dbo.tLieferantenBestellung
+                WHERE tLieferantenBestellung.kLieferantenBestellung = @kLieferantenBestellung;
+                
+                
+                INSERT INTO @typeArtikel (kArtikel)
+                SELECT @kArtikelForUpdate
+            
+            END
+            ELSE
+            BEGIN
+                
+                INSERT INTO @typeLagerbestandProLager (kArtikel,kWarenlager)
+                SELECT DISTINCT dbo.tLieferantenBestellungPos.kArtikel , tLieferantenBestellung.kLager
+                FROM dbo.tLieferantenBestellungPos
+                         JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellung = tLieferantenBestellungPos.kLieferantenBestellung
+                WHERE dbo.tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung;
+                
+                
+                INSERT INTO @typeArtikel (kArtikel)
+                SELECT DISTINCT dbo.tLieferantenBestellungPos.kArtikel
+                FROM dbo.tLieferantenBestellungPos
+                WHERE dbo.tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung;
+            
+            END;
+            
+            
+            
+            EXEC spUpdateLagerbestandProLager @typeLagerbestandProLager;
+            EXEC dbo.spUpdateLagerBestand @typeArtikel;
+            
+
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spSplitPicklisteByAuftrag</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spSplitPicklisteByAuftrag</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Picklisten nach Aufträgen gesplittet werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spSplitPicklisteByAuftrag]
+	@kBestellung INT, -- Die Bestellung die gesplittet wurde
+	@kBestellungNewOrder INT, -- Die neue Bestellung die abgesplittet wurde
+	@kWarenlager INT, -- Das Warenlager wo gesplittet wurde
+	@kPickliste INT
+
+AS
+
+	DECLARE @nRet INT;
+	DECLARE @kArtikelOld INT;
+	DECLARE @nAnzahlOld DECIMAL(25,5);
+	DECLARE @TempPickPos INT;
+	DECLARE @TempMenge DECIMAL(25,5);
+	DECLARE @kPickposAktuell  INT;
+	DECLARE @fAnzahlPickposAktuell DECIMAL(25,5);
+	DECLARE @kBestellPosOld INT;
+	DECLARE @kBestellungNow INT;
+	DECLARE @kNewPickPos INT;
+
+BEGIN
+
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+	SET @nRet = 0;
+
+	--
+	-- Die Pickpositionen zwischenspeichern. Zu diesen Zeitpunkt haben die geplittete und die alte Bestellung.
+	--
+
+	SELECT   
+		kPicklistePos,
+	    kPickliste,
+	    kWarenLager,
+	    kWarenLagerEingang,
+	    fAnzahl,
+	    kBestellPos,
+	    kPicklistePosStatus,
+	    kArtikel,
+	    kWarenlagerPlatz,
+	    kPicklistePos_Ursprung,
+	    kLieferscheinPos,
+	    kBestellung,
+	    nPickPrio,
+	    nStatus,
+	    kAnsprechpartner
+	INTO #TempPickpos  
+	FROM dbo.tPicklistePos
+	WHERE dbo.tpicklistePos.kBestellung = @kBestellung
+	AND ((@kPickliste IS NOT NULL AND dbo.tPicklistePos.kPickliste = @kPickliste) OR (@kPickliste IS NULL AND dbo.tpicklistepos.nStatus &gt;= 30 AND dbo.tpicklistepos.nStatus &lt;= 35))
+
+	-- &#220;ber alle Bestellpositionen in beiden Bestellungen, gesplittet und alt. Zuerst suchen wir die BestellPos die von Split &#252;brig blieben.
+	--
+	DECLARE cur_GetOldBestellPos CURSOR LOCAL FAST_FORWARD FOR   
+	SELECT Verkauf.tAuftragPosition.kAuftragPosition, Verkauf.tAuftragPosition.kArtikel,Verkauf.tAuftragPosition.fAnzahl,Verkauf.tAuftragPosition.kAuftrag
+	FROM Verkauf.tAuftragPosition
+	WHERE Verkauf.tAuftragPosition.kAuftrag IN (@kBestellung,@kBestellungNewOrder)
+	ORDER BY CASE WHEN Verkauf.tAuftragPosition.kAuftrag = @kBestellung THEN 0 ELSE 1 END,
+					   Verkauf.tAuftragPosition.kArtikel,
+					   Verkauf.tAuftragPosition.fAnzahl desc;
+
+	--
+	-- Geht alle Bestellpositionen durch und sucht die entsprechenden Mengen in den Pickpositionen. Die gefunden Pickpos werden evtl. gesplittet und
+	-- bekommen dan die richtige Bestellpos und Bestellung zugewiesen
+	--
+	OPEN cur_GetOldBestellPos    
+	FETCH NEXT FROM cur_GetOldBestellPos INTO  @kBestellPosOld,@kArtikelOld,@nAnzahlOld,@kBestellungNow
+	WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+	BEGIN
+
+	WHILE (@nAnzahlOld &gt; 0)
+	BEGIN
+	  
+		SET @kPickposAktuell = 0;
+		SET @TempPickPos = 0;
+		SET @TempMenge = 0;
+	  
+		SELECT TOP 1 @kPickposAktuell = tPicklistePos.kPicklistePos, @fAnzahlPickposAktuell = tPicklistePos.fAnzahl
+		FROM #TempPickpos tpicklistePos
+		WHERE tPicklistePos.kArtikel = @kArtikelOld
+		AND tPicklistePos.fAnzahl &gt; 0
+		ORDER BY CASE WHEN tpicklistePos.kWarenLager = @kWarenlager THEN 0 ELSE 1 END, --Zuert Lager der Pickpos wo gesplittet wurde
+				 CASE WHEN fAnzahl = @nAnzahlOld THEN 0 ELSE 1 END,
+				 CASE WHEN fAnzahl &lt; @nAnzahlOld THEN 0 ELSE 1 END,
+				 tPicklistePos.fAnzahl;
+
+		IF(@kPickposAktuell = 0 OR (@TempPickPos = @kPickposAktuell AND @TempMenge = @fAnzahlPickposAktuell))
+		BEGIN
+			SET @nAnzahlOld =  0;
+		END
+		ELSE
+		BEGIN
+		 
+			-- zum vermeiden von endlosschleifen
+			SET @TempPickPos = @kPickposAktuell;
+			SET @TempMenge = @fAnzahlPickposAktuell;
+		 
+			IF (@fAnzahlPickposAktuell &lt;= @nAnzahlOld)
+			BEGIN
+		    
+				SET @nAnzahlOld = @nAnzahlOld - @fAnzahlPickposAktuell;
+		    
+				UPDATE dbo.tPicklistePos 
+				SET kBestellPos = @kBestellPosOld, kBestellung = @kBestellungNow
+				WHERE dbo.tPicklistePos.kPicklistePos = @kPickposAktuell;
+		      
+				DELETE FROM #TempPickpos
+				WHERE kPicklistePos = @kPickposAktuell;
+		    
+			END
+		ELSE
+			BEGIN
+		    
+				EXEC WMS.spPicklistePosSplitten
+				@kPicklistePos = @kPickposAktuell,
+				@nMenge = @nAnzahlOld,
+				@kNewPicklistePos = @kNewPickPos OUTPUT,
+				@nRet = @nRet OUTPUT;
+   		
+				UPDATE dbo.tPicklistePos
+				SET kBestellPos = @kBestellPosOld,kBestellung = @kBestellungNow
+				WHERE dbo.tPicklistePos.kPicklistePos = @kNewPickPos;
+			 
+				UPDATE #TempPickpos SET fAnzahl = fAnzahl - @nAnzahlOld
+				WHERE kPicklistePos = @kPickposAktuell;
+			
+				SET @nAnzahlOld = 0;
+		    
+			END
+		END
+	END
+    
+	
+	FETCH NEXT FROM cur_GetOldBestellPos INTO  @kBestellPosOld,@kArtikelOld,@nAnzahlOld,@kBestellungNow;
+	END;
+	CLOSE cur_GetOldBestellPos;
+	DEALLOCATE cur_GetOldBestellPos;
+
+END;</code></pre>
+</body>
+</html>

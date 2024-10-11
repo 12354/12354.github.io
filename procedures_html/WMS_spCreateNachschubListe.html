@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spCreateNachschubListe</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spCreateNachschubListe</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>-- =============================================
+-- Author:		&lt;Author,,Name&gt;
+-- Create date: &lt;Create Date,,&gt;
+-- Description:	&lt;Description,,&gt;
+-- =============================================
+CREATE PROCEDURE [WMS].[spCreateNachschubListe]
+(	
+	@kWarenLager INT,
+	@cIso CHAR(2)              = &#39;&#39;,   -- Standartsprache
+	@kStartWarenLagerPlatz INT = NULL, -- kein Startplatz
+	@nNachschubType INT        = 2,    -- Gesammtmenge
+	@nIsFiFo INT               = 0,    -- kein FiFo beachten
+	@nRegardMhd INT            = 0,    -- MHD nicht beachten
+	@nSortierungType INT       = 1,    -- Lagerplatzsortierung
+	@nSortierungIsDesc INT     = 0    -- Sortierungsrichtung Aufsteigend
+)
+AS
+BEGIN
+
+DECLARE @nSort INT = 0, @cName NVARCHAR(50) = &#39;&#39;
+
+SELECT 
+	@nSort = CASE WHEN Platz.nSort = 0 THEN 999999999 WHEN Platz.nSort IS NULL THEN 999999999 ELSE Platz.nSort END,
+	@cName = Platz.cName
+FROM dbo.tWarenLagerPlatz AS Platz WHERE Platz.kWarenLagerPlatz = @kStartWarenLagerPlatz
+
+	IF(object_id(&#39;tempdb..#NachschubArtikelTemp&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #NachschubArtikelTemp;
+	END;
+	CREATE TABLE #NachschubArtikelTemp(kArtikel INT,
+								fMenge DECIMAL(25, 13),
+								PRIMARY KEY (kArtikel));
+
+INSERT INTO #NachschubArtikelTemp (kArtikel,fMenge)
+	SELECT
+		NachschubListe.kArtikel
+		,CASE @nNachschubType
+			WHEN 0 THEN NachschubListe.fNachschubMenge
+			WHEN 1 THEN NachschubListe.fMengeOffeneBestellungen
+			WHEN 2 THEN NachschubListe.fGesammtMenge
+			WHEN 3 THEN NachschubListe.fNachschubMenge
+			WHEN 4 THEN NachschubListe.fMengeOffeneBestellungen
+			WHEN 5 THEN NachschubListe.fGesammtMenge
+		END
+	FROM WMS.ifNachschubListeNeueApp(@kWarenLager) AS NachschubListe
+	OPTION (RECOMPILE)
+
+IF(object_id(&#39;tempdb..#NachschubTemp&#39;) IS NOT NULL)
+BEGIN
+   DROP TABLE #NachschubTemp;
+END;
+CREATE TABLE #NachschubTemp(kArtikel INT,
+							fMenge DECIMAL(25, 13),
+							kWarenLagerPlatz INT,
+							cWarenlagerPlatz  NVARCHAR(100),
+							fMengeAufLagerplatz DECIMAL(25, 13),
+							nSort INT,
+							dErstellt DATE,
+							dMHD DATE,
+							nMengeSort INT,
+							PRIMARY KEY (kWarenLagerPlatz,kArtikel));
+
+-- Temp Table f&#252;llen
+INSERT INTO #NachschubTemp (kArtikel,kWarenLagerPlatz,cWarenlagerPlatz,fMengeAufLagerplatz,fMenge,nSort,dErstellt,dMHD,nMengeSort)
+SELECT
+	NachschubListe.kArtikel
+	,Platz.kWarenLagerPlatz
+	,Platz.cWarenlagerPlatz
+	,Platz.fMengeAufLagerplatz
+	,NachschubListe.fMenge
+	,Platz.nSort
+    ,Platz.dErstellt
+	,Platz.dMHD
+	,CASE WHEN NachschubListe.fMenge &gt; Platz.fMengeAufLagerplatz
+		THEN 999999 - Platz.fMengeAufLagerplatz
+		ELSE Platz.fMengeAufLagerplatz - NachschubListe.fMenge
+	END
+FROM #NachschubArtikelTemp AS NachschubListe
+	JOIN (
+		SELECT
+			WarenLagerEingang.kWarenLagerPlatz
+			,Platz.cName AS cWarenlagerPlatz
+			,Platz.nSort
+			,SUM(WarenLagerEingang.fAnzahlAktuell - WarenLagerEingang.fAnzahlReserviertPickpos) AS fMengeAufLagerplatz
+			,MIN(WarenLagerEingang.dErstellt) AS dErstellt
+			,MIN(WarenLagerEingang.dMHD) AS dMHD
+			,WarenLagerEingang.kArtikel
+		FROM dbo.tWarenLagerEingang AS WarenLagerEingang
+			JOIN (
+				SELECT
+					Platz.kWarenLagerPlatz,
+					CASE WHEN Platz.nSort = 0 THEN 999999999 WHEN Platz.nSort IS NULL THEN 999999999 ELSE Platz.nSort END AS nSort,
+					Platz.cName
+				FROM dbo.tWarenLagerPlatz AS Platz
+			) AS Platz ON Platz.kWarenLagerPlatz = WarenLagerEingang.kWarenLagerPlatz
+		WHERE 
+			WarenLagerEingang.fAnzahlAktuell &gt; WarenLagerEingang.fAnzahlReserviertPickpos
+			AND WarenLagerEingang.kWarenLagerPlatz IN (
+				SELECT DISTINCT BereichPlatz.kWarenLagerPlatz
+				FROM dbo.tWMSLagerBereich AS LagerBereich
+					JOIN dbo.tWMSLagerBereichPlatz AS BereichPlatz ON BereichPlatz.kWMSLagerBereich = LagerBereich.kWMSLagerBereich
+				WHERE LagerBereich.nTyp = 2 AND LagerBereich.kWarenLager = @kWarenLager
+				)
+			AND (Platz.nSort &gt; @nSort OR (Platz.nSort = @nSort AND Platz.cName &gt;= @cName))
+		GROUP BY
+			WarenLagerEingang.kArtikel
+			,WarenLagerEingang.kWarenLagerPlatz
+			,Platz.cName
+			,Platz.nSort
+	) AS Platz ON Platz.kArtikel = NachschubListe.kArtikel
+WHERE
+	NachschubListe.fMenge &gt; 0
+	AND Platz.nSort &gt; @nSort OR (Platz.nSort = @nSort AND Platz.cWarenlagerPlatz &gt;= @cName)
+ORDER BY
+	NachschubListe.kArtikel;
+
+WITH NachschubPlatz
+		AS ( SELECT
+	            NachschubListe.kArtikel
+	            ,CASE WHEN NachschubListe.fMenge - KommPlatz.fMengeAufVorhergehendenLagerplatz &gt; NachschubListe.fMengeAufLagerplatz
+	            THEN NachschubListe.fMengeAufLagerplatz
+	            ELSE NachschubListe.fMenge - KommPlatz.fMengeAufVorhergehendenLagerplatz
+	            END AS fMenge
+	            ,NachschubListe.kWarenLagerPlatz
+	            ,NachschubListe.cWarenlagerPlatz
+	            ,NachschubListe.nSort
+	            ,NachschubListe.fMengeAufLagerplatz
+
+			FROM #NachschubTemp AS NachschubListe
+				OUTER APPLY 
+					( SELECT ISNULL(SUM(NachschubListe2.fMengeAufLagerplatz),0) AS fMengeAufVorhergehendenLagerplatz
+						FROM #NachschubTemp AS NachschubListe2 
+						WHERE ((@nRegardMhd = 1 AND NachschubListe.dMHD IS NOT NULL AND NachschubListe2.dMHD &lt; NachschubListe.dMHD)
+							OR ((@nRegardMhd = 0 OR NachschubListe.dMHD IS NULL OR NachschubListe2.dMHD = NachschubListe.dMHD) AND (@nIsFiFo = 1 AND NachschubListe2.dErstellt &lt; NachschubListe.dErstellt))
+							OR ((@nRegardMhd = 0 OR NachschubListe.dMHD IS NULL OR NachschubListe2.dMHD = NachschubListe.dMHD) AND (@nIsFiFo = 0 OR NachschubListe2.dErstellt = NachschubListe.dErstellt) AND NachschubListe2.nMengeSort &lt; NachschubListe.nMengeSort)
+							OR ((@nRegardMhd = 0 OR NachschubListe.dMHD IS NULL OR NachschubListe2.dMHD = NachschubListe.dMHD) AND (@nIsFiFo = 0 OR NachschubListe2.dErstellt = NachschubListe.dErstellt) AND NachschubListe2.nMengeSort = NachschubListe.nMengeSort AND NachschubListe2.kWarenLagerPlatz &lt; NachschubListe.kWarenLagerPlatz)
+							) AND NachschubListe.kArtikel = NachschubListe2.kArtikel
+					) AS KommPlatz
+			WHERE
+				-- zeigt nur so viele Pl&#228;tze an, um ausreichend Bestand zu kommesionieren
+				NachschubListe.fMenge - KommPlatz.fMengeAufVorhergehendenLagerplatz &gt; 0
+		)
+
+SELECT
+	Artikel.kArtikel
+	,Artikel.cArtNr
+	,Artikel.cName
+	,Artikel.cBarcode
+	,Artikel.nCharge
+	,Artikel.nMHD
+	,Artikel.cAktiv
+	,Artikel.cTeilbar
+	,Artikel.cLagerArtikel
+	,NachschubPlatz.fMenge
+	,NachschubPlatz.kWarenLagerPlatz
+	,NachschubPlatz.cWarenlagerPlatz
+	,NachschubPlatz.fMengeAufLagerplatz
+	,Bestand.cChargenNr
+	,Bestand.dMHD
+	,Bestand.fAnzahlAktuell
+	,Bestand.fAnzahlReserviertPickpos
+
+FROM NachschubPlatz
+	JOIN WMS.lvArtikelMobile(@cIso) AS Artikel ON Artikel.kArtikel = NachschubPlatz.kArtikel
+	JOIN (
+	
+		SELECT 
+			Eingang.kArtikel
+			, SUM(Eingang.fAnzahlAktuell) AS fAnzahlAktuell
+			, SUM(Eingang.fAnzahlReserviertPickpos) AS fAnzahlReserviertPickpos
+			, Eingang.dMHD
+			, Eingang.cChargenNr
+			, Eingang.kWarenLagerPlatz
+
+		FROM
+			dbo.tWarenLagerEingang AS Eingang 
+				JOIN dbo.tWarenLagerPlatz AS Lagerplatz 
+					ON Eingang.kWarenLagerPlatz = Lagerplatz.kWarenLagerPlatz 
+					AND Lagerplatz.kWarenLager = @kWarenlager
+
+		WHERE 
+			Eingang.fAnzahlAktuell &gt; 0
+
+		GROUP BY 
+			Eingang.kArtikel
+			, Eingang.dMHD
+			, Eingang.cChargenNr
+			, Eingang.kWarenLagerPlatz
+	) AS Bestand
+		ON Bestand.kWarenLagerPlatz = NachschubPlatz.kWarenLagerPlatz
+		AND Bestand.kArtikel = NachschubPlatz.kArtikel
+
+ORDER BY
+		CASE @nSortierungType
+			WHEN 0 THEN -- Menge Umzulagern
+				CASE @nSortierungIsDesc
+					WHEN 0 THEN NachschubPlatz.fMenge
+					ELSE -NachschubPlatz.fMenge
+				END
+			ELSE 0 -- Lagerplatz
+		END ASC
+		,CASE WHEN @nSortierungType = 1 AND @nSortierungIsDesc = 1 -- Lagerplatz absteigend
+			THEN -NachschubPlatz.nSort
+			ELSE NachschubPlatz.nSort
+		END ASC
+		,CASE WHEN @nSortierungType = 1 AND @nSortierungIsDesc = 1 -- Lagerplatz absteigend
+			THEN NachschubPlatz.cWarenlagerPlatz
+			ELSE &#39;&#39;
+		END DESC
+		,CASE WHEN @nSortierungType = 1 AND @nSortierungIsDesc = 1 -- Lagerplatz aufsteigend
+			THEN &#39;&#39;
+			ELSE NachschubPlatz.cWarenlagerPlatz
+		END ASC
+END</code></pre>
+</body>
+</html>

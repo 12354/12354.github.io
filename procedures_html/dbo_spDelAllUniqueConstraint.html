@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spDelAllUniqueConstraint</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spDelAllUniqueConstraint</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können alle Unique-Constraints zu einer Tabelle entfernt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spDelAllUniqueConstraint]
+@cTabelle NVARCHAR(255)
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @cName NVARCHAR(512)
+	DECLARE @nObjectID BIGINT
+	SELECT TOP(1) @cName = cstr.name, @nObjectID = cstr.object_id FROM sys.key_constraints AS cstr WITH(NOLOCK) 
+		JOIN sys.tables AS tbl ON tbl.object_id = cstr.parent_object_id
+		WHERE tbl.name = @cTabelle
+			AND cstr.type_desc = &#39;UNIQUE_CONSTRAINT&#39;
+			AND SCHEMA_NAME(tbl.schema_id)=N&#39;dbo&#39;
+		ORDER BY cstr.object_id
+
+	WHILE (@cName IS NOT NULL AND LEN(@cName)&gt;0)
+	BEGIN
+		DECLARE @tsql NVARCHAR(2048)
+		SET @tsql = &#39;ALTER TABLE &#39;+@cTabelle+&#39; DROP CONSTRAINT &#39;+@cName
+		EXEC sp_executesql @tsql 		
+
+		SET @cName = NULL
+		SELECT TOP(1) @cName = cstr.name, @nObjectID = cstr.object_id FROM sys.key_constraints AS cstr WITH(NOLOCK) 
+			JOIN sys.tables AS tbl ON tbl.object_id = cstr.parent_object_id
+			WHERE tbl.name = @cTabelle
+				AND cstr.type_desc = &#39;UNIQUE_CONSTRAINT&#39;
+				AND SCHEMA_NAME(tbl.schema_id)=N&#39;dbo&#39;
+				AND cstr.object_id &gt; @nObjectID
+			ORDER BY cstr.object_id
+	END
+END</code></pre>
+</body>
+</html>

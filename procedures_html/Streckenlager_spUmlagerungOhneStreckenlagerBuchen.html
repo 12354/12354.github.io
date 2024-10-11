@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streckenlager.spUmlagerungOhneStreckenlagerBuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Streckenlager.spUmlagerungOhneStreckenlagerBuchen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Streckenlager].[spUmlagerungOhneStreckenlagerBuchen]
+@kUmlagerung INT, -- Die Umlagerung, die gebucht werden soll
+@kBenutzer INT,
+@cKommentar NVARCHAR(255),
+@nError INT OUT
+
+-- Funktion: Direkte Umlagerung, ohne Streckenlager
+	
+AS
+
+DECLARE @kBestellung INT;
+DECLARE @kWarenlagerZiellager INT;
+DECLARE @kArtikel INT;
+DECLARE @MengeUmlagerArtikel DECIMAL(25,13);
+DECLARE @MengeVerfuegbar DECIMAL(25,13);
+DECLARE @kWarenlagerPlatzStartLager INT;
+DECLARE @kWarenlagerPlatzZielLager INT;
+
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+
+
+BEGIN TRY
+
+	  SET @nError = 0;
+
+	  DECLARE cur_GetUmlagerArtikel CURSOR LOCAL FAST_FORWARD FOR  
+	  SELECT vAuftragPosition.kArtikel, SUM(vAuftragPosition.fAnzahl) AS MengeUmlagerArtikel
+	  FROM Verkauf.vAuftragPosition
+	  JOIN dbo.tUmlagerung ON tUmlagerung.kBestellung = vAuftragPosition.kAuftrag
+	  WHERE tUmlagerung.kUmlagerung = @kUmlagerung
+	  AND vAuftragPosition.nType != 0
+	  GROUP BY vAuftragPosition.kArtikel;		  
+
+
+	  SELECT @kWarenlagerPlatzStartLager =  dbo.tWarenLagerPlatz.kWarenLagerPlatz 
+	  FROM dbo.tWarenLagerPlatz 
+	  JOIN dbo.tUmlagerung ON dbo.tUmlagerung.kQuellLager = dbo.tWarenLagerPlatz.kWarenLager
+	  WHERE dbo.tWarenLagerPlatz.kWarenLagerPlatzTyp = 0 
+	  AND dbo.tWarenLagerPlatz.nStatus = 0
+	  AND dbo.tUmlagerung.kUmlagerung = @kUmlagerung;
+
+	  SELECT @kWarenlagerPlatzZielLager =  dbo.tWarenLagerPlatz.kWarenLagerPlatz 
+	  FROM dbo.tWarenLagerPlatz 
+	  JOIN dbo.tUmlagerung ON dbo.tUmlagerung.kZielLager = dbo.tWarenLagerPlatz.kWarenLager
+	  WHERE dbo.tWarenLagerPlatz.kWarenLagerPlatzTyp = 0 
+	  AND dbo.tWarenLagerPlatz.nStatus = 0
+	  AND dbo.tUmlagerung.kUmlagerung = @kUmlagerung;
+
+	  -- Checken ob alle Mengen umbuchbar sind
+	   IF( 0 &lt;	(SELECT count (vAuftragPosition.kAuftragPosition)
+				 FROM Verkauf.vAuftragPosition
+				 JOIN dbo.tUmlagerung ON tUmlagerung.kBestellung = vAuftragPosition.kAuftrag
+				 OUTER APPLY (SELECT tWarenlagereingang.kArtikel,  SUM(tWarenlagereingang.fAnzahlAktuell) AS fAnzahlAktuell, SUM (tWarenlagereingang.fAnzahlReserviertPickpos) AS fAnzahlReserviertPickpos
+				 		  	   FROM dbo.tWarenlagereingang 
+				 			   JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz =  tWarenlagereingang.kWarenLagerPlatz
+				 			   WHERE tWarenLagerPlatz.kWarenLager =  tUmlagerung.kQuellLager
+				 			   AND dbo.tWarenlagereingang.kArtikel = vAuftragPosition.kArtikel
+				 			   GROUP BY dbo.tWarenlagereingang.kArtikel) AS ArtikelMengen
+				  WHERE tUmlagerung.kUmlagerung = @kUmlagerung
+				  AND Verkauf.vAuftragPosition.nType != 0
+				  GROUP BY vAuftragPosition.kArtikel
+				  HAVING  SUM(vAuftragPosition.fAnzahl) &gt; (MAX(ArtikelMengen.fAnzahlAktuell) - MAX(ArtikelMengen.fAnzahlReserviertPickpos))))
+	    BEGIN
+			SET @nError = 1; --Nicht alle Mengen Umbuchbar 
+			RETURN;
+		END;
+
+
+		--
+		-- Artikel umlagern
+		--
+
+		BEGIN TRANSACTION
+		BEGIN
+
+			OPEN cur_GetUmlagerArtikel;
+			FETCH NEXT FROM cur_GetUmlagerArtikel INTO @kArtikel,@MengeUmlagerArtikel
+
+			-- Einbuchen ins Ziellager
+			WHILE (@@FETCH_STATUS = 0 )
+			BEGIN  
+ 
+			
+				EXEC [dbo].[spPlatzUmbuchen]
+					@kArtikel = @kArtikel,
+					@fAnzahl = @MengeUmlagerArtikel,
+					@kWarenlagerPLatzNeu = @kWarenlagerPlatzZielLager,
+					@kWarenlagerPlatzAlt = @kWarenlagerPlatzStartLager,
+					@cKommentar = @cKommentar,
+					@kBuchungsart = 160,
+					@kBenutzer = @kBenutzer,
+					@kLHMNeu = null,
+					@kLHMAlt = null,
+					@dMhd = null,
+					@cChargenNr = null;
+
+			FETCH NEXT FROM cur_GetUmlagerArtikel INTO @kArtikel,@MengeUmlagerArtikel
+			END;
+
+		END;
+
+		COMMIT;
+
+		--
+		-- Lagerbestand aktualisieren
+		--
+		DECLARE @TYPE_spUpdateLagerbestandProLager AS TYPE_spUpdateLagerbestandProLager;
+
+	    INSERT INTO @TYPE_spUpdateLagerbestandProLager (kArtikel,kWarenlager)
+		SELECT UmlagerArtikel.kArtikel, UmlagerArtikel.Warenlager
+		FROM
+			(SELECT vAuftragPosition.kArtikel,tUmlagerung.kZielLager AS Warenlager
+			FROM Verkauf.vAuftragPosition
+			JOIN dbo.tUmlagerung ON tUmlagerung.kBestellung = vAuftragPosition.kAuftrag
+			WHERE tUmlagerung.kUmlagerung = @kUmlagerung
+			UNION
+			SELECT vAuftragPosition.kArtikel,tUmlagerung.kQuellLager AS Warenlager
+			FROM Verkauf.vAuftragPosition
+			JOIN dbo.tUmlagerung ON tUmlagerung.kBestellung = vAuftragPosition.kAuftrag
+			WHERE tUmlagerung.kUmlagerung = @kUmlagerung) AS UmlagerArtikel
+	    GROUP BY UmlagerArtikel.kArtikel, UmlagerArtikel.Warenlager;		  
+	    								
+	    EXEC [dbo].[spUpdateLagerbestandProLager] @TYPE_spUpdateLagerbestandProLager;
+
+
+		--
+		-- Umlagerung abschlie&#223;en
+		--
+		SELECT @kBestellung =  dbo.tUmlagerung.kBestellung
+		FROM dbo.tUmlagerung
+		WHERE tUmlagerung.kUmlagerung = @kUmlagerung;
+
+		UPDATE dbo.tUmlagerung
+		SET nStatus = 3
+		WHERE kUmlagerung = @kUmlagerung;
+
+		UPDATE Verkauf.tAuftrag SET tAuftrag.nKomplettAusgeliefert = 2
+		WHERE tAuftrag.kAuftrag = @kBestellung;
+
+        DELETE FROM dbo.tPicklistePos WHERE nStatus &lt;= 20 AND kBestellung = @kBestellung;
+
+		DECLARE @Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+		INSERT INTO @Auftrag ( kAuftrag )
+		VALUES (@kBestellung);
+
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftrag;
+
+END TRY
+BEGIN CATCH
+
+    IF @@TRANCOUNT &gt; 0
+		ROLLBACK;
+	
+	SET @nError = 2;
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SET @ErrorMessage =  ERROR_MESSAGE();
+    SET @ErrorSeverity =  ERROR_SEVERITY();
+    SET @ErrorState =  ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, 
+		  @ErrorSeverity,
+		  @ErrorState);
+END CATCH</code></pre>
+</body>
+</html>

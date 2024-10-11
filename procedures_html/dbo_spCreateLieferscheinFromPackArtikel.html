@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spCreateLieferscheinFromPackArtikel</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spCreateLieferscheinFromPackArtikel</h1>
+    <p><strong>Description:</strong> Mit der Procedure werden Lieferscheine für die bereits durch das WMS verpackten Artikel erzeugt. </p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spCreateLieferscheinFromPackArtikel]
+	@kBestellung INT,
+	@kBenutzer INT,
+	@kPickliste INT,
+	@cLieferscheinNr NVARCHAR(255),
+	@kRetLieferschein  INT OUT,
+	@nRetError  INT OUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	DECLARE @nRet INT;
+	DECLARE @kBestellungNewOrder INT;
+	DECLARE @kLieferschein INT;
+	DECLARE @MaxMenge DECIMAL(25,13);
+	DECLARE @kWMSPackItem INT;
+	DECLARE @kArtikel INT;
+	DECLARE @fMenge DECIMAL(25,13);
+	DECLARE @kBestellposNeu INT;
+	DECLARE @kBestellposAlt INT;
+	DECLARE @fMengeAlt DECIMAL(25,13);
+     DECLARE @IsNowDate DATETIME;
+	DECLARE @kBestellpos INT;	 
+	DECLARE @kBestellstuecklisteNeu INT;  
+	DECLARE @kBestellStueckliste INT;
+	DECLARE @nPicklistenStatus INT = 40; -- 40 = Packtisch Fall, Hier haben wie keine Picklistenvorlage und kein Status InBox (30)
+	DECLARE @cHinweisNeu NVARCHAR(2000);
+
+	DECLARE @Temp_BestellPosAlt TABLE(kBestellPos INT,kArtikel INT,fMenge DECIMAL(25,13),kBestellstueckliste INT, cHinweis nVARCHAR(2000));
+	DECLARE @Temp_BestellPosNeu TABLE(kBestellPos INT,kArtikel INT,fMenge DECIMAL(25,13),kBestellstueckliste INT, cHinweis nVARCHAR(2000));
+	
+	DECLARE cur_GetWMSPackItems CURSOR LOCAL FAST_FORWARD FOR   
+	SELECT dbo.tWMSPackItem.kWMSPackItem,dbo.tWMSPackItem.kArtikel,ROUND( dbo.tWMSPackItem.fMenge, 4) AS fMenge ,dbo.tWMSPackItem.kBestellpos,dbo.tWMSPackItem.kBestellStueckliste
+	FROM dbo.tWMSPackItem WITH(NOLOCK)
+	WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+	AND dbo.tWMSPackItem.kPickliste = @kPickliste;
+
+BEGIN
+
+
+		SET @nRet = 0;
+		SET @kBestellungNewOrder = 0;
+		SET @IsNowDate = GETDATE();
+	
+	     SELECT @nPicklistenStatus = CASE WHEN tPicklisteVorlage.nPicklistenVorlageTyp IN (1,3,4) THEN 30 ELSE 40 END
+		FROM dbo.tPickliste
+		JOIN dbo.tPicklisteVorlage ON tPicklisteVorlage.kPicklisteVorlage = tPickliste.kPicklistenVorlage
+	     WHERE tPickliste.kPickliste = @kPickliste;
+
+	
+	     --
+	     -- Erzeugen eines Lieferscheins mit den gescannten Artikeln aus dem Eazyshipping
+	     --
+	
+
+
+		-- Die alten Bestellpositionen Speichern
+		INSERT INTO @Temp_BestellPosAlt(kBestellPos,kArtikel,fMenge,kBestellstueckliste,cHinweis)
+		SELECT tAuftragPosition.kAuftragPosition,tAuftragPosition.kArtikel, SUM(dbo.tPicklistePos.fAnzahl) AS nAnzahl,tAuftragPosition.kAuftragStueckliste, tAuftragPosition.cHinweis
+		FROM Verkauf.tAuftragPosition
+		JOIN tArtikel ON tArtikel.kArtikel = tAuftragPosition.kArtikel
+		JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition
+		WHERE tAuftragPosition.kAuftrag = @kBestellung
+		AND dbo.tPicklistePos.kPickliste = @kPickliste
+		AND dbo.tPicklistePos.nStatus &lt; @nPicklistenStatus
+		GROUP BY tAuftragPosition.kAuftragPosition,tAuftragPosition.kArtikel,tAuftragPosition.kAuftragStueckliste, tAuftragPosition.cHinweis
+		ORDER by tAuftragPosition.kAuftragPosition
+				
+		-- &#220;ber alle Artikel aus eazyshipping
+		OPEN cur_GetWMSPackItems    
+		FETCH NEXT FROM cur_GetWMSPackItems INTO  @kWMSPackItem,@kArtikel,@fMenge,@kBestellpos,@kBestellStueckliste
+
+		WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+		BEGIN  
+		
+			--Wenn Bestellpos vorhanden, dann ist es eine FreiPos. Einfach komplett &#252;bernehmen.
+		    IF(@fMenge &gt; 0  AND @nRet &gt;= 0 AND @kBestellpos &gt; 0)
+			BEGIN
+		 
+				 -- Freipos kann auch in st&#252;ckliste seinm bzw. st&#252;cklisten k&#246;nnen auch NUR aus freipos bestehen
+				 SELECT @kBestellstuecklisteNeu = tAuftragPosition.kAuftragStueckliste, @cHinweisNeu = tAuftragPosition.cHinweis
+				 FROM Verkauf.tAuftragPosition 
+				 WHERE tAuftragPosition.kAuftragPosition = @kBestellpos;
+
+				 INSERT INTO @Temp_BestellPosNeu (kBestellPos,kArtikel,fMenge,kBestellstueckliste,cHinweis) 
+				 VALUES (@kBestellpos,@kArtikel,@fMenge,@kBestellstuecklisteNeu,@cHinweisNeu);
+
+		    END;
+			ELSE
+			BEGIN
+			    -- Die Menge aus Eazyshipping mu&#223; in den Bestellpos gesucht werden, die gefundenen Bestellpos werden tempor&#228;t zwischengespeichert in @Temp_BestellPosNeu
+			    WHILE (@fMenge &gt; 0  AND @nRet &gt;= 0)
+			    BEGIN  
+				    SET @kBestellposNeu = null;
+				    SET @kBestellposAlt = null;
+		  
+				    SELECT TOP 1 @kBestellposAlt = kBestellPos , @fMengeAlt = fMenge,@kBestellstuecklisteNeu = kBestellstueckliste, @cHinweisNeu = cHinweis
+				    FROM @Temp_BestellPosAlt
+				    WHERE kArtikel = @kArtikel
+				    AND fMenge &gt; 0
+					ORDER BY  CASE WHEN kBestellStueckliste = @kBestellStueckliste THEN 0 ELSE 1 END,  
+				              CASE WHEN fMenge &gt; @fMenge THEN 1 ELSE 0 END,
+							  fMenge DESC,
+							  kBestellPos ASC;
+
+					IF((@fMengeAlt - @fMenge) &lt; 0.0001 AND (@fMengeAlt - @fMenge &gt; 0))
+						SET @fMenge = @fMengeAlt;
+		    
+				    IF(@kBestellposAlt IS NULL OR @fMengeAlt = 0)
+				    BEGIN
+					    SET @nRet = -203000201; -- Fehler
+				    END
+				    ELSE
+				    BEGIN
+		    
+					    SET @MaxMenge = CASE WHEN @fMenge &gt;= @fMengeAlt THEN @fMengeAlt ELSE @fMenge END;
+					    SET @fMenge = @fMenge - @MaxMenge;
+		    
+					    SELECT @kBestellposNeu = kBestellPos 
+					    FROM @Temp_BestellPosNeu
+					    WHERE kBestellPos = @kBestellposAlt;
+    		    
+    					    -- Die neuen Bestellpositionen entweder anlagen oder erh&#246;hen
+					    IF(@kBestellposNeu is not null) 
+					    BEGIN 
+    		      
+						    UPDATE @Temp_BestellPosNeu
+						    SET fMenge = fMenge + @MaxMenge
+						    WHERE kBestellPos = @kBestellposNeu;
+    		      
+    					    END
+					    ELSE
+					    BEGIN
+    		    
+						    INSERT INTO @Temp_BestellPosNeu (kBestellPos,kArtikel,fMenge,kBestellstueckliste,cHinweis) 
+						    VALUES (@kBestellposAlt,@kArtikel,@MaxMenge,@kBestellstuecklisteNeu,@cHinweisNeu);
+    		    
+					    END
+    		    
+					    UPDATE @Temp_BestellPosAlt
+					    SET fMenge = fMenge - @MaxMenge
+					    WHERE kBestellPos = @kBestellposAlt;
+
+				    END
+			    END
+			END
+
+			FETCH NEXT FROM cur_GetWMSPackItems INTO  @kWMSPackItem,@kArtikel,@fMenge,@kBestellpos,@kBestellStueckliste
+		END
+		CLOSE cur_GetWMSPackItems;
+		DEALLOCATE cur_GetWMSPackItems;
+
+		-- St&#252;cklistenV&#228;ter per Hand reinmachen, das kommt raus sobald wir die mit in St&#252;cklisten anlegen
+		-- AuftragEckdatenBerechnen braucht bei &quot;fMengeGesammt&quot; 6 Nachkommastellen, sonst wird der Auftrag nicht als komplett versendet erkannt
+		INSERT INTO @Temp_BestellPosNeu(kBestellPos,kArtikel,fMenge,cHinweis)
+		SELECT tAuftragPosition.kAuftragStueckliste,Vater.kArtikel, ROUND(((CAST(  MAX(ISNULL(t1.fAnzahlNeu,0.0)) AS DECIMAL(25,13))  / SUM(ISNULL(tAuftragPosition.fAnzahl,0.0))) * Vater.fAnzahl),6) AS fMengeGesammt,Vater.cHinweis
+		FROM Verkauf.tAuftragPosition
+		JOIN Verkauf.tAuftragPosition AS Vater ON Vater.kAuftragPosition = tAuftragPosition.kAuftragStueckliste
+		LEFT JOIN (SELECT BestNeu.kBestellStueckliste,SUM(ISNULL(BestNeu.fMenge,0.0)) fAnzahlNeu
+				    FROM @Temp_BestellPosNeu BestNeu
+				    WHERE BestNeu.kBestellPos != BestNeu.kBestellStueckliste
+				    AND BestNeu.kBestellStueckliste &gt; 0
+				    GROUP BY BestNeu.kBestellStueckliste) AS t1 ON  t1.kBestellStueckliste = tAuftragPosition.kAuftragStueckliste
+		WHERE tAuftragPosition.kAuftragPosition &lt;&gt; ISNULL(tAuftragPosition.kAuftragStueckliste,0)
+		AND tAuftragPosition.kAuftragStueckliste &gt; 0
+		AND tAuftragPosition.kAuftrag = @kBestellung
+		AND tAuftragPosition.fAnzahl &gt; 0
+		GROUP BY Vater.kArtikel,tAuftragPosition.kAuftragStueckliste,Vater.fAnzahl,Vater.cHinweis
+		HAVING MAX(t1.fAnzahlNeu) &gt; 0;
+
+
+
+		IF(@nRet &gt;= 0)
+		BEGIN
+
+		   EXEC  Versand.spLieferscheinErstellen 
+					   @xLieferschein= NULL,
+					   @kBestellung = @kBestellung,
+					   @kBenutzer = @kBenutzer,
+					   @cLieferscheinNr = @cLieferscheinNr,
+					   @cHinweis= &#39;&#39;,
+					   @dMailVersand = NULL,
+					   @dGedruckt = NULL,
+					   @nFulfillment = 0,
+					   @kLieferantenBestellung = NULL,
+					   @kSessionId = NULL,
+					   @kLieferschein = @kRetLieferschein OUTPUT;
+
+
+		   IF (@kRetLieferschein &gt; 0)
+		   BEGIN
+
+			 DECLARE @LieferscheinPositionen AS XML
+			 SET @LieferscheinPositionen = (
+				    SELECT 0 AS kLieferscheinPos, @kRetLieferschein AS kLieferschein,BestellPos.kbestellpos AS kBestellPos, SUM(ISNULL(BestellPos.fMenge,0.0)) AS fAnzahl, BestellPos.cHinweis AS cHinweis
+				    FROM @Temp_BestellPosNeu BestellPos
+		              GROUP BY BestellPos.kbestellpos, BestellPos.cHinweis
+			 FOR XML PATH(&#39;LieferscheinPos&#39;), TYPE );
+
+             EXEC [Versand].[spLieferscheinPosErstellen]
+							 @xLieferscheinPos = @LieferscheinPositionen,
+							 @kLieferschein = NULL,
+							 @kBestellPos = NULL,
+							 @fAnzahl  = NULL,
+							 @cHinweis  = NULL,
+							 @kLieferscheinPos = NULL,
+							 @nLagerbestandNichtBerechnen = 1;
+
+	        END;
+		   ELSE
+		     SET @nRet = -1;
+
+	     END;
+
+		SET @nRetError = @nRet;
+
+END;</code></pre>
+</body>
+</html>

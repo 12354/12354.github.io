@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CustomWorkflows._CheckAction</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>CustomWorkflows._CheckAction</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [CustomWorkflows].[_CheckAction] @actionName VARCHAR(128)
+AS
+BEGIN
+
+    DECLARE @status AS NVARCHAR(100);
+    DECLARE @cNotAllowedParamTypesInAction AS NVARCHAR(100);
+    DECLARE @nObject AS INT;
+    DECLARE @nParamCount AS INT;
+    SELECT @status = Status,
+           @nObject = nObjekt,
+           @cNotAllowedParamTypesInAction = cNotAllowedParamTypesInAction,
+           @nParamCount = nParamCount
+    FROM CustomWorkflows.vCustomActionCheck
+    WHERE cName = @actionName;
+    IF @status = &#39;ERROR&#39;
+    BEGIN
+        IF @nParamCount &gt; 7
+        BEGIN
+            RAISERROR(&#39;Es d&#252;rfen neben dem Parameter f&#252;r den PK maximal 6 weitere Parameter angegeben werden&#39;, 11, 0);
+        END;
+        IF @cNotAllowedParamTypesInAction IS NOT NULL
+        BEGIN
+            RAISERROR(&#39;Nicht erlaubte Datentypen in den Parametern der Aktion gefunden&#39;, 11, 0);
+
+            PRINT &#39;
+Es werden folgende Datetypen f&#252;r die Parameter unterst&#252;tzt:
+			&#39;;
+            DECLARE @typeName NVARCHAR(100);
+
+            DECLARE typeName_cursor_name CURSOR FAST_FORWARD READ_ONLY FOR
+            SELECT typeName
+            FROM CustomWorkflows.tAllowedDatatypes;
+
+            OPEN typeName_cursor_name;
+
+            FETCH NEXT FROM typeName_cursor_name
+            INTO @typeName;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+
+                PRINT @typeName;
+                FETCH NEXT FROM typeName_cursor_name
+                INTO @typeName;
+            END;
+
+            CLOSE typeName_cursor_name;
+            DEALLOCATE typeName_cursor_name;
+
+        END;
+        IF @nObject IS NULL
+        BEGIN
+            RAISERROR(&#39;PK-Spalte muss erster Parameter der Aktion sein&#39;, 11, 0);
+
+            PRINT &#39;
+&#220;ber den ersten Parameter der Aktion wird bestimmt, f&#252;r welches Workflowobjekt diese Aktion verwendet werden kann. 
+Dieser muss vom Typ &quot;int&quot; sein&#39;;
+            PRINT &#39;
+Folgende Workflow Objekte werden unterst&#252;tzt:
+			&#39;;
+            DECLARE @cWorklfowObjektName NVARCHAR(100);
+            DECLARE @cPkColumn NVARCHAR(100);
+
+            DECLARE cursor_name CURSOR FAST_FORWARD READ_ONLY FOR
+            SELECT cName,
+                   cPkColumn
+            FROM CustomWorkflows.tWorkflowObjects;
+
+            OPEN cursor_name;
+
+            FETCH NEXT FROM cursor_name
+            INTO @cWorklfowObjektName,
+                 @cPkColumn;
+
+            WHILE @@FETCH_STATUS = 0
+            BEGIN
+
+                PRINT &#39;	&#39; + @cWorklfowObjektName + &#39;: &#39; + @cPkColumn;
+                FETCH NEXT FROM cursor_name
+                INTO @cWorklfowObjektName,
+                     @cPkColumn;
+            END;
+
+            CLOSE cursor_name;
+            DEALLOCATE cursor_name;
+        END;
+    END;
+END;</code></pre>
+</body>
+</html>

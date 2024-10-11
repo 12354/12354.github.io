@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spKundeInsert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spKundeInsert</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure Kunde.spKundeInsert werden sowohl die Daten des Kunden als auch ein Adressdatenasatz zum Kunden gefüllt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Kunde].[spKundeInsert]
+	@Daten AS TYPE_spkundeInsert READONLY
+AS 
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @ReturnValue INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	-- Context Info
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	DECLARE @hash VARBINARY(128);
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;Kunde.spKundeInsert&#39;);
+	SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+		   SET @CreatedTransaction = 1;
+		   BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION Savepoint0;
+		END;
+			IF(OBJECT_ID(&#39;tempdb..#Daten_spkundeInsert&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Daten_spkundeInsert;
+		END
+		CREATE TABLE #Daten_spkundeInsert(InternalId INT, kInetKunde INT, kKundenKategorie INT, cKundenNr NVARCHAR(30), 
+			cFirma NVARCHAR(128), cAnrede NVARCHAR(30), cTitel NVARCHAR(64), cVorname NVARCHAR(126), cName NVARCHAR(126), 
+			cStrasse NVARCHAR(255), cPLZ NVARCHAR(24), cOrt NVARCHAR(64), cLand NVARCHAR(64), cTel NVARCHAR(30), cFax NVARCHAR(30), 
+			cEMail NVARCHAR(255), dErstellt DATETIME, cMobil NVARCHAR(30), 
+			fRabatt DECIMAL(28, 14), cUSTID NVARCHAR(20), cNewsletter CHAR(1), cZusatz NVARCHAR(60), 
+			cEbayName NVARCHAR(60), kBuyer INT, cAdressZusatz NVARCHAR(255), cGeburtstag NVARCHAR(10), 
+			cWWW NVARCHAR(255), cSperre CHAR(1), cPostID NVARCHAR(255), kKundenGruppe INT, nZahlungsziel INT, 
+			kSprache INT, cISO NVARCHAR(5), cBundesland NVARCHAR(255), cHerkunft NVARCHAR(255), cKassenKunde CHAR(1), 
+			cHRNr NVARCHAR(255), kZahlungsart INT, nDebitorennr INT, cSteuerNr NVARCHAR(255), nKreditlimit INT, kKundenDrucktext INT, 
+			nMahnstopp TINYINT, nMahnrhythmus INT, kFirma TINYINT, fProvision DECIMAL(25,13), nVertreter TINYINT, 
+			fSkonto DECIMAL(25,13), nSkontoInTagen INT);
+		INSERT INTO #Daten_spkundeInsert(InternalId, kInetKunde, kKundenKategorie, cKundenNr, cFirma, cAnrede, cTitel, cVorname, 
+			cName, cStrasse, cPLZ, cOrt, cLand, cTel, cFax, cEMail,  dErstellt, cMobil, fRabatt, 
+			cUSTID, cNewsletter, cZusatz, cEbayName, kBuyer, cAdressZusatz, cGeburtstag, cWWW, cSperre, cPostID, 
+			kKundenGruppe, nZahlungsziel, kSprache, cISO, cBundesland, cHerkunft, cKassenKunde, cHRNr, 
+			kZahlungsart, nDebitorennr, cSteuerNr, nKreditlimit, kKundenDrucktext, nMahnstopp, nMahnrhythmus, kFirma, fProvision,
+			nVertreter, fSkonto, nSkontoInTagen)
+			SELECT Daten.kInternalId, Daten.kInetKunde, Daten.kKundenKategorie, Daten.cKundenNr, Daten.cFirma, 
+				Daten.cAnrede, Daten.cTitel, Daten.cVorname, Daten.cName, Daten.cStrasse, Daten.cPLZ, Daten.cOrt, Daten.cLand, 
+				Daten.cTel, Daten.cFax, Daten.cEMail, Daten.dErstellt, Daten.cMobil, 
+				Daten.fRabatt, Daten.cUSTID, Daten.cNewsletter, Daten.cZusatz,  Daten.cEbayName, Daten.kBuyer, 
+				Daten.cAdressZusatz, Daten.cGeburtstag, Daten.cWWW, Daten.cSperre, Daten.cPostID, Daten.kKundenGruppe, 
+				Daten.nZahlungsziel, Daten.kSprache, Daten.cISO, Daten.cBundesland, Daten.cHerkunft, 
+				Daten.cKassenKunde, Daten.cHRNr, Daten.kZahlungsart, Daten.nDebitorennr, Daten.cSteuerNr, 
+				Daten.nKreditlimit, Daten.kKundenDrucktext, Daten.nMahnstopp, Daten.nMahnrhythmus, Daten.kFirma, Daten.fProvision,
+				Daten.nVertreter, Daten.fSkonto, Daten.nSkontoInTagen
+			FROM @Daten AS Daten;
+	--
+	-- Hier kommt der Code rein vor dem INSERT/UPDATE/DELETE
+	--
+	IF(OBJECT_ID(&#39;tempdb..#Temp_spkundeInsert&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Temp_spkundeInsert;
+	END
+	CREATE TABLE #Temp_spkundeInsert(InternalId INT IDENTITY(1,1), kKunde INT);
+		-- Daten schreiben 
+	INSERT INTO dbo.tkunde(kInetKunde, kKundenKategorie, cKundenNr, dErstellt, fRabatt, 
+		cNewsletter, cEbayName, kBuyer, cGeburtstag, cWWW, cSperre, kKundenGruppe, 
+		nZahlungsziel, kSprache, cHerkunft, cKassenKunde, cHRNr, kZahlungsart, nDebitorennr, cSteuerNr, 
+		nKreditlimit, kKundenDrucktext, nMahnstopp, nMahnrhythmus, kFirma, fProvision, nVertreter, fSkonto, nSkontoInTagen)
+		OUTPUT INSERTED.kKunde INTO #Temp_spkundeInsert
+	SELECT kInetKunde, kKundenKategorie, cKundenNr,  
+			dErstellt, fRabatt, cNewsletter, cEbayName, kBuyer, cGeburtstag, 
+			cWWW, cSperre, kKundenGruppe, nZahlungsziel, kSprache, cHerkunft, cKassenKunde, cHRNr, 
+			kZahlungsart, nDebitorennr, cSteuerNr, nKreditlimit, kKundenDrucktext, nMahnstopp, nMahnrhythmus, Daten.kFirma,
+			Daten.fProvision, Daten.nVertreter, Daten.fSkonto, Daten.nSkontoInTagen
+	FROM #Daten_spkundeInsert AS Daten;
+
+	--
+	-- tAdresse schreiben
+	--
+	DECLARE @adresse TYPE_spAdresseInsert;
+	INSERT INTO @adresse ( kInternalId,
+		                    kInetAdresse,
+		                    kKunde,
+		                    cFirma,
+		                    cAnrede,
+		                    cTitel,
+		                    cVorname,
+		                    cName,
+		                    cStrasse,
+		                    cPLZ,
+		                    cOrt,
+		                    cLand,
+		                    cTel,
+		                    cZusatz,
+		                    cAdressZusatz,
+		                    cPostID,
+		                    cMobil,
+		                    cMail,
+		                    cFax,
+		                    cBundesland,
+		                    cISO,
+		                    nStandard,
+		                    nTyp,
+							cUstId )
+		SELECT #Temp_spkundeInsert.InternalId, 
+				0, 
+				#Temp_spkundeInsert.kKunde,  
+				Daten.cFirma, 
+				Daten.cAnrede, 
+				Daten.cTitel, 
+				Daten.cVorname, 
+				Daten.cName, 
+				Daten.cStrasse, 
+				Daten.cPLZ, 
+				Daten.cOrt, 
+				Daten.cLand, 
+				Daten.cTel, 
+				Daten.cZusatz, 
+				Daten.cAdressZusatz, 
+				Daten.cPostID, 
+				Daten.cMobil, 
+				Daten.cEMail, 
+				Daten.cFax, 
+				Daten.cBundesland,
+				Daten.cISO, 
+				1, 
+				1,
+				Daten.cUstId
+		FROM #Daten_spkundeInsert AS Daten
+		JOIN #Temp_spkundeInsert ON #Temp_spkundeInsert.InternalId = Daten.InternalId
+		
+		
+	EXEC dbo.spAdresseInsert @Adresse = @adresse,
+		                    @callerKundeInsert = 1
+	--
+	-- Hier kommt der Code nach dem INSERT/UPDATE/DELETE rein
+	--
+	
+	DECLARE @KundenToUpdate AS TYPE_spUpdateKundeSuche;
+
+	INSERT INTO @KundenToUpdate (kKunde)
+	SELECT DISTINCT kKunde
+	FROM #Temp_spkundeInsert;
+	
+	EXEC Kunde.spUpdateKundeSuche @Kunden = @KundenToUpdate;
+
+
+	-- R&#252;ckgabe des PK
+	SELECT @ReturnValue = #Temp_spkundeInsert.kKunde
+		FROM #Temp_spkundeInsert;
+		
+		IF(@CreatedTransaction = 1)
+		BEGIN
+			COMMIT-- Nur wenn kein Savepoint gesetzt
+		END
+		RETURN @ReturnValue;
+	END TRY
+	BEGIN CATCH
+	-- Dedlock Catch
+		IF(ERROR_NUMBER() = 1205)
+		BEGIN
+			SET @retry = @retry - 1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			IF(@retry = 0)
+			BEGIN
+				SET CONTEXT_INFO 0x0;
+				THROW;
+				RETURN 0;
+			END
+			EXEC dbo.spWaitRandom;
+		END
+		ELSE
+		BEGIN
+			SET @retry = -1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			SET CONTEXT_INFO @OldContextInfo;
+			THROW;
+			RETURN 0;
+		END
+	END CATCH
+END</code></pre>
+</body>
+</html>

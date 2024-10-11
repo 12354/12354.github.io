@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spKundenEigenesFeldCreateOrUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spKundenEigenesFeldCreateOrUpdate</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Kunde].[spKundenEigenesFeldCreateOrUpdate]
+@KundenEigenesFeldAnpassen Kunde.TYPE_KundenEigenesFeldAnpassen READONLY,
+@nFeldTyp AS INT = 12
+
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @cKey AS NVARCHAR(255);
+DECLARE @cGruppenNameAttribut AS NVARCHAR(64)  = &#39;Kundenattribute&#39;; -- Fester Name f&#252;r AttributGruppe
+
+BEGIN TRY
+
+
+	IF @nFeldTyp = 100
+	BEGIN
+		SET @cGruppenNameAttribut = &#39;Migration&#39;;
+		SET @nFeldTyp = 4;
+	END
+
+    -- Input Type Parameter in Temp Speichern
+    IF(object_id(&#39;tempdb..#EigeneFelderCreateOrUpdate&#39;) IS NOT NULL)
+    BEGIN
+	  DROP TABLE #EigeneFelderCreateOrUpdate;
+    END;
+    CREATE TABLE #EigeneFelderCreateOrUpdate(kKunde INT,cKey Nvarchar(255),cValue NVARCHAR(MAX));
+    CREATE CLUSTERED INDEX IX_EigeneFelderZuLoeschen_kKunde_cKey ON #EigeneFelderCreateOrUpdate(cKey);
+
+    INSERT INTO #EigeneFelderCreateOrUpdate(kKunde,cKey,cValue)
+    SELECT kKunde,cKey,cValue
+    FROM @KundenEigenesFeldAnpassen;
+
+
+    DECLARE CUR_FehlendeAttributeAnlegen CURSOR LOCAL FAST_FORWARD FOR  
+    SELECT DISTINCT #EigeneFelderCreateOrUpdate.cKey
+    FROM #EigeneFelderCreateOrUpdate
+    WHERE NOT EXISTS ( SELECT tattribut.kAttribut 
+				   FROM dbo.tattribut
+			        JOIN tAttributSprache ON tAttributSprache.kAttribut = tAttribut.kAttribut
+			        WHERE tAttribut.nIstFreifeld= 1 AND tAttributSprache.cName = #EigeneFelderCreateOrUpdate.cKey);
+
+    --
+    -- Attribute die es noch nicht gibt anlegen
+    --
+    OPEN CUR_FehlendeAttributeAnlegen    
+    FETCH NEXT FROM CUR_FehlendeAttributeAnlegen INTO  @cKey;
+    WHILE (@@FETCH_STATUS = 0 )
+    BEGIN  
+
+	   DECLARE @Id BIGINT;
+	   
+	   INSERT INTO dbo.tAttribut (nIstMehrsprachig, nIstFreifeld, nSortierung, nBezugstyp, nAusgabeweg, nIstStandard, kFeldTyp, cGruppeName, nReadOnly) 
+	   VALUES (0, 1, 1, 3, 2, 0, @nFeldTyp, @cGruppenNameAttribut, 0);
+	   
+	   SET @Id = SCOPE_IDENTITY();
+	   
+	   INSERT INTO dbo.tAttributSprache (kAttribut, kSprache, cName) VALUES (@Id, 0, @cKey);
+
+	   FETCH NEXT FROM CUR_FehlendeAttributeAnlegen INTO  @cKey;
+    END;
+    CLOSE CUR_FehlendeAttributeAnlegen;
+    DEALLOCATE CUR_FehlendeAttributeAnlegen;
+
+
+    --
+    -- Zuweisung der Attribute an KundeEigenesFeld . Vorher alle die es evtl. schon gibt l&#246;schen.
+    --
+    DELETE Kunde.tKundeEigenesFeld 
+    FROM Kunde.tKundeEigenesFeld 
+    JOIN #EigeneFelderCreateOrUpdate ON #EigeneFelderCreateOrUpdate.kKunde = tKundeEigenesFeld.kKunde
+    CROSS APPLY (  SELECT tattribut.kAttribut 
+			    FROM dbo.tattribut
+			    JOIN tAttributSprache on tAttributSprache.kAttribut = tAttribut.kAttribut
+			    WHERE tAttribut.nIstFreifeld= 1 AND tAttributSprache.cName = #EigeneFelderCreateOrUpdate.cKey ) AS Attribute
+    WHERE Attribute.kAttribut = Kunde.tKundeEigenesFeld.kAttribut;
+    
+
+        -- Input Type Parameter in Temp Speichern
+    IF(object_id(&#39;tempdb..#Attribut&#39;) IS NOT NULL)
+    BEGIN
+	  DROP TABLE #Attribut;
+    END;
+    CREATE TABLE #Attribut(kAttribut INT,cName varchar(255));
+    CREATE CLUSTERED INDEX IX_#Attribut ON #Attribut(cName,kAttribut);
+
+    INSERT INTO #Attribut(kAttribut,cName)
+    SELECT DISTINCT tattribut.kAttribut ,tAttributSprache.cName
+    FROM dbo.tattribut
+    JOIN tAttributSprache on tAttributSprache.kAttribut = tAttribut.kAttribut AND tAttributSprache.kSprache = 0
+    WHERE tAttribut.nIstFreifeld= 1;
+
+
+    INSERT INTO Kunde.tKundeEigenesFeld (kKunde, kAttribut, cWertVarchar,nWertInt)
+    SELECT DISTINCT #EigeneFelderCreateOrUpdate.kKunde,#Attribut.kAttribut,
+	#EigeneFelderCreateOrUpdate.cValue,
+	CASE WHEN @nFeldTyp = 4 THEN
+		CONVERT(INT,#EigeneFelderCreateOrUpdate.cValue)
+	ELSE
+		NULL
+	END
+    FROM #EigeneFelderCreateOrUpdate
+    JOIN #Attribut ON #Attribut.cName = #EigeneFelderCreateOrUpdate.cKey;    
+
+
+END TRY
+BEGIN CATCH
+
+
+    DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

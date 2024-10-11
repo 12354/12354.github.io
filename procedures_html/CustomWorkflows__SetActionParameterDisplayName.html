@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CustomWorkflows._SetActionParameterDisplayName</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>CustomWorkflows._SetActionParameterDisplayName</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [CustomWorkflows].[_SetActionParameterDisplayName]    
+    @parameterName VARCHAR(128),
+    @displayName VARCHAR(128)
+AS
+BEGIN
+
+    IF EXISTS
+    (
+        SELECT *
+        FROM sys.extended_properties displayNameUserType
+            JOIN sys.types userTypes
+                ON userTypes.is_user_defined = 1
+                   AND displayNameUserType.major_id = userTypes.user_type_id
+        WHERE displayNameUserType.name = &#39;DisplayName&#39;
+              AND displayNameUserType.class_desc = &#39;TYPE&#39;
+              AND userTypes.name = @parameterName
+    )
+    BEGIN
+
+        EXEC sys.sp_dropextendedproperty @name = N&#39;DisplayName&#39;,
+                                         @level0type = N&#39;SCHEMA&#39;,
+                                         @level0name = N&#39;CustomWorkflows&#39;,
+                                         @level1type = N&#39;TYPE&#39;,
+                                         @level1name = @parameterName;
+    END;
+
+    EXEC sys.sp_addextendedproperty @name = N&#39;DisplayName&#39;,
+                                    @value = @displayName,
+                                    @level0type = &#39;SCHEMA&#39;,
+                                    @level0name = N&#39;CustomWorkflows&#39;,
+                                    @level1type = &#39;TYPE&#39;,
+                                    @level1name = @parameterName,
+                                    @level2type = NULL,
+                                    @level2name = NULL;
+
+END;</code></pre>
+</body>
+</html>

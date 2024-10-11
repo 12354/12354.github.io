@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spGarbageCollection_VerwaistePicklistenLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spGarbageCollection_VerwaistePicklistenLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spGarbageCollection_VerwaistePicklistenLoeschen]
+AS
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+BEGIN
+	DECLARE @Picklisten TABLE
+	(
+		kPickliste INT NOT NULL
+	)
+
+	INSERT @Picklisten (kPickliste)
+		SELECT
+			kPickliste
+		FROM dbo.tPickliste
+		LEFT JOIN dbo.tSessionId ON tSessionId.kSessionId = tPickliste.kSessionId
+		WHERE (tSessionId.kSessionId IS NULL OR DATEADD(mi, 10, tSessionId.dLastAction) &lt; GETDATE()) 
+			AND (tPickliste.nStatus = 5 OR tPickliste.nStatus = 10 AND (tPickliste.kLieferant &gt; 0 OR tPickliste.kAnsprechpartner &gt; 0));
+
+	DELETE dbo.tPickliste
+	FROM dbo.tPickliste
+	JOIN @Picklisten AS PicklistenTable ON tPickliste.kPickliste = PicklistenTable.kPickliste;
+END</code></pre>
+</body>
+</html>

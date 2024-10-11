@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spReserviereSeriennummern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spReserviereSeriennummern</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spReserviereSeriennummern]
+
+-- Reservierung von Seriennummern
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+
+@PicklistePos XML,
+-- &lt;PicklistePos&gt;
+--   &lt;kPicklistePos&gt;25&lt;/kPicklistePos&gt;
+-- &lt;/PicklistePos&gt;
+-- &lt;PicklistePos&gt;
+--   &lt;kPicklistePos&gt;26&lt;/kPicklistePos&gt;
+-- &lt;/PicklistePos&gt;
+@Seriennummern XML
+-- &lt;Seriennummer&gt;
+--   &lt;kLagerartikel&gt;25&lt;/kLagerartikel&gt;
+-- &lt;/Seriennummer&gt;
+-- &lt;Seriennummer&gt;
+--   &lt;kLagerartikel&gt;26&lt;/kLagerartikel&gt;
+-- &lt;/Seriennummer&gt;
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spReserviereSeriennummern
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY
+	DECLARE @kPicklistePos AS INT;
+	DECLARE @fAnzahl AS INT;
+	DECLARE @kBestellPos AS INT;
+	DECLARE @kArtikel AS INT;
+	DECLARE @kWarenlager AS INT;
+	DECLARE @fAnzahlReserviert AS INT;
+
+	-- 
+	-- XML-Geraffel umkopieren
+	-- 
+	IF(object_id(&#39;tempdb..#XMLPickpos&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #XMLPickpos;
+	END
+    CREATE TABLE #XMLPickpos(
+		kPicklistePos INT, 
+		fAnzahl INT,
+		kBestellPos INT,
+		kArtikel INT,
+		kWarenlager INT)
+	INSERT INTO #XMLPickpos
+	(
+	    #XMLPickpos.kPicklistePos,
+	    #XMLPickpos.fAnzahl,
+	    #XMLPickpos.kBestellPos,
+	    #XMLPickpos.kArtikel,
+	    #XMLPickpos.kWarenlager
+	)
+	SELECT
+		[dbo].[tPicklistePos].[kPicklistePos] AS kPicklistePos,
+		[dbo].[tPicklistePos].[fAnzahl] AS fAnzahl,
+		[dbo].[tPicklistePos].[kBestellPos] AS kBestellPos,
+		[dbo].[tPicklistePos].[kArtikel] AS kArtikel,
+		[dbo].[tPicklistePos].[kWarenlager] AS kWarenlager
+	FROM @PicklistePos.nodes(&#39;/PicklistePos&#39;) AS ParamValues(ID)
+	JOIN [dbo].[tPicklistePos] ON [dbo].[tPicklistePos].[kPicklistePos] = ParamValues.ID.value(&#39;kPicklistePos[1]&#39;, &#39;INT&#39;)
+	JOIN [dbo].[tArtikel] ON [dbo].[tArtikel].[kArtikel] = [dbo].[tPicklistePos].[kArtikel]
+	WHERE [dbo].[tArtikel].[cLagerArtikel] = &#39;Y&#39;
+	
+	-- Bestehende Zuordnungen l&#246;schen
+	UPDATE [dbo].[tlagerartikel]
+	SET
+		[dbo].[tlagerartikel].[kPicklistePos] = 0,
+		[dbo].[tlagerartikel].[kBestellPos] = 0
+	FROM [dbo].[tlagerartikel]
+	JOIN #XMLPickpos ON #XMLPickpos.kPicklistePos = [dbo].[tlagerartikel].[kPicklistePos] AND #XMLPickpos.kWarenlager = [dbo].[tlagerartikel].[kWarenlager]
+	WHERE ISNULL([dbo].[tlagerartikel].[kLieferscheinPos], 0) = 0
+
+	DECLARE cPicklistePos CURSOR LOCAL FAST_FORWARD FOR
+		SELECT kPicklistePos, fAnzahl, kBestellPos, kArtikel, kWarenlager
+		FROM #XMLPickpos
+	OPEN cPicklistePos;
+	FETCH NEXT FROM cPicklistePos INTO @kPicklistePos, @fAnzahl, @kBestellPos, @kArtikel, @kWarenlager;
+	WHILE (@@FETCH_STATUS = 0)
+	BEGIN
+		IF ((@Seriennummern IS NULL) OR (DATALENGTH(@Seriennummern) = 0))
+		BEGIN
+			-- Seriennummern automatisch reservieren
+			UPDATE [dbo].[tlagerartikel]
+			SET 
+				[dbo].[tlagerartikel].[kPicklistePos] = @kPicklistePos,
+				[dbo].[tlagerartikel].[kBestellPos] = @kBestellPos
+			WHERE
+				[dbo].[tlagerartikel].[kLagerartikel] IN (
+					SELECT TOP(@fAnzahl) 
+					[dbo].[tlagerartikel].[kLagerartikel] 
+					FROM [dbo].[tLagerartikel]
+					WHERE [dbo].[tlagerartikel].[kWarenlager] = @kWarenlager AND
+						[dbo].[tlagerartikel].[kArtikel] = @kArtikel AND
+						(([dbo].[tlagerartikel].[kBestellPos] IS NULL) OR ([dbo].[tlagerartikel].[kBestellPos] = 0)) AND
+						(([dbo].[tlagerartikel].[kLieferscheinPos] IS NULL) OR ([dbo].[tlagerartikel].[kLieferscheinPos] = 0)) AND
+						([dbo].[tlagerartikel].[kPicklistePos] = 0))
+		END ELSE BEGIN
+			-- Seriennummern manuell reservieren
+			UPDATE [dbo].[tlagerartikel]
+			SET 
+				[dbo].[tlagerartikel].[kPicklistePos] = @kPicklistePos,
+				[dbo].[tlagerartikel].[kBestellPos] = @kBestellPos
+			WHERE
+				[dbo].[tlagerartikel].[kLagerartikel] IN (
+					SELECT TOP(@fAnzahl) 
+					[dbo].[tlagerartikel].[kLagerartikel]
+					FROM @Seriennummern.nodes(&#39;/Seriennummer&#39;) AS ParamValues(ID)
+					JOIN [dbo].[tLagerartikel] ON ParamValues.ID.value(&#39;kLagerartikel[1]&#39;,&#39;INT&#39;) = [dbo].[tLagerartikel].[kLagerartikel]
+					WHERE [dbo].[tlagerartikel].[kWarenlager] = @kWarenlager AND
+						[dbo].[tlagerartikel].[kArtikel] = @kArtikel AND
+						(([dbo].[tlagerartikel].[kBestellPos] IS NULL) OR ([dbo].[tlagerartikel].[kBestellPos] = 0)) AND
+						(([dbo].[tlagerartikel].[kLieferscheinPos] IS NULL) OR ([dbo].[tlagerartikel].[kLieferscheinPos] = 0)) AND
+						(([dbo].[tlagerartikel].[kPicklistePos] IS NULL) OR ([dbo].[tlagerartikel].[kPicklistePos] = 0))
+					ORDER BY ParamValues.ID.value(&#39;nPrio[1]&#39;,&#39;INT&#39;))
+		END
+		FETCH NEXT FROM cPicklistePos INTO @kPicklistePos, @fAnzahl, @kBestellPos, @kArtikel, @kWarenlager;
+	END
+	IF(object_id(&#39;tempdb..#XMLPickpos&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #XMLPickpos;
+	END
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+		ROLLBACK TRANSACTION;
+	ELSE
+		IF XACT_STATE() &lt;&gt; -1
+			ROLLBACK TRANSACTION spReserviereSeriennummern;
+
+	DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

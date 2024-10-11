@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEPRECATED.spAuftragEckdatenBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>DEPRECATED.spAuftragEckdatenBerechnen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE DEPRECATED.spAuftragEckdatenBerechnen
+@kAuftrag INT
+AS 
+BEGIN
+	DECLARE @Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+	INSERT INTO @Auftrag (kAuftrag)
+	VALUES (@kAuftrag);
+
+	EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftrag;
+END</code></pre>
+</body>
+</html>

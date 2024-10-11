@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spCopyUserSettings</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spCopyUserSettings</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>-- =============================================
+-- Author:		V&#246;lker, Marc
+-- Create date: 21.08.2019
+-- Description:	Kopiert die Benutzer Einstellungen von einem Benutzer zu einem anderen
+-- =============================================
+CREATE PROCEDURE [Maintenance].[spCopyUserSettings]
+	@kBenutzerQuelle int, -- Um explizit die Firma zu nennen, um welche es geht
+	@kBenutzerZiel int, -- Der benutzer der die Aktion ausgef&#252;hrt hat
+	@nType tinyint -- Welche art von &#220;bertragung ist es, 0 = Alle, 1 = Tabellen, 2= Druckeinstellungen, 4 = Email Signatur, 8 = 
+AS
+BEGIN
+	SET NOCOUNT ON;
+	if(@kBenutzerQuelle = @kBenutzerZiel)
+	BEGIN
+		RETURN
+	END
+	BEGIN TRANSACTION
+	-- L&#246;schen der Aktuellen Einstellungen
+	if(@nType = 0 OR (@nType &amp; 1) = 1)
+	BEGIN
+		delete from [dbo].[tUserLayout] where kBenutzer = @kBenutzerZiel
+		delete from [dbo].[tUserSetting] where kBenutzer = @kBenutzerZiel
+		delete from [dbo].[tListViewExHeader] where kBenutzer = @kBenutzerZiel		
+		delete from [dbo].[tSetting] where kBenutzer = @kBenutzerZiel	
+		delete from [pps].[tSetting] where kBenutzer = @kBenutzerZiel	
+	END
+	
+	-- Drucker Einstellungen l&#246;schen
+	if(@nType = 0 OR (@nType &amp; 2) = 2)
+	BEGIN
+		delete from	[Report].[tVorlagensetEinstellung] where  kBenutzer = @kBenutzerZiel
+		delete from	[Shipping].[tShippingPrinterConfiguration] where  kBenutzer = @kBenutzerZiel
+		delete from	[dbo].[tAmazonShippingDruckereinstellungen] where  kBenutzer = @kBenutzerZiel
+	END
+
+	--Tabellen Einstellungen &#252;bertragen
+	if(@nType = 0 OR (@nType &amp; 1) = 1)
+	BEGIN
+		INSERT INTO [dbo].[tUserLayout] (kBenutzer,cName,cWert) 
+			SELECT @kBenutzerZiel,cName,cWert FROM [dbo].[tUserLayout]  WHERE kBenutzer = @kBenutzerQuelle
+		INSERT INTO [dbo].[tUserSetting] (kBenutzer,cName,cWert) 
+			SELECT @kBenutzerZiel,cName,cWert FROM [dbo].[tUserSetting]  WHERE kBenutzer = @kBenutzerQuelle
+		INSERT INTO [dbo].[tListViewExHeader] (kBenutzer,[kBenutzerAdmin],[nListViewID],[cRechnername],[nHeaderID],[nSize],[nSort],[nOrderBy],[cOriginalName],[cCustomName],[nRoundStellen]) 
+			SELECT @kBenutzerZiel,[kBenutzerAdmin],[nListViewID],[cRechnername],[nHeaderID],[nSize],[nSort],[nOrderBy],[cOriginalName],[cCustomName],[nRoundStellen] FROM [dbo].[tListViewExHeader]  WHERE kBenutzer = @kBenutzerQuelle	
+		
+		-- WMS und Wawi Einstellungen &#252;bertragen
+		MERGE INTO [dbo].[tSetting] AS Ziel
+		USING (SELECT nScope,cSection,cVersion,cApplicationName,cName,cValue,@kBenutzerZiel, cDescription 
+				FROM [dbo].[tSetting] WHERE kBenutzer = @kBenutzerQuelle) as Source (nScope,cSection,cVersion,cApplicationName,cName,cValue,kBenutzer,cDescription)
+		ON (Ziel.cSection = Source.cSection AND Ziel.[nScope] = Source.[nScope] AND Ziel.cName = Source.cName AND Ziel.cApplicationName = Source.cApplicationName AND Ziel.kBenutzer = Source.kBenutzer)
+		WHEN MATCHED THEN
+			UPDATE SET Ziel.cValue = Source.cValue, Ziel.dLetzteAenderung = GETDATE()
+		WHEN NOT MATCHED THEN
+			INSERT ([cApplicationName],[cSection],[nScope],[cName],[cValue],[cVersion],[dLetzteAenderung],[kBenutzer],[cDescription])
+			VALUES (Source.cApplicationName,Source.cSection,Source.nScope,Source.cName,Source.cValue,Source.cVersion,GETDATE(),Source.kBenutzer, Source.cDescription);
+
+		-- pps Einstellungen &#252;bertragen
+		MERGE INTO [pps].[tSetting] AS Ziel
+		USING (SELECT nScope, cSection, cVersion, cApplicationName, cName, cValue, @kBenutzerZiel, cDescription 
+				FROM [pps].[tSetting] WHERE kBenutzer = @kBenutzerQuelle) as Source (nScope, cSection, cVersion, cApplicationName, cName, cValue, kBenutzer, cDescription)
+		ON (Ziel.cSection = Source.cSection AND Ziel.[nScope] = Source.[nScope] AND Ziel.cName = Source.cName AND Ziel.cApplicationName = Source.cApplicationName AND Ziel.kBenutzer = Source.kBenutzer)
+		WHEN MATCHED THEN
+			UPDATE SET Ziel.cValue = Source.cValue, Ziel.dLetzteAenderung = GETDATE()
+		WHEN NOT MATCHED THEN
+			INSERT ([cApplicationName], [cSection], [nScope], [cName], [cValue], [cVersion], [dLetzteAenderung], [kBenutzer], cDescription)
+			VALUES (Source.cApplicationName, Source.cSection, Source.nScope, Source.cName, Source.cValue, Source.cVersion, GETDATE(), Source.kBenutzer, Source.cDescription);
+			
+	END
+	-- Drucker Einstellungen &#252;bertragen
+	if(@nType = 0 OR  (@nType &amp; 2) = 2)
+	BEGIN
+		INSERT INTO [Report].[tVorlagensetEinstellung] ([kVorlagenset],[cRechnername],[kBenutzer],[cDruckername1],[nKopien1],[cDruckername2],[nKopien2],[cFaxname])  SELECT [kVorlagenset],[cRechnername],@kBenutzerZiel,[cDruckername1],[nKopien1],[cDruckername2],[nKopien2],[cFaxname] FROM [Report].[tVorlagensetEinstellung] WHERE kBenutzer = @kBenutzerQuelle
+		INSERT INTO [Shipping].[tShippingPrinterConfiguration] ([nShippingServiceProviderType],[cRechnername],[kBenutzer],[cDruckerName],[nPageScaling],[nOrientation],[kPrintDocumentType],[nExemplare]) SELECT [nShippingServiceProviderType],[cRechnername],@kBenutzerZiel,[cDruckerName],[nPageScaling],[nOrientation],[kPrintDocumentType] ,[nExemplare]   FROM [Shipping].[tShippingPrinterConfiguration] WHERE kBenutzer = @kBenutzerQuelle
+		INSERT INTO [dbo].[tAmazonShippingDruckereinstellungen] ([kVersandart],[cRechnername],[kBenutzer],[cDruckername],[nPageScaling]) SELECT [kVersandart],[cRechnername],@kBenutzerZiel,[cDruckername],[nPageScaling] FROM [dbo].[tAmazonShippingDruckereinstellungen] WHERE kBenutzer = @kBenutzerQuelle
+	END
+	COMMIT
+END</code></pre>
+</body>
+</html>

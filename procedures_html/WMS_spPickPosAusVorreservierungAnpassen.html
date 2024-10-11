@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPickPosAusVorreservierungAnpassen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPickPosAusVorreservierungAnpassen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>-- Wenn ein Warenlagereingang umgelagert wird, muss auch die Vorreservierung (Pickliste mit ntype = 3) dazu angepasst werden, falls es eine gibt.
+CREATE PROCEDURE [WMS].[spPickPosAusVorreservierungAnpassen]
+  @kWarenlagerEingang   INT, -- Der Warenlagereingan der Umgelagert wurde
+  @kWarenlagerEingangNeu INT, -- Falls der Wareneingang bei der Umlagerung gesplittet wurde, ist das hier der neue
+  @kWarenlagerplatzNeu INT, -- Der neue Platz
+  @fAnzahlUmbuchen DECIMAL(25,13) -- Die Anzahl die umgelagert wurde
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @FETCH_STATUS_cPickPosRes INT = 0;
+
+BEGIN
+
+
+	DECLARE @kPicklistePosRes INT, @fAnzahlRes DECIMAL(25,13),  @fStartAnzahlUmbuchen DECIMAL(25,13);
+	DECLARE cPickPosRes CURSOR LOCAL FAST_FORWARD FOR
+	SELECT tPicklistePos.kPicklistePos,tPicklistePos.fAnzahl
+	FROM dbo.tPicklistePos 
+	JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+	WHERE tPicklistePos.kWarenLagerEingang = @kWarenlagerEingang
+	AND tPicklistePos.nStatus &lt; 40
+	AND tPickliste.nType = 3
+	ORDER BY tPicklistePos.kPicklistePos, CASE WHEN tPicklistePos.fAnzahl = @fAnzahlUmbuchen THEN 0 ELSE 1 END, tPicklistePos.fAnzahl;
+
+	SET @fStartAnzahlUmbuchen = @fAnzahlUmbuchen;
+
+	OPEN cPickPosRes;
+	FETCH NEXT FROM cPickPosRes INTO @kPicklistePosRes, @fAnzahlRes;
+	SET @FETCH_STATUS_cPickPosRes = @@FETCH_STATUS; 
+	WHILE (@FETCH_STATUS_cPickPosRes = 0 AND @fStartAnzahlUmbuchen &gt; 0)
+    BEGIN
+	 
+	
+	IF(@fStartAnzahlUmbuchen &gt;= @fAnzahlRes)
+	BEGIN -- PP Anpassen
+	
+		UPDATE dbo.tPicklistePos SET kWarenLagerEingang = @kWarenlagerEingangNeu, kWarenlagerPlatz = @kWarenlagerplatzNeu
+		WHERE tPicklistePos.kPicklistePos = @kPicklistePosRes;
+
+		SET @fStartAnzahlUmbuchen = @fStartAnzahlUmbuchen - @fAnzahlRes;
+	END;
+	ELSE IF (@fStartAnzahlUmbuchen &lt; @fAnzahlRes)
+	BEGIN -- Splitten
+
+		DECLARE @kNewPicklistePos INT,  @nRet INT, @fMengeSplit DECIMAL(25,13) =  @fStartAnzahlUmbuchen;
+	    EXEC [WMS].[spPicklistePosSplitten]
+			 @kPicklistePos = @kPicklistePosRes,
+			 @nMenge = @fMengeSplit,
+			 @kNewPicklistePos = @kNewPicklistePos OUT,
+			 @nRet = @nRet OUT;
+
+	    UPDATE dbo.tPicklistePos SET kWarenLagerEingang = @kWarenlagerEingangNeu, kWarenlagerPlatz = @kWarenlagerplatzNeu
+		WHERE tPicklistePos.kPicklistePos = @kNewPicklistePos;
+
+		SET @fStartAnzahlUmbuchen = 0;
+
+	END;
+
+	FETCH NEXT FROM cPickPosRes INTO @kPicklistePosRes, @fAnzahlRes;
+	SET @FETCH_STATUS_cPickPosRes = @@FETCH_STATUS; 
+	END;
+	
+	CLOSE cPickPosRes;
+	DEALLOCATE cPickPosRes;
+
+END;</code></pre>
+</body>
+</html>

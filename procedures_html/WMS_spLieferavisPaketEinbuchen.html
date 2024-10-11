@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spLieferavisPaketEinbuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spLieferavisPaketEinbuchen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spLieferavisPaketEinbuchen]
+@kBenutzer INT,         -- Der Benutzer der den Vorgang ausf&#252;hrt
+@kWarenlagerPlatz INT,		
+@kLieferavisPaket INT,
+@nMHDChargeSerNoAktiv INT,
+@cLieferscheinNr NVARCHAR(255),
+@kSessionId INT = 0
+
+
+-- Funktion: Die Artikel aus dem LieferavisPakes Paket werden eingebucht und die Lieferantenbestellung wird geupdated. Vorher passiert eine Validierung im Erfolgsfall ist nError = 0.
+	
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @nAbgelaufenesMHDNichtEinbuchen TINYINT = 0;
+DECLARE @kWarenlager INT;
+DECLARE @nEKHandling TINYINT;
+DECLARE @nUeberlieferungErlaubt TINYINT;
+DECLARE @nMHDAktivWarenlager TINYINT;
+DECLARE @nChargeAktivWarenlager TINYINT;
+
+DECLARE @bChargenInPaket TINYINT = 0;
+DECLARE @bMhdInPaket TINYINT = 0;
+DECLARE @bTeilmengenInPaket TINYINT = 0;
+DECLARE @bSerNoInPaket TINYINT = 0;
+DECLARE @kLieferantenBestellung INT;
+DECLARE @cLieveravisNummer NVARCHAR(255);
+DECLARE @LieferantenBestellungFaktor DECIMAL(25,13);
+DECLARE @dBuchungsDatum DATETIME;
+
+DECLARE @DBError_000002001 INT = 100002001; -- Teilmengen Artikel d&#252;rfen nicht eingebucht werden
+DECLARE @DBError_000002002 INT = 100002002; -- MHD/Charge Modul nicht aktiv
+DECLARE @DBError_000002003 INT = 100002003; -- MHD nicht erlaubt
+DECLARE @DBError_000002004 INT = 100002004; -- Chargen nicht erlaubt
+DECLARE @DBError_000002005 INT = 100002005; -- MHD/Chargen nicht richtig im Avis hinterlegt
+DECLARE @DBError_000002006 INT = 100002006; -- MHD in Paket abgelaufen
+DECLARE @DBError_000002007 INT = 100002007; -- Zuviel Menge in Paket
+DECLARE @DBError_000002008 INT = 100002008; -- Positionen haben keine Sernos hinterlegt
+DECLARE @DBError_000002009 INT = 100002009; -- Seriennummer im System vorhanden
+
+BEGIN TRY
+
+
+	SELECT @kWarenlager = tWarenlager.kWarenlager, @nMHDChargeSerNoAktiv = CASE WHEN tWarenlager.nLagerplatzVerwaltung = 0 THEN 1 ELSE @nMHDChargeSerNoAktiv END
+	FROM dbo.tWarenLagerPlatz
+	JOIN dbo.tWarenlager ON tWarenlager.kWarenLager = tWarenLagerPlatz.kWarenLager
+	WHERE tWarenLagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatz;
+	
+	SELECT @nAbgelaufenesMHDNichtEinbuchen = nAbgelaufenesMHDNichtEinbuchen,@nEKHandling = nFreierWeEKUnbekanntHandling ,@nUeberlieferungErlaubt = nUeberlieferung, @nMHDAktivWarenlager = nMHD, @nChargeAktivWarenlager = nChargen
+	FROM dbo.tWarenLagerOptionen
+	WHERE kWarenLager = @kWarenlager;
+	
+	SELECT @kLieferantenBestellung = tLieferavis.kLieferantenBestellung, @cLieveravisNummer = tLieferavis.cNummer, @LieferantenBestellungFaktor = ISNULL(tLieferantenBestellung.fFaktor, 1.0)
+	FROM dbo.tLieferavisPaket
+	JOIN dbo.tLieferavis ON tLieferavis.kLieferavis = tLieferavisPaket.kLieferavis
+	JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellung = tLieferavis.kLieferantenBestellung
+	WHERE tLieferavisPaket.kLieferavisPaket = @kLieferavisPaket;
+
+
+	-- Alle Artikel im Packet in temp Table
+    IF (object_id(&#39;tempdb..#ArtikelInPaket&#39;) IS NOT NULL)
+    BEGIN
+	   DROP TABLE #ArtikelInPaket;
+    END;
+
+    CREATE TABLE #ArtikelInPaket (kArtikel INT, fAnzahl DECIMAL(25,13), cCharge nVARCHAR(255), dMHD DATETIME, bIstMHD TINYINT, bIstCharge TINYINT, bIstSerNo TINYINT,  bIstTeilmenge TINYINT,  bIstSerNoPassend TINYINT);
+
+    INSERT INTO #ArtikelInPaket  (kArtikel, fAnzahl, tLieferavisPosition.cCharge, tLieferavisPosition.dMHD, bIstMHD , bIstCharge , bIstSerNo ,  bIstTeilmenge,bIstSerNoPassend)
+    SELECT tArtikel.kArtikel, SUM(tLieferavisPosition.fMenge),tLieferavisPosition.cCharge, tLieferavisPosition.dMHD, ISNULL(tArtikel.nMHD,0), ISNULL(tArtikel.nCharge,0),
+           CASE WHEN tArtikel.cLagerArtikel = &#39;Y&#39; THEN 1 ELSE 0 END,
+           ISNULL(tArtikel.nIstTeilmengenArtikel,0),
+           CASE WHEN SUM(tLieferavisPosition.fMenge) = MAX(ISNULL(SerNo.SerNoCount,0))  THEN 1 ELSE 0 END
+    FROM  dbo.tLieferavisPaket
+              JOIN dbo.tLieferavisPosition ON tLieferavisPosition.kLieferavis = tLieferavisPaket.kLieferavis AND tLieferavisPosition.nPaketNummer = tLieferavisPaket.nPaketNummer
+              JOIN dbo.tArtikel ON tArtikel.kArtikel = tLieferavisPosition.kArtikel
+        OUTER APPLY (
+    				SELECT COUNT(tLieferavisSeriennummer.cSeriennummer) AS SerNoCount
+    				FROM dbo.tLieferavisSeriennummer
+    				WHERE tLieferavisSeriennummer.kLieferavisPosition = tLieferavisPosition.kLieferavisPosition
+    				) AS SerNo
+    WHERE tLieferavisPaket.kLieferavisPaket = @kLieferavisPaket
+    GROUP BY  tArtikel.kArtikel, tLieferavisPosition.cCharge, tLieferavisPosition.dMHD, ISNULL(tArtikel.nMHD,0), ISNULL(tArtikel.nCharge,0),
+    CASE WHEN SerNo.SerNoCount &gt; 0 THEN 1 ELSE 0 END, ISNULL(tArtikel.nIstTeilmengenArtikel,0),tArtikel.cLagerArtikel;
+        
+        
+	-- Paket Eigenschaften speichern
+	SELECT @bChargenInPaket = MAX(bIstCharge),  @bMhdInPaket = MAX(bIstMHD),  @bTeilmengenInPaket = MAX(bIstTeilmenge), @bSerNoInPaket = MAX(bIstSerNo)
+	FROM #ArtikelInPaket
+	WHERE  bIstMHD = 1 OR bIstCharge = 1 OR bIstSerNo = 1 OR bIstTeilmenge = 1;
+
+
+	--
+	-- Validierung des Pakets, im Fehlerfall Return mit nen Errorcode
+	--
+
+	IF (@bTeilmengenInPaket = 1)
+	BEGIN
+		RETURN  @DBError_000002001; --Teilmengen Artikel d&#252;rfen nicht eingebucht werden
+	END;
+
+	IF ((@bMhdInPaket = 1 OR @bChargenInPaket = 1 OR @bSerNoInPaket = 1) AND @nMHDChargeSerNoAktiv = 0)  
+	BEGIN
+		RETURN @DBError_000002002; --MHD/Charge Modul nicht aktiv
+	END
+
+	IF (@bMhdInPaket = 1 AND @nMHDAktivWarenlager = 0)
+	BEGIN
+		RETURN @DBError_000002003; --MHD nicht erlaubt
+	END;
+
+	IF (@bChargenInPaket = 1 AND @nChargeAktivWarenlager = 0)
+	BEGIN
+		RETURN @DBError_000002004; -- Chargen nicht erlaubt
+	END;
+
+	
+	-- Chargen/MHD gef&#252;llt?
+	IF (@bMhdInPaket = 1 OR @bChargenInPaket = 1)
+	BEGIN
+		IF EXISTS (SELECT *
+				   FROM #ArtikelInPaket
+				   WHERE (#ArtikelInPaket.bIstCharge = 1 AND #ArtikelInPaket.cCharge IS NULL) OR (#ArtikelInPaket.bIstMHD = 1 AND #ArtikelInPaket.dMHD IS NULL))
+		BEGIN
+		   RETURN @DBError_000002005; -- MHD/Chargen nicht richtig im Avis hinterlegt
+		END;
+	END;
+
+
+	IF (@bMhdInPaket = 1 AND @nAbgelaufenesMHDNichtEinbuchen = 1 AND EXISTS ( SELECT * FROM #ArtikelInPaket WHERE #ArtikelInPaket.bIstMHD = 1 AND #ArtikelInPaket.dMHD &lt; GETDATE() ))
+	BEGIN
+	    RETURN @DBError_000002006; -- MHD in Paket abgelaufen
+	END
+	
+	IF (@nUeberlieferungErlaubt = 0)
+	BEGIN
+    	IF EXISTS(
+				SELECT *
+				FROM
+					(
+					SELECT kArtikel, SUM(tLieferantenBestellungPos.fAnzahlOffen) AS fAnzahlOffen
+					FROM dbo.tLieferantenBestellungPos
+					WHERE tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung
+					GROUP BY tLieferantenBestellungPos.kArtikel
+					) AS LiefArtikel
+				OUTER APPLY
+				(
+					SELECT kArtikel, SUM(#ArtikelInPaket.fAnzahl) AS fAnzahl
+					FROM #ArtikelInPaket
+					WHERE #ArtikelInPaket.kArtikel = LiefArtikel.kArtikel
+					GROUP BY kArtikel
+				) AS PaketArtikel
+				WHERE LiefArtikel.fAnzahlOffen &lt; PaketArtikel.fAnzahl)
+		BEGIN
+	        RETURN @DBError_000002007; -- Zuviel Menge in Paket
+		END;
+	END;
+
+
+	IF (@bSerNoInPaket = 1)
+	BEGIN
+		IF EXISTS (SELECT *
+				   FROM #ArtikelInPaket
+				   WHERE bIstSerNo = 1 AND bIstSerNoPassend = 0)
+		BEGIN
+		   RETURN @DBError_000002008;  --Positionen haben keine Sernos hinterlegt
+		END;
+
+
+		IF EXISTS (SELECT *
+				   FROM tLagerartikel
+				   JOIN dbo.tLieferavisSeriennummer ON  tLieferavisSeriennummer.cSeriennummer = tLagerartikel.cSeriennr
+				   JOIN dbo.tLieferavisPosition  ON tLieferavisPosition.kArtikel = tLagerartikel.kArtikel AND tLieferavisPosition.kLieferavisPosition = tLieferavisSeriennummer.kLieferavisPosition
+				   JOIN dbo.tLieferavisPaket ON tLieferavisPaket.nPaketNummer = tLieferavisPosition.nPaketNummer AND tLieferavisPosition.kLieferavis = tLieferavisPosition.kLieferavis  AND tLieferavisPaket.kLieferavisPaket = @kLieferavisPaket
+				   JOIN dbo.tLieferavis ON tLieferavis.kLieferavis = tLieferavisPosition.kLieferavis
+				   WHERE kLieferscheinPos = 0
+				   AND tLieferavisSeriennummer.cSeriennummer = tLagerartikel.cSeriennr
+				   AND tLieferavis.kLieferantenBestellung = @kLieferantenBestellung)
+		BEGIN
+		   RETURN @DBError_000002009;  --Seriennummern im System vorhanden
+		END;
+
+
+	END;
+
+	
+	--
+	-- Speichern der Wareneing&#228;nge. Dabei werden die Mengen im Paket aufgeteilt nach Bestellpos. Mengen die mehrgeliefert wurden, werden der ersten Bestellpos des Artikels zugeordnet.
+	--
+	
+	-- Temp Table zum Speichern der Warenlagereingaenge
+    IF (object_id(&#39;tempdb..#WarenlagereingaengeToSave&#39;) IS NOT NULL)
+    BEGIN
+	    DROP TABLE #WarenlagereingaengeToSave;
+    END;
+    
+    CREATE TABLE #WarenlagereingaengeToSave (kArtikel INT, fAnzahl DECIMAL(25,13), cCharge nVARCHAR(255), dMHD DATETIME, kLieferantenBestellungPos INT);
+
+
+    DECLARE  CUR_FillWarenlagereingaengeToSave CURSOR LOCAL FAST_FORWARD FOR
+	SELECT kArtikel,fAnzahl,cCharge,dMHD
+	FROM #ArtikelInPaket;
+
+
+	DECLARE @kArtikelToSave INT,@fAnzahlToSave DECIMAL(25,13),@cChargeToSave nVARCHAR(255),@dMHDToSave DATETIME;
+
+	OPEN CUR_FillWarenlagereingaengeToSave
+	FETCH NEXT FROM CUR_FillWarenlagereingaengeToSave INTO @kArtikelToSave,@fAnzahlToSave,@cChargeToSave,@dMHDToSave
+  	WHILE (@@FETCH_STATUS = 0 ) 
+	BEGIN
+	
+
+	    -- &#220;ber alle Bestellpos, Artikel auf offene Mengen verteilen
+	    DECLARE  CUR_LiefBestellungPos CURSOR LOCAL FAST_FORWARD FOR
+	    SELECT tLieferantenBestellungPos.kLieferantenBestellungPos, (tLieferantenBestellungPos.fAnzahlOffen - ISNULL(#WarenlagereingaengeToSave.fAnzahl,0)) fAnzahlOffen
+	    FROM tLieferantenBestellungPos
+	    LEFT JOIN #WarenlagereingaengeToSave ON #WarenlagereingaengeToSave.kLieferantenBestellungPos = tLieferantenBestellungPos.kLieferantenBestellungPos
+	    WHERE tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung 
+	    AND tLieferantenBestellungPos.kArtikel = @kArtikelToSave
+	    AND (tLieferantenBestellungPos.fAnzahlOffen - ISNULL(#WarenlagereingaengeToSave.fAnzahl,0)) &gt; 0
+	    ORDER BY (tLieferantenBestellungPos.fAnzahlOffen - ISNULL(#WarenlagereingaengeToSave.fAnzahl,0));
+	    
+	    DECLARE @kLieferantenBestellungPos INT;
+	    DECLARE @fAnzahlOffen DECIMAL(25,13);
+	    OPEN CUR_LiefBestellungPos
+	    FETCH NEXT FROM CUR_LiefBestellungPos INTO @kLieferantenBestellungPos,@fAnzahlOffen
+	    WHILE (@@FETCH_STATUS = 0 AND @fAnzahlToSave &gt; 0 ) 
+	    BEGIN
+	  
+	    	 IF(@fAnzahlToSave &lt;= @fAnzahlOffen)
+	    	 BEGIN
+	    		INSERT INTO #WarenlagereingaengeToSave (kArtikel, fAnzahl, cCharge , dMHD , kLieferantenBestellungPos ) VALUES (@kArtikelToSave,@fAnzahlToSave,@cChargeToSave,@dMHDToSave,@kLieferantenBestellungPos);
+	    		SET @fAnzahlToSave = 0;
+	    		BREAK;
+	    	 END;
+	    	 ELSE
+	    	 BEGIN
+	    	     INSERT INTO #WarenlagereingaengeToSave (kArtikel, fAnzahl, cCharge , dMHD , kLieferantenBestellungPos ) VALUES (@kArtikelToSave,@fAnzahlOffen,@cChargeToSave,@dMHDToSave,@kLieferantenBestellungPos);
+	    	   	 SET @fAnzahlToSave = @fAnzahlToSave - @fAnzahlOffen;
+	    	 END;
+	    
+	    	 FETCH NEXT FROM CUR_LiefBestellungPos INTO  @kLieferantenBestellungPos,@fAnzahlOffen;
+	    END;
+	  
+	    CLOSE CUR_LiefBestellungPos;
+	    DEALLOCATE CUR_LiefBestellungPos;
+	    
+	    
+	    -- Falls es noch offene Mengen gibt, der ersten Bestellpos zuweisen
+	    IF(@fAnzahlToSave &gt; 0)
+	    BEGIN
+	    
+	         DECLARE @kLieferantenBestellungPosLast INT;
+	         --ERste Bestellpos
+	    	  SELECT TOP 1 @kLieferantenBestellungPosLast =  tLieferantenBestellungPos.kLieferantenBestellungPos
+	    	  FROM tLieferantenBestellungPos
+	          WHERE tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung 
+	          AND tLieferantenBestellungPos.kArtikel = @kArtikelToSave
+	          ORDER BY tLieferantenBestellungPos.kLieferantenBestellungPos DESC
+	    
+	    	  INSERT INTO #WarenlagereingaengeToSave (kArtikel, fAnzahl, cCharge , dMHD , kLieferantenBestellungPos ) VALUES (@kArtikelToSave,@fAnzahlToSave,@cChargeToSave,@dMHDToSave,@kLieferantenBestellungPosLast);
+	    	  SET @fAnzahlToSave = 0;
+	    
+	    END;
+	    
+	    FETCH NEXT FROM CUR_FillWarenlagereingaengeToSave INTO  @kArtikelToSave,@fAnzahlToSave,@cChargeToSave,@dMHDToSave;
+	END;
+
+	CLOSE CUR_FillWarenlagereingaengeToSave;
+	DEALLOCATE CUR_FillWarenlagereingaengeToSave;
+
+
+	-- Warenlagereing&#228;nge normal
+	DECLARE @xWarenlagerEingaenge XML = NULL;
+	SET @xWarenlagerEingaenge = (
+	SELECT #WarenlagereingaengeToSave.kArtikel,@kWarenlagerPlatz AS kWarenlagerPlatz ,#WarenlagereingaengeToSave.kLieferantenBestellungPos, @kBenutzer AS kBenutzer,fAnzahl,
+		 ISNULL(CASE @nEKHandling 
+	WHEN 1 THEN tartikel.fEKNetto 
+	WHEN 2 THEN  ISNULL(tLiefArtikel.fEKNetto, 0.0) / CASE WHEN @LieferantenBestellungFaktor = 0.0 THEN 1.0 ELSE @LieferantenBestellungFaktor  END 
+	WHEN 3 THEN  ISNULL(tLieferantenBestellungPos.fEKNetto, 0.0) / CASE WHEN @LieferantenBestellungFaktor = 0.0 THEN 1.0 ELSE @LieferantenBestellungFaktor END
+	END, 0) AS fEKEinzel,
+	cCharge AS cChargenNr,dMHD,@cLieveravisNummer AS cKommentar,@kSessionId AS kSessionId,10 AS kBuchungsart, 0 AS kBestellPosUmlagerung,0 AS kRTMRetourePos, @cLieferscheinNr AS cLieferscheinNr
+	FROM #WarenlagereingaengeToSave
+	JOIN dbo.tArtikel ON tArtikel.kArtikel = #WarenlagereingaengeToSave.kArtikel
+	JOIN dbo.tLieferantenBestellungPos ON tLieferantenBestellungPos.kLieferantenBestellungPos = #WarenlagereingaengeToSave.kLieferantenBestellungPos
+	JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellung = tLieferantenBestellungPos.kLieferantenBestellung
+	LEFT JOIN dbo.tLiefArtikel ON tLiefArtikel.tArtikel_kArtikel =  tArtikel.kArtikel AND tLiefArtikel.tLieferant_kLieferant = tLieferantenBestellung.kLieferant
+
+	FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+	);
+    
+
+	IF (@xWarenlagerEingaenge IS NOT NULL)
+	BEGIN
+	    EXEC dbo.spWarenlagerEingangSchreiben @xWarenlagerEingaenge  = @xWarenlagerEingaenge;
+	END;
+
+
+	--LieferantenbestellPos gelieferte Menge Updaten
+	--Evtl. sp&#228;ter in Transaction aufnehmen, fall es hier speicher probleme gibt. Transaction k&#246;nnte aber zu Blocker Problemen f&#252;hren
+	DECLARE @xLieferantenbestellungPos AS XML;
+
+
+	SET @xLieferantenbestellungPos =
+	(
+		SELECT LieferantenBestellungPos.kLieferantenBestellungPos AS kLieferantenbestellungPos,
+			   LieferantenBestellungPos.kLieferantenBestellung AS kLieferantenbestellung,
+			   LieferantenBestellungPos.kArtikel,
+			   LieferantenBestellungPos.cArtNr,
+			   LieferantenBestellungPos.cLieferantenArtNr,
+			   LieferantenBestellungPos.cName,
+			   LieferantenBestellungPos.cLieferantenBezeichnung,
+			   LieferantenBestellungPos.fUST,
+			   LieferantenBestellungPos.fMenge,
+			   LieferantenBestellungPos.cHinweis,
+			   LieferantenBestellungPos.fEKNetto,
+			   LieferantenBestellungPos.nPosTyp,
+			   LieferantenBestellungPos.cNameLieferant,
+			   LieferantenBestellungPos.nLiefertage,
+			   GETDATE() AS dLieferdatum,
+			   LieferantenBestellungPos.nSort,
+			   LieferantenBestellungPos.kLieferscheinPos,
+			   LieferantenBestellungPos.fMengeGeliefert + SUM(#WarenlagereingaengeToSave.fAnzahl) AS fMengeGeliefert,
+			   LieferantenBestellungPos.cVPEEinheit,
+			   LieferantenBestellungPos.nVPEMenge
+		FROM dbo.tLieferantenBestellungPos AS LieferantenBestellungPos
+		JOIN #WarenlagereingaengeToSave ON #WarenlagereingaengeToSave.kLieferantenBestellungPos = LieferantenBestellungPos.kLieferantenBestellungPos
+		GROUP BY LieferantenBestellungPos.kLieferantenBestellungPos,
+			   LieferantenBestellungPos.kLieferantenBestellung,
+			   LieferantenBestellungPos.kArtikel,
+			   LieferantenBestellungPos.cArtNr,
+			   LieferantenBestellungPos.cLieferantenArtNr,
+			   LieferantenBestellungPos.cName,
+			   LieferantenBestellungPos.cLieferantenBezeichnung,
+			   LieferantenBestellungPos.fUST,
+			   LieferantenBestellungPos.fMenge,
+			   LieferantenBestellungPos.cHinweis,
+			   LieferantenBestellungPos.fEKNetto,
+			   LieferantenBestellungPos.nPosTyp,
+			   LieferantenBestellungPos.cNameLieferant,
+			   LieferantenBestellungPos.nLiefertage,
+			   LieferantenBestellungPos.nSort,
+			   LieferantenBestellungPos.kLieferscheinPos,
+			   LieferantenBestellungPos.fMengeGeliefert ,
+			   LieferantenBestellungPos.cVPEEinheit,
+			   LieferantenBestellungPos.nVPEMenge
+		FOR XML PATH(&#39;LieferantenbestellungPos&#39;), TYPE
+	);     
+
+
+	EXECUTE Lieferantenbestellung.spLieferantenBestellungPosBearbeiten @xLieferantenbestellungPos;
+	EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusUpdate @kLieferantenBestellung;
+
+
+
+	--SerNo Buchen
+	IF (@bSerNoInPaket = 1)
+	BEGIN
+	          	INSERT INTO dbo.tlagerartikel  WITH(ROWLOCK) (kLager,kLagerOrt,kArtikel,cSeriennr,fEK,cBeschreibung1,cBeschreibung2,kBestellPos,kLieferscheinPos,kWarenlager,kLieferant,kLieferantenbestellung) 
+				SELECT 0,0,tLieferavisPosition.kArtikel,tLieferavisSeriennummer.cSeriennummer,0,&#39;&#39;,&#39;&#39;,0,0,@kWarenlager,0,@kLieferantenBestellung
+				FROM dbo.tLieferavisSeriennummer
+				JOIN dbo.tLieferavisPosition ON tLieferavisPosition.kLieferavisPosition = tLieferavisSeriennummer.kLieferavisPosition
+				JOIN dbo.tLieferavisPaket ON tLieferavisPaket.nPaketNummer = tLieferavisPosition.nPaketNummer AND tLieferavisPosition.kLieferavis = tLieferavisPosition.kLieferavis
+				WHERE tLieferavisPaket.kLieferavisPaket = @kLieferavisPaket
+	END;
+
+	return 0;
+
+END TRY
+BEGIN CATCH
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    SET @ErrorMessage =  ERROR_MESSAGE();
+
+    RAISERROR (@ErrorMessage, 
+		  16,
+		  1);
+END CATCH;</code></pre>
+</body>
+</html>

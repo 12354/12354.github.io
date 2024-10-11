@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnung.spRechnungEckdatenBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Rechnung.spRechnungEckdatenBerechnen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Rechnung].[spRechnungEckdatenBerechnen]
+	@Rechnungen AS Rechnung.TYPE_spRechnungEckdatenBerechnen READONLY
+AS
+BEGIN
+	DECLARE @OldContextInfo VARBINARY(128);
+	DECLARE @hash VARBINARY(128);
+
+	-- Parameter gef&#252;llt?
+	IF NOT EXISTS(SELECT * FROM @Rechnungen WHERE [@Rechnungen].kRechnung &gt; 0)
+	BEGIN
+		RETURN 0;
+	END
+
+	-- Daten vorbereiten
+
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungKeys&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #TempRechnungKeys;
+	END
+
+	CREATE TABLE #TempRechnungKeys
+	(
+		kRechnung INT PRIMARY KEY NOT NULL
+	);
+
+	INSERT INTO #TempRechnungKeys (kRechnung)
+	SELECT DISTINCT [@Rechnungen].kRechnung
+	FROM @Rechnungen
+	WHERE [@Rechnungen].kRechnung &gt; 0
+
+	IF(OBJECT_ID(&#39;tempdb..#TempDataRechnungPositionEckdaten&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #TempDataRechnungPositionEckdaten;
+	END
+
+	DECLARE @fRunden DECIMAL(25,13);
+	SET @fRunden = 0.009;
+	IF(ISNULL((SELECT TOP(1) teinstellungen.nRunden FROM dbo.teinstellungen), 0) &gt; 0)
+	BEGIN
+		SET @fRunden = 0.059;
+	END
+
+	CREATE TABLE #TempDataRechnungPositionEckdaten
+	(
+		kRechnungPosition INT PRIMARY KEY NOT NULL,
+		fVKBrutto DECIMAL(25, 13) NOT NULL,
+		fVKBruttoGesamt DECIMAL(25, 13) NOT NULL,
+		fVKNettoGesamt DECIMAL(25, 13) NOT NULL,
+		fMwStBetrag DECIMAL(25, 13) NOT NULL,
+		fRabattbetrag DECIMAL(25, 13) NOT NULL,
+		fGewichtGesamt DECIMAL(25, 13) NULL,
+		fVersandgewichtGesamt DECIMAL(25, 13) NULL
+	);
+
+	INSERT INTO #TempDataRechnungPositionEckdaten
+	(
+		kRechnungPosition,
+		fVKBrutto,
+		fVKBruttoGesamt,
+		fVKNettoGesamt,
+		fMwStBetrag,
+		fRabattbetrag,
+		fGewichtGesamt,
+		fVersandgewichtGesamt
+	)
+	SELECT
+		tRechnungPosition.kRechnungPosition,
+		tRechnungPosition.fVKNetto * (1.0 + (tRechnungPosition.fMwSt / 100.0)) AS fVKBrutto,
+		ROUND(ISNULL(tRechnungPosition.fWertBruttoGesamtFixiert, tRechnungPosition.fAnzahl * tRechnungPosition.fVKNetto * (1.0 - (tRechnungPosition.fRabatt / 100.0)) * (1.0 + (tRechnungPosition.fMwSt / 100.0))), 4) AS fVKBruttoGesamt,
+		ROUND(ISNULL(tRechnungPosition.fWertNettoGesamtFixiert, tRechnungPosition.fAnzahl * tRechnungPosition.fVKNetto * (1.0 - (tRechnungPosition.fRabatt / 100.0))), 4) AS fVKNettoGesamt,
+		ROUND(ISNULL(tRechnungPosition.fWertBruttoGesamtFixiert, tRechnungPosition.fAnzahl * tRechnungPosition.fVKNetto * (1.0 - (tRechnungPosition.fRabatt / 100.0)) * (1.0 + (tRechnungPosition.fMwSt / 100.0))) - ISNULL(tRechnungPosition.fWertNettoGesamtFixiert, tRechnungPosition.fAnzahl * tRechnungPosition.fVKNetto * (1.0 - (tRechnungPosition.fRabatt / 100.0))), 4) AS fMwStBetrag,
+		ROUND(tRechnungPosition.fAnzahl * tRechnungPosition.fVKNetto * (1.0 + (tRechnungPosition.fMwSt / 100.0)) - ISNULL(tRechnungPosition.fWertBruttoGesamtFixiert, tRechnungPosition.fAnzahl * tRechnungPosition.fVKNetto * (1.0 - (tRechnungPosition.fRabatt / 100.0)) * (1.0 + (tRechnungPosition.fMwSt / 100.0))), 4) AS fRabattbetrag,
+		tRechnungPosition.fGewicht * tRechnungPosition.fAnzahl AS fGewichtGesamt,
+		tRechnungPosition.fVersandgewicht * tRechnungPosition.fAnzahl AS fVersandgewichtGesamt
+	FROM Rechnung.tRechnungPosition
+	JOIN #TempRechnungKeys AS Rechnungen ON Rechnungen.kRechnung = tRechnungPosition.kRechnung;
+
+	IF(OBJECT_ID(&#39;tempdb..#TempDataRechnungEckdaten&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #TempDataRechnungEckdaten;
+	END
+
+	CREATE TABLE #TempDataRechnungEckdaten
+	(
+		kRechnung INT PRIMARY KEY NOT NULL,
+		nIstAngemahnt BIT NOT NULL,
+		nMahnstufe TINYINT NULL,
+		dMahndatum DATETIME NULL,
+		dZahlungsziel DATETIME NULL,
+		fOffenerWert DECIMAL(25,13) NOT NULL,
+		dBezahlt DATETIME NULL,
+		fVkBruttoGesamt DECIMAL(25,13) NULL,
+		fVkNettoGesamt DECIMAL(25,13) NULL,
+		fZahlung DECIMAL(25,13) NOT NULL,
+		fGutschrift	DECIMAL(25,13)	NOT NULL,
+		nZahlungStatus TINYINT NOT NULL,
+		nRechnungTyp TINYINT NOT NULL,
+		cAuftragsnummern NVARCHAR(200) NULL,
+		nHasRechnungskorrektur BIT NOT NULL,
+		nKorrigiert BIT NOT NULL,
+		dMaildatum DATETIME NULL,
+		dDruckdatum DATETIME NULL,
+		fMahngebuehr DECIMAL(25,13) NOT NULL,
+		fOffeneMahngebuehr DECIMAL(25,13) NOT NULL
+	);
+
+	INSERT INTO #TempDataRechnungEckdaten
+	(
+		kRechnung,
+		nIstAngemahnt,
+		nMahnstufe,
+		dMahndatum,
+		dZahlungsziel,
+		fOffenerWert,
+		dBezahlt,
+		fVkBruttoGesamt,
+		fVkNettoGesamt,
+		fZahlung,
+		fGutschrift,
+		nZahlungStatus,
+		nRechnungTyp,
+		cAuftragsnummern,
+		nHasRechnungskorrektur,
+		nKorrigiert,
+		dMaildatum,
+		dDruckdatum,
+		fMahngebuehr,
+		fOffeneMahngebuehr
+	)
+	SELECT DISTINCT	Rechnungen.kRechnung,
+		CASE
+			WHEN (tZahlungsErinnerung.kZahlungsErinnerung IS NOT NULL)
+				THEN 1
+			ELSE 0
+		END as nIstAngemahnt,
+		tZahlungsErinnerung.nMahnstufeAktuell AS nMahnstufe,
+		tZahlungsErinnerung.dMahndatum AS dMahndatum,
+		CASE WHEN tZahlungsErinnerung.dZahlungsfrist IS NULL
+				THEN (tRechnung.dErstellt + tRechnung.nZahlungszielTage)
+				ELSE tZahlungsErinnerung.dZahlungsfrist
+		END AS dZahlungsziel,
+		CASE
+			WHEN tRechnung.nStorno = 1
+				THEN 0
+			ELSE ISNULL(Summen.fVKBruttoGesamt, 0)
+		END - ISNULL(Zahlung.fZahlung, 0) - ISNULL(Gutschrift.fGutschrift, 0) AS fOffenerWert,
+		CASE
+			WHEN ISNULL(Summen.fVKBruttoGesamt, 0) - ISNULL(Gutschrift.fGutschrift, 0) - @fRunden &lt;= ISNULL(Zahlung.fZahlung, 0)
+				THEN ISNULL(ISNULL(tRechnungEckdaten.dBezahlt, Zahlung.dLetzteZahlung), tRechnung.dErstellt)
+			ELSE NULL
+		END	AS dBezahlt,
+		ISNULL(Summen.fVKBruttoGesamt, 0) AS fVkBruttoGesamt,
+		ISNULL(Summen.fVKNettoGesamt, 0) AS fVkNettoGesamt,
+		ISNULL(Zahlung.fZahlung, 0) AS fZahlung,
+		ISNULL(Gutschrift.fGutschrift, 0) AS fGutschrift,
+		CASE
+			WHEN tRechnung.nStorno = 1 OR (ISNULL(Summen.fVKBruttoGesamt, 0) - ISNULL(Gutschrift.fGutschrift, 0) - @fRunden &lt;= ISNULL(Zahlung.fZahlung, 0))
+				THEN 2 --Vollbezahlt
+			WHEN ISNULL(Zahlung.fZahlung, 0) = 0
+				THEN 0 --Keine Zahlung
+			ELSE 1 --Teilbezahlt
+		END AS nZahlungStatus,
+		ISNULL(RechnungTyp.nRechnungTyp, 0) AS nRechnungTyp,
+		LEFT(STUFF((SELECT &#39;, &#39; + tAuftrag.cAuftragsNr
+			FROM Verkauf.tAuftrag
+			JOIN Verkauf.tAuftragRechnung ON tAuftragRechnung.kAuftrag = tAuftrag.kAuftrag
+			WHERE Rechnungen.kRechnung = tAuftragRechnung.kRechnung AND tAuftrag.cAuftragsNr != &#39;&#39;
+			FOR XML PATH (&#39;&#39;)), 1, 2, &#39;&#39;), 200) AS cAuftragsnummern,
+		CASE
+			WHEN Gutschrift.kRechnung IS NOT NULL
+				THEN 1
+			ELSE 0
+		END AS nHasRechnungskorrektur,
+		CASE
+			WHEN tRechnungKorrektur.kRechnung IS NOT NULL
+				THEN 1
+			ELSE 0
+		END AS nKorrigiert,
+		tmpRechnungAusgabe.dGemailt AS dMaildatum,
+		tmpRechnungAusgabe.dGedruckt AS dDruckdatum,
+		ISNULL(tZahlungsErinnerung.fGebuehr, 0) AS fMahngebuehr,
+		CASE
+			WHEN tRechnung.nStorno = 1
+				THEN 0
+			ELSE ISNULL(tZahlungsErinnerung.fGebuehr, 0)
+		END - ISNULL(Zahlung.fMahnzahlung, 0) AS fOffeneMahngebuehr
+	FROM #TempRechnungKeys AS Rechnungen
+	LEFT JOIN Rechnung.tRechnungEckdaten ON Rechnungen.kRechnung = tRechnungEckdaten.kRechnung
+	JOIN Rechnung.tRechnung ON tRechnung.kRechnung = Rechnungen.kRechnung
+	LEFT JOIN
+	(
+		SELECT
+			RechnungsZahlungen.kRechnung,
+			SUM(CASE WHEN RechnungsZahlungen.IstMahnzahlung = 0 THEN RechnungsZahlungen.fBetrag ELSE 0 END) AS fZahlung,
+			MAX(RechnungsZahlungen.dDatum) AS dLetzteZahlung,
+			SUM(RechnungsZahlungen.fEingangszahlung) AS fEingangszahlung,
+			SUM(CASE WHEN RechnungsZahlungen.IstMahnzahlung = 1 THEN RechnungsZahlungen.fBetrag ELSE 0 END) AS fMahnzahlung
+		FROM
+		(
+			SELECT
+				tgutschrift.kRechnung,
+				tZahlung.fBetrag,
+				0 AS dDatum,
+				0.0 AS fEingangszahlung,
+				0 AS IstMahnzahlung
+			FROM
+				dbo.tZahlung
+			JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tZahlung.kGutschrift
+			UNION ALL
+			(
+				SELECT
+					tZahlung.kRechnung,
+					tZahlung.fBetrag,
+					tZahlung.dDatum,
+					CASE WHEN tZahlung.fBetrag &gt; 0 THEN tZahlung.fBetrag ELSE 0.0 END AS fEingangszahlung,
+					CASE WHEN tZahlung.nZahlungstyp = 1 THEN 1 ELSE 0 END AS IstMahnzahlung
+				FROM
+					dbo.tZahlung
+				WHERE tZahlung.kRechnung &gt; 0 AND (tZahlung.kGutschrift IS NULL OR tZahlung.kGutschrift = 0)
+			)
+		) AS RechnungsZahlungen
+		GROUP BY RechnungsZahlungen.kRechnung
+	) AS Zahlung ON Zahlung.kRechnung = Rechnungen.kRechnung
+	LEFT JOIN
+	(
+		SELECT
+			tRechnungPosition.kRechnung,
+			ROUND(SUM(ISNULL(tRechnungPosition.fWertBruttoGesamtFixiert, #TempDataRechnungPositionEckdaten.fVKBruttoGesamt)), 2) AS fVKBruttoGesamt,
+			ROUND(SUM(ISNULL(tRechnungPosition.fWertNettoGesamtFixiert, #TempDataRechnungPositionEckdaten.fVKNettoGesamt)), 2) AS fVKNettoGesamt
+		FROM #TempDataRechnungPositionEckdaten
+		JOIN Rechnung.tRechnungPosition ON tRechnungPosition.kRechnungPosition = #TempDataRechnungPositionEckdaten.kRechnungPosition
+		GROUP BY tRechnungPosition.kRechnung
+	) AS Summen ON Summen.kRechnung = Rechnungen.kRechnung
+	LEFT JOIN
+	(
+		SELECT
+			tgutschrift.kRechnung,
+			ROUND(SUM(ROUND(CONVERT(DECIMAL(25, 13), tGutschriftPos.nAnzahl * tGutschriftPos.fVKPreis) * CONVERT(DECIMAL(25, 13), 1.0 - CONVERT(DECIMAL(25, 13), tGutschriftPos.fRabatt / 100.0)), 4)), 2) AS fGutschrift
+			-- entspricht ROUND(SUM(ROUND((nAnzahl * fVKPreis) * (1.0 - (fRabatt / 100.0)), 4)), 2) AS fGutschrift
+		FROM dbo.tGutschriftPos
+		JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+		WHERE tgutschrift.nStorno = 0 AND tgutschrift.nStornoTyp = 0
+		GROUP BY tgutschrift.kRechnung
+	) AS Gutschrift ON Gutschrift.kRechnung = Rechnungen.kRechnung
+	LEFT JOIN
+	(
+		SELECT
+			tZahlungsErinnerung.kZahlungsErinnerung,
+			tZahlungsErinnerung.kRechnung,
+			tZahlungsErinnerung.nMahnstufeAktuell,
+			tZahlungsErinnerung.dMahndatum,
+			tZahlungsErinnerung.dZahlungsfrist,
+			ROUND(tZahlungsErinnerung.fGebuehr, 2) AS fGebuehr
+		FROM
+		(
+			SELECT
+				ROW_NUMBER() OVER (PARTITION BY kRechnung ORDER BY dMahndatum DESC, nMahnstufeAktuell DESC) AS Rownumber,
+				tZahlungsErinnerung.kZahlungsErinnerung,
+				tZahlungsErinnerung.kRechnung,
+				tZahlungsErinnerung.nMahnstufeAktuell,
+				tZahlungsErinnerung.dMahndatum,
+				tZahlungsErinnerung.dZahlungsfrist,
+				tZahlungsErinnerung.fGebuehr
+			FROM dbo.tZahlungsErinnerung
+		) AS tZahlungsErinnerung
+		WHERE tZahlungsErinnerung.Rownumber = 1
+	) AS tZahlungsErinnerung ON tZahlungsErinnerung.kRechnung = Rechnungen.kRechnung
+	LEFT JOIN
+	(
+		SELECT DISTINCT tRechnungKorrektur.kRechnung
+		FROM Rechnung.tRechnungKorrektur
+	) AS tRechnungKorrektur ON tRechnungKorrektur.kRechnung = tRechnungEckdaten.kRechnung
+	LEFT JOIN
+	(
+		SELECT
+			tAuftragRechnung.kRechnung,
+			CASE
+				WHEN COUNT(AnzahlAuftrag.kAuftrag) = 0
+					THEN 0
+				WHEN COUNT(AnzahlAuftrag.kAuftrag) = 1
+					THEN
+						CASE
+							WHEN AnzahlRechnung.fAnzahl &gt;= SUM(AnzahlAuftrag.fAnzahl)
+								THEN 0 --NormaleRechnung
+							ELSE 1 --Teilrechnung
+						END
+				ELSE
+					CASE
+						WHEN AnzahlRechnung.fAnzahl &gt;= SUM(AnzahlAuftrag.fAnzahl)
+							THEN 2 --Sammelrechnung
+						ELSE 3 --TeilSammelrechnung
+					END
+			END AS nRechnungTyp
+		FROM Verkauf.tAuftragRechnung
+		JOIN
+		(
+			SELECT
+				tRechnungPosition.kRechnung,
+				SUM(tRechnungPosition.fAnzahl - ISNULL(AnzahlKorrektur.fAnzahl, 0)) AS fAnzahl
+			FROM Rechnung.tRechnungPosition
+			LEFT JOIN
+			(
+				SELECT
+					tGutschriftPos.kRechnungPosition,
+					SUM(tGutschriftPos.nAnzahl) AS fAnzahl
+				FROM dbo.tGutschriftPos
+				JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+				WHERE tGutschriftPos.nAuftragsmengeReduzieren = 0 AND tgutschrift.nStorno = 0
+				GROUP BY tGutschriftPos.kRechnungPosition
+			) AS AnzahlKorrektur ON tRechnungPosition.kRechnungPosition = AnzahlKorrektur.kRechnungPosition
+			GROUP BY tRechnungPosition.kRechnung
+		) AS AnzahlRechnung ON AnzahlRechnung.kRechnung = tAuftragRechnung.kRechnung
+		LEFT JOIN
+		(
+			SELECT
+				tAuftragPosition.kAuftrag,
+				SUM(tAuftragPosition.fAnzahl) AS fAnzahl
+			FROM Verkauf.tAuftragPosition
+			WHERE tAuftragPosition.nType != 15
+			GROUP BY tAuftragPosition.kAuftrag
+		) AS AnzahlAuftrag ON AnzahlAuftrag.kAuftrag = tAuftragRechnung.kAuftrag
+		GROUP BY tAuftragRechnung.kRechnung, AnzahlRechnung.fAnzahl
+	) AS RechnungTyp ON RechnungTyp.kRechnung = Rechnungen.kRechnung
+	LEFT JOIN
+	(
+		SELECT
+			tRechnungAusgabeDateien.kRechnung,
+			MAX(CASE WHEN tRechnungAusgabeDateien.nAusgabeArt = 1 THEN tRechnungAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dGedruckt,
+			MAX(CASE WHEN tRechnungAusgabeDateien.nAusgabeArt = 2 THEN tRechnungAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dGemailt
+		FROM Rechnung.tRechnungAusgabeDateien
+		WHERE tRechnungAusgabeDateien.cFehlermeldung IS NULL OR tRechnungAusgabeDateien.cFehlermeldung = &#39;&#39;
+		GROUP BY tRechnungAusgabeDateien.kRechnung
+	) AS tmpRechnungAusgabe ON tmpRechnungAusgabe.kRechnung = Rechnungen.kRechnung
+
+
+	-- Muss implementiert werden wenn zahlung umgestellt ist (Druckdaten werden &#252;ber Trigger geschrieben)
+
+	-- Context Info
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;Rechnung.spRechnungEckdatenBerechnen&#39;);
+	SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+
+	--
+	-- MERGE tRechnungPositionEckdaten
+	--
+	UPDATE target
+	SET
+		target.kRechnungPosition = source.kRechnungPosition,
+		target.fVKBrutto = source.fVKBrutto,
+		target.fVKBruttoGesamt = source.fVKBruttoGesamt,
+		target.fVKNettoGesamt = source.fVKNettoGesamt,
+		target.fMwStBetrag = source.fMwStBetrag,
+		target.fRabattbetrag = source.fRabattbetrag,
+		target.fGewichtGesamt = source.fGewichtGesamt,
+		target.fVersandgewichtGesamt = source.fVersandgewichtGesamt
+	FROM
+		Rechnung.tRechnungPositionEckdaten AS target
+	JOIN
+		#TempDataRechnungPositionEckdaten AS source
+		ON target.kRechnungPosition = source.kRechnungPosition
+
+
+	INSERT INTO Rechnung.tRechnungPositionEckdaten
+	(
+		kRechnungPosition,
+		fVKBrutto,
+		fVKBruttoGesamt,
+		fVKNettoGesamt,
+		fMwStBetrag,
+		fRabattbetrag,
+		fGewichtGesamt,
+		fVersandgewichtGesamt
+	)
+	SELECT
+		source.kRechnungPosition,
+		source.fVKBrutto,
+		source.fVKBruttoGesamt,
+		source.fVKNettoGesamt,
+		source.fMwStBetrag,
+		source.fRabattbetrag,
+		source.fGewichtGesamt,
+		source.fVersandgewichtGesamt
+	FROM
+		#TempDataRechnungPositionEckdaten AS source
+	LEFT JOIN
+		Rechnung.tRechnungPositionEckdaten AS target
+		ON target.kRechnungPosition = source.kRechnungPosition
+	WHERE target.kRechnungPosition IS NULL
+
+	--
+	-- MERGE tRechnungEckdaten
+	--
+	UPDATE target
+	SET
+		target.nIstAngemahnt = source.nIstAngemahnt,
+		target.nMahnstufe = source.nMahnstufe,
+		target.dMahndatum = source.dMahndatum,
+		target.dZahlungsziel = source.dZahlungsziel,
+		target.fOffenerWert = source.fOffenerWert,
+		target.dBezahlt = source.dBezahlt,
+		target.fVkBruttoGesamt = source.fVkBruttoGesamt,
+		target.fVkNettoGesamt = source.fVkNettoGesamt,
+		target.fZahlung = source.fZahlung,
+		target.fGutschrift = source.fGutschrift,
+		target.nZahlungStatus = source.nZahlungStatus,
+		target.nRechnungTyp = source.nRechnungTyp,
+		target.cAuftragsnummern = source.cAuftragsnummern,
+		target.nHasRechnungskorrektur = source.nHasRechnungskorrektur,
+		target.nKorrigiert = source.nKorrigiert,
+		target.dMaildatum = source.dMaildatum,
+		target.dDruckdatum = source.dDruckdatum,
+		target.fMahngebuehr = source.fMahngebuehr,
+		target.fOffeneMahngebuehr = source.fOffeneMahngebuehr
+	FROM
+		Rechnung.tRechnungEckdaten AS target
+	JOIN
+		#TempDataRechnungEckdaten AS source
+		ON target.kRechnung = source.kRechnung
+
+
+	INSERT INTO Rechnung.tRechnungEckdaten
+	(
+		kRechnung,
+		nIstAngemahnt,
+		nMahnstufe,
+		dMahndatum,
+		dZahlungsziel,
+		fOffenerWert,
+		dBezahlt,
+		fVkBruttoGesamt,
+		fVkNettoGesamt,
+		fZahlung,
+		fGutschrift,
+		nZahlungStatus,
+		nRechnungTyp,
+		cAuftragsnummern,
+		nHasRechnungskorrektur,
+		nKorrigiert,
+		dMaildatum,
+		dDruckdatum,
+		fMahngebuehr,
+		fOffeneMahngebuehr
+	)
+	SELECT
+		source.kRechnung,
+		source.nIstAngemahnt,
+		source.nMahnstufe,
+		source.dMahndatum,
+		source.dZahlungsziel,
+		source.fOffenerWert,
+		source.dBezahlt,
+		source.fVkBruttoGesamt,
+		source.fVkNettoGesamt,
+		source.fZahlung,
+		source.fGutschrift,
+		source.nZahlungStatus,
+		source.nRechnungTyp,
+		source.cAuftragsnummern,
+		source.nHasRechnungskorrektur,
+		source.nKorrigiert,
+		source.dMaildatum,
+		source.dDruckdatum,
+		source.fMahngebuehr,
+		source.fOffeneMahngebuehr
+	FROM
+		#TempDataRechnungEckdaten AS source
+	LEFT JOIN
+		Rechnung.tRechnungEckdaten AS target
+		ON target.kRechnung = source.kRechnung
+	WHERE target.kRechnung IS NULL
+
+	UPDATE Rechnung.tRechnung
+	SET tRechnung.nRechnungStatus = 100
+	FROM Rechnung.tRechnung
+	JOIN #TempDataRechnungEckdaten ON #TempDataRechnungEckdaten.kRechnung = tRechnung.kRechnung;
+
+	SET CONTEXT_INFO @OldContextInfo;
+
+	DECLARE @Auftrag Verkauf.TYPE_spAuftragEckdatenBerechnen
+
+	INSERT INTO @Auftrag (kAuftrag)
+	SELECT DISTINCT tAuftragRechnung.kAuftrag
+	FROM #TempDataRechnungEckdaten
+	JOIN Verkauf.tAuftragRechnung ON tAuftragRechnung.kRechnung = #TempDataRechnungEckdaten.kRechnung
+
+	IF EXISTS(SELECT * FROM @Auftrag)
+	BEGIN
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag
+	END
+
+END</code></pre>
+</body>
+</html>

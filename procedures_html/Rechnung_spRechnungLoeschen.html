@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnung.spRechnungLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Rechnung.spRechnungLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Rechnung].[spRechnungLoeschen]
+	@RechnungKey INT,
+	@BenutzerKey INT,
+	@LogMessage NVARCHAR(4000),
+	@OnlyValidate BIT = 0
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+-- R&#252;ckgabewerte
+-- 0 - Erfolgreich
+-- 1 - Kein Rechnungsentwurf
+-- 2 - Externe Rechnung
+-- 3 - Auftrag darf nicht ver&#228;ndert werden
+-- 4 - Zahlung existiert
+-- 5 - Zahlung Rechnungskorrektur
+-- 6 - Fehler beim L&#246;schen
+
+DECLARE @retry INT = 5;
+WHILE @retry &gt; 0
+BEGIN  
+	BEGIN TRY  
+		-- 1 - Kein Rechnungsentwurf
+		IF EXISTS(SELECT 1 FROM Rechnung.tRechnung WHERE tRechnung.nIstEntwurf = 0 AND tRechnung.kRechnung = @RechnungKey) 
+			RETURN 1;
+		
+		-- 2 - Externe Rechnung
+		IF EXISTS(SELECT 1
+				FROM Verkauf.tAuftragRechnung
+				JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragRechnung.kAuftrag
+				WHERE tAuftrag.nIstExterneRechnung != 0 AND tAuftragRechnung.kRechnung = @RechnungKey)
+			RETURN 2;
+		
+		-- 3 - Auftrag darf nicht ver&#228;ndert werden
+		IF EXISTS(SELECT 1
+				FROM Verkauf.tAuftragRechnung
+				JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragRechnung.kAuftrag
+				WHERE tAuftrag.nIstReadOnly = 2 AND tAuftragRechnung.kRechnung = @RechnungKey)
+			RETURN 3;
+		
+		-- 4 - Zahlung existiert
+		IF EXISTS(SELECT 1
+				FROM dbo.tZahlung
+				WHERE (tZahlung.kGutschrift IS NULL OR tZahlung.kGutschrift = 0) AND tZahlung.kRechnung = @RechnungKey)
+			RETURN 4;
+		
+		-- 5 - Zahlung Rechnungskorrektur
+		IF EXISTS(SELECT 1
+				FROM dbo.tZahlung
+				JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tZahlung.kGutschrift
+				WHERE tgutschrift.kRechnung = @RechnungKey) OR 
+			EXISTS(SELECT 1
+				FROM dbo.tZahlungsabgleichausgang
+				JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tZahlungsabgleichausgang.kGutschrift
+				WHERE tgutschrift.kRechnung = @RechnungKey)
+			RETURN 5; 
+		
+		SET @retry = 0;
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205)           
+        BEGIN              
+            SET @retry = @retry - 1;           
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+	
+	DECLARE @Auftraege AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+	
+	IF(@OnlyValidate = 0)
+	BEGIN
+		BEGIN TRY  
+			DECLARE @TranCount INT = @@TRANCOUNT;
+			IF(@TranCount &gt; 0)
+			BEGIN
+				SAVE TRANSACTION TransactionRechnungLoeschen;
+			END
+			ELSE
+			BEGIN
+				BEGIN TRANSACTION  
+			END     
+			
+			-- Rechnungskorrekturen l&#246;schen
+			DELETE trechnungsadresse
+			FROM dbo.trechnungsadresse
+			JOIN dbo.tgutschrift ON tgutschrift.kRechnungsAdresse = trechnungsadresse.kRechnungsAdresse
+			WHERE tgutschrift.kRechnung = @RechnungKey;
+			
+			DELETE tGutschriftPos
+			FROM dbo.tGutschriftPos
+			JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+			WHERE tgutschrift.kRechnung = @RechnungKey;
+			
+			DELETE dbo.tgutschrift
+			WHERE tgutschrift.kRechnung = @RechnungKey;
+			
+			--Rechnung l&#246;schen
+			INSERT INTO @Auftraege(kAuftrag)
+			SELECT DISTINCT tAuftragRechnung.kAuftrag
+			FROM Verkauf.tAuftragRechnung
+			WHERE tAuftragRechnung.kAuftrag IS NOT NULL AND tAuftragRechnung.kRechnung = @RechnungKey;
+			
+			INSERT INTO dbo.tLog(dDatum, kBenutzer, cLog, nTyp, nVorgang)
+			VALUES(GETDATE(), @BenutzerKey, @LogMessage, 3, 3)
+			
+			DELETE Rechnung.tRechnungZahlungsinfo WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungText WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungFile WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungEckdaten WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungAusgabeDateien WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungAdresse WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungPositionEckdaten 
+			FROM Rechnung.tRechnungPositionEckdaten
+			JOIN tRechnungPosition ON tRechnungPosition.kRechnungPosition = tRechnungPositionEckdaten.kRechnungPosition
+			WHERE tRechnungPosition.kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungPositionEigenschaft 
+			FROM Rechnung.tRechnungPositionEigenschaft
+			JOIN tRechnungPosition ON tRechnungPosition.kRechnungPosition = tRechnungPositionEigenschaft.kRechnungPosition
+			WHERE tRechnungPosition.kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungPositionFile 
+			FROM Rechnung.tRechnungPositionFile
+			JOIN tRechnungPosition ON tRechnungPosition.kRechnungPosition = tRechnungPositionFile.kRechnungPosition
+			WHERE tRechnungPosition.kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungPositionText 
+			FROM Rechnung.tRechnungPositionText
+			JOIN tRechnungPosition ON tRechnungPosition.kRechnungPosition = tRechnungPositionText.kRechnungPosition
+			WHERE tRechnungPosition.kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnungPosition WHERE kRechnung = @RechnungKey;
+			
+			DELETE Rechnung.tRechnung WHERE kRechnung = @RechnungKey;
+			
+			SET @retry = 0;
+			IF(@TranCount = 0)
+			BEGIN           
+				COMMIT TRANSACTION      
+			END
+		END TRY       
+		BEGIN CATCH           
+			IF(ERROR_NUMBER() = 1205 AND @TranCount = 0)           
+			BEGIN              
+				SET @retry = @retry - 1;               
+				ROLLBACK       
+			END          
+			ELSE          
+			BEGIN              
+				SET @retry = 0;               
+				THROW;           
+			END      
+		END CATCH
+	END
+		
+	IF(@OnlyValidate = 0 AND (SELECT COUNT(*) FROM @Auftraege) &gt; 0)
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftraege;
+	
+	-- 0 - Erfolgreich
+	RETURN 0;
+END</code></pre>
+</body>
+</html>

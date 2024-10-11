@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spDropColumnConstraints</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spDropColumnConstraints</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können alle Constraints zu einer Spalte entfernt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spDropColumnConstraints] 
+    @tableName Nvarchar( 128 ), 
+    @columnName Nvarchar( 128 )
+AS
+BEGIN
+    SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+    DECLARE @sqlDropIndex nvarchar( 1000 ), @constraintName varchar( 128 )
+    WHILE 0 = 0
+        BEGIN
+            SET @constraintName = ( SELECT TOP(1) constraint_name
+								FROM information_schema.constraint_column_usage
+								WHERE table_name = @tableName
+								    AND column_name = @columnName 
+							 )
+            IF @constraintName IS NULL
+                BEGIN 
+				BREAK
+                END
+            EXEC ( &#39;ALTER TABLE &quot;&#39;+@tableName+&#39;&quot; DROP CONSTRAINT &quot;&#39;+@constraintName+&#39;&quot;&#39; )
+        END
+    WHILE 0 = 0
+        BEGIN
+            SET @constraintName = ( SELECT TOP(1) SysObjects.Name AS ContraintName
+								FROM SysObjects 
+								   INNER JOIN( 
+                                                    SELECT Name, ID
+											 FROM SysObjects
+											 WHERE XType = &#39;U&#39; 
+								    )AS Tab ON Tab.ID = Sysobjects.Parent_Obj
+								    INNER JOIN sysconstraints ON sysconstraints.Constid = Sysobjects.ID
+								    INNER JOIN SysColumns Col ON Col.ColID = sysconstraints.ColID AND Col.ID = Tab.ID
+								    WHERE col.Name = @columnName
+									   AND Tab.Name = @tableName 
+							 )
+            IF @constraintName IS NULL
+                BEGIN 
+				BREAK
+                END
+            EXEC ( &#39;ALTER TABLE &quot;&#39;+@tableName+&#39;&quot; DROP CONSTRAINT &quot;&#39;+@constraintName+&#39;&quot;&#39; )
+        END
+    WHILE 0 = 0
+        BEGIN
+            SET @constraintName = ( SELECT TOP(1) &#39;DROP INDEX &#39; + idx.name + &#39; ON &#39; + tbl.name
+								FROM sys.indexes idx 
+								INNER JOIN sys.tables tbl ON idx.object_id = tbl.object_id
+								INNER JOIN sys.index_columns idxCol ON idx.index_id = idxCol.index_id
+                                        INNER JOIN sys.columns col ON idxCol.column_id = col.column_id
+								WHERE idx.type &lt;&gt; 0
+                                            AND tbl.name = @tableName
+								    AND col.name = @columnName 
+							 )
+            IF @constraintName IS NULL
+                BEGIN 
+				BREAK
+                END
+            EXEC ( @constraintName )
+        END
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logging.spSearchAllLogs</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Logging.spSearchAllLogs</h1>
+    <p><strong>Description:</strong> Diese SP erlaubt es, alle JTL-Logtabellen "auf einen Schlag" zu durchsuchen</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Logging.spSearchAllLogs
+	@nTageVorher INT = NULL, -- Anzahl der Tage (r&#252;ckwirkend vom aktuellem Datum), die im Log durchsucht werden (Default = 60 Tage)
+	@cSuchText NVARCHAR(255) = NULL, -- Suchtext f&#252;r LIKE-Suche
+	@dDatumVon DATETIME = NULL, -- Start-Datum f&#252;r Logs
+	@dDatumBis DATETIME = NULL, -- Ende-Datum f&#252;r Logs
+	@cTabellenWeglassen NVARCHAR(4000) = NULL, -- Hier k&#246;nnen Tabellennamen angegeben werden, die bei der Suche weggelassen werden. Mehrere Werte trennen durch Pipe &#39;|&#39; (z.B. &#39;dbo.ABC|dbo.XYZ&#39;)
+	@Debug BIT = 0 -- Zum Ausgeben zus&#228;tzlicher Debugmeldungen und Ergebnisse
+AS
+/*************************************************************************************************************
+Beschreibung:	Diese SP erlaubt es, alle JTL-Logtabellen &quot;auf einen Schlag&quot; zu durchsuchen
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf(e):
+EXEC Logging.spSearchAllLogs -- Alle Logeintr&#228;ge der letzten 60 Tage
+EXEC Logging.spSearchAllLogs @nTageVorher = 300 -- Alle Logeintr&#228;ge der letzten 300 Tage
+EXEC Logging.spSearchAllLogs @dDatumVon = &#39;20220301&#39;, @dDatumBis = &#39;20220801&#39;, @cTabellenWeglassen = &#39;dbo.tDbLog|dbo.tDbErrorlog&#39; -- Alle Logeintr&#228;ge von 1.3.2022 bis 1.8.2022 (Ausschlu&#223; von 2 Tabellen aus den Ergebnissen)
+*************************************************************************************************************/
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+	BEGIN TRY
+		DECLARE
+			@cMe NVARCHAR(255), 
+			@cSQL NVARCHAR(MAX) = N&#39;&#39;,
+			@cCR CHAR(2),
+			@cMsg VARCHAR(4096),
+			@cDefinition VARCHAR(MAX),
+			@cAktuelleTabelle VARCHAR(MAX),
+			@cTabelle NVARCHAR(255),
+			@cFeldID NVARCHAR(255),
+			@cFeldDatum NVARCHAR(255),
+			@cFeldMeldung NVARCHAR(1000);
+			
+		-- Error-Handling
+		DECLARE
+			@cErrMsg NVARCHAR(2048), -- RAISERROR-Messages max. 2048 characters
+			@cErrStelle VARCHAR(255),
+			@nErrSeverity TINYINT,
+			@nErrState TINYINT,
+			@cErrProc NVARCHAR(128);
+
+		SET @cMe = OBJECT_SCHEMA_NAME(@@PROCID) + &#39;.&#39; + OBJECT_NAME(@@PROCID);
+		SET @cCR = CHAR(13) + CHAR(10);
+
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; START &#39; + @cME;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Parameter &#252;berpr&#252;fen
+		IF @nTageVorher IS NOT NULL AND @dDatumVon IS NOT NULL
+		BEGIN
+			SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; Parameterpr&#252;fung - bitte nur einen der beiden Parameter angeben: @nTageVorher oder @dDatumVon&#39;;
+			RAISERROR (@cMsg, 15, 1) WITH NOWAIT;
+		END
+
+		-- Default-Parameter setzen
+		IF @dDatumVon IS NULL
+		BEGIN
+			SET @nTageVorher = ISNULL(@nTageVorher, 60);
+			SET @dDatumVon = CONVERT(DATE, DATEADD(DAY, -@nTageVorher, GETDATE())); -- Wenn @nTageVorher &#252;bergeben wird, wird auf volle Tage &quot;gerundet&quot;
+		END
+		IF @Debug = 1
+		BEGIN
+			SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; DEBUG | Von-Datum @dDatumVon = &#39; + FORMAT(@dDatumVon, &#39;dd.MM.yyyy HH:mm:ss&#39;);
+			RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+		END
+
+		--------------------------------------------------------------------------------------------
+		-- ===== Konfiguration =====
+		-- Damit die SP mit verschiedenen WAWI-Versionen arbeiten kann (in denen es u.U. bestimmte Logtabellen noch nicht / nicht mehr gibt),
+		-- werden durchsuchbare Tabellen nachfolgend konfiguriert:
+		-- Tabellenname (mit Schema)|ID-Spalte (falls vorhanden)|DatumsSpalte|Meldungs-Spalte (@cCR am Ende als Zeilentrenner)
+		-- Der Such-SQL wird sp&#228;ter per dynamischem SQL erstellt
+		--------------------------------------------------------------------------------------------
+		SET @cDefinition =
+			&#39;Amazon.tAmazonabgleichLogsitzung|kAmazonabgleichLogsitzung|dEnde|cStatusMeldung&#39; + @cCR
+			+ &#39;Amazon.tVCSSelfInvoiceLogeintrag|kVCSSelfInvoiceLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;BI.tLogeintrag|kLogEintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;dbo.ebay_log|NULL|dDatum|ISNULL(cString, &#39;&#39;&#39;&#39;) + &#39;&#39;/&#39;&#39; + ISNULL(cText, &#39;&#39;&#39;&#39;)&#39; + @cCR
+			+ &#39;dbo.ebay_logbuch|kEbayLogbuch|dZeit|cBetreff + &#39;&#39;/&#39;&#39; + ISNULL(cLog, &#39;&#39;&#39;&#39;)&#39; + @cCR
+			+ &#39;dbo.pf_amazon_log_zuordnen|NULL|dErstellt|cNachricht&#39; + @cCR
+			+ &#39;dbo.pf_logbuch|kLogbuch|dZeit|cLog&#39; + @cCR
+			+ &#39;dbo.POS_SystemLog|kSystemLog|dDatum|cText&#39; + @cCR
+			+ &#39;dbo.tBenutzerLog|kBenutzerLog|dZeitstempel|cAktion&#39; + @cCR
+			+ &#39;dbo.tDatevLogs|kDatevLog|dUebertragungsDatum|cFehlerMessage&#39; + @cCR
+			+ &#39;dbo.tDbErrorlog|kDbErrorlog|dZeitstempel|cErrorProcedure + &#39;&#39;@&#39;&#39; + CAST(nErrorLine AS VARCHAR(20)) + &#39;&#39;: &#39;&#39; + cErrorMessage&#39; + @cCR -- cRechnerName
+			+ &#39;dbo.tDbLog|NULL|dZeit|cException&#39; + @cCR
+			+ &#39;dbo.tErrorlog|kErrorLog|dErstelltUtc|cMeldung&#39; + @cCR
+			+ &#39;dbo.tLizenzlog|kLizenzlog|dDatum|cLog&#39; + @cCR
+			+ &#39;dbo.tLog|NULL|dDatum|cLog&#39; + @cCR
+			+ &#39;dbo.tMDELog|kMDELog|dDatum|cLog&#39; + @cCR
+			+ &#39;dbo.tPreiskalkulationLogbuch|kLogbuch|dZeit|cLog&#39; + @cCR
+			+ &#39;dbo.tUmsatzzuordnungLog|kUmsatzzuordnungLog|dDatum|cDaten&#39; + @cCR
+			+ &#39;dbo.tUpdateLog|kUpdateLog|dZeitstempel|cMeldung&#39; + @cCR -- kBenutzer
+			+ &#39;dbo.tVoucherCloudLogeintrag|kVoucherCloudLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;dbo.tWorkflowLog|kWorkflowLog|dDatum|cLog&#39; + @cCR
+			+ &#39;dbo.tWorklog|kWorkerlog|dDate|cMessage&#39; + @cCR
+			+ &#39;dbo.tZahlungsabgleichLogeintrag|kZahlungsabgleichLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;dbo.tZahlungsabgleichLogsitzung|kZahlungsabgleichLogsitzung|dEnde|cStatusMeldung&#39; + @cCR
+			+ &#39;dbo.tZahlungsausgangLogeintrag|kZahlungsausgangLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;dbo.tZALog|NULL|CAST(dDate AS DATE)|cString&#39; + @cCR
+			+ &#39;Ebay.tEbayAbgleichLogeintrag|kEbayAbgleichLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;Ebay.tEbayAbgleichLogsitzung|kEbayAbgleichLogsitzung|dEnde|cStatusMeldung&#39; + @cCR
+			+ &#39;FulfillmentNetwork.tFulfillmentLog|kFulfillmentLog|dTimestamp|cMessage&#39; + @cCR
+			+ &#39;Shipping.tTrackingLogs|kTrackingLog|dDateTime|cMessage&#39; + @cCR
+			+ &#39;Sync.tConnectorLogeintrag|kConnectorLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;Sync.tDbeSLogeintrag|kDbeSLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;Sync.tPosLogeintrag|kPosLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;Sync.tScxLogeintrag|kScxLogeintrag|dZeitpunkt|cMeldung&#39; + @cCR
+			+ &#39;Sync.tSyncLogsitzung|NULL|dEnde|cStatusMeldung&#39; + @cCR
+			+ &#39;WMS.tWMSErrorLog|NULL|dTimeStamp|cName&#39; + @cCR
+			+ &#39;Worker.tErrorlog|NULL|dZeitstempelUtc|cMeldung&#39;;
+
+		/* -- Um die aktuelle WAWI nach Logtabellen zu durchsuchen, die bisher noch nicht aufgenommen sind, folgenden SQL ausf&#252;hren
+		DECLARE @cDefinition VARCHAR(MAX), @cCR CHAR(2) = CHAR(13) + CHAR(10);
+
+		SET @cDefinition =
+		/* Hier die aktuelle Definition aus der SP eintragen */
+
+		SELECT		NN.FullName as UnbekannteLogTabelle
+		FROM		sys.tables AS SyTbl
+		CROSS APPLY	(SELECT SCHEMA_NAME(schema_id) + &#39;.&#39; + SyTbl.name AS FullName) AS NN
+		WHERE	SyTbl.name LIKE &#39;%Log%&#39;
+				AND SyTbl.name NOT LIKE &#39;%Logistik%&#39;
+				AND NN.FullName NOT IN (SELECT LEFT(part, CHARINDEX(&#39;|&#39;, part) - 1) FROM dbo.SplitString(@cDefinition, CHAR(13) + CHAR(10)))
+				AND NN.FullName NOT IN -- Tabellen ausschliessen, die keine Logtabellen sind
+					(&#39;FulfillmentNetwork.tVorgang_FulfillmentLog&#39;, &#39;dbo.tPreiskalkulationLogbuchDetails&#39;, &#39;dbo.POS_Log&#39;, &#39;dbo.tWmsInventurlog&#39;, &#39;FulfillmentNetwork.tLogin&#39;,
+					&#39;dbo.ebay_item_duplicate_log&#39;, &#39;Logging.tAuftragLog&#39;, &#39;Logging.tRechnungLog&#39;, &#39;Logging.tGutschriftLog&#39;, &#39;dbo.tBenutzerLogin&#39;, &#39;dbo.tEntityDialogLock&#39;,
+					&#39;Verkauf.tAuftrag_Log&#39;, &#39;Verkauf.tAuftragPositionEigenschaft_Log&#39;, &#39;Verkauf.tAuftragPositionIntervall_Log&#39;, &#39;dbo.tLoggingConfiguration&#39;, &#39;Verkauf.tAuftragAdresse_Log&#39;,
+					&#39;Verkauf.tAuftragPosition_Log&#39;, &#39;Verkauf.tAuftragMerge_Log&#39;, &#39;Verkauf.tAuftragMerge_Log&#39;, &#39;Verkauf.tAuftragZahlungsinfo_Log&#39;, &#39;dbo.tWmsInventurlogSubsets&#39;,
+					&#39;WMS.tWMSErrorLogController&#39;, &#39;dbo.tWmsInventurlogSubsetDetails&#39;, &#39;BI.tLogsitzung&#39;)
+
+		-- Auswertung / Anzeige des Inhalts von @cDefinition
+		SELECT		&#39;Aktuell ber&#252;cksichtige Logtabellen&#39; AS Was, SS.id, NN.TableName, &#39;SELECT * FROM &#39; + NN.TableName AS cSQL, NN.KeyField, NN.DateField, NN.cMeldung
+		FROM		dbo.SplitString(@cDefinition, CHAR(13) + CHAR(10)) AS SS
+		CROSS APPLY (SELECT	LEFT(SS.part, CHARINDEX(&#39;|&#39;, SS.part) - 1) AS TableName,
+							(SELECT X.part FROM dbo.SplitString(SS.Part, &#39;|&#39;) AS X WHERE id = 1) AS Sp1,
+							(SELECT X.part FROM dbo.SplitString(SS.Part, &#39;|&#39;) AS X WHERE id = 2) AS KeyField,
+							(SELECT X.part FROM dbo.SplitString(SS.Part, &#39;|&#39;) AS X WHERE id = 3) AS DateField,
+							(SELECT X.part FROM dbo.SplitString(SS.Part, &#39;|&#39;) AS X WHERE id = 4) AS cMeldung) AS NN
+		*/
+
+
+		-- Tabellendefinitionen einzeln durchgehen und dynamisches SQL erstellen
+		DECLARE curCursor CURSOR LOCAL FAST_FORWARD FOR
+		SELECT	SS.part
+		FROM	dbo.SplitString(@cDefinition, @cCR) AS SS
+
+		OPEN curCursor;
+		FETCH NEXT FROM curCursor INTO @cAktuelleTabelle;
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			SELECT @cTabelle = SS.part FROM dbo.SplitString(@cAktuelleTabelle, &#39;|&#39;) AS SS WHERE SS.id = 1;
+			SELECT @cFeldID = SS.part FROM dbo.SplitString(@cAktuelleTabelle, &#39;|&#39;) AS SS WHERE SS.id = 2;
+			SELECT @cFeldDatum = SS.part FROM dbo.SplitString(@cAktuelleTabelle, &#39;|&#39;) AS SS WHERE SS.id = 3;
+			SELECT @cFeldMeldung = SS.part FROM dbo.SplitString(@cAktuelleTabelle, &#39;|&#39;) AS SS WHERE SS.id = 4;
+
+			-- Tabelle vorhanden?
+			IF OBJECT_ID(@cTabelle) IS NOT NULL
+			BEGIN
+
+				-- Tabelle auf der Ausschlu&#223;liste?
+				IF &#39;|&#39; + @cTabellenWeglassen + &#39;|&#39; LIKE &#39;%|&#39; + @cTabelle + &#39;|%&#39;
+				BEGIN
+					SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; NICHT BER&#220;CKSICHTIGT: &#39; + @cTabelle + &#39; (Parameter @cTabellenWeglassen)&#39;;
+					RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+				END
+				ELSE
+				BEGIN
+					-- Bei der ersten Tabelle Spaltennamen im SQL angeben
+					IF ISNULL(@cSQL, &#39;&#39;) = &#39;&#39;
+					BEGIN
+						SET @cSQL = @cSQL + @cCR
+							+ &#39; SELECT &#39;&#39;&#39; + @cTabelle + &#39;&#39;&#39; AS cTableName,&#39;
+							+ &#39; &#39; + CASE WHEN @cFeldId = &#39;NULL&#39; THEN &#39;NULL&#39; ELSE &#39;&#39;&#39;&#39; + @cFeldID + &#39;&#39;&#39;&#39; END + &#39; AS kIdSpalte,&#39;
+							+ &#39; &#39; +  @cFeldID + &#39; AS kId,&#39;
+							+ &#39; &#39; + @cFeldDatum + &#39; AS dDatum,&#39;
+							+ &#39; &#39; + @cFeldMeldung + &#39; AS cMeldung&#39;
+							+ &#39; FROM &#39; + REPLACE(QUOTENAME(@cTabelle), &#39;.&#39;, &#39;].[&#39;);
+					END
+					ELSE
+					BEGIN
+						SET @cSQL = @cSQL + @cCR
+							+ &#39;UNION ALL SELECT &#39;&#39;&#39; + @cTabelle + &#39;&#39;&#39;,&#39;
+							+ &#39; &#39; + CASE WHEN @cFeldId = &#39;NULL&#39; THEN &#39;NULL&#39; ELSE &#39;&#39;&#39;&#39; + @cFeldID + &#39;&#39;&#39;&#39; END + &#39;,&#39;
+							+ &#39; &#39; + @cFeldID + &#39;,&#39;
+							+ &#39; &#39; + @cFeldDatum + &#39;,&#39;
+							+ &#39; &#39; + @cFeldMeldung + &#39;&#39;
+							+ &#39; FROM &#39; + REPLACE(QUOTENAME(@cTabelle), &#39;.&#39;, &#39;].[&#39;);
+					END
+				END
+			END
+			ELSE
+			BEGIN
+				SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; NICHT VORHANDEN in dieser DB: &#39; + @cTabelle;
+				RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+			END
+			FETCH NEXT FROM curCursor INTO @cAktuelleTabelle;
+		END
+		IF CURSOR_STATUS(&#39;local&#39;, &#39;curCursor&#39;) &gt;= -1 BEGIN
+			CLOSE curCursor;
+			DEALLOCATE curCursor;
+		END
+
+		-- SQL finalisieren
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; SQL finalisieren&#39;;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+		SET @cSQL = &#39;SELECT * FROM (&#39;
+			+ @cSQL + @cCR
+			+ &#39; ) AS X&#39; + @cCR;
+
+		SET @cSQL = @cSQL + &#39; WHERE X.dDatum &gt; &#39;&#39;&#39; + FORMAT(@dDatumVon, &#39;yyyyMMdd HH:mm:ss&#39;) + &#39;&#39;&#39;&#39; + @cCR;
+
+		IF @dDatumBis IS NOT NULL
+		BEGIN
+			IF @Debug = 1
+			BEGIN
+				SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; DEBUG | Bis-Datum @dDatumBis = &#39; + FORMAT(@dDatumBis, &#39;dd.MM.yyyy HH:mm:ss&#39;);
+				RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+			END
+			SET @cSQL = @cSQL + &#39;       AND X.dDatum &lt; &#39;&#39;&#39; + FORMAT(@dDatumBis, &#39;yyyyMMdd HH:mm:ss&#39;) + &#39;&#39;&#39;&#39;  + @cCR;
+		END
+
+		IF ISNULL(@cSuchText, &#39;&#39;) &lt;&gt; &#39;&#39;
+		BEGIN
+			IF @Debug = 1
+			BEGIN
+				SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; DEBUG | Suchtext @cSuchText = &#39; + @cSuchText;
+				RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+			END
+			SET @cSQL = @cSQL + &#39;       AND X.cMeldung LIKE &#39;&#39;%&#39; + @cSuchText + &#39;%&#39;&#39;&#39;  + @cCR;
+		END
+
+		SET @cSQL = @cSQL + &#39; ORDER BY X.dDatum DESC&#39; + @cCR
+
+		-- Run dynamic SQL
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff&#39;) + &#39; Run dynamic SQL&#39;;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		IF @Debug = 1
+		BEGIN
+			SELECT @cSQL AS SQL; -- Debug
+		END
+		EXEC sp_executesql @stmt = @cSQL;
+
+	END TRY
+	BEGIN CATCH
+        SELECT @cErrMsg = ERROR_MESSAGE(), @nErrSeverity = ERROR_SEVERITY(), @nErrState = ERROR_STATE(), @cErrProc = ERROR_PROCEDURE();
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION
+        -- EXEC dbo.spErrorHandler @DeadlockRetries = @nDeadlockRetries OUTPUT;
+
+		SELECT @cErrMsg = QUOTENAME(@cErrProc)
+			+ CASE WHEN ISNULL(@cErrStelle, &#39;&#39;) = &#39;&#39; THEN &#39;&#39; ELSE  &#39; [@&#39;+ @cErrStelle +&#39;]&#39; END
+			+ &#39;, Line &#39; + LTRIM(STR(ERROR_LINE())) + &#39;. ErrNo &#39;
+			+ LTRIM(STR(ERROR_NUMBER())) + &#39;: &#39; + @cErrMsg;
+
+		RAISERROR(&#39;%s&#39;, @nErrSeverity, @nErrState, @cErrMsg); -- Fehler neu werfen
+		RETURN -ERROR_NUMBER();
+	END CATCH
+
+END</code></pre>
+</body>
+</html>

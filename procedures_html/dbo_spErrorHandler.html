@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spErrorHandler</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spErrorHandler</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE dbo.spErrorHandler
+    @Context NVARCHAR(128) = NULL,
+    @DeadlockRetries TINYINT OUTPUT
+AS
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+    -- Auskommentiert, da @CurrentLocks wird aktuell nicht gespeichert wird
+	-- DECLARE @CurrentLocks XML = (SELECT * FROM Maintenance.vLocks ORDER BY SPID FOR XML PATH(&#39;TransactionLock&#39;));
+    DECLARE @DeadlockGraph XML = NULL;
+
+    -- 13 -&gt; Indicates transaction deadlock errors | 1205 = Deadlock
+	IF ((ERROR_SEVERITY() = 13) OR (ERROR_NUMBER() = 1205))
+    BEGIN
+        SELECT TOP(1) @DeadlockGraph = DeadlockGraph FROM Maintenance.vLastDeadlockGraphs ORDER BY [Timestamp] DESC;
+
+		-- Extrem gro&#223;e Deadlock-Graphen aus Speicherplatz-Gr&#252;nden nicht speichern
+		IF LEN(CONVERT(NVARCHAR(MAX), @DeadlockGraph)) &gt; 50000
+		BEGIN
+			SET @DeadlockGraph = NULL;
+		END
+
+    END
+
+	IF (XACT_STATE() = -1) OR ((ISNULL(@DeadlockRetries, 0) &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() &lt;&gt; 0)) ROLLBACK TRANSACTION;
+
+    INSERT INTO	dbo.tDbErrorlog
+				(dZeitstempel, cAppName, cHostName, cInformation,
+				nErrorNumber, nErrorSeverity, nErrorLine, nErrorState, cErrorProcedure,
+				cErrorMessage, cLockStatus, cDeadlockGraph)
+	VALUES		(GETUTCDATE(), APP_NAME(), HOST_NAME(), @Context,
+				ERROR_NUMBER(), ERROR_SEVERITY(), ERROR_LINE(), ERROR_STATE(), ERROR_PROCEDURE(),
+				ERROR_MESSAGE(), NULL, @DeadlockGraph);
+
+    IF (ISNULL(@DeadlockRetries, 0) &gt; 1) AND (ERROR_NUMBER() IN (1203, 1205, 1221, 1532, 1533, 1534, 1535, 3948, 3953, 3957, 3960, 3966, 41301, 41339))
+    BEGIN
+        SET @DeadlockRetries = @DeadlockRetries - 1;
+        DECLARE @time CHAR(8) = &#39;00:00:0&#39; + CAST(CAST(RAND() * 5 AS INT) + 1 AS CHAR(1));
+        WAITFOR DELAY @time;
+    END ELSE BEGIN
+        SET @DeadlockRetries = 0;
+    END
+
+    RETURN @DeadlockRetries;
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.CommandExecute</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.CommandExecute</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[CommandExecute]
+
+@DatabaseContext nvarchar(max),
+@Command nvarchar(max),
+@CommandType nvarchar(max),
+@Mode int,
+@Comment nvarchar(max) = NULL,
+@DatabaseName nvarchar(max) = NULL,
+@SchemaName nvarchar(max) = NULL,
+@ObjectName nvarchar(max) = NULL,
+@ObjectType nvarchar(max) = NULL,
+@IndexName nvarchar(max) = NULL,
+@IndexType int = NULL,
+@StatisticsName nvarchar(max) = NULL,
+@PartitionNumber int = NULL,
+@ExtendedInfo xml = NULL,
+@LockMessageSeverity int = 16,
+@ExecuteAsUser nvarchar(max) = NULL,
+@LogToTable nvarchar(max),
+@Execute nvarchar(max)
+
+AS
+
+BEGIN
+
+  ----------------------------------------------------------------------------------------------------
+  --// Source:  https://ola.hallengren.com                                                        //--
+  --// License: https://ola.hallengren.com/license.html                                           //--
+  --// GitHub:  https://github.com/olahallengren/sql-server-maintenance-solution                  //--
+  --// Version: 2020-12-31 18:58:56                                                               //--
+  ----------------------------------------------------------------------------------------------------
+
+  SET NOCOUNT ON
+
+  DECLARE @StartMessage nvarchar(max)
+  DECLARE @EndMessage nvarchar(max)
+  DECLARE @ErrorMessage nvarchar(max)
+  DECLARE @ErrorMessageOriginal nvarchar(max)
+  DECLARE @Severity int
+
+  DECLARE @Errors TABLE (ID int IDENTITY PRIMARY KEY,
+                         [Message] nvarchar(max) NOT NULL,
+                         Severity int NOT NULL,
+                         [State] int)
+
+  DECLARE @CurrentMessage nvarchar(max)
+  DECLARE @CurrentSeverity int
+  DECLARE @CurrentState int
+
+  DECLARE @sp_executesql nvarchar(max) = QUOTENAME(@DatabaseContext) + &#39;.sys.sp_executesql&#39;
+
+  DECLARE @StartTime datetime2
+  DECLARE @EndTime datetime2
+
+  DECLARE @ID int
+
+  DECLARE @Error int = 0
+  DECLARE @ReturnCode int = 0
+
+  DECLARE @EmptyLine nvarchar(max) = CHAR(9)
+
+  DECLARE @RevertCommand nvarchar(max)
+
+  ----------------------------------------------------------------------------------------------------
+  --// Check core requirements                                                                    //--
+  ----------------------------------------------------------------------------------------------------
+
+  IF NOT (SELECT [compatibility_level] FROM sys.databases WHERE database_id = DB_ID()) &gt;= 90
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The database &#39; + QUOTENAME(DB_NAME(DB_ID())) + &#39; has to be in compatibility level 90 or higher.&#39;, 16, 1
+  END
+
+  IF NOT (SELECT uses_ansi_nulls FROM sys.sql_modules WHERE [object_id] = @@PROCID) = 1
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;ANSI_NULLS has to be set to ON for the stored procedure.&#39;, 16, 1
+  END
+
+  IF NOT (SELECT uses_quoted_identifier FROM sys.sql_modules WHERE [object_id] = @@PROCID) = 1
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;QUOTED_IDENTIFIER has to be set to ON for the stored procedure.&#39;, 16, 1
+  END
+
+  IF @LogToTable = &#39;Y&#39; AND NOT EXISTS (SELECT * FROM sys.objects objects INNER JOIN sys.schemas schemas ON objects.[schema_id] = schemas.[schema_id] WHERE objects.[type] = &#39;U&#39; AND schemas.[name] = &#39;dbo&#39; AND objects.[name] = &#39;CommandLog&#39;)
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The table CommandLog is missing. Download https://ola.hallengren.com/scripts/CommandLog.sql.&#39;, 16, 1
+  END
+
+  ----------------------------------------------------------------------------------------------------
+  --// Check input parameters                                                                     //--
+  ----------------------------------------------------------------------------------------------------
+
+  IF @DatabaseContext IS NULL OR NOT EXISTS (SELECT * FROM sys.databases WHERE name = @DatabaseContext)
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @DatabaseContext is not supported.&#39;, 16, 1
+  END
+
+  IF @Command IS NULL OR @Command = &#39;&#39;
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @Command is not supported.&#39;, 16, 1
+  END
+
+  IF @CommandType IS NULL OR @CommandType = &#39;&#39; OR LEN(@CommandType) &gt; 60
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @CommandType is not supported.&#39;, 16, 1
+  END
+
+  IF @Mode NOT IN(1,2) OR @Mode IS NULL
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @Mode is not supported.&#39;, 16, 1
+  END
+
+  IF @LockMessageSeverity NOT IN(10,16) OR @LockMessageSeverity IS NULL
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @LockMessageSeverity is not supported.&#39;, 16, 1
+  END
+
+  IF LEN(@ExecuteAsUser) &gt; 128
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @ExecuteAsUser is not supported.&#39;, 16, 1
+  END
+
+  IF @LogToTable NOT IN(&#39;Y&#39;,&#39;N&#39;) OR @LogToTable IS NULL
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @LogToTable is not supported.&#39;, 16, 1
+  END
+
+  IF @Execute NOT IN(&#39;Y&#39;,&#39;N&#39;) OR @Execute IS NULL
+  BEGIN
+    INSERT INTO @Errors ([Message], Severity, [State])
+    SELECT &#39;The value for the parameter @Execute is not supported.&#39;, 16, 1
+  END
+
+  ----------------------------------------------------------------------------------------------------
+  --// Raise errors                                                                               //--
+  ----------------------------------------------------------------------------------------------------
+
+  DECLARE ErrorCursor CURSOR FAST_FORWARD FOR SELECT [Message], Severity, [State] FROM @Errors ORDER BY [ID] ASC
+
+  OPEN ErrorCursor
+
+  FETCH ErrorCursor INTO @CurrentMessage, @CurrentSeverity, @CurrentState
+
+  WHILE @@FETCH_STATUS = 0
+  BEGIN
+    RAISERROR(&#39;%s&#39;, @CurrentSeverity, @CurrentState, @CurrentMessage) WITH NOWAIT
+    RAISERROR(@EmptyLine, 10, 1) WITH NOWAIT
+
+    FETCH NEXT FROM ErrorCursor INTO @CurrentMessage, @CurrentSeverity, @CurrentState
+  END
+
+  CLOSE ErrorCursor
+
+  DEALLOCATE ErrorCursor
+
+  IF EXISTS (SELECT * FROM @Errors WHERE Severity &gt;= 16)
+  BEGIN
+    SET @ReturnCode = 50000
+    GOTO ReturnCode
+  END
+
+  ----------------------------------------------------------------------------------------------------
+  --// Execute as user                                                                            //--
+  ----------------------------------------------------------------------------------------------------
+
+  IF @ExecuteAsUser IS NOT NULL
+  BEGIN
+    SET @Command = &#39;EXECUTE AS USER = &#39;&#39;&#39; + REPLACE(@ExecuteAsUser,&#39;&#39;&#39;&#39;,&#39;&#39;&#39;&#39;&#39;&#39;) + &#39;&#39;&#39;; &#39; + @Command + &#39;; REVERT;&#39;
+
+    SET @RevertCommand = &#39;REVERT&#39;
+  END
+
+  ----------------------------------------------------------------------------------------------------
+  --// Log initial information                                                                    //--
+  ----------------------------------------------------------------------------------------------------
+
+  SET @StartTime = SYSDATETIME()
+
+  SET @StartMessage = &#39;Date and time: &#39; + CONVERT(nvarchar,@StartTime,120)
+  RAISERROR(&#39;%s&#39;,10,1,@StartMessage) WITH NOWAIT
+
+  SET @StartMessage = &#39;Database context: &#39; + QUOTENAME(@DatabaseContext)
+  RAISERROR(&#39;%s&#39;,10,1,@StartMessage) WITH NOWAIT
+
+  SET @StartMessage = &#39;Command: &#39; + @Command
+  RAISERROR(&#39;%s&#39;,10,1,@StartMessage) WITH NOWAIT
+
+  IF @Comment IS NOT NULL
+  BEGIN
+    SET @StartMessage = &#39;Comment: &#39; + @Comment
+    RAISERROR(&#39;%s&#39;,10,1,@StartMessage) WITH NOWAIT
+  END
+
+  IF @LogToTable = &#39;Y&#39;
+  BEGIN
+    INSERT INTO dbo.CommandLog (DatabaseName, SchemaName, ObjectName, ObjectType, IndexName, IndexType, StatisticsName, PartitionNumber, ExtendedInfo, CommandType, Command, StartTime)
+    VALUES (@DatabaseName, @SchemaName, @ObjectName, @ObjectType, @IndexName, @IndexType, @StatisticsName, @PartitionNumber, @ExtendedInfo, @CommandType, @Command, @StartTime)
+  END
+
+  SET @ID = SCOPE_IDENTITY()
+
+  ----------------------------------------------------------------------------------------------------
+  --// Execute command                                                                            //--
+  ----------------------------------------------------------------------------------------------------
+
+  IF @Mode = 1 AND @Execute = &#39;Y&#39;
+  BEGIN
+    EXECUTE @sp_executesql @stmt = @Command
+    SET @Error = @@ERROR
+    SET @ReturnCode = @Error
+  END
+
+  IF @Mode = 2 AND @Execute = &#39;Y&#39;
+  BEGIN
+    BEGIN TRY
+      EXECUTE @sp_executesql @stmt = @Command
+    END TRY
+    BEGIN CATCH
+      SET @Error = ERROR_NUMBER()
+      SET @ErrorMessageOriginal = ERROR_MESSAGE()
+
+      SET @ErrorMessage = &#39;Msg &#39; + CAST(ERROR_NUMBER() AS nvarchar) + &#39;, &#39; + ISNULL(ERROR_MESSAGE(),&#39;&#39;)
+      SET @Severity = CASE WHEN ERROR_NUMBER() IN(1205,1222) THEN @LockMessageSeverity ELSE 16 END
+      RAISERROR(&#39;%s&#39;,@Severity,1,@ErrorMessage) WITH NOWAIT
+
+      IF NOT (ERROR_NUMBER() IN(1205,1222) AND @LockMessageSeverity = 10)
+      BEGIN
+        SET @ReturnCode = ERROR_NUMBER()
+      END
+
+      IF @ExecuteAsUser IS NOT NULL
+      BEGIN
+        EXECUTE @sp_executesql @RevertCommand
+      END
+    END CATCH
+  END
+
+  ----------------------------------------------------------------------------------------------------
+  --// Log completing information                                                                 //--
+  ----------------------------------------------------------------------------------------------------
+
+  SET @EndTime = SYSDATETIME()
+
+  SET @EndMessage = &#39;Outcome: &#39; + CASE WHEN @Execute = &#39;N&#39; THEN &#39;Not Executed&#39; WHEN @Error = 0 THEN &#39;Succeeded&#39; ELSE &#39;Failed&#39; END
+  RAISERROR(&#39;%s&#39;,10,1,@EndMessage) WITH NOWAIT
+
+  SET @EndMessage = &#39;Duration: &#39; + CASE WHEN (DATEDIFF(SECOND,@StartTime,@EndTime) / (24 * 3600)) &gt; 0 THEN CAST((DATEDIFF(SECOND,@StartTime,@EndTime) / (24 * 3600)) AS nvarchar) + &#39;.&#39; ELSE &#39;&#39; END + CONVERT(nvarchar,DATEADD(SECOND,DATEDIFF(SECOND,@StartTime,@EndTime),&#39;1900-01-01&#39;),108)
+  RAISERROR(&#39;%s&#39;,10,1,@EndMessage) WITH NOWAIT
+
+  SET @EndMessage = &#39;Date and time: &#39; + CONVERT(nvarchar,@EndTime,120)
+  RAISERROR(&#39;%s&#39;,10,1,@EndMessage) WITH NOWAIT
+
+  RAISERROR(@EmptyLine,10,1) WITH NOWAIT
+
+  IF @LogToTable = &#39;Y&#39;
+  BEGIN
+    UPDATE dbo.CommandLog
+    SET EndTime = @EndTime,
+        ErrorNumber = CASE WHEN @Execute = &#39;N&#39; THEN NULL ELSE @Error END,
+        ErrorMessage = @ErrorMessageOriginal
+    WHERE ID = @ID
+  END
+
+  ReturnCode:
+  IF @ReturnCode &lt;&gt; 0
+  BEGIN
+    RETURN @ReturnCode
+  END
+
+  ----------------------------------------------------------------------------------------------------
+
+END</code></pre>
+</body>
+</html>

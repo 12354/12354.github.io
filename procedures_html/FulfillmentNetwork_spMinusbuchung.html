@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spMinusbuchung</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spMinusbuchung</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spMinusbuchung]
+    @kArtikel INT,
+        @nSeriennummern INT,
+        @nCharge INT,
+        @nMHD INT,
+        @kWarenlagerPlatz INT,
+        @fAnzahlAuszubuchen DECIMAL(28, 14),
+        @kBenutzer INT,
+        @cKommentar VARCHAR(255),
+        @cChargenNr VARCHAR(255),
+        @dMHD DATETIME,
+        @kUmlagerung INT,
+		@kMerchantStockChange INT,
+		@kVorgang INT,
+        @cSeriennummer VARCHAR(128) = &#39;#$KEINE$#&#39;,
+        @cSessionId VARCHAR(100) = NULL,
+        @cLogMeldung VARCHAR(8000),
+        @kLieferscheinPos INT = 0,
+        @kPickliste INT = 0,
+        @nHistorieNichtSchreiben INT = 0
+    AS
+    BEGIN
+
+        --
+        -- WarenlagerEing&#228;nge gegen die minus-gebucht werden sollen
+        --
+        DECLARE @WarenlagerEingaengeForAusgaenge TABLE
+                                                 (
+                                                     kWarenLagerEingang INT NOT NULL,
+                                                     kLieferscheinPos INT NOT NULL,
+                                                     fAnzahl DECIMAL(28, 14) NOT NULL,
+                                                     cKommentar VARCHAR(255) NULL,
+                                                     kBenutzer INT NOT NULL,
+                                                     kBuchungsart INT NOT NULL
+                                                 );
+
+
+        --
+        -- Cursor &#252;ber alle WEs die in Frage kommen k&#246;nnen
+        --
+
+
+        DECLARE warenlagerEingang_cursor CURSOR FAST_FORWARD LOCAL FOR
+            SELECT WarenlagerEingang.kWarenLagerEingang,
+                   WarenlagerEingang.fAnzahlAktuell,
+                   ISNULL(LieferscheinPos.kLieferscheinPos, 0) AS kLieferscheinPosUmlagerung,
+                   LieferscheinPos.kZielLager
+            FROM tWarenLagerEingang AS WarenlagerEingang
+                     LEFT JOIN
+                 (
+                     SELECT LieferscheinPos.kBestellPos,
+                            LieferscheinPos.kLieferscheinPos,
+                            Umlagerung.kUmlagerung,
+                            Umlagerung.kZielLager
+                     FROM dbo.tLieferscheinPos AS LieferscheinPos
+                              JOIN Verkauf.tAuftragPosition AS AuftragPos ON AuftragPos.kAuftragPosition = LieferscheinPos.kBestellPos
+                              JOIN dbo.tUmlagerung AS Umlagerung
+                                   ON Umlagerung.kBestellung = AuftragPos.kAuftrag
+                 ) AS LieferscheinPos
+                 ON LieferscheinPos.kBestellPos = WarenlagerEingang.kBestellPosUmlagerung
+                     LEFT JOIN tWarenLagerAusgang Ausgang
+                               ON Ausgang.kLieferscheinPos = LieferscheinPos.kLieferscheinPos
+            WHERE WarenlagerEingang.kArtikel = @kArtikel
+              --AND (WarenlagerEingang.fAnzahlAktuell = ISNULL(Ausgang.fAnzahl,0) OR (@kUmlagerung IS NULL))
+              AND WarenlagerEingang.fAnzahlAktuell &gt; 0
+              AND WarenlagerEingang.kWarenLagerPlatz = @kWarenlagerPlatz
+              AND
+                (
+                            LieferscheinPos.kUmlagerung = @kUmlagerung
+                        OR (@kUmlagerung IS NULL)
+                    )
+            ORDER BY (CASE
+                          WHEN
+                              (
+                                          @dMHD = WarenlagerEingang.dMHD
+                                      OR @nMHD = 0
+                                  ) THEN
+                              0
+                          ELSE
+                              1
+                END
+                         ) + (CASE
+                                  WHEN
+                                      (
+                                                  @cChargenNr = WarenlagerEingang.cChargenNr
+                                              OR @nCharge = 0
+                                          ) THEN
+                                      0
+                                  ELSE
+                                      1
+                END
+                         );
+
+        DECLARE @kBuchungsart INT = 30;
+        IF (NOT @kUmlagerung IS NULL AND @kUmlagerung &gt; 0)
+            BEGIN
+                SET @kBuchungsart = 60;
+            END;
+
+        --
+        -- Schleife &#252;ber alle WEs, bis keine mehr da sind oder fAnzahlAuszubuchen = 0
+        --
+        DECLARE @kWarenlagerEingang INT;
+        DECLARE @fAnzahlAktuell DECIMAL(28, 14);
+        DECLARE @kLieferscheinPosUmlagerung INT;
+        DECLARE @kZielLager INT;
+        OPEN warenlagerEingang_cursor;
+        FETCH NEXT FROM warenlagerEingang_cursor
+            INTO @kWarenlagerEingang,
+                @fAnzahlAktuell,
+                @kLieferscheinPosUmlagerung,
+                @kZielLager;
+        WHILE @@FETCH_STATUS = 0 AND @fAnzahlAuszubuchen &gt; 0
+            BEGIN
+                IF EXISTS
+                    (
+                        SELECT *
+                        FROM @WarenlagerEingaengeForAusgaenge
+                        WHERE kWarenLagerEingang = @kWarenlagerEingang
+                    )
+                    BEGIN
+                        SELECT @fAnzahlAktuell = @fAnzahlAktuell - a.fAnzahl
+                        FROM @WarenlagerEingaengeForAusgaenge a
+                        WHERE a.kWarenLagerEingang = @kWarenlagerEingang;
+                    END;
+                DECLARE @fAnzahlAuszubuchenEingang DECIMAL(28, 14) = @fAnzahlAktuell;
+                --
+                -- Nur so viel ausbuchen wie n&#246;tig
+                --
+                IF @fAnzahlAuszubuchen &lt; @fAnzahlAktuell
+                    BEGIN
+                        SET @fAnzahlAuszubuchenEingang = @fAnzahlAuszubuchen;
+                    END;
+                IF(@kLieferscheinPos = 0)
+                    BEGIN
+                        SET @kLieferscheinPos = @kLieferscheinPosUmlagerung
+                    END
+                ELSE IF @kPickliste &gt; 0
+                    BEGIN
+                        --Wenn es eine @kPickliste gibt, dann muss auch eine tPicklistenPos erstellt werden
+
+                        SET @kBuchungsart = 70
+
+
+                        DECLARE @kWarenlager AS INT
+                        SELECT @kWarenlager = kWarenLager FROM dbo.tWarenLagerPlatz WHERE kWarenLagerPlatz = @kWarenlagerPlatz
+                        DECLARE @kLieferschein AS INT
+                        DECLARE @kBestellPos AS INT
+                        DECLARE @kBestellung AS INT
+
+                        SELECT
+                                @kLieferschein = LieferscheinPos.kLieferschein,
+                                @kBestellPos = LieferscheinPos.kBestellPos,
+                                @kBestellung = BestellPos.kAuftrag
+                        FROM dbo.tLieferscheinPos AS LieferscheinPos
+                                 JOIN Verkauf.tAuftragPosition AS BestellPos ON BestellPos.kAuftragPosition = LieferscheinPos.kBestellPos
+                        WHERE kLieferscheinPos = @kLieferscheinPos
+
+
+                        INSERT INTO [dbo].[tPicklistePos]
+                        (
+                            [kPickliste],
+                            [kWarenLager],
+                            [kWarenLagerEingang],
+                            [fAnzahl],
+                            [kBestellPos],
+                            [kPicklistePosStatus],
+                            [kArtikel],
+                            [kWarenlagerPlatz],
+                            [kPicklistePos_Ursprung],
+                            [kLieferscheinPos],
+                            [kBestellung],
+                            [nPickPrio],
+                            [nStatus],
+                            [kAnsprechpartner]
+                        )
+                        VALUES
+                        ( @kPickliste, @kWarenlager, 0, @fAnzahlAuszubuchen, @kBestellPos, 0, @kArtikel, @kWarenlagerPlatz, 0, @kLieferscheinPos, @kBestellung, 0, 40, NULL);
+
+                        DECLARE @kPicklistePos INT = SCOPE_IDENTITY();
+
+                        UPDATE dbo.tPicklistePos SET kWarenLagerEingang = @kWarenlagerEingang WHERE kPicklistePos = @kPicklistePos
+
+
+                        INSERT INTO [dbo].[tPicklistePosStatus]
+                        (
+                            [kPicklistePos],
+                            [kbenutzer],
+                            [dZeitstempel],
+                            [nStatus]
+                        )
+                        VALUES
+                        ( @kPicklistePos, @kBenutzer, GETDATE(), 40);
+                        DECLARE @kPicklistePosStatus INT = SCOPE_IDENTITY();
+                        UPDATE dbo.tPicklistePos SET kPicklistePosStatus = @kPicklistePosStatus
+                        WHERE kPicklistePos = @kPicklistePos;
+                    END
+
+
+                IF @fAnzahlAktuell &gt; 0
+                    BEGIN
+                        INSERT INTO @WarenlagerEingaengeForAusgaenge
+                        (
+                            kWarenLagerEingang,
+                            kLieferscheinPos,
+                            cKommentar,
+                            kBenutzer,
+                            kBuchungsart,
+                            fAnzahl
+                        )
+                        VALUES
+                        (@kWarenlagerEingang, @kLieferscheinPos, @cKommentar, @kBenutzer, @kBuchungsart, @fAnzahlAuszubuchenEingang);
+
+                        --
+                        -- Seriennummern ausbuchen, bzw. bei einer Umlagerung (also ausbuchen aus Streckenlager) wieder frei geben
+                        --
+                        IF (@nSeriennummern = 1)
+                            BEGIN
+                                IF (@kLieferscheinPos &gt; 0 AND @kUmlagerung &gt; 0)
+                                    BEGIN;
+                                    --
+                                    -- Wenn es sich um eine Ausbuchung aus einem Streckenlager handelt, gibt es auch eine Umlagerung und einen Lieferschein
+                                    -- Es werden so viele Seriennummer wieder frei gegeben, wie @fAnzahlAuszubuchenEingang und das Warenlager neu gesetzt
+                                    --
+                                    WITH SeriennummernAuszubuchen
+                                             AS (SELECT ROW_NUMBER() OVER (ORDER BY CASE
+                                                                                        WHEN SeriennummernAuszubuchen.cSeriennr = @cSeriennummer THEN
+                                                                                            0
+                                                                                        WHEN SeriennummernAuszubuchen.cSeriennr = &#39;#$KEINE$#&#39; THEN
+                                                                                            1
+                                                                                        ELSE
+                                                                                            2
+                                            END
+                                            ) AS Nr,
+                                                        kLagerArtikel
+                                                 FROM tLagerArtikel AS SeriennummernAuszubuchen
+                                                 WHERE SeriennummernAuszubuchen.kArtikel = @kArtikel
+                                                   AND SeriennummernAuszubuchen.kLieferscheinPos = @kLieferscheinPos)
+                                    UPDATE Lagerartikel
+                                    SET kLieferscheinPos = 0,
+                                        kBestellPos = 0,
+                                        kPicklistePos = 0,
+                                        kWarenlager = @kZielLager
+                                    FROM dbo.tLagerArtikel AS Lagerartikel
+                                             JOIN SeriennummernAuszubuchen
+                                                  ON Lagerartikel.kLagerArtikel = SeriennummernAuszubuchen.kLagerArtikel
+                                                      AND SeriennummernAuszubuchen.Nr &lt;= @fAnzahlAuszubuchenEingang;
+                                    END;
+                                ELSE
+                                    BEGIN;
+                                    WITH SeriennummernAuszubuchen
+                                             AS (SELECT ROW_NUMBER() OVER (ORDER BY CASE
+                                                                                        WHEN SeriennummernAuszubuchen.cSeriennr = @cSeriennummer THEN
+                                                                                            0
+                                                                                        WHEN SeriennummernAuszubuchen.cSeriennr = &#39;#$KEINE$#&#39; THEN
+                                                                                            1
+                                                                                        ELSE
+                                                                                            2
+                                            END
+                                            ) AS Nr,
+                                                        SeriennummernAuszubuchen.*
+                                                 FROM tLagerArtikel AS SeriennummernAuszubuchen
+                                                          JOIN dbo.tWarenLagerPlatz AS WarenlagerPlatz
+                                                               ON SeriennummernAuszubuchen.kWarenlager = WarenlagerPlatz.kWarenLager
+                                                                   AND WarenlagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatz
+                                                                   AND SeriennummernAuszubuchen.kLieferscheinPos = 0
+                                                 WHERE SeriennummernAuszubuchen.kArtikel = @kArtikel)
+                                    UPDATE Lagerartikel
+                                    SET kLieferscheinPos = 999999999,
+                                        kBestellPos = 999999999,
+                                        kPicklistePos = 0
+                                    FROM dbo.tLagerArtikel AS Lagerartikel
+                                             JOIN SeriennummernAuszubuchen
+                                                  ON Lagerartikel.kLagerArtikel = SeriennummernAuszubuchen.kLagerArtikel
+                                                      AND SeriennummernAuszubuchen.Nr &lt;= @fAnzahlAuszubuchenEingang;
+                                    END;
+                            END;
+
+                        SET @fAnzahlAuszubuchen = @fAnzahlAuszubuchen - @fAnzahlAuszubuchenEingang;
+                    END;
+                FETCH NEXT FROM warenlagerEingang_cursor
+                    INTO @kWarenlagerEingang,
+                        @fAnzahlAktuell,
+                        @kLieferscheinPosUmlagerung,
+                        @kZielLager;
+            END;
+
+        CLOSE warenlagerEingang_cursor;
+        DEALLOCATE warenlagerEingang_cursor;
+
+
+        --
+        -- Wenn nicht alles ausgebucht werden konnte, z.B. weil kein MHD und/oder Charge mit &#252;bertragen wurde, dann m&#252;ss trotzdem
+        --
+
+
+        --
+        -- XML f&#252;r WarenlagerAusgangSchreiben
+     
+        IF EXISTS (SELECT * FROM @WarenlagerEingaengeForAusgaenge)
+            BEGIN
+
+			/* declare variables */
+			DECLARE @kWarenLagerEingangForAusgaenge INT,
+                     @kLieferscheinPosForAusgaenge INT,
+                     @fAnzahlForAusgaenge decimal(28, 14),
+                     @cKommentarForAusgaenge varchar(255),
+                     @kBenutzerForAusgaenge INT,
+                     @kBuchungsartForAusgaenge INT
+			
+			DECLARE warenlagerAusgaengeCursor CURSOR FAST_FORWARD READ_ONLY FOR SELECT kWarenLagerEingang,
+                                                                                       kLieferscheinPos,
+                                                                                       fAnzahl,
+                                                                                       cKommentar,
+                                                                                       kBenutzer,
+                                                                                       kBuchungsart FROM @WarenlagerEingaengeForAusgaenge
+			
+			OPEN warenlagerAusgaengeCursor
+			
+			FETCH NEXT FROM warenlagerAusgaengeCursor INTO @kWarenLagerEingangForAusgaenge,@kLieferscheinPosForAusgaenge,@fAnzahlForAusgaenge,@cKommentarForAusgaenge,@kBenutzerForAusgaenge,@kBuchungsartForAusgaenge
+			
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+			    DECLARE @kWarenlagerAusgang INT;
+                EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = null,                    -- xml
+                     @kWarenLagerEingang = @kWarenLagerEingangForAusgaenge,                         -- int
+                     @kLieferscheinPos = @kLieferscheinPosForAusgaenge,                           -- int
+                     @fAnzahl = @fAnzahlForAusgaenge,                                 -- decimal(28, 14)
+                     @cKommentar = @cKommentarForAusgaenge,                                -- varchar(255)
+                     @kBenutzer = @kBenutzerForAusgaenge,                                  -- int
+                     @kBuchungsart = @kBuchungsartForAusgaenge,                               -- int
+                     @nHistorieNichtSchreiben = @nHistorieNichtSchreiben,                    -- int
+                     @kWarenlagerAusgang = @kWarenlagerAusgang OUTPUT -- int
+
+				IF(@kMerchantStockChange &gt; 0)
+				BEGIN
+					INSERT INTO [FulfillmentNetwork].[tMerchantStockChangeRef]
+					(
+						[kMerchantStockChange],
+						[kWarenlagerEingang],
+						[kWarenlagerAusgang]
+					)
+					VALUES
+					(   @kMerchantStockChange, -- kMerchantStockChange - int
+						0, -- kWarenlagerEingang - int
+						@kWarenlagerAusgang  -- kWarenlagerAusgang - int
+						)
+				END
+
+			    FETCH NEXT FROM warenlagerAusgaengeCursor INTO @kWarenLagerEingangForAusgaenge,@kLieferscheinPosForAusgaenge,@fAnzahlForAusgaenge,@cKommentarForAusgaenge,@kBenutzerForAusgaenge,@kBuchungsartForAusgaenge
+			END
+			
+			CLOSE warenlagerAusgaengeCursor
+			DEALLOCATE warenlagerAusgaengeCursor
+
+
+				DECLARE @FulfillmentLogDaten AS FulfillmentNetwork.TYPE_spFulfillmentLogSchreiben				
+                INSERT INTO @FulfillmentLogDaten
+                SELECT DISTINCT Ausgang.kBenutzer,
+                       GETDATE() AS dTimestamp,
+                       @cSessionId AS cSessionId,
+                       2 AS nLogLevel,
+                       1 AS [nMessageSource],
+                       0 AS [kLieferant],
+                       ISNULL(Lieferscheinpos.kLieferschein ,0) AS [kLieferschein],
+                       0 AS [kArtikelHistory],
+                       WarenlagerPlatz.kWarenLager AS [kWarenlager],
+                       ISNULL(Bestellpos.kAuftrag,0) AS [kBestellung],
+                       0 AS [kLieferantenBestellung],
+                       ISNULL(FulfillmentAuftrag.kFulfillmentAuftrag,0) AS [kFulfillmentAuftrag],
+                       @kArtikel AS [kArtikel],
+                       @cLogMeldung AS [cMessage],
+					   NULL AS cRequestId,
+					   0 AS kKunde,
+					   NULL AS cMessageDetails
+                FROM @WarenlagerEingaengeForAusgaenge AS Ausgang
+                         JOIN dbo.tWarenLagerPlatz AS WarenlagerPlatz
+                              ON WarenlagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatz
+						LEFT JOIN dbo.tLieferscheinPos AS Lieferscheinpos ON Lieferscheinpos.kLieferscheinPos = Ausgang.kLieferscheinPos
+						LEFT JOIN Verkauf.tAuftragPosition AS Bestellpos ON Bestellpos.kAuftragPosition = Lieferscheinpos.kBestellPos
+						LEFT JOIN dbo.tFulfillmentAuftrag AS FulfillmentAuftrag ON FulfillmentAuftrag.kLieferschein = Lieferscheinpos.kLieferschein;
+
+				EXEC FulfillmentNetwork.spFulfillmentLogSchreiben @FulfillemntLogDaten = @FulfillmentLogDaten, -- TYPE_spFulfillmentLogSchreiben
+				                                                  @kVorgang = @kVorgang                -- int
+				
+            END;
+    END;</code></pre>
+</body>
+</html>

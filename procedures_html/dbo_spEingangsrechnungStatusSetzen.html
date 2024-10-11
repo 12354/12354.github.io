@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spEingangsrechnungStatusSetzen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spEingangsrechnungStatusSetzen</h1>
+    <p><strong>Description:</strong> Mit der Stored procedure kann der Status einer Eingangsrechnung neu gesetzt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spEingangsrechnungStatusSetzen]
+	@xEingangsrechnungen dbo.TYPE_spEingangsrechnungStatusSetzen READONLY
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @retry INT = 5;
+WHILE @retry &gt; 0
+BEGIN      
+    BEGIN TRY  
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END
+
+	   CREATE TABLE #Eingangsrechnung (kEingangsrechnung INT, dBezahlt DATETIME, nStatus TINYINT);
+	
+	   INSERT INTO #Eingangsrechnung(kEingangsrechnung, dBezahlt, nStatus)
+	   SELECT DISTINCT tEingangsrechnung.kEingangsrechnung, tEingangsrechnung.dBezahlt, tEingangsrechnung.nStatus
+	   FROM @xEingangsrechnungen AS eingangsrechnungsIDs
+	   JOIN dbo.tEingangsrechnung
+		  ON tEingangsrechnung.kEingangsrechnung = eingangsrechnungsIDs.kEingangsrechnung;
+	
+	   UPDATE #Eingangsrechnung  
+	   SET dBezahlt = 
+	   (
+		  CASE 
+			 WHEN
+				ROUND(
+					   (
+						  SELECT ISNULL(SUM(-ISNULL(tZahlung.fBetrag, 0.0)), 0.0) 
+						  FROM dbo.tZahlung 
+						  WHERE tZahlung.kEingangsrechnung = #Eingangsrechnung.kEingangsrechnung
+					   ) + 0.009, 2) 
+				&gt;= ROUND
+				(
+					   (
+						  SELECT 
+							 SUM(ISNULL(dbo.tEingangsrechnungPos.fMenge, 0.0) 
+								* ISNULL(tEingangsrechnungPos.fEKNetto, 0.0) 
+								* (1.0 + (ISNULL(tEingangsrechnungPos.fMwSt, 0.0) / 100)) 
+								+ ISNULL(tEingangsrechnungPosZusatzkosten.dWert, 0.0))
+						  FROM dbo.tEingangsrechnungPos 
+						  JOIN dbo.tEingangsrechnung 
+							 ON tEingangsrechnungPos.kEingangsrechnung = tEingangsrechnung.kEingangsrechnung  
+						  LEFT JOIN   
+						  (  
+							 SELECT 
+								tEingangsrechnungPosZusatzkosten.kEingangsrechnungPos, 
+								SUM(ISNULL(tEingangsrechnungPosZusatzkosten.dWert, 0.0) 
+									   * (1.0 + (ISNULL(tEingangsrechnungPosZusatzkosten.fMwst, 0.0) / 100))) AS dWert  
+							 FROM dbo.tEingangsrechnungPosZusatzkosten 
+							 JOIN dbo.tEingangsrechnungzusatzkosten 
+								ON tEingangsrechnungPosZusatzkosten.kZusatzkosten = tEingangsrechnungzusatzkosten.kZusatzkosten  
+							 WHERE tEingangsrechnungzusatzkosten.nPreis = 1  
+							 GROUP BY tEingangsrechnungPosZusatzkosten.kEingangsrechnungPos  
+						  ) AS tEingangsrechnungPosZusatzkosten 
+							 ON tEingangsrechnungPosZusatzkosten.kEingangsrechnungPos = tEingangsrechnungPos.kEingangsrechnungPos  
+						  WHERE tEingangsrechnungPos.kEingangsrechnung = #Eingangsrechnung.kEingangsrechnung
+					   ), 2
+				)
+				THEN 
+				(
+					   SELECT MAX(tZahlung.dDatum) 
+					   FROM dbo.tZahlung 
+					   WHERE tZahlung.kEingangsrechnung = #Eingangsrechnung.kEingangsrechnung
+				)
+			 ELSE NULL 
+		  END
+	   );
+	
+	   UPDATE #Eingangsrechnung   
+	   SET nStatus = 
+	   (
+		  CASE 
+			 WHEN #Eingangsrechnung.dBezahlt IS NOT NULL AND #Eingangsrechnung.nStatus = 5 
+				THEN 20
+			 WHEN #Eingangsrechnung.dBezahlt IS NULL AND #Eingangsrechnung.nStatus = 20
+				THEN 5
+			 ELSE #Eingangsrechnung.nStatus 
+		  END
+	   )
+
+	   UPDATE dbo.tEingangsrechnung
+	   SET 
+		  dBezahlt = #Eingangsrechnung.dBezahlt,
+		  nStatus = #Eingangsrechnung.nStatus
+	   FROM dbo.tEingangsrechnung
+	   JOIN #Eingangsrechnung 
+		  ON #Eingangsrechnung.kEingangsrechnung = tEingangsrechnung.kEingangsrechnung
+		
+	   SET @retry = 0;
+        IF(@TranCount = 0)
+        BEGIN           
+            COMMIT TRANSACTION      
+        END
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END</code></pre>
+</body>
+</html>

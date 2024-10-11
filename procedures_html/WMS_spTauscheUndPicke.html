@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spTauscheUndPicke</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spTauscheUndPicke</h1>
+    <p><strong>Description:</strong> Die Stored Procedure pickt Mengen für eine Pickposition. Falls notwendig werden Wareneingangszuordnungen geändert.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spTauscheUndPicke]
+  @kPicklistePos    INT,              -- Pickpos die gepickt werden soll
+  @nMenge           DECIMAL(25,13),    -- Menge die gepickt werden soll
+  @cCharge          NVARCHAR(255),     -- Charge die gepickt werden soll
+  @cMHD             NVARCHAR(255),     -- MHD das gepickt werden soll
+  @kLhm             INT,              -- Auf dieses LHM wird gepickt, falls 0 wird keine umlagerung gemacht
+  @kBenutzer        INT,              
+  @nStatusNachPick  INT,              -- Der Status der Pickpos nach dem Pick
+  @nRestmengeLoeschen INT,            -- 1 = Es werden die Restmengen von dem Warenlagereingang von dem wir absplitten gel&#246;scht
+  @nRet             INT OUT
+
+-- Funktion:
+-- Diese Procedur versucht die &#252;bergebene Menge f&#252;r die Pickposition zu picken. Falls Charge oder MHD &#252;bergeben wurden, kann ein tausch der Warenlagereing&#228;nge stattfinden, damit die richtige Charge/MHD gepicket wird.
+  
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	DECLARE @kWarenLagerPlatz INT -- Warenlagerplatz der &#252;bergebenen Pickpos
+	DECLARE @kArtikel         INT  -- Artikel der &#252;bergebenen Pickpos
+	DECLARE @kWarenLagerEingang INT  -- Warenlagereingang des Tauschpartners
+	DECLARE @nPPIdent         INT -- ID ob der des Tauschpartner eine Pickpos hat
+	DECLARE @fAnzahlAktuell   DECIMAL(25,13) -- PickposAnzahl des Tauschpartners
+	DECLARE @fGesAnzahl       DECIMAL(25,13) -- Die gesammte Menge die noch gepickt werden soll
+	DECLARE @kIsPicklistePos  INT  -- Die aktuelle Pickpositiion die gepickt werden soll
+	DECLARE @kTauschPicklistePos INT -- Die  Pickposition des Tauschpartners
+	DECLARE @kWarenLagerEingangQuell INT -- Warenlagereingang des aktuellen picks
+	DECLARE @dPLTimestamp     DATETIME -- Zeitstempel -&gt; Systemzeit
+	DECLARE @kNewPicklistePos INT;	-- Pickpos
+	DECLARE @kNewTauschPicklistePos INT;
+	DECLARE @kPickliste INT;
+
+	BEGIN 
+		SET @nRet = 0;
+
+		SELECT @kWarenLagerPlatz = dbo.tWarenLagerEingang.kWarenLagerPlatz, @kArtikel = dbo.tWarenLagerEingang.kArtikel, @kPickliste = tPicklistePos.kPickliste
+			FROM dbo.tPicklistePos WITH(NOLOCK)
+			JOIN dbo.tWarenLagerEingang WITH(NOLOCK) ON dbo.tWarenLagerEingang.kWarenLagerEingang = dbo.tPicklistePos.kWarenLagerEingang
+			WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePos
+
+
+		-- Virtuelle Tabelle erstellen
+		-- Sucht alle Warenlagereing&#228;nge die mit dem &#252;bergebenen Eingaben &#252;bereinstimmen (charge,mhd,platz). Es wird unterschieden zwischen Warenlagereing&#228;ngen die in einer pickpos sind und den ohne
+		SELECT  kWarenLagerEingang,nPPIdent,fAnzahlAktuell,kPicklistePos
+			INTO #TempWarenLagerEingang 
+			FROM(
+				SELECT dbo.tWarenLagerEingang.kWarenLagerEingang, 1 AS nPPIdent,tPicklistePos.fAnzahl AS fAnzahlAktuell,dbo.tPicklistePos.kPicklistePos kPicklistePos
+					FROM dbo.tWarenLagerEingang WITH(NOLOCK)
+					JOIN dbo.tPicklistePos WITH(NOLOCK) ON dbo.tPicklistePos.kWarenLagerEingang = dbo.tWarenLagerEingang.kWarenLagerEingang AND (dbo.tPicklistePos.nStatus &lt; 30 AND tPicklistePos.kPickliste = @kPickliste  OR dbo.tPicklistePos.nStatus &lt; 20)
+					WHERE (
+							@cCharge IS NULL 
+							OR dbo.tWarenLagerEingang.cChargenNr = @cCharge
+							)
+						AND (
+							@cMHD IS NULL 
+							OR CONVERT(NVARCHAR,tWarenlagerEingang.dMHD, 104) = @cMHD
+							)
+						AND dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0
+						AND dbo.tWarenLagerEingang.kWarenLagerPlatz = @kWarenLagerPlatz
+						AND dbo.tWarenLagerEingang.kArtikel = @kArtikel
+				UNION
+				SELECT dbo.tWarenLagerEingang.kWarenLagerEingang, 0 AS nPPIdent,(dbo.tWarenLagerEingang.fAnzahlAktuell-dbo.twarenlagereingang.fAnzahlReserviertPickpos) AS fAnzahlAktuell, NULL AS kPicklistePos
+					FROM dbo.tWarenLagerEingang WITH(NOLOCK)
+					WHERE (
+							@cCharge IS NULL 
+							OR dbo.tWarenLagerEingang.cChargenNr = @cCharge
+							)
+						AND (
+							@cMHD IS NULL
+							OR CONVERT(NVARCHAR,dbo.tWarenlagerEingang.dMHD, 104) = @cMHD
+							)
+						AND dbo.tWarenLagerEingang.fAnzahlAktuell-dbo.twarenlagereingang.fAnzahlReserviertPickpos &gt; 0
+						AND dbo.tWarenLagerEingang.kWarenLagerPlatz = @kWarenLagerPlatz
+						AND dbo.tWarenLagerEingang.kArtikel = @kArtikel
+				) AS T1
+			ORDER BY nPPIdent,
+				CASE WHEN fAnzahlAktuell = @nMenge 
+					THEN 0 
+					ELSE 1 
+				END,
+				fAnzahlAktuell DESC;
+
+		DECLARE cur_GetWarenLagerEingang CURSOR LOCAL FAST_FORWARD FOR  
+		SELECT * FROM #TempWarenLagerEingang;
+
+		SET @fGesAnzahl = @nMenge;
+		SET @kIsPicklistePos = @kPicklistePos;
+		SET @dPLTimestamp = GETDATE();
+
+		-- Holt sich den n&#228;chsten passenden Warenlagereingang um ihn zu picken
+		OPEN cur_GetWarenLagerEingang    
+		FETCH NEXT FROM cur_GetWarenLagerEingang INTO  @kWarenLagerEingang,@nPPIdent,@fAnzahlAktuell,@kTauschPicklistePos;
+  
+		-- Keinen gefunden -&gt; Ende. 
+		-- Kein Fehler, Warenlageringang gefunden und GesammtAnzahl noch nicht gepickt -&gt; Weitermachen.
+		WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0 AND @fGesAnzahl &gt; 0)
+		BEGIN  
+			SET @kNewPicklistePos = 0;
+
+			IF(@kWarenLagerEingang IS NULL)
+			BEGIN
+				SET @nRet = -203000022; -- Keinen Tauschpartner gefunden
+				BREAK;
+			END
+
+			IF(@fGesAnzahl &gt; @fAnzahlAktuell)
+			BEGIN
+
+			EXEC dbo.spPlatzUmbuchenPickposition
+				 @kWarenlagerplatzNeu = @kWarenLagerPlatz,
+				 @kPicklistePos = @kIsPicklistePos,
+				 @kLHM = 0,
+				 @kBuchungsart = 140,
+				 @kBenutzer = @kBenutzer,
+				 @fAnzahl = @fAnzahlAktuell,
+				 @cKommentar = &#39;Splitt WMS-TauscheUndPicke&#39;,
+				 @kPicklistePosNeu = @kNewPicklistePos OUTPUT;
+			END;
+
+			IF (@nPPIdent = 0) -- Wenn WLE keine PP hat dann &#252;bernehmen wir ihn f&#252;r unsere PP
+			BEGIN
+				UPDATE dbo.tPicklistePos WITH(ROWLOCK) 
+				SET dbo.tPicklistePos.kWarenLagerEingang = @kWarenLagerEingang 
+			     WHERE dbo.tPicklistePos.kPicklistePos = @kIsPicklistePos;
+
+				IF(@fAnzahlAktuell &gt; @fGesAnzahl)
+					SET @fAnzahlAktuell = @fGesAnzahl;
+
+			END;
+			ELSE  -- Falls WLE eine PP hat -&gt; TAUSCHEN
+			BEGIN 
+			     
+				-- aktuelles WLE der PP vom Pick holen
+				SELECT @kWarenLagerEingangQuell = dbo.tWarenLagerEingang.kWarenLagerEingang
+				FROM dbo.tPicklistePos WITH(NOLOCK)
+				JOIN dbo.tWarenLagerEingang WITH(NOLOCK) ON dbo.tWarenLagerEingang.kWarenLagerEingang = dbo.tPicklistePos.kWarenLagerEingang
+				WHERE dbo.tPicklistePos.kPicklistePos = @kIsPicklistePos;
+
+				-- Wenn Tausch-PP mehr Menge hat als wir picken wollen, Tausch-PP splitten
+				IF(@fAnzahlAktuell &gt; @fGesAnzahl)
+				BEGIN
+					SET @fAnzahlAktuell = @fGesAnzahl;
+
+				    EXEC dbo.spPlatzUmbuchenPickposition
+					@kWarenlagerplatzNeu = @kWarenLagerPlatz, --Mu&#223; auf den gleichen Platz liegen
+					@kPicklistePos = @kTauschPicklistePos,
+					@kLHM = 0,
+					@kBuchungsart = 140,
+					@kBenutzer = @kBenutzer,
+					@fAnzahl = @fGesAnzahl,
+					@cKommentar = &#39;Splitt WMS-TauscheUndPicke&#39;,
+					@kPicklistePosNeu = @kNewTauschPicklistePos;
+
+					 -- Der Warenlagereingang der TauschPickPos kann sich durch splitten ge&#228;ndert haben
+				    SELECT @kWarenLagerEingang = kWarenLagerEingang
+					FROM tPicklistePos 
+					WHERE kPicklistePos = @kTauschPicklistePos;
+
+				END;
+				BEGIN
+					--Tauch-PP bekommt die WLE der Quell PP
+					UPDATE dbo.tPicklistePos WITH(ROWLOCK) 
+					SET dbo.tPicklistePos.kWarenLagerEingang = @kWarenLagerEingangQuell 
+					WHERE dbo.tPicklistePos.kPicklistePos = @kTauschPicklistePos;
+
+					-- Quell PP bekommt die WLE des Tauch-PP
+					UPDATE dbo.tPicklistePos WITH(ROWLOCK) 
+					SET dbo.tPicklistePos.kWarenLagerEingang = @kWarenLagerEingang 
+					WHERE dbo.tPicklistePos.kPicklistePos = @kIsPicklistePos;
+				END; 
+			END;
+
+
+			-- PICKEN
+			EXEC @nRet = WMS.spPicklisteposPicken
+				@kPicklistePos  = @kIsPicklistePos,
+				@kLhm  = @kLhm,
+				@kBenutzer  = @kBenutzer,
+				@fPickMenge = @fAnzahlAktuell,
+				@dTimestamp = @dPLTimestamp,
+				@nRestmengeLoeschen = 0,
+				@nStatusNachPick = @nStatusNachPick;
+
+
+			-- Die Menge die wir in diesen durchlauf gepickt haben von der gesammtpickmenge abziehen
+			SET @fGesAnzahl = @fGesAnzahl - @fAnzahlAktuell;
+
+			IF(@kNewPicklistePos &gt; 0)
+				SET @kIsPicklistePos = @kNewPicklistePos
+      
+			-- Hole n&#228;chsten m&#246;glichen Tauschpartner
+			FETCH NEXT FROM cur_GetWarenLagerEingang INTO  @kWarenLagerEingang,@nPPIdent,@fAnzahlAktuell,@kTauschPicklistePos;  
+		END;
+
+
+	CLOSE cur_GetWarenLagerEingang;
+	DEALLOCATE cur_GetWarenLagerEingang;
+
+
+	IF(@fGesAnzahl &gt; 0)
+		SET @nRet = -203000023; -- Konnte nicht ganze Menge tauschen
+
+    SELECT @nRet;
+END;</code></pre>
+</body>
+</html>

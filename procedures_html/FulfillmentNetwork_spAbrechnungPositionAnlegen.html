@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spAbrechnungPositionAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spAbrechnungPositionAnlegen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spAbrechnungPositionAnlegen]
+    @kArtikel INT ,
+    @kAbrechnung INT ,
+    @cBezeichnung NVARCHAR(256) = &#39;&#39; ,
+    @fVkNetto DECIMAL(25,13) ,
+    @fVKPreis DECIMAL(25,13) ,
+    @fEKNetto DECIMAL(25,13) ,
+    @fAnzahl [DECIMAL](25,13) ,
+    @fRabatt [DECIMAL](25,13) ,
+    @fMwSt [DECIMAL](25,13) ,
+    @cArtNr [NVARCHAR](100) = &#39;&#39; ,
+    @cEinheit [NVARCHAR](255) = &#39;&#39; ,   
+	@cHinweis NVARCHAR(4000),
+	@nType TINYINT,
+    @kObjektPk INT ,
+    @nObjekt INT ,
+	@dErstellt DATETIME = GETDATE
+AS
+    SET NOCOUNT ON;
+    SET ANSI_NULLS ON;
+    SET ANSI_NULL_DFLT_ON ON;
+    SET ANSI_PADDING ON;
+    SET CONCAT_NULL_YIELDS_NULL ON;
+    SET XACT_ABORT OFF;
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+   
+    BEGIN TRY
+        BEGIN TRANSACTION;
+        DECLARE @kAbrechnungPosVorhanden INT;       
+        DECLARE @nAnzahlVorhanden [DECIMAL](25,13);     
+		DECLARE @TYPE_FREIPOSITION INT = 0;
+		DECLARE @TYPE_ARTIKEL INT = 1;
+		DECLARE @TYPE_LAGERKOSTEN INT = 2;
+					
+
+		IF(@kArtikel &gt; 0 AND @fVkNetto &gt; 0)
+		BEGIN
+			DECLARE @kKunde AS INT
+			SELECT @kKunde = kKunde FROM FulfillmentNetwork.tAbrechnung WHERE kAbrechnung = @kAbrechnung
+			SELECT @fMwSt = FulfillmentNetwork.ifAbrechnungSteuersatz(@kKunde,kSteuerklasse) FROM dbo.tArtikel WHERE kArtikel = @kArtikel
+			SET @fVKPreis = @fVkNetto * ( 1 + ( @fMwSt / 100 ) ) 
+		END
+
+        SELECT TOP 1
+                @kAbrechnungPosVorhanden = AbrechnungPos.kAbrechnungPos ,
+				@nAnzahlVorhanden = AbrechnungPos.fAnzahl 
+        FROM    FulfillmentNetwork.tAbrechnungPos AS AbrechnungPos
+        WHERE   CAST(AbrechnungPos.fVKNetto AS DECIMAL(25, 4)) = CAST(@fVkNetto AS DECIMAL(25,
+                                                              4))
+                AND ( ( @nType = @TYPE_ARTIKEL
+                        AND AbrechnungPos.kArtikel = @kArtikel
+                      )
+                      OR (  @nType = @TYPE_FREIPOSITION
+                           AND AbrechnungPos.cBezeichnung = @cBezeichnung
+                         )
+					  OR (  @nType = @TYPE_LAGERKOSTEN
+                           AND AbrechnungPos.cBezeichnung = @cBezeichnung
+                         )
+                    )
+                AND AbrechnungPos.fRabatt = @fRabatt
+                AND AbrechnungPos.fMwSt = @fMwSt
+                AND (AbrechnungPos.cArtNr = @cArtNr OR AbrechnungPos.cArtNr IS NULL AND @cArtNr IS NULL)
+                AND AbrechnungPos.kAbrechnung = @kAbrechnung;
+
+        DECLARE @kAbrechnungPos INT;
+        IF @kAbrechnungPosVorhanden IS NULL
+            BEGIN
+                DECLARE @nSort AS INT = 0;            
+                SELECT  @nSort = MAX(nSort)
+                FROM    FulfillmentNetwork.tAbrechnungPos
+                WHERE   kAbrechnung = @kAbrechnung;
+                SET @nSort = @nSort + 1;
+                IF @nSort IS NULL
+                    SET @nSort = 1;
+									
+			INSERT INTO FulfillmentNetwork.tAbrechnungPos   ( 	kAbrechnung, 	kArtikel, 	kAbrechnungStueckliste, cBezeichnung, 	cArtNr, 	cEinheit, 	fAnzahl, 	fVKNetto, 	fMwSt, 	fVKPreis, 	fRabatt, 	nSort , nType 	)
+			VALUES 											( 	@kAbrechnung, 	@kArtikel, 	0, 						@cBezeichnung, 	@cArtNr, 	@cEinheit, 	@fAnzahl, 	@fVkNetto, 	@fMwSt, @fVKPreis, 	@fRabatt, 	@nSort, @nType 	)
+
+				SELECT  @kAbrechnungPos = SCOPE_IDENTITY();
+                
+            END;
+        ELSE
+            BEGIN     
+				DECLARE @fAnzahlNeu DECIMAL(28,14) = @fAnzahl + @nAnzahlVorhanden;       
+                SET @kAbrechnungPos = @kAbrechnungPosVorhanden;
+                UPDATE FulfillmentNetwork.tAbrechnungPos SET fAnzahl = @fAnzahlNeu WHERE kAbrechnungPos = @kAbrechnungPos
+            END;
+
+
+
+		INSERT INTO FulfillmentNetwork.tAbrechnungEinzelnachweis 	( 	kAbrechnung, 	kAbrechnungPos, 	fAnzahl, 	nObjekt, 	kObjektPk, 	dErstellt , cHinweis 	)
+		VALUES 														( 	@kAbrechnung, 	@kAbrechnungPos, 	@fAnzahl, 	@nObjekt, 	@kObjektPk, @dErstellt , @cHinweis 	);
+
+
+
+        COMMIT;
+    END TRY
+    BEGIN CATCH
+        SELECT  @ErrorMessage = ERROR_MESSAGE() ,
+                @ErrorSeverity = ERROR_SEVERITY() ,
+                @ErrorState = ERROR_STATE();
+        ROLLBACK;
+        RAISERROR (	@ErrorMessage, 
+					@ErrorSeverity,
+					@ErrorState
+		);
+;
+        RETURN;
+    END CATCH;</code></pre>
+</body>
+</html>

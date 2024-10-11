@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spSpeicherplatzInfo</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spSpeicherplatzInfo</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spSpeicherplatzInfo] AS
+BEGIN
+
+	IF OBJECT_ID(&#39;tempdb..#temptable&#39;) IS NOT NULL
+	BEGIN 
+		DROP TABLE #temptable;
+	END
+
+	CREATE TABLE #temptable (Drive CHAR(128), AvailableSpace INT);
+
+	BEGIN TRY
+		INSERT INTO #temptable
+		(
+			Drive,
+			AvailableSpace
+		)
+		SELECT DISTINCT SUBSTRING(volume_mount_point, 1, 1) AS volume_mount_point, available_bytes/1024/1024 AS available_bytes
+		FROM sys.master_files
+		CROSS APPLY sys.dm_os_volume_stats(master_files.database_id, master_files.file_id);
+	END TRY
+	BEGIN CATCH
+	
+	END CATCH
+
+	SELECT 
+		   DB_NAME() AS DbName,
+		   ISNULL(FILEGROUP_NAME(database_files.file_id), &#39;LOG&#39;) [FileGroup],
+		   database_files.physical_name,
+		   SERVERPROPERTY(&#39;Edition&#39;) AS ServerEdition,
+		   database_files.size / 128 AS FileSize,
+		   CAST(FILEPROPERTY(database_files.name, &#39;SpaceUsed&#39;)AS INT)/128 AS UsedSpace,
+		   database_files.size / 128 - CAST(FILEPROPERTY(database_files.name, &#39;SpaceUsed&#39;) AS INT)/128 UnusedSpace,
+		   CASE WHEN database_files.file_id IN (0, 4) AND CAST(SERVERPROPERTY(&#39;Edition&#39;) AS NVARCHAR(129)) LIKE &#39;%Expre%&#39; 
+				THEN 10240 - CAST(FILEPROPERTY(database_files.name, &#39;SpaceUsed&#39;) AS INT)/128
+			ELSE 
+				NULL 
+			END [Max space left until edition limitation],
+		   CASE WHEN database_files.file_id IN (0, 4) AND CAST(SERVERPROPERTY(&#39;Edition&#39;) AS NVARCHAR(129)) LIKE &#39;%Expre%&#39; AND 10240 - CAST(FILEPROPERTY(database_files.name, &#39;SpaceUsed&#39;) AS INT)/128 &lt; temptable.AvailableSpace
+				THEN 10240 - CAST(FILEPROPERTY(database_files.name, &#39;SpaceUsed&#39;)AS INT)/128
+			ELSE
+				temptable.AvailableSpace
+			END [Max growth database]
+	FROM sys.database_files
+	LEFT JOIN #temptable AS temptable ON temptable.Drive = SUBSTRING(database_files.physical_name, 1, 1);
+	
+
+END;</code></pre>
+</body>
+</html>

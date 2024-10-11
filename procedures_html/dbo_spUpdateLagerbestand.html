@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spUpdateLagerbestand</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spUpdateLagerbestand</h1>
+    <p><strong>Description:</strong> Berechnet die Bestände für Artikel und trägt diese in dbo.tLagerbestand ein.</p>
+    <p><strong>Long Description:</strong> Dioe Stored Procedure wird mit einem Type aufgerufen der die Artikel beinhaltet die neu berechnet werden sollen. Alle Werte in tlagerbestand werden neu berechnet.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spUpdateLagerbestand]
+    @Artikel AS dbo.TYPE_spUpdateLagerbestand READONLY,
+	@Debug BIT = 0
+AS
+/*************************************************************************************************************
+Beschreibung:	Berechnet die Best&#228;nde f&#252;r Artikel und tr&#228;gt diese in dbo.tLagerbestand ein.
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+DECLARE @Artikel dbo.TYPE_spUpdateLagerbestand;
+INSERT INTO @Artikel (kArtikel) SELECT TOP(100) kArtikel FROM dbo.tArtikel ORDER BY kArtikel DESC;
+EXEC dbo.spUpdateLagerbestand @Artikel = @Artikel;
+*************************************************************************************************************/
+
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+	DECLARE
+		@DeadlockRetries TINYINT,
+		@cErrStelle VARCHAR(255);
+
+	--------------------------------------------------------------------------------------------------
+	-- Die alte Logik mit dem 3-maligen Schreiben der dbo.tLagerbestand war sehr deadlockanf&#228;llig, insbesondere bei gr&#246;&#223;eren Kunden.
+	-- Deshalb wird nur noch *ein einziger* Schreibvorgang in die dbo.tLagerbestand ganz am Ende gemacht, um so die Sperren m&#246;glichst kurz zu halten
+	-- und dadurch die Wahrscheinlichkeit eines Deadlocks stark zu reduzieren.
+	-- Das erfordert aber, da&#223; alle Zwischenergebnisse, die f&#252;r die Lagerbestandsberechnung der St&#252;cklisten- und Varkombiv&#228;ter ben&#246;tigt werden,
+	-- innerhalb dieser SP (in den Temptabellen) gespeichert werden m&#252;ssen und nicht mehr direkt &#252;ber die Views &#39;Bestand.vBestandStueckliste&#39;
+	-- und &#39;Bestand.vBestandVarkombivater&#39; ermittelt werden k&#246;nnen (da diese auf &#39;vorher&#39; ermittelte Werte der dbo.tLagerbestand zur&#252;ckgreifen)
+	--------------------------------------------------------------------------------------------------
+
+	BEGIN TRY
+		--------------------------------------------------------------------------------------------------
+		-- Temp-Tabelle f&#252;r Lagerbestand erstellen
+		IF OBJECT_ID(&#39;tempdb..#Lagerbestand&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE #Lagerbestand;
+		END;
+		CREATE TABLE #Lagerbestand (
+			-- Artikel-bezogene Spalten
+			kArtikel INT NOT NULL PRIMARY KEY,
+			nArtikelTyp TINYINT NULL, -- 0 = Lagerf&#252;hrender Artikel oder Artikel ohne Bestandsf&#252;hrung / 1 = St&#252;cklistenvater / 2 = Varkombivater
+			nLagerAktiv TINYINT NULL,
+			nLagerKleinerNull TINYINT NULL,
+			nTeilbar TINYINT NULL,
+			nUpdated BIT NULL, -- Sind die #Lagerbestand-Werte dieses DS geschrieben/ge&#228;ndert worden?
+			cDebug VARCHAR(255),
+
+			-- Bestands-bezogene Spalten
+			fLagerbestand DECIMAL(25, 13) NULL,
+			fLagerbestandEigen DECIMAL(25, 13) NULL,
+			fInAuftraegen DECIMAL(25, 13) NULL,
+			fVerfuegbar DECIMAL(25, 13) NULL,
+			fVerfuegbarGesperrt DECIMAL(25, 13) NULL,
+			fAuslieferungGesperrt DECIMAL(25, 13) NULL,
+			fZulauf DECIMAL(25, 13) NULL,
+			fAufEinkaufsliste DECIMAL(25, 13) NULL,
+			dLieferdatum DATETIME NULL
+		);
+
+		--------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;Alle &#252;bergebenen Artikel samt deren St&#252;cklisten- und Varkombi-V&#228;tern einf&#252;gen in die Queue&#39;
+	
+		;WITH InputMitSLV AS (
+			SELECT	kArtikel
+			FROM	@Artikel AS Input
+			UNION
+			SELECT	DISTINCT SL.kVaterArtikel
+			FROM	@Artikel AS Input
+			JOIN	dbo.tStueckliste AS SL ON SL.kArtikel = Input.kArtikel
+		)
+		INSERT INTO	#Lagerbestand (kArtikel, nArtikelTyp, nLagerAktiv, nTeilbar, nLagerKleinerNull, cDebug)
+		SELECT		Art.kArtikel,
+					CASE
+						WHEN Art.nIstVater = 1 THEN 2 -- Varkombivater
+						WHEN Art.kStueckliste &gt; 0 THEN 1 -- St&#252;cklistenvater
+						ELSE 0 -- Lagerf&#252;hrender Artikel (normal) oder keine Bestandsf&#252;hrung
+					END AS nArtikeltyp,
+					CASE WHEN Art.cLagerAktiv = &#39;Y&#39; THEN 1 ELSE 0 END AS nLagerAktiv,
+					CASE WHEN Art.cTeilbar = &#39;Y&#39; THEN 1 ELSE 0 END AS nTeilbar,
+					CASE WHEN Art.cLagerKleinerNull = &#39;Y&#39; THEN 1 ELSE 0 END AS nLagerKleinerNull,
+					&#39;Artikel aus @Artikel&#39; AS cDebug
+		FROM	dbo.tArtikel AS Art
+		JOIN	(
+					SELECT	kArtikel
+					FROM	InputMitSLV
+					UNION
+					SELECT	DISTINCT Art.kVaterArtikel
+					FROM	InputMitSLV AS I
+					JOIN	dbo.tArtikel AS Art ON I.kArtikel = Art.kArtikel
+					WHERE	Art.kVaterArtikel &gt; 0
+				) AS InputGesamt ON InputGesamt.kArtikel = Art.kArtikel
+
+		--------------------------------------------------------------------------------------------------
+		-- Zus&#228;tzlich alle St&#252;cklistenkinder hinzuf&#252;gen, die bisher noch nicht in der Queue sind,
+		-- da diese f&#252;r die Intra-SP-Errechnung des Lagerbestands der St&#252;cklisten-V&#228;ter notwendig sind
+		SET @cErrStelle = &#39;Intra-Query-SL-Kinder (INSERT)&#39;
+
+		INSERT INTO	#Lagerbestand (kArtikel, nArtikelTyp, nLagerAktiv, nLagerKleinerNull, nTeilbar, cDebug)
+		SELECT	DISTINCT
+				SL.kArtikel,
+				0 AS nArtikelTyp,
+				CASE WHEN Art.cLagerAktiv = &#39;Y&#39; THEN 1 ELSE 0 END AS nLagerAktiv,
+				CASE WHEN Art.cTeilbar = &#39;Y&#39; THEN 1 ELSE 0 END AS nTeilbar,
+				CASE WHEN Art.cLagerKleinerNull = &#39;Y&#39; THEN 1 ELSE 0 END AS nLagerKleinerNull,
+				@cErrStelle AS cDebug
+		FROM	#Lagerbestand AS Tmp
+		JOIN	dbo.tStueckliste AS SL ON SL.kVaterArtikel = Tmp.kArtikel
+		JOIN	dbo.tArtikel AS Art ON Art.kArtikel = SL.kArtikel
+		WHERE	NOT EXISTS(SELECT 1 FROM #Lagerbestand AS Tmp WHERE Tmp.kArtikel = SL.kArtikel)
+
+		--------------------------------------------------------------------------------------------------
+		-- Zus&#228;tzlich alle Varkombi-Kinder hinzuf&#252;gen, die bisher noch nicht in der Queue sind,
+		-- da diese f&#252;r die Intra-SP-Errechnung des Lagerbestands der Varcombi-V&#228;ter notwendig sind
+		-- Achtung: Falls diese fehlenden Varkombi-Kinder St&#252;cklisten-V&#228;ter sind, m&#252;ssen auch deren
+		-- St&#252;cklisten-Kinder ber&#252;cksichtigt werden
+		SET @cErrStelle = &#39;Intra-Query-Varkombi-Kinder (INSERT)&#39;
+
+		;WITH VarkombiKinder AS (
+			SELECT	Art.kArtikel
+			FROM	#Lagerbestand AS Tmp
+			JOIN	dbo.tArtikel AS Art ON Art.kVaterArtikel = Tmp.kArtikel
+			WHERE	NOT EXISTS(SELECT 1 FROM #Lagerbestand AS Tmp WHERE Tmp.kArtikel = Art.kArtikel)
+			UNION
+			SELECT	SL.kArtikel
+			FROM	#Lagerbestand AS Tmp
+			JOIN	dbo.tArtikel AS Art ON Art.kVaterArtikel = Tmp.kArtikel
+			JOIN	dbo.tStueckliste AS SL ON SL.kStueckliste = Art.kStueckliste
+			WHERE	NOT EXISTS(SELECT 1 FROM #Lagerbestand AS Tmp WHERE Tmp.kArtikel = SL.kArtikel)
+		)
+		INSERT INTO	#Lagerbestand (kArtikel, nArtikelTyp, nLagerAktiv, nLagerKleinerNull, nTeilbar, cDebug)
+		SELECT	DISTINCT
+				Art.kArtikel,
+				CASE WHEN kStueckliste &gt; 0 THEN 1 ELSE 0 END AS nArtikelTyp,
+				CASE WHEN Art.cLagerAktiv = &#39;Y&#39; THEN 1 ELSE 0 END AS nLagerAktiv,
+				CASE WHEN Art.cTeilbar = &#39;Y&#39; THEN 1 ELSE 0 END AS nTeilbar,
+				CASE WHEN Art.cLagerKleinerNull = &#39;Y&#39; THEN 1 ELSE 0 END AS nLagerKleinerNull,
+				@cErrStelle AS cDebug
+		FROM	VarkombiKinder AS Input
+		JOIN	dbo.tArtikel AS Art ON Art.kArtikel = Input.kArtikel
+		WHERE	NOT EXISTS(SELECT 1 FROM #Lagerbestand AS Tmp WHERE Tmp.kArtikel = Input.kArtikel)
+
+		--------------------------------------------------------------------------------------------------
+		-- (1) Errechnung Lagerbestand f&#252;r Lagerartikel (oder Artikel ohne Bestandsf&#252;hrung)
+		SET @cErrStelle = &#39;(1) Errechnung Lagerbestand f&#252;r Lagerartikel (oder Artikel ohne Bestandsf&#252;hrung)&#39;
+
+		UPDATE	TempLB
+		SET	
+					TempLB.fLagerbestand = ISNULL(BestBA.fBestand, 0.0) + ISNULL(BestLief.fBestand, 0.0),
+					TempLB.fVerfuegbar = ISNULL(CASE
+							WHEN TempLB.nLagerAktiv = 1
+								THEN ISNULL(BestBA.fBestand, 0.0)
+										+ ISNULL(BestVirt.fBestand, 0.0)
+										+ ISNULL(BestLief.fBestand,0.0)
+										- ISNULL(BestIA.fInAuftraegen,0.0)
+										- ISNULL(BestBA.fBestandGesperrtFuerVerfuegbar, 0.0)
+								ELSE 0.0
+							END, 0.0),
+					TempLB.fVerfuegbarGesperrt = ISNULL(BestBA.fBestandGesperrtFuerVerfuegbar, 0.0),
+					TempLB.fZulauf = ISNULL(BestZ.fZulauf, 0.0) + ISNULL(BestVirt.fZulauf, 0.0),
+					TempLB.fAufEinkaufsliste = ISNULL(BestEL.fAnzahl, 0.0),
+					TempLB.dLieferdatum = BestZ.dLieferdatum,
+					TempLB.fLagerbestandEigen = ISNULL(BestBA.fBestand, 0.0),
+					TempLB.fInAuftraegen = ISNULL(BestIA.fInAuftraegen, 0.0),
+					TempLB.fAuslieferungGesperrt = ISNULL(BestBA.fBestandGesperrtFuerAuslieferung, 0.0),
+					TempLB.nUpdated = 1,
+					TempLB.cDebug = ISNULL(TempLB.cDebug, &#39;&#39;) + &#39; + UPD(1)&#39;
+		FROM		#Lagerbestand AS TempLB
+		LEFT JOIN	Bestand.vBestandBestandsartikel AS BestBA ON BestBA.kArtikel = TempLB.kArtikel
+		LEFT JOIN	Bestand.vBestandLieferanten AS BestLief ON BestLief.kArtikel = TempLB.kArtikel		
+		LEFT JOIN	Bestand.vInAuftraegen AS BestIA ON BestIA.kArtikel = TempLB.kArtikel
+		LEFT JOIN	Bestand.vZulauf AS BestZ ON BestZ.kArtikel = TempLB.kArtikel
+		LEFT JOIN	Bestand.vAufEinkaufsliste AS BestEL ON BestEL.kArtikel = TempLB.kArtikel		
+		LEFT JOIN	Bestand.vBestandVirtuell AS BestVirt ON BestVirt.kArtikel = TempLB.kArtikel		
+		WHERE		TempLB.nArtikelTyp = 0; -- 0 = Lagerf&#252;hrender Artikel (normal) oder keine Bestandsf&#252;hrung
+
+		--------------------------------------------------------------------------------------------------
+		-- (2) Aktualisierung des Bestands der St&#252;cklisten-V&#228;ter
+		SET @cErrStelle = &#39;(2) Aktualisierung des Bestands der St&#252;cklisten-V&#228;ter&#39;
+
+		UPDATE		TempLB
+		SET			TempLB.fLagerbestand = BestSL.fBestand,
+					TempLB.fVerfuegbar = BestSL.fVerfuegbar,
+					TempLB.fVerfuegbarGesperrt = BestSL.fBestandGesperrtVerfuegbar,
+					TempLB.fZulauf = BestSL.fZulauf,
+					TempLB.fAufEinkaufsliste = BestSL.fAufEinkaufsliste,
+					TempLB.dLieferdatum = BestSL.dLieferdatum,
+					TempLB.fLagerbestandEigen = BestSL.fBestandEigen,
+					TempLB.fInAuftraegen = ISNULL(BestIA.fInAuftraegen, 0.0),
+					TempLB.fAuslieferungGesperrt = BestSL.fBestandGesperrtAuslieferung,
+					TempLB.nUpdated = 1,
+					TempLB.cDebug = ISNULL(TempLB.cDebug, &#39;&#39;) + &#39; + UPD(2)&#39;
+
+		FROM		#Lagerbestand AS TempLB
+		-- Die nachfolgende Teilquery (Subselect mit Alias BestSL) entspricht View Bestand.vBestandStueckliste,
+		-- bei der dbo.tLagerbestand durch Temp-Tabelle #Lagerbestand ersetzt ist
+		JOIN		(
+						SELECT
+								A.kArtikel,
+								A.cArtNr,
+								A.kStueckliste,
+								CASE
+									WHEN SLD.fLagerbestandDominant = 1000000000.0 AND SLD.fLagerbestandNichtDominant = 1000000000.0 THEN 0.0
+									WHEN SLD.fLagerbestandDominant = 1000000000.0 THEN SLD.fLagerbestandNichtDominant
+									ELSE SLD.fLagerbestandDominant 
+								END AS fBestand,
+								CASE
+									WHEN SLD.fLagerbestandEigenDominant = 1000000000.0 AND SLD.fLagerbestandEigenNichtDominant = 1000000000.0 THEN 0.0
+									WHEN SLD.fLagerbestandEigenDominant = 1000000000.0 THEN SLD.fLagerbestandEigenNichtDominant
+									ELSE SLD.fLagerbestandEigenDominant 
+								END AS fBestandEigen,
+								CASE
+									WHEN SLD.fVerfuegbarGesperrtDominant = 1000000000.0 AND SLD.fVerfuegbarGesperrtNichtDominant = 1000000000.0 THEN 0.0
+									WHEN SLD.fVerfuegbarGesperrtDominant = 1000000000.0 THEN SLD.fVerfuegbarGesperrtNichtDominant
+									ELSE SLD.fVerfuegbarGesperrtDominant
+								END AS fBestandGesperrtVerfuegbar,
+								CASE
+									WHEN SLD.fAuslieferungGesperrtDominant = 1000000000.0 AND SLD.fAuslieferungGesperrtNichtDominant = 1000000000.0 THEN 0.0
+									WHEN SLD.fAuslieferungGesperrtDominant = 1000000000.0 THEN SLD.fAuslieferungGesperrtNichtDominant
+									ELSE SLD.fAuslieferungGesperrtDominant 
+								END AS fBestandGesperrtAuslieferung,
+								CASE
+									WHEN SLD.fVerfuegbarDominant = 1000000000.0 AND SLD.fVerfuegbarNichtDominant = 1000000000.0 THEN 0.0
+									WHEN SLD.fVerfuegbarDominant = 1000000000.0 THEN SLD.fVerfuegbarNichtDominant
+									ELSE SLD.fVerfuegbarDominant 
+								END AS fVerfuegbar,
+								CASE
+									WHEN SLD.fZulaufDominant = 1000000000.0 AND SLD.fZulaufNichtDominant = 1000000000.0 THEN 0.0
+									WHEN SLD.fZulaufDominant = 1000000000.0 THEN SLD.fZulaufNichtDominant
+									ELSE SLD.fZulaufDominant 
+								END AS fZulauf,
+								SLD.dLieferdatum,
+								SLD.fAufEinkaufsliste
+
+						FROM	dbo.tArtikel AS A
+						JOIN	(
+									SELECT
+										VaterA.kArtikel AS kVaterArtikel,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN KindA.cLagerKleinerNull = &#39;Y&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fLagerbestand / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fLagerbestand / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fLagerbestandDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fLagerbestand / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fLagerbestand / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fLagerbestandNichtDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN KindA.cLagerKleinerNull = &#39;Y&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fLagerbestandEigen / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fLagerbestandEigen / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fLagerbestandEigenDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fLagerbestandEigen / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fLagerbestandEigen / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fLagerbestandEigenNichtDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN KindA.cLagerKleinerNull = &#39;Y&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN (LB.fVerfuegbar - KindA.nPuffer) / SL.fAnzahl
+												ELSE CAST(FLOOR((LB.fVerfuegbar - KindA.nPuffer) / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fVerfuegbarDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN (LB.fVerfuegbar - KindA.nPuffer) / SL.fAnzahl
+												ELSE CAST(FLOOR((LB.fVerfuegbar - KindA.nPuffer) / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fVerfuegbarNichtDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN KindA.cLagerKleinerNull = &#39;Y&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fVerfuegbarGesperrt / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fVerfuegbarGesperrt / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fVerfuegbarGesperrtDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fVerfuegbarGesperrt / SL.fAnzahl
+												ELSE CAST(CEILING(LB.fVerfuegbarGesperrt / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fVerfuegbarGesperrtNichtDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN KindA.cLagerKleinerNull = &#39;Y&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fZulauf / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fZulauf / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fZulaufDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fZulauf / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fZulauf / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fZulaufNichtDominant,
+										MIN(CASE
+											WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fAufEinkaufsliste / SL.fAnzahl
+											ELSE CAST(FLOOR(LB.fAufEinkaufsliste / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fAufEinkaufsliste,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN KindA.cLagerKleinerNull = &#39;Y&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fAuslieferungGesperrt / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fAuslieferungGesperrt / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fAuslieferungGesperrtDominant,
+										MIN(CASE
+												WHEN KindA.cLagerAktiv = &#39;N&#39; THEN 1000000000.0
+												WHEN VaterA.cTeilbar = &#39;Y&#39; THEN LB.fAuslieferungGesperrt / SL.fAnzahl
+												ELSE CAST(FLOOR(LB.fAuslieferungGesperrt / SL.fAnzahl) AS DECIMAL(25,13))
+											END) AS fAuslieferungGesperrtNichtDominant,
+										MAX(LB.dLieferdatum) AS dLieferdatum
+
+									FROM dbo.tArtikel AS VaterA
+									JOIN dbo.tStueckliste AS SL ON SL.kStueckliste = VaterA.kStueckliste
+									JOIN dbo.tArtikel AS KindA ON KindA.kArtikel = SL.kArtikel
+									JOIN #Lagerbestand AS LB ON LB.kArtikel = KindA.kArtikel
+									GROUP BY VaterA.kArtikel
+								) AS SLD ON SLD.kVaterArtikel = A.kArtikel
+					) AS BestSL ON BestSL.kArtikel = TempLB.kArtikel
+		LEFT JOIN	Bestand.vInAuftraegen AS BestIA ON BestIA.kArtikel = TempLB.kArtikel
+		WHERE		TempLB.nArtikeltyp = 1; -- 1 = St&#252;cklisten-V&#228;ter
+	
+		--------------------------------------------------------------------------------------------------
+		-- (3) Aktualisierung des Bestands der Varkombi-V&#228;ter
+		SET @cErrStelle = &#39;(3) Aktualisierung des Bestands der Varkombi-V&#228;ter&#39;
+
+		UPDATE	TempLB
+		SET
+					TempLB.fLagerbestand = BestVarKV.fBestand,
+					TempLB.fVerfuegbar = BestVarKV.fVerfuegbar,
+					TempLB.fVerfuegbarGesperrt = BestVarKV.fBestandGesperrtFuerVerfuegbar,
+					TempLB.fZulauf = BestVarKV.fZulauf,
+					TempLB.fAufEinkaufsliste = BestVarKV.fAufEinkaufsliste,
+					TempLB.dLieferdatum = BestVarKV.dLieferdatum,
+					TempLB.fLagerbestandEigen = BestVarKV.fBestandEigen,
+					TempLB.fInAuftraegen = BestVarKV.fInAuftraegen,
+					TempLB.fAuslieferungGesperrt = BestVarKV.fBestandGesperrtFuerAuslieferung,
+					TempLB.nUpdated = 1,
+					TempLB.cDebug = ISNULL(TempLB.cDebug, &#39;&#39;) + &#39; + UPD(3)&#39;
+
+		FROM	#Lagerbestand AS TempLB
+		-- Die nachfolgende Teilquery (Subselect mit Alias BestVarKV) entspricht View Bestand.vBestandVarkombivater,
+		-- wobei nur dbo.tLagerbestand durch Temp-Tabelle #Lagerbestand ersetzt ist
+		JOIN	(
+					SELECT 
+								KindA.kVaterArtikel AS kArtikel,
+								SUM(LB.fLagerbestand) AS fBestand,
+								SUM(CASE WHEN KindA.cLagerAktiv = &#39;Y&#39; AND LB.fLagerbestandEigen &gt; 0.0 THEN LB.fLagerbestandEigen ELSE 0.0 END) AS fBestandEigen,
+								SUM(CASE WHEN KindA.cLagerAktiv = &#39;Y&#39; AND LB.fVerfuegbarGesperrt &gt; 0.0 THEN LB.fVerfuegbarGesperrt ELSE 0.0 END) AS fBestandGesperrtFuerVerfuegbar,
+								SUM(CASE WHEN KindA.cLagerAktiv = &#39;Y&#39; AND LB.fAuslieferungGesperrt &gt; 0.0 THEN LB.fAuslieferungGesperrt ELSE 0.0 END) AS fBestandGesperrtFuerAuslieferung,
+								SUM(LB.fInAuftraegen) AS fInAuftraegen,
+								SUM(CASE WHEN KindA.cLagerAktiv = &#39;Y&#39; AND LB.fVerfuegbar &gt; 0.0 THEN LB.fVerfuegbar ELSE 0.0 END) AS fVerfuegbar,
+								SUM(LB.fZulauf) AS fZulauf,
+								MIN(LB.dLieferdatum) AS dLieferdatum,
+								SUM(LB.fAufEinkaufsliste) AS fAufEinkaufsliste
+					FROM		dbo.tArtikel AS KindA
+					JOIN		#Lagerbestand AS LB ON LB.kArtikel = KindA.kArtikel
+					WHERE		KindA.kVaterArtikel &gt; 0
+					GROUP BY	KindA.kVaterArtikel
+				) AS BestVarKV ON BestVarKV.kArtikel = TempLB.kArtikel
+		WHERE	TempLB.nArtikelTyp = 2; -- 2 = Varkombi-V&#228;ter
+
+		IF @Debug = 1
+		BEGIN
+			SELECT &#39;Debug #Lagerbestand&#39; AS Was, * FROM #Lagerbestand ORDER BY kArtikel
+		END
+
+		--------------------------------------------------------------------------------------------------
+		-- (4) Finales Zur&#252;ckschreiben der Daten nach dbo.tLagerbestand
+		SET @cErrStelle = &#39;(4) Finales Zur&#252;ckschreiben der Daten nach dbo.tLagerbestand&#39;
+
+		SET @DeadlockRetries = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+
+	DeadlockRetry:
+		BEGIN TRY
+			IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;	
+
+			MERGE INTO dbo.tLagerbestand WITH (HOLDLOCK) AS LB
+			USING #Lagerbestand AS TempLB ON (LB.kArtikel = TempLB.kArtikel)
+			WHEN MATCHED THEN
+				UPDATE SET
+					LB.nArtikelTyp = TempLB.nArtikelTyp,
+					LB.nLagerAktiv = TempLB.nLagerAktiv,
+					LB.nTeilbar = TempLB.nTeilbar,
+					LB.nLagerKleinerNull = TempLB.nLagerKleinerNull,
+
+					LB.fLagerbestand = ISNULL(TempLB.fLagerbestand, 0.0),
+					LB.fLagerbestandEigen = ISNULL(TempLB.fLagerbestandEigen, 0.0),
+					LB.fInAuftraegen = ISNULL(TempLB.fInAuftraegen, 0.0),
+					LB.fVerfuegbar = ISNULL(TempLB.fVerfuegbar, 0.0),
+					LB.fVerfuegbarGesperrt = ISNULL(TempLB.fVerfuegbarGesperrt, 0.0),
+					LB.fAuslieferungGesperrt = ISNULL(TempLB.fAuslieferungGesperrt, 0.0),
+					LB.fAufEinkaufsliste = ISNULL(TempLB.fAufEinkaufsliste, 0.0),
+					LB.fZulauf = ISNULL(TempLB.fZulauf, 0.0),
+					LB.dLieferdatum = TempLB.dLieferdatum
+			WHEN NOT MATCHED THEN
+				INSERT	(kArtikel, nArtikelTyp, nLagerAktiv, nTeilbar, nLagerKleinerNull,
+						fLagerbestand, fLagerbestandEigen, fInAuftraegen,
+						fVerfuegbar, fVerfuegbarGesperrt, fAuslieferungGesperrt,
+						fAufEinkaufsliste, fZulauf, dLieferdatum)
+				VALUES	(TempLB.kArtikel, TempLB.nArtikelTyp, TempLB.nLagerAktiv, TempLB.nTeilbar, TempLB.nLagerKleinerNull,
+						ISNULL(TempLB.fLagerbestand, 0.0), ISNULL(TempLB.fLagerbestandEigen, 0.0), ISNULL(TempLB.fInAuftraegen, 0.0),
+						ISNULL(TempLB.fVerfuegbar, 0.0), ISNULL(TempLB.fVerfuegbarGesperrt, 0.0), ISNULL(TempLB.fAuslieferungGesperrt, 0.0),
+						ISNULL(TempLB.fAufEinkaufsliste, 0.0), ISNULL(TempLB.fZulauf, 0.0), TempLB.dLieferdatum);
+
+			IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+		END TRY
+		BEGIN CATCH
+			BEGIN TRY
+				EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+				IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+			END TRY
+			BEGIN CATCH
+				IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+			END CATCH;
+			THROW;
+		END CATCH
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION
+		SET @DeadlockRetries = 0;
+		EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+		THROW;
+	END CATCH
+END</code></pre>
+</body>
+</html>

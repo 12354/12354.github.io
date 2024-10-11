@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artikel.spWarenbestaendeUmbuchenNachLoeschenVonZustand</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Artikel.spWarenbestaendeUmbuchenNachLoeschenVonZustand</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Artikel].[spWarenbestaendeUmbuchenNachLoeschenVonZustand]
+	@kBenutzer INT,
+    @kArtikelSource INT,   -- Best&#228;nde vom QuellArtikel werden ausgebucht
+    @kArtikelDestination INT, -- Best&#228;nde von Zielartikel werden eingebucht
+	@kKommentarFuerLog NVARCHAR(100) -- der Kommentar f&#252;r das Log
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+--
+-- Funktion: Diese Prozedur soll genutzt werden, um Bestaende von einem Artikel auf den anderen zu uebertragen (bspw. wenn ein Artikelzustand geloescht wird)
+--
+
+	BEGIN TRY
+
+
+		--
+		--  Bestand vom Quellartikel der als Zielartikel eingebucht werden soll.
+		--
+		DECLARE @xWarenlagerEingaenge XML;
+	    SET @xWarenlagerEingaenge = (
+	    SELECT @kArtikelDestination AS kArtikel,kWarenlagerPlatz,@kBenutzer AS kBenutzer,fAnzahlAktuell AS fAnzahl,fEKEinzel,cChargenNr,dMHD, @kKommentarFuerLog AS cKommentar,kSessionId,150 AS kBuchungsart, 0 AS kBestellPosUmlagerung,0 AS kRTMRetourePos
+	    FROM dbo.tWarenLagerEingang
+		WHERE tWarenLagerEingang.kArtikel = @kArtikelSource
+		AND tWarenLagerEingang.fAnzahlAktuell &gt; 0
+	    FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+	    );
+
+
+	    --
+		-- Bestand vom Quellartikel der ausgebucht werden soll.
+		--
+		DECLARE @xWarenlagerEingaengeZumAusbuchen XML;
+	    SET @xWarenlagerEingaengeZumAusbuchen = (
+
+	    SELECT kWarenLagerEingang,0 AS kLieferscheinPos,fAnzahlAktuell AS fAnzahl,@kKommentarFuerLog AS cKommentar,@kBenutzer AS kBenutzer,150 AS kBuchungsart
+	    FROM dbo.tWarenLagerEingang
+		WHERE tWarenLagerEingang.kArtikel = @kArtikelSource
+		AND tWarenLagerEingang.fAnzahlAktuell &gt; 0
+	    FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+	    );
+
+		-- Falls Warenbestaende existieren
+		IF (@xWarenlagerEingaenge IS NOT NULL AND @xWarenlagerEingaengeZumAusbuchen IS NOT NULL)
+		BEGIN
+
+			--
+			-- Bestaende werden in einer Transaction gebucht. Bei einer Exception werden beide Vorgaenge reverted.
+			--
+			BEGIN TRANSACTION
+
+				EXEC dbo.spWarenlagerEingangSchreiben @xWarenlagerEingaenge;
+				EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerEingaengeZumAusbuchen;
+
+			COMMIT;
+
+		END;
+    
+
+	END TRY
+
+	BEGIN CATCH
+		IF @@TRANCOUNT&gt; 0 -- falls fehler aufgetreten sind, rollback ausfuehren
+		BEGIN
+			ROLLBACK;
+		END;
+
+		DECLARE @ErrorMessage NVARCHAR(4000);
+		DECLARE @ErrorSeverity INT;
+		DECLARE @ErrorState INT;
+
+		SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+		INSERT INTO dbo.tLog (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+	    VALUES (GETDATE(),  0,   @ErrorMessage,   97,  1);
+
+		RAISERROR (	@ErrorMessage, 
+					@ErrorSeverity,
+					@ErrorState
+				);
+
+	END CATCH</code></pre>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spIstWarenlagerAllenHaendlerVonArtikelnAuthorisiert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spIstWarenlagerAllenHaendlerVonArtikelnAuthorisiert</h1>
+    <p><strong>Description:</strong> Prüft, ob alle Händler der FFN-Fremd Artikel für das Ziellager authorisiert sind.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROC [FulfillmentNetwork].[spIstWarenlagerAllenHaendlerVonArtikelnAuthorisiert]
+    @artikel AS [FulfillmentNetwork].[TYPE_spIstWarenlagerAllenHaendlerVonArtikelnAuthorisiert] READONLY,
+    @kWarenlagerZiel AS INT,
+	@ok TINYINT = 0 OUTPUT
+AS
+IF EXISTS
+(
+    SELECT *
+    FROM @artikel AS Artikel
+        JOIN FulfillmentNetwork.tProductRef AS ProductRef
+            ON ProductRef.kArtikel = Artikel.kArtikel AND ProductRef.nType = 2
+        JOIN dbo.tliefartikel AS LiefArtikel
+            ON LiefArtikel.tArtikel_kArtikel = ProductRef.kArtikel
+               AND LiefArtikel.nStandard = 1
+        LEFT JOIN FulfillmentNetwork.tLieferantWarenlager AS WarenlagerZuordnung
+            ON WarenlagerZuordnung.kLieferant = LiefArtikel.tLieferant_kLieferant
+               AND WarenlagerZuordnung.kWarenlager = @kWarenlagerZiel
+   WHERE WarenlagerZuordnung.kWarenlager IS NULL
+)
+BEGIN
+    SET @ok = 0;
+END;
+ELSE
+BEGIN
+    SET @ok = 1;
+END;</code></pre>
+</body>
+</html>

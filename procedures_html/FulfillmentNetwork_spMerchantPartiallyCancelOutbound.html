@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spMerchantPartiallyCancelOutbound</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spMerchantPartiallyCancelOutbound</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spMerchantPartiallyCancelOutbound]
+@kLieferschein INT
+,@kBenutzer INT         
+                  
+AS
+--
+-- Korrigiert alle Warenlager Aus- und Eing&#228;nge, sowie die Lieferschein Positionen so, dass die vom Fulfiller noch nicht ausgelieferte Menge wieder freigegeben wird und neu ausgeliefert werden kann. Der Auftrag ist dann teilgeliefert.
+--
+BEGIN
+	DECLARE @OldContextInfo VARBINARY(128)
+	DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+    DECLARE @retry INT;
+    SET @retry = 5;
+    WHILE @retry &gt; 0
+        BEGIN
+            IF(CONTEXT_INFO() IS NOT NULL)
+                BEGIN
+                    SET @OldContextInfo = CONTEXT_INFO();
+                END;
+            ELSE
+                BEGIN
+                    SET @OldContextInfo = 0x0000;
+                END;
+
+            BEGIN TRY
+                BEGIN TRANSACTION
+					DECLARE @kLieferscheinPos AS INT
+					
+					DECLARE lieferscheinPos_cursor CURSOR FAST_FORWARD LOCAL FOR
+					SELECT kLieferscheinPos FROM dbo.tLieferscheinPos WHERE kLieferschein = @kLieferschein
+                    OPEN lieferscheinPos_cursor;
+					FETCH NEXT FROM lieferscheinPos_cursor INTO @kLieferscheinPos;
+					WHILE @@FETCH_STATUS = 0
+					BEGIN
+
+
+						DECLARE @AktuelleAuslieferungen AS FulfillmentNetwork.TYPE_ifMerchantGetWarenlagerEingaenge	
+						DELETE @AktuelleAuslieferungen
+						INSERT INTO @AktuelleAuslieferungen
+						(		
+							kWarenlager,
+							kArtikel,
+							fAnzahl
+						)
+						SELECT 
+							   tWarenLagerPlatz.kWarenLager,
+							   tWarenLagerAusgang.kArtikel,
+							   SUM(tWarenLagerAusgang.fAnzahl) AS fAnzahl
+						FROM dbo.tWarenLagerAusgang
+						JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tWarenLagerAusgang.kWarenLagerPlatz
+						WHERE tWarenLagerAusgang.kLieferscheinPos = @kLieferscheinPos
+						GROUP BY tWarenLagerPlatz.kWarenLager,
+							   tWarenLagerAusgang.kArtikel
+
+						DECLARE @KorrekteWarenlagerEingaenge TABLE 
+						(
+							kArtikel INT NOT NULL, 
+							kWarenlagerEingang INT NOT NULL, 
+							kLieferscheinPos INT NULL, 
+							fAnzahl DECIMAL(25,13) NOT NULL,
+							kMerchantStockChange INT NULL,
+							cNote  NVARCHAR(255) NULL
+						);
+						DELETE @KorrekteWarenlagerEingaenge
+						INSERT INTO @KorrekteWarenlagerEingaenge
+						SELECT 
+							ifMerchantGetWarenlagerEingaenge.kArtikel,
+                            ifMerchantGetWarenlagerEingaenge.kWarenLagerEingang,
+                            ifMerchantGetWarenlagerEingaenge.kLieferscheinPos,
+                            ifMerchantGetWarenlagerEingaenge.fAnzahl,
+                            ifMerchantGetWarenlagerEingaenge.kMerchantStockChange,
+							ifMerchantGetWarenlagerEingaenge.cNote
+						FROM FulfillmentNetwork.ifMerchantGetWarenlagerEingaenge(@kLieferscheinPos,@AktuelleAuslieferungen)
+
+
+						DECLARE @GeloeschteWarenlagerausgangsinformatioen AS Table(kWarenlagereingang INT, kArtikel INT, fAnzahl DECIMAL (28, 14),fAnzahlAlt DECIMAL (28, 14), kLieferscheinPos INT, kWarenlagerPlatz INT);
+						DELETE @GeloeschteWarenlagerausgangsinformatioen
+
+						--
+						-- Warenlagerausg&#228;nge anpassen
+						--
+						SET CONTEXT_INFO 0x5089;
+						UPDATE dbo.tWarenLagerAusgang SET fAnzahl = tWarenLagerAusgang.fAnzahl - [@KorrekteWarenlagerEingaenge].fAnzahl
+						OUTPUT DELETED.kWarenLagerEingang, DELETED.kArtikel, DELETED.fAnzahl,Inserted.fAnzahl, DELETED.kLieferscheinPos, Deleted.kWarenLagerPlatz
+							INTO @GeloeschteWarenlagerausgangsinformatioen(kWarenlagereingang, kArtikel, fAnzahlAlt,fAnzahl, kLieferscheinPos, kWarenlagerPlatz)
+						FROM dbo.tWarenLagerAusgang
+							JOIN @KorrekteWarenlagerEingaenge ON 
+						[@KorrekteWarenlagerEingaenge].kWarenlagerEingang = tWarenLagerAusgang.kWarenLagerEingang AND [@KorrekteWarenlagerEingaenge].kLieferscheinPos = tWarenLagerAusgang.kLieferscheinPos
+						WHERE [@KorrekteWarenlagerEingaenge].kLieferscheinPos = @kLieferscheinPos AND kMerchantStockChange IS NULL
+
+						--
+						-- Warenlagerausg&#228;nge mit fAnzahl 0 l&#246;schen
+						--
+						DELETE dbo.tWarenLagerAusgang
+						OUTPUT DELETED.kWarenLagerEingang, DELETED.kArtikel, DELETED.fAnzahl, DELETED.kLieferscheinPos, Deleted.kWarenLagerPlatz
+							INTO @GeloeschteWarenlagerausgangsinformatioen(kWarenlagereingang, kArtikel, fAnzahl, kLieferscheinPos, kWarenlagerPlatz)
+						FROM dbo.tWarenLagerAusgang
+							JOIN @KorrekteWarenlagerEingaenge ON 
+						[@KorrekteWarenlagerEingaenge].kWarenlagerEingang = tWarenLagerAusgang.kWarenLagerEingang AND [@KorrekteWarenlagerEingaenge].kLieferscheinPos = tWarenLagerAusgang.kLieferscheinPos
+						WHERE [@KorrekteWarenlagerEingaenge].kLieferscheinPos = @kLieferscheinPos AND kMerchantStockChange IS NULL AND dbo.tWarenLagerAusgang.fAnzahl = 0
+							
+						--
+						-- fAnzahlAktuell in Wareneing&#228;ngen korrigieren
+						--
+						SET CONTEXT_INFO 0x5091;
+						UPDATE dbo.tWarenLagerEingang
+						SET fAnzahlAktuell = fAnzahlAktuell + WarenausgaengeKumuliert.fAnzahl
+						FROM dbo.tWarenLagerEingang
+								 JOIN
+							 (
+								 SELECT	kWarenlagereingang,
+										   SUM(Warenausgaenge.fAnzahlAlt - Warenausgaenge.fAnzahl) AS fAnzahl
+								 FROM @GeloeschteWarenlagerausgangsinformatioen AS Warenausgaenge
+								 GROUP BY kWarenlagereingang
+							 ) AS WarenausgaengeKumuliert ON tWarenLagerEingang.kWarenLagerEingang = WarenausgaengeKumuliert.kWarenlagereingang;
+
+						
+						SET CONTEXT_INFO 0x5116;
+						UPDATE dbo.tLieferscheinPos
+						SET fAnzahl = tLieferscheinPos.fAnzahl - WarenausgaengeKumuliert.fAnzahl
+						FROM dbo.tLieferscheinPos
+								 JOIN
+							 (
+								 SELECT	Warenausgaenge.kLieferscheinPos,
+										   SUM(Warenausgaenge.fAnzahlAlt - Warenausgaenge.fAnzahl) AS fAnzahl
+								 FROM @GeloeschteWarenlagerausgangsinformatioen AS Warenausgaenge
+								 GROUP BY Warenausgaenge.kLieferscheinPos
+							 ) AS WarenausgaengeKumuliert ON tLieferscheinPos.kLieferscheinPos = WarenausgaengeKumuliert.kLieferscheinPos;
+
+
+					--
+                    -- Best&#228;nde aktualisieren
+                    --
+                    DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+					DELETE @typeArtikel
+                    INSERT INTO @typeArtikel (kArtikel)
+                    SELECT DISTINCT kArtikel
+                    FROM @GeloeschteWarenlagerausgangsinformatioen
+
+                    EXEC dbo.spUpdateLagerbestand @typeArtikel;
+
+                    --
+                    -- Best&#228;nde pro Warenlager aktualisieren
+                    --
+                    DECLARE @TYPE_spUpdateLagerbestandProLager AS TYPE_spUpdateLagerbestandProLager;
+					DELETE @TYPE_spUpdateLagerbestandProLager
+                    INSERT INTO @TYPE_spUpdateLagerbestandProLager (kArtikel, kWarenlager)
+                    SELECT	DISTINCT tWarenLagerEingang.kArtikel AS kArtikel,
+                              tWarenLagerPlatz.kWarenLager AS kWarenlager
+                    FROM dbo.tWarenLagerEingang
+                             JOIN dbo.tWarenLagerPlatz ON tWarenLagerEingang.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+                    WHERE tWarenLagerEingang.kWarenLagerEingang IN (SELECT DISTINCT kWarenLagerEingang FROM @GeloeschteWarenlagerausgangsinformatioen);
+
+                    EXEC dbo.spUpdateLagerbestandProLager @TYPE_spUpdateLagerbestandProLager;
+
+
+                    INSERT INTO dbo.tArtikelHistory
+                    (
+                        kWarenLagerPlatz, kArtikel, fAnzahl, dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+                        fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert
+                    )
+                    SELECT Eingang.kWarenLagerPlatz,
+                           Eingang.kArtikel,
+                           SUM(Ausgang.fAnzahlAlt - Ausgang.fAnzahl) ,
+                           GETDATE() AS dErstellt,
+                           @kBenutzer AS kBenutzer,
+                           0 AS kWarenLagerEingang,
+                           LieferscheinPos.kBestellPos AS  kBestellPos,
+                           ISNULL(Eingang.kGutschriftPos,0),
+                           ISNULL(Eingang.fEKEinzel,
+                                  ISNULL(dbo.tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+                           &#39;Fulfillment Auftrag teilstorniert&#39; AS cKommentar,
+                           70 AS kBuchungsart,
+                           LieferscheinPos.kLieferscheinPos AS kLieferscheinPos,
+                           MAX(tlagerbestand.fLagerbestandEigen) AS fLagerBestandGesamt,
+                           MAX(LagerBestandAufPlatz.fAnzahl) AS fLagerBestand, -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+                           0 AS kLieferantenBestellungPos,
+                           Lieferschein.cLieferscheinNr,
+                           Eingang.cChargenNr,
+                           Eingang.dMHD,
+                           ISNULL(dbo.tlagerbestand.fVerfuegbar,0),
+                           ISNULL(dbo.tlagerbestand.fInAuftraegen,0)
+                    FROM @GeloeschteWarenlagerausgangsinformatioen AS Ausgang
+                             JOIN dbo.tWarenLagerEingang AS Eingang ON Eingang.kWarenLagerEingang = Ausgang.kWarenLagerEingang
+                             JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = Eingang.kArtikel
+                             JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = Eingang.kArtikel
+                             JOIN dbo.tLieferscheinPos AS LieferscheinPos ON Ausgang.kLieferscheinPos = LieferscheinPos.kLieferscheinPos
+                             JOIN dbo.tLieferschein AS Lieferschein ON Lieferschein.kLieferschein = LieferscheinPos.kLieferschein
+                             OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fAnzahl
+                                          FROM dbo.tWarenLagerEingang
+                                          WHERE dbo.tWarenLagerEingang.kArtikel = Eingang.kArtikel
+                                            AND dbo.tWarenLagerEingang.kWarenLagerPlatz = Eingang.kWarenlagerPlatz) AS LagerBestandAufPlatz
+                    GROUP BY
+                        Eingang.kWarenLagerPlatz,
+                        Eingang.kArtikel,
+                        Eingang.kBenutzer,
+                        ISNULL(Eingang.kGutschriftPos,0),
+                        ISNULL(Eingang.fEKEinzel,
+                               ISNULL(dbo.tArtikel.fEKNetto,0.0)),
+                        Eingang.cKommentar,
+                        Eingang.kBuchungsart,
+                        LieferscheinPos.kLieferscheinPos,
+                        LieferscheinPos.kBestellPos,
+                        Lieferschein.cLieferscheinNr,
+                        Eingang.cChargenNr,
+                        Eingang.dMHD,
+                        dbo.tlagerbestand.fInAuftraegen,
+                        dbo.tlagerbestand.fVerfuegbar;
+
+
+						FETCH NEXT FROM lieferscheinPos_cursor INTO @kLieferscheinPos;
+					END
+					CLOSE lieferscheinPos_cursor;
+					DEALLOCATE lieferscheinPos_cursor;
+
+					--Offene Pakte &quot;versenden&quot;, damit Lieferschein abgeschlossen wird
+					UPDATE dbo.tVersand SET dVersendet = GETDATE(), cHinweis = LTRIM(cHinweis + &#39; Teilstorniert durch Fulfiller&#39;) WHERE kLieferschein = @kLieferschein AND dVersendet IS NULL
+
+					--Eckdaten neu berechnen
+					DECLARE @Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen
+					INSERT INTO @Auftrag
+					(
+						kAuftrag
+					)
+					SELECT kbestellung FROM dbo.tLieferschein WHERE kLieferschein = @kLieferschein
+					EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftrag -- TYPE_spAuftragEckdatenBerechnen
+					
+					
+                    SET @retry = -1;      
+					SET CONTEXT_INFO @OldContextInfo;              
+                COMMIT
+            END TRY
+            BEGIN CATCH
+                IF(ERROR_NUMBER() = 1205)
+                    BEGIN
+                        SET @retry = @retry - 1;
+                        ROLLBACK;
+                        IF(@retry = 0)
+                            BEGIN
+                                SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+                                RAISERROR (	@ErrorMessage,
+                                    @ErrorSeverity,
+                                    @ErrorState
+                                    );   
+								SET CONTEXT_INFO @OldContextInfo;                             
+                                RETURN;
+                            END
+                        WAITFOR DELAY &#39;00:00:00:5&#39;;
+                    END
+                ELSE
+                    BEGIN
+                        SET @retry = -1;
+                        SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+                        ROLLBACK;
+                        RAISERROR (	@ErrorMessage,
+                            @ErrorSeverity,
+                            @ErrorState
+                            );  
+						SET CONTEXT_INFO @OldContextInfo;                      
+                        RETURN;
+                    END
+            END CATCH  
+			SET CONTEXT_INFO @OldContextInfo;          
+        END
+
+	
+END</code></pre>
+</body>
+</html>

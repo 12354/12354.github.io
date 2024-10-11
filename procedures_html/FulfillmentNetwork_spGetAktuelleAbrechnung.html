@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spGetAktuelleAbrechnung</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spGetAktuelleAbrechnung</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spGetAktuelleAbrechnung]
+    @kFulfillerEinstellungen INT ,
+    @kBenutzer INT ,
+    @kAbrechnung INT OUTPUT ,
+    @nNeueAbrechnung TINYINT OUTPUT
+AS
+    SET NOCOUNT ON;
+    SET ANSI_NULLS ON;
+    SET ANSI_NULL_DFLT_ON ON;
+    SET ANSI_PADDING ON;
+    SET CONCAT_NULL_YIELDS_NULL ON;
+    SET XACT_ABORT OFF;
+
+    DECLARE @kKunde INT;
+    DECLARE @kLieferant INT = 0;
+    DECLARE @kStandardFirmaLieferant INT;
+    DECLARE @cPrefixAbrechnung NVARCHAR(256);
+    DECLARE @cSuffixAbrechnung NVARCHAR(256);
+    DECLARE @nAbrechnungsZeitraum TINYINT;
+    DECLARE @kAbrechnungAktuell INT;
+    DECLARE @cAbrechnungsNummerAktuell NVARCHAR(256) = &#39;&#39;;
+    DECLARE @dAbrechnungInitial DATE;
+    DECLARE @dAbrechnungStart DATE;
+    DECLARE @dAbrechnungEnde DATE;
+    DECLARE @dTagAktuell DATE = CAST(GETDATE() AS DATE);
+
+    SELECT  @kLieferant = Einstellungen.kLieferant ,
+            @kKunde = Einstellungen.kKunde ,
+            @cPrefixAbrechnung = Einstellungen.cPrefixAbrechnung ,
+            @cSuffixAbrechnung = Einstellungen.cSuffixAbrechnung ,
+            @nAbrechnungsZeitraum = Einstellungen.nAbrechnungsZeitraum ,
+            @kAbrechnungAktuell = Einstellungen.kAbrechnung ,
+            @dAbrechnungStart = Einstellungen.dAbrechnungStart ,
+            @dAbrechnungInitial = Einstellungen.dAbrechnungInitial ,
+            @dAbrechnungEnde = Einstellungen.dAbrechnungEnde ,
+            @kStandardFirmaLieferant = Lieferant.nStandardFirma
+    FROM    FulfillmentNetwork.tFulfillerEinstellungen AS Einstellungen
+            JOIN dbo.tlieferant AS Lieferant ON Lieferant.kLieferant = Einstellungen.kLieferant
+    WHERE   kFulfillerEinstellungen = @kFulfillerEinstellungen;
+
+    IF @kLieferant = 0
+        BEGIN
+            DECLARE @cError NVARCHAR(255) = &#39;Fulfillment Lieferant nicht gefunden&#39;;
+            RAISERROR(@cError, 11, 1); 
+            RETURN -1;
+        END;
+
+    IF @kAbrechnungAktuell &gt; 0
+        BEGIN
+            SELECT  @cAbrechnungsNummerAktuell = cAbrechnungsNummer
+            FROM    FulfillmentNetwork.tAbrechnung
+            WHERE   kAbrechnung = @kAbrechnungAktuell;
+        END;   
+
+
+	DECLARE @AbrechnungsNr NVARCHAR(256)
+	   
+	EXEC FulfillmentNetwork.spGetAktuelleAbrechnungsnummer @nAbrechnungsZeitraum = @nAbrechnungsZeitraum, -- int
+	    @dAbrechnungInitial = @dAbrechnungInitial, -- datetime
+	    @AbrechnungsNr = @AbrechnungsNr OUTPUT, -- varchar(256)
+	    @Start = @dAbrechnungStart OUTPUT, -- datetime
+	    @Ende = @dAbrechnungEnde OUTPUT -- datetime
+	
+
+    SET @AbrechnungsNr = @cPrefixAbrechnung + @AbrechnungsNr + @cSuffixAbrechnung;
+
+
+    IF @cAbrechnungsNummerAktuell = @AbrechnungsNr
+		--
+		-- Nichts zutun. Aktuell laufende Abrechnung noch g&#252;ltig
+		--
+        BEGIN
+            SELECT  @kAbrechnung = @kAbrechnungAktuell , @nNeueAbrechnung = 0;
+            RETURN;
+        END;
+
+	--
+	-- Gibt es schon eine Abrechnung mit dieser Nummer, dann diese zuweisen, ansonsten neu erstellen
+	--
+	
+    DECLARE @kAbrechnungVorhanden AS INT = 0;
+    SELECT  @kAbrechnungVorhanden = kAbrechnung
+    FROM    FulfillmentNetwork.tAbrechnung
+    WHERE   cAbrechnungsNummer = @AbrechnungsNr;
+
+    IF @kAbrechnungVorhanden &gt; 0 AND @kAbrechnungAktuell = @kAbrechnungVorhanden
+       BEGIN
+            SELECT  @kAbrechnung = @kAbrechnungVorhanden , @nNeueAbrechnung = 0;
+            RETURN;
+        END;
+    ELSE IF @kAbrechnungVorhanden &gt; 0
+       BEGIN
+                UPDATE  FulfillmentNetwork.tFulfillerEinstellungen
+                SET     kAbrechnung = @kAbrechnungVorhanden
+                WHERE   kFulfillerEinstellungen = @kFulfillerEinstellungen;
+
+                SELECT  @kAbrechnung = @kAbrechnungVorhanden , @nNeueAbrechnung = 0;
+                RETURN;
+            END;
+    ELSE IF @kAbrechnungVorhanden = 0
+       BEGIN
+                    DECLARE @kAbrechnungNeu INT;
+                    DECLARE @kSprache INT;                
+
+                    SELECT  @kSprache = kSprache
+                    FROM    dbo.tSpracheUsed
+                    WHERE   nStandard = 1;
+
+                    DECLARE @dErstellt AS DATETIME = GETDATE();
+
+                    DECLARE @cAnmerkung AS VARCHAR(255) = &#39;Automatisch angelegte Abrechnung f&#252;r den Zeitraum &#39;
+                        + CONVERT(NVARCHAR(10), @dAbrechnungStart, 104) + &#39; - &#39;
+                        + CONVERT(NVARCHAR(10), @dAbrechnungEnde, 104)
+                        + &#39; Anzahl Tage: &#39;
+                        + CAST(DATEDIFF(DAY, @dAbrechnungStart,
+                                        @dAbrechnungEnde) + 1 AS NVARCHAR(255));                    
+
+					INSERT INTO FulfillmentNetwork.tAbrechnung
+					        ( kBenutzer ,
+					          kKunde ,
+					          kFirma ,
+					          kFulfillmentLieferant ,
+					          cAbrechnungsNummer ,
+					          cAnmerkung ,
+					          dAbrechnungVon ,
+					          dAbrechnungBis ,
+					          kBestellung ,
+					          dAuftragErstellt ,
+					          nStorno
+					        )
+					VALUES  ( @kBenutzer , -- kBenutzer - int
+					          @kKunde , -- kKunde - int
+					          @kStandardFirmaLieferant , -- kFirma - int
+					          @kLieferant , -- kFulfillmentLieferant - int
+					          @AbrechnungsNr , -- cAbrechnungsNummer - varchar(50)
+					          @cAnmerkung , -- cAnmerkung - nvarchar(max)
+					          @dAbrechnungStart , -- dAbrechnungVon - datetime
+					          @dAbrechnungEnde, -- dAbrechnungBis - datetime
+					          0 , -- kBestellung - int
+					          NULL , -- dAuftragErstellt - datetime
+					          0  -- nStorno - tinyint
+					        )
+					SELECT  @kAbrechnungNeu = SCOPE_IDENTITY();
+                    UPDATE  FulfillmentNetwork.tFulfillerEinstellungen
+                    SET     kAbrechnung = @kAbrechnungNeu ,
+                            dAbrechnungStart = @dAbrechnungStart ,
+                            dAbrechnungEnde = @dAbrechnungEnde
+                    WHERE   kFulfillerEinstellungen = @kFulfillerEinstellungen;
+                  
+                    SELECT  @kAbrechnung = @kAbrechnungNeu , @nNeueAbrechnung = 1;
+
+                END;</code></pre>
+</body>
+</html>

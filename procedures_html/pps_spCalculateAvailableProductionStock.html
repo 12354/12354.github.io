@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pps.spCalculateAvailableProductionStock</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>pps.spCalculateAvailableProductionStock</h1>
+    <p><strong>Description:</strong> Berechnet die produzierbaren Lagerbestände für die Produktion und trägt diese in tBillOfMaterial und (falls nUpdateSupplierStock = 1 ist) in tLiefartikel ein.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE pps.spCalculateAvailableProductionStock
+    @BillOfMaterials AS pps.TYPE_spCalculateAvailableProductionStock READONLY, -- &#220;bergabe der zu berechnenden kBillOfMaterial(s)
+    @nUpdateSupplierStock BIT = 0, -- Lieferantenbestand aktualisieren?
+	@Debug BIT = 0 -- Wenn = 1, wird die interne TempTabelle zur&#252;ckgegeben
+AS
+/*************************************************************************************************************
+Beschreibung:	Berechnet die produzierbaren Lagerbest&#228;nde f&#252;r die Produktion und tr&#228;gt diese in
+				tBillOfMaterial und (falls nUpdateSupplierStock = 1 ist) in tLiefartikel ein.
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+DECLARE @BillOfMaterials pps.TYPE_spCalculateAvailableProductionStock;
+INSERT INTO @BillOfMaterials (kBillOfMaterial) SELECT kBillOfMaterial FROM pps.tBillOfMaterial WHERE nState = 1 and nType = 0
+EXEC pps.spCalculateAvailableProductionStock @BillOfMaterials = @BillOfMaterials;
+*************************************************************************************************************/
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+    -- Konstanten
+	DECLARE
+		@PPS_ARTIKELTYPE_BOM UNIQUEIDENTIFIER = &#39;0200D767-9A5C-4B6A-882E-051FFA69A9D2&#39;,
+		@PPS_ARTIKELTYPE_INDIVIDUAL UNIQUEIDENTIFIER = &#39;A6706B01-FA24-4818-A591-1A23F75C177F&#39;
+		-- ,@PPS_ARTIKELTYPE_COMPONENT UNIQUEIDENTIFIER = &#39;B268BC2F-55D4-468D-B55A-A6317DD78D0E&#39; -- der Vollst&#228;ndigkeit halber (aktuell nicht verwendet)
+
+	DECLARE
+		@nCurrentLevel INT,
+		@UpdatedArtikels AS dbo.TYPE_spUpdateLagerbestand;
+
+    ---------------------------------------------------------------------------------------------------
+	-- Temptabellen erzeugen
+	IF OBJECT_ID(&#39;tempdb..#TempBom&#39;) IS NOT NULL
+    BEGIN
+        DROP TABLE #TempBom;
+    END;
+
+    CREATE TABLE #TempBom (
+        kBillOfMaterial INT NOT NULL PRIMARY KEY,
+		kArtikel INT NULL, -- wird NULL gesetzt, wenn die BillOfMaterial nicht die &quot;Live&quot;-Bom ist
+		nIsIndividualProduct BIT NULL DEFAULT (0),
+        fCalculatedStock DECIMAL(25,13) NULL,
+		dCalculationDate DATETIMEOFFSET NULL,
+		nMaxLevel TINYINT NULL DEFAULT (0),
+		cDebug VARCHAR(255) NULL
+    );
+	CREATE UNIQUE NONCLUSTERED INDEX IX_TempBom_kArtikel ON #TempBom (kArtikel) WHERE kArtikel IS NOT NULL;
+
+    ---------------------------------------------------------------------------------------------------
+    -- Temptabelle f&#252;llen - &#252;bergebene Artikel einf&#252;gen
+    INSERT INTO #TempBom (kBillOfMaterial, kArtikel, cDebug)
+	SELECT DISTINCT
+				Bom.kBillOfMaterial,
+				CASE WHEN nState = 1 THEN Bom.kArtikel ELSE NULL END, -- Nur f&#252;r &#39;Live&#39;-Boms ist kArtikel g&#252;ltig
+				&#39;INSERT 1 (Param @BillOfMaterials)&#39; AS cDebug
+    FROM		@BillOfMaterials AS Params
+    JOIN		pps.tBillOfMaterial AS Bom ON Bom.kBillOfMaterial = Params.kBillOfMaterial
+	WHERE		Bom.nType = 0 -- 0 = Regular
+				-- Hier erlauben wir auch Nicht-Live-Boms (nState &lt;&gt; 1)
+
+    -- Falls keine &#252;bergeben wurden =&gt; alle aktiven St&#252;cklisten aufnehmen
+    IF NOT EXISTS(SELECT 1 FROM #TempBom)
+    BEGIN
+        INSERT INTO #TempBom (kBillOfMaterial, kArtikel, cDebug)
+        SELECT		Bom.kBillOfMaterial,
+					Bom.kArtikel,
+					&#39;INSERT 2 (Alle BillOfMaterials)&#39; AS cDebug
+        FROM		pps.tBillOfMaterial AS Bom
+		WHERE		Bom.nState = 1 -- 1 = Live
+					AND Bom.nType = 0 -- 0 = Regular
+    END
+	ELSE
+	BEGIN
+		-- &#220;bergeordnete BillOfMaterials (wenn die Boms selbst Komponenten sind) der TempTabelle hinzuf&#252;gen
+		INSERT INTO #TempBom (kBillOfMaterial, kArtikel, cDebug)
+		SELECT		Bom.kBillOfMaterial,
+					Bom.kArtikel,
+					&#39;INSERT 3 (BoM-V&#228;ter)&#39; AS cDebug
+		FROM		#TempBom AS Temp
+		JOIN		pps.tBillOfMaterialComponents AS BomC ON BomC.kArtikel = Temp.kArtikel
+		JOIN		pps.tBillOfMaterial AS Bom ON Bom.kBillOfMaterial = BomC.kBillOfMaterial AND Bom.nState = 1 AND Bom.nType = 0 -- nur Live+Regular-Bom&#39;s
+		LEFT JOIN	#TempBom AS TempExistCheck ON TempExistCheck.kBillOfMaterial = Bom.kBillOfMaterial
+		WHERE		TempExistCheck.kBillOfMaterial IS NULL -- Nur Boms, die noch nicht in Temp vorhanden sind
+		GROUP BY	Bom.kBillOfMaterial, Bom.kArtikel
+
+		-- Untergeordnete (f&#252;r die Berechnung n&#246;tige) BillOfMaterials der TempTabelle hinzuf&#252;gen
+		INSERT INTO #TempBom (kBillOfMaterial, kArtikel, cDebug)
+		SELECT		Bom.kBillOfMaterial,
+					Bom.kArtikel,
+					&#39;INSERT 4 (zus&#228;tzliche BoM-Kinder)&#39; AS cDebug
+		FROM		pps.vBillOfMaterialComponentHierarchy AS BomH
+		JOIN		#TempBom AS Temp ON Temp.kBillOfMaterial = BomH.kBillOfMaterial -- Nur zu Boms aus dem Input
+		JOIN		pps.tBillOfMaterial AS Bom ON Bom.kArtikel = BomH.kArtikelComponent AND Bom.nState = 1 AND Bom.nType = 0 -- nur Live+Regular-Bom&#39;s
+		LEFT JOIN	#TempBom AS TempExistCheck ON TempExistCheck.kBillOfMaterial = Bom.kBillOfMaterial
+		WHERE		TempExistCheck.kBillOfMaterial IS NULL -- Nur Boms, die noch nicht in Temp vorhanden sind
+		GROUP BY	Bom.kBillOfMaterial, Bom.kArtikel
+	END
+
+	---------------------------------------------------------------------------------------------------
+	-- Temptabelle - fehlende Werte updaten
+	-- Individualprodukte kennzeichnen
+	UPDATE		Temp
+	SET			Temp.nIsIndividualProduct = 1,
+				Temp.cDebug = ISNULL(Temp.cDebug, &#39;&#39;) + &#39; + UPDATE 1 (nIsIndividualProduct)&#39;
+	FROM		#TempBom AS Temp
+	WHERE		EXISTS(SELECT 1 FROM Artikel.tArtikelType AS ArtT WHERE ArtT.kArtikel = Temp.kArtikel AND ArtT.uArtikelType = @PPS_ARTIKELTYPE_INDIVIDUAL)
+
+	-- nMaxLevel f&#252;r die fehlenden Elemente ermitteln
+	UPDATE		Temp
+	SET			Temp.nMaxLevel = MaxLevel.nMaxLevel,
+				Temp.cDebug = ISNULL(Temp.cDebug, &#39;&#39;) + &#39; + UPDATE 2 (fehlende nMaxLevel)&#39;
+	FROM		(
+					SELECT		BomH.kArtikelComponent AS kArtikel, MAX(nLevel) AS nMaxLevel
+					FROM		#TempBom AS Temp
+					JOIN		pps.vBillOfMaterialComponentHierarchy AS BomH ON BomH.kBillOfMaterial = Temp.kBillOfMaterial
+					GROUP BY	BomH.kArtikelComponent
+				) AS MaxLevel
+	JOIN		#TempBom AS Temp ON Temp.kArtikel = MaxLevel.kArtikel
+
+	SET @nCurrentLevel = (SELECT MAX(Temp.nMaxLevel) FROM #TempBom AS Temp)
+
+	---------------------------------------------------------------------------------------------------
+	-- Mehrmalige Berechnung von fCalculatedStock (absteigend nach Level)
+	WHILE (@nCurrentLevel &gt;= 0)
+	BEGIN
+		;WITH cteData AS (
+			SELECT		
+						Temp.kBillOfMaterial,
+						CONVERT(DECIMAL(25,13), MIN(
+							CASE
+								WHEN ArtC.cLagerAktiv = &#39;N&#39; THEN 1000000000.0 -- keine Lagerhaltung
+								WHEN ArtC.cTeilbar = &#39;Y&#39; THEN NN.fCalculatedStock -- Teilmengen
+								ELSE FLOOR(NN.fCalculatedStock)
+							END)
+						) AS fCalculatedStock
+			FROM		#TempBom AS Temp
+			JOIN		pps.tBillOfMaterialComponents AS BomC ON BomC.kBillOfMaterial = Temp.kBillOfMaterial
+			LEFT JOIN	#TempBom AS ChildBom ON ChildBom.kArtikel = BomC.kArtikel
+			JOIN		dbo.tArtikel AS ArtC ON ArtC.kArtikel = BomC.kArtikel
+			LEFT JOIN	dbo.tLagerbestand AS LB ON LB.kArtikel = BomC.kArtikel
+			CROSS APPLY	(
+							SELECT	(
+										CASE WHEN Temp.nIsIndividualProduct = 1 THEN 0 ELSE LB.fLagerbestandEigen END /* Bei Individualprodukten wird der Lagerbestand nicht ber&#252;cksichtigt */
+										+ ISNULL(ChildBom.fCalculatedStock, 0) /* Falls Bom: (vorher berechneten) produzierbaren Bestand hinzuf&#252;gen */
+										- LB.fVerfuegbarGesperrt
+										- LB.fInAuftraegen
+									)
+									/ (
+										CASE
+											WHEN BomC.kMassEinheit IS NOT NULL AND ArtC.fMassMenge &lt;&gt; 0 /* Ma&#223;einheiten */
+												THEN dbo.CalcMeasurement(
+													BomC.nQuantity * BomC.fRestFactor,
+													BomC.kMassEinheit,
+													ArtC.kMassEinheit) / ArtC.fMassMenge
+											ELSE BomC.nQuantity * BomC.fRestFactor
+										END
+									) AS fCalculatedStock
+						) AS NN -- Nice Names
+			WHERE		BomC.kArtikel IS NOT NULL -- keine Operations
+						AND Temp.nMaxLevel = @nCurrentLevel -- Aktuelles Level
+			GROUP BY	Temp.kBillOfMaterial
+		)
+		UPDATE		Temp
+		SET			Temp.fCalculatedStock = Cte.fCalculatedStock,
+					Temp.dCalculationDate = SYSDATETIMEOFFSET(),
+					Temp.cDebug = ISNULL(Temp.cDebug, &#39;&#39;) + &#39; + UPDATE fCalculatedStock (Level = &#39; + CONVERT(VARCHAR(20), @nCurrentLevel) + &#39;)&#39;
+		FROM		#TempBom AS Temp
+		JOIN		cteData AS Cte ON Cte.kBillOfMaterial = Temp.kBillOfMaterial
+		WHERE		Temp.nMaxLevel = @nCurrentLevel -- Aktuelles Level (Sicherheits-Check)
+
+		IF @Debug = 1
+		BEGIN
+			SELECT &#39;Debug #TempBom - @nCurrentLevel = &#39; + CONVERT(VARCHAR(20), @nCurrentLevel) AS Was, * FROM #TempBom ORDER BY kArtikel
+		END
+		SET @nCurrentLevel = @nCurrentLevel - 1;
+	END
+
+	---------------------------------------------------------------------------------------------------
+	-- Temptabelle - negative Werte auf 0 setzen
+	UPDATE		Temp
+	SET			Temp.fCalculatedStock = 0,
+				Temp.cDebug = ISNULL(Temp.cDebug, &#39;&#39;) + &#39; + UPDATE fCalculatedStock = 0 (da &#39; + CONVERT(VARCHAR(20), CONVERT(DECIMAL(25,4), Temp.fCalculatedStock)) + &#39; &lt; 0)&#39;
+	FROM		#TempBom AS Temp
+	WHERE		Temp.fCalculatedStock &lt; 0 -- Negativ
+
+	IF @Debug = 1
+	BEGIN
+		SELECT &#39;Debug #TempBom (Finale)&#39; AS Was, * FROM #TempBom ORDER BY kArtikel
+	END
+	
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END; 
+DeadlockRetry0:
+	BEGIN TRY
+		IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+
+		-- Bestand in der Tabelle updaten
+		UPDATE	Bom
+		SET		Bom.fCalculatedStock = Temp.fCalculatedStock,
+				Bom.dCalculatedStockTimeStamp = Temp.dCalculationDate
+		OUTPUT	inserted.kArtikel INTO @UpdatedArtikels -- Die ge&#228;nderten kArtikel werden f&#252;r dbo.spUpdateLagerbestand &#39;vorgemerkt&#39;
+		FROM	pps.tBillOfMaterial AS Bom
+		JOIN	#TempBom AS Temp ON Bom.kBillOfMaterial = Temp.kBillOfMaterial
+		WHERE	ISNULL(Bom.fCalculatedStock, 0) &lt;&gt; ISNULL(Temp.fCalculatedStock, 0) -- Nur Update, wenn unterschiedlicher Wert
+
+		-- Virtuellen Bestand updaten =&gt; beeinflusst fVerfuegbar und fZulauf in dbo.tLagerbestand
+		MERGE INTO dbo.tLagerbestandVirtuell AS LBVirt
+		USING (SELECT * FROM #TempBom AS Tmp WHERE NOT Tmp.fCalculatedStock IS NULL AND Tmp.kArtikel IS NOT NULL) AS Temp
+		ON (LBVirt.kArtikel = Temp.kArtikel AND LBVirt.iModuleId = @PPS_ARTIKELTYPE_BOM)
+		WHEN MATCHED THEN
+			UPDATE SET
+				LBVirt.fBestand = Temp.fCalculatedStock,
+				LBVirt.dGeandert = CONVERT(DATETIME, Temp.dCalculationDate, 1)
+		WHEN NOT MATCHED THEN
+			INSERT	(kArtikel, iModuleId, fBestand, nLagerBeachten, dGeandert, fZulauf)
+			VALUES	(Temp.kArtikel, @PPS_ARTIKELTYPE_BOM, Temp.fCalculatedStock, 0, CONVERT(DATETIME, Temp.dCalculationDate, 1), 0);
+
+        -- Lieferanten-Bestand updaten (beeinflusst fVerfuegbar und fLagerbestand in dbo.tLagerbestand)
+		IF @nUpdateSupplierStock = 1
+		BEGIN
+			UPDATE	LiefArt
+			SET		LiefArt.fLagerbestand = Temp.fCalculatedStock
+			FROM	dbo.tLiefartikel AS LiefArt
+			JOIN	dbo.tLieferant AS Lief ON LiefArt.tLieferant_kLieferant = Lief.kLieferant
+			JOIN	pps.tBillOfMaterial AS Bom ON Bom.kArtikel = LiefArt.tArtikel_kArtikel
+			JOIN	#TempBom AS Temp ON Bom.kBillOfMaterial = Temp.kBillOfMaterial
+			WHERE	Lief.nType = 1 -- 1 = Interne Produktion
+					AND LiefArt.fLagerbestand &lt;&gt; Temp.fCalculatedStock;
+		END
+
+        -- Artikel-Best&#228;nde aktualisieren =&gt; n&#246;tig, weil sich (evtl.) der Lieferantenbestand und der virtuelle Bestand ge&#228;ndert haben (k&#246;nnen)
+		-- Die zu aktualisierenden kArtikel werden &#252;ber die Output-Klausel beim tBillOfMaterial-Update erzeugt
+		IF @Debug = 1
+		BEGIN
+			SELECT &#39;Debug (ge&#228;nderte) kArtikel f&#252;r SP dbo.spUpdateLagerbestand&#39; AS Was, * FROM @UpdatedArtikels ORDER BY kArtikel
+		END
+		EXEC dbo.spUpdateLagerbestand @UpdatedArtikels;
+
+		IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+		BEGIN TRY
+			EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry0;
+		END TRY
+		BEGIN CATCH
+			IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+		END CATCH;
+		THROW;
+	END CATCH
+
+	DROP TABLE #TempBom;
+END</code></pre>
+</body>
+</html>

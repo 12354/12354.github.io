@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spAdresseInsert</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spAdresseInsert</h1>
+    <p><strong>Description:</strong> Mit der Procedure kann einen neue Adresse hinzugefügt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spAdresseInsert]
+	@Adresse TYPE_spAdresseInsert READONLY,
+	@callerKundeInsert BIT = 0
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+SET QUOTED_IDENTIFIER ON;
+DECLARE @returnValue INT;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @raiseError BIT;
+DECLARE @ErrorData XML;
+DECLARE @xmlAppend XML;
+DECLARE @WithRollback INT;
+SET @WithRollback = CASE WHEN @callerKundeInsert = 1
+						THEN 0
+						ELSE 1
+					END;
+SET @ErrorData = (SELECT &#39;Header&#39; AS Header FOR XML PATH(&#39;ErrorList&#39;));
+SET @raiseError = 0;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	--
+	-- Daten aufbereiten
+	--
+	IF (OBJECT_ID(&#39;tempdb..#TempDataAdresse&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #TempDataAdresse;
+	END
+	CREATE TABLE #TempDataAdresse
+	(
+		kInternalId INT,
+		kInetAdresse INT,
+		kKunde INT,
+		cFirma NVARCHAR(128),
+		cAnrede NVARCHAR(30),
+		cTitel NVARCHAR(64),
+		cVorname NVARCHAR(255),
+		cName NVARCHAR(255),
+		cStrasse NVARCHAR(255),
+		cPLZ NVARCHAR(24),
+		cOrt NVARCHAR(255),
+		cLand NVARCHAR(255),
+		cTel NVARCHAR(30),
+		cZusatz NVARCHAR(60),
+		cAdressZusatz NVARCHAR(255),
+		cPostID NVARCHAR(255),
+		cMobil NVARCHAR(30),
+		cMail NVARCHAR(255),
+		cFax NVARCHAR(30),
+		cBundesland NVARCHAR(255),
+		cISO NVARCHAR(5),
+		nStandard TINYINT,
+		nTyp TINYINT,
+		nError BIT,
+		cUstId NVARCHAR(20)
+	);
+	INSERT INTO #TempDataAdresse ( kInternalId,
+	                               kInetAdresse,
+	                               kKunde,
+	                               cFirma,
+	                               cAnrede,
+	                               cTitel,
+	                               cVorname,
+	                               cName,
+	                               cStrasse,
+	                               cPLZ,
+	                               cOrt,
+	                               cLand,
+	                               cTel,
+	                               cZusatz,
+	                               cAdressZusatz,
+	                               cPostID,
+	                               cMobil,
+	                               cMail,
+	                               cFax,
+	                               cBundesland,
+	                               cISO,
+	                               nStandard,
+	                               nTyp,
+								   cUstId,
+								   nError )
+		SELECT Adresse.kInternalId,
+               Adresse.kInetAdresse,
+               Adresse.kKunde,
+               Adresse.cFirma,
+               Adresse.cAnrede,
+               Adresse.cTitel,
+               Adresse.cVorname,
+               Adresse.cName,
+               Adresse.cStrasse,
+               Adresse.cPLZ,
+               Adresse.cOrt,
+               Adresse.cLand,
+               Adresse.cTel,
+               Adresse.cZusatz,
+               Adresse.cAdressZusatz,
+               Adresse.cPostID,
+               Adresse.cMobil,
+               Adresse.cMail,
+               Adresse.cFax,
+               Adresse.cBundesland,
+               Adresse.cISO,
+               Adresse.nStandard,
+               Adresse.nTyp,
+			   Adresse.cUstId,
+			   0 AS nError
+		FROM @Adresse AS Adresse;
+
+	--
+	-- Daten validieren
+	--
+	IF (EXISTS(SELECT * FROM #TempDataAdresse) AND @callerKundeInsert = 1)
+	BEGIN
+		UPDATE #TempDataAdresse
+			SET #TempDataAdresse.nError = 1
+		WHERE #TempDataAdresse.kKunde NOT IN
+		(
+			SELECT tkunde.kKunde
+			FROM dbo.tkunde
+		);
+		SET @xmlAppend = (SELECT &#39;Adressen ohne Kunde&#39; AS Header, 
+								(SELECT SUBSTRING((
+									SELECT &#39;, &#39; + CONVERT(VARCHAR(10), #TempDataAdresse.kKunde)
+									FROM #TempDataAdresse
+									WHERE #TempDataAdresse.kKunde NOT IN
+									(
+										SELECT tkunde.kKunde
+										FROM dbo.tkunde
+									)
+								FOR XML PATH(&#39;&#39;)),3,1000)) AS Daten, 
+								&#39;&#39; AS ErrorMessage FOR XML PATH(&#39;Error&#39;));
+		SET @ErrorData.modify(&#39;insert sql:variable(&quot;@xmlAppend&quot;) as last into (/ErrorList)[1]&#39;);
+	END
+	--
+	-- Es darf nur eine Adresse mit Standard = 1 und Kunde/Typ Kombination geben
+	--
+	IF(EXISTS(SELECT *
+				FROM #TempDataAdresse
+				JOIN dbo.tAdresse ON tAdresse.kKunde = #TempDataAdresse.kKunde
+								AND tAdresse.nStandard = 1
+								AND #TempDataAdresse.nStandard = 1
+								AND tAdresse.nTyp = #TempDataAdresse.nTyp
+				)
+		)
+	BEGIN
+		UPDATE #TempDataAdresse
+			SET #TempDataAdresse.nError = 1
+			WHERE #TempDataAdresse.kInternalId IN (
+				SELECT #TempDataAdresse.kInternalId
+				FROM #TempDataAdresse
+				JOIN dbo.tAdresse ON tAdresse.kKunde = #TempDataAdresse.kKunde
+								AND tAdresse.nStandard = 1
+								AND #TempDataAdresse.nStandard = 1
+								AND tAdresse.nTyp = #TempDataAdresse.nTyp
+			);
+		SET @xmlAppend = (SELECT &#39;Es kann nur eine Standardadresse geben pro Typ&#39; AS Header, 
+								&#39;&#39; AS Daten, 
+								&#39;&#39; AS ErrorMessage FOR XML PATH(&#39;Error&#39;));
+		SET @ErrorData.modify(&#39;insert sql:variable(&quot;@xmlAppend&quot;) as last into (/ErrorList)[1]&#39;);
+	END
+	IF(OBJECT_ID(&#39;tempdb..#OutputAdresse&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #OutputAdresse;
+	END;
+	CREATE TABLE #OutputAdresse
+	(
+		InternalId INT IDENTITY(1,1),
+		kAdresse INT
+	);
+	IF(@raiseError = 0)
+	BEGIN
+		IF(CONTEXT_INFO() IS NOT NULL)
+		BEGIN
+			SET @OldContextInfo = CONTEXT_INFO();
+		END
+		ELSE
+		BEGIN
+			SET @OldContextInfo = 0x0;
+		END
+		DECLARE @hash VARBINARY(128);
+		SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;dbo.spAdresseInsert&#39;);
+		SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+		BEGIN TRY  
+		  DECLARE @TranCount INT = @@TRANCOUNT;
+		  IF(@TranCount = 0)
+		  BEGIN
+			 BEGIN TRANSACTION  
+		  END
+
+			 --
+			 -- Adressen anlegen
+			 --
+			 INSERT INTO dbo.tAdresse ( kInetAdresse,
+								    kKunde,
+								    cFirma,
+								    cAnrede,
+								    cTitel,
+								    cVorname,
+								    cName,
+								    cStrasse,
+								    cPLZ,
+								    cOrt,
+								    cLand,
+								    cTel,
+								    cZusatz,
+								    cAdressZusatz,
+								    cPostID,
+								    cMobil,
+								    cMail,
+								    cFax,
+								    cBundesland,
+								    cISO,
+								    nStandard,
+								    nTyp,
+									   cUstId )
+				OUTPUT INSERTED.kAdresse 
+					   INTO #OutputAdresse (kAdresse)
+				SELECT Adresse.kInetAdresse,
+				    Adresse.kKunde,
+				    Adresse.cFirma,
+				    Adresse.cAnrede,
+				    Adresse.cTitel,
+				    Adresse.cVorname,
+				    Adresse.cName,
+				    Adresse.cStrasse,
+				    Adresse.cPLZ,
+				    Adresse.cOrt,
+				    Adresse.cLand,
+				    Adresse.cTel,
+				    Adresse.cZusatz,
+				    Adresse.cAdressZusatz,
+				    Adresse.cPostID,
+				    Adresse.cMobil,
+				    Adresse.cMail,
+				    Adresse.cFax,
+				    Adresse.cBundesland,
+				    Adresse.cISO,
+				    Adresse.nStandard,
+				    Adresse.nTyp,
+					   Adresse.cUstId
+				FROM #TempDataAdresse AS Adresse
+				WHERE Adresse.nError = 0
+				ORDER BY Adresse.kInternalId;
+			
+			 --tKunde_suche aktualisieren
+			 DECLARE @KundenToUpdate AS TYPE_spUpdateKundeSuche;
+
+			 INSERT INTO @KundenToUpdate (kKunde)
+			 SELECT DISTINCT kKunde
+			 FROM #TempDataAdresse;
+			
+			 EXEC Kunde.spUpdateKundeSuche @Kunden = @KundenToUpdate;
+
+			 SET @retry = 0;
+			 IF(@TranCount = 0)
+			 BEGIN           
+				COMMIT TRANSACTION      
+			 END
+			 SELECT TOP(1) @returnValue = #OutputAdresse.kAdresse FROM #OutputAdresse;
+			 RETURN @returnValue;
+	   END TRY       
+	   BEGIN CATCH           
+		  IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+		  BEGIN              
+			 SET @retry = @retry - 1;               
+			 ROLLBACK       
+		  END          
+		  ELSE          
+		  BEGIN              
+			 SET @retry = 0;               
+			 THROW;           
+		  END      
+	   END CATCH
+    END
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWarenLagerEingangAusbuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWarenLagerEingangAusbuchen</h1>
+    <p><strong>Description:</strong> Über die Stored Procedure werden in der Inventur des WMS Bestände ausgebucht.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spWarenLagerEingangAusbuchen]
+	@kWarenlagereingang INT,
+	@fMenge DECIMAL(25,13),
+	@cKommentar NVARCHAR(255),
+	@nBuchungsArt INT,
+	@kWarenLager INT,
+	@kBenutzer INT,
+	@dDatum DATETIME,
+	@nRet INT OUTPUT
+
+-- Funktion: Bucht die &#220;bergebene Menge des Warenlagereingangs aus         
+--           Die Prozedur wird bisher nur f&#252;r Inventur aus WMS verwendet, f&#252;r weitere verwendungen kann sie entsprechend erweitert werden.         
+AS
+
+DECLARE @cLagerKleinerNull NVARCHAR(255)
+DECLARE @nFulfillment INT
+DECLARE @kArtikel INT
+DECLARE @fBuchungsMenge DECIMAL(25,13)
+DECLARE @cErrorLog NVARCHAR(MAX)
+DECLARE @kWarenlagerplatz INT
+
+BEGIN TRAN T3
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+	BEGIN TRY
+    SET @nRet = 0
+	
+	SELECT @cLagerKleinerNull = tArtikel.cLagerKleinerNull,@kArtikel = tArtikel.kArtikel, @kWarenlagerplatz = tWarenLagerEingang.kWarenLagerPlatz
+		FROM tWarenLagerEingang WITH(NOLOCK)
+		JOIN tArtikel WITH(NOLOCK) ON tArtikel.kArtikel =  tWarenLagerEingang.kArtikel
+		WHERE  tWarenLagerEingang.kWarenLagerEingang = @kWarenlagereingang
+	
+	SELECT @nFulfillment = tWarenlager.nFulfillment
+		FROM tWarenlager WITH(NOLOCK)
+		WHERE kWarenLager = @kWarenLager
+     
+    IF(@nFulfillment &lt; 2)
+    BEGIN
+		INSERT INTO tWarenLagerAusgang WITH (ROWLOCK) (kWarenLagerEingang,kWarenLagerPlatz,kLieferscheinPos,kArtikel,fAnzahl,cKommentar,dErstellt,kBenutzer) 
+			VALUES (@kWarenlagereingang,@kWarenlagerplatz,0,@kArtikel,@fMenge,@cKommentar,@dDatum,@kBenutzer)
+     
+        SET @fBuchungsMenge = @fMenge * (-1)         
+		EXEC spBestandBuchenManuell
+			@kArtikel = @kArtikel,
+			@fAnzahl = @fBuchungsMenge,
+			@kWarenLagerPlatz = @kWarenlagerplatz,
+			@kWareneingang = 0,
+			@kPlattform = 1,
+			@kBenutzer = @kBenutzer,
+			@cKommentar = @cKommentar,
+			@kBuchungsart = @nBuchungsArt,
+			@kLieferscheinPos = 0
+     
+		END
+		ELSE
+		BEGIN      
+			IF(@nFulfillment = 2 OR @cLagerKleinerNull = &#39;Y&#39;)
+			BEGIN
+				INSERT INTO tWarenLagerAusgang WITH (ROWLOCK) (kWarenLagerEingang,kWarenLagerPlatz,kLieferscheinPos,kArtikel,fAnzahl,cKommentar,dErstellt,kBenutzer) 
+					VALUES (0,0,0,@kArtikel,@fMenge,@cKommentar,@dDatum,@kBenutzer)
+			END
+			SET @fBuchungsMenge = @fMenge * (-1)
+     
+			EXEC spBestandBuchenManuell
+				@kArtikel = @kArtikel,
+				@fAnzahl = @fBuchungsMenge,
+				@kWarenLagerPlatz = 0,
+				@kWareneingang = 0,
+				@kPlattform = 1,
+				@kBenutzer = @kBenutzer,
+				@cKommentar = @cKommentar,
+				@kBuchungsart = @nBuchungsArt,
+				@kLieferscheinPos = 0
+		END
+		IF @nRet = 0
+			COMMIT TRAN T3
+		ELSE
+			ROLLBACK TRAN T3
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRAN T3    
+		SET @nRet = -203000202 -- unbekannter Fehler Inventur
+		SET @cErrorLog = CAST(ERROR_NUMBER() AS NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_SEVERITY() AS NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_STATE() AS NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_PROCEDURE() AS NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_LINE() AS NVARCHAR) + &#39; : &#39; +
+                     ERROR_MESSAGE()
+		INSERT INTO tLog (dDatum,cLog,kBenutzer,nTyp,nVorgang) 
+		VALUES (@dDatum,@cErrorLog,@kBenutzer,16,2)
+	END CATCH</code></pre>
+</body>
+</html>

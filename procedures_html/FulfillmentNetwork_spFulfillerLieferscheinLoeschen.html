@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spFulfillerLieferscheinLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spFulfillerLieferscheinLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spFulfillerLieferscheinLoeschen]
+    @kLieferschein INT,
+    @kBenutzer INT,
+    @kWarenlagerPlatz INT,
+    @cKommentar AS NVARCHAR(255)
+AS
+BEGIN
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @kArtikel AS INT,
+                @kBuchungsArt AS INT,
+                @fAnzahl AS DECIMAL(28, 14),
+                @fEKEinzel AS DECIMAL(28, 14),
+                @cCharge AS VARCHAR(255),
+                @dMhd AS DATETIME,
+				@kBestellPos AS INT;
+
+
+		--Buchungsart ermitteln. Bei WMS Lager &quot;32: Plusbuchung WMS&quot;, sonst &quot;30: Korrekturbuchung&quot;
+        SELECT @kBuchungsArt = CASE
+                                   WHEN Lager.nLagerplatzVerwaltung = 1 THEN
+                                       32
+                                   ELSE
+                                       30
+                               END
+        FROM dbo.tWarenLagerPlatz AS Platz
+            JOIN dbo.tWarenLager AS Lager
+                ON Lager.kWarenLager = Platz.kWarenLager
+        WHERE Platz.kWarenLagerPlatz = @kWarenlagerPlatz;
+
+
+		--Cursor &#252;ber alle Warenlagerausg&#228;nge zu dem Lieferschein
+        DECLARE pos_cursor CURSOR FAST_FORWARD READ_ONLY FOR
+        SELECT WarenlagerAusgang.kArtikel,
+               SUM(WarenlagerAusgang.fAnzahl) AS fAnzahl,
+               MAX(Eingang.fEKEinzel) AS fEKEinzel,
+               Eingang.cChargenNr,
+               Eingang.dMHD,
+			   LieferscheinPos.kBestellPos
+        FROM dbo.tWarenLagerAusgang AS WarenlagerAusgang
+            JOIN dbo.tWarenLagerEingang AS Eingang
+                ON Eingang.kWarenLagerEingang = WarenlagerAusgang.kWarenLagerEingang
+            JOIN dbo.tLieferscheinPos AS LieferscheinPos
+                ON LieferscheinPos.kLieferscheinPos = WarenlagerAusgang.kLieferscheinPos
+        WHERE LieferscheinPos.kLieferschein = @kLieferschein
+        GROUP BY WarenlagerAusgang.kArtikel,
+                 Eingang.cChargenNr,
+                 Eingang.dMHD,
+				 LieferscheinPos.kBestellPos;
+
+        OPEN pos_cursor;
+
+        FETCH NEXT FROM pos_cursor
+        INTO @kArtikel,
+             @fAnzahl,
+             @fEKEinzel,
+             @cCharge,
+             @dMhd,
+			 @kBestellPos;
+
+        WHILE @@FETCH_STATUS = 0
+        BEGIN
+
+            DECLARE @kWarenlagerEingang INT;
+            EXEC dbo.spWarenlagerEingangSchreiben @xWarenlagerEingaenge = NULL,                     -- xml
+                                                  @kArtikel = @kArtikel,                            -- int
+                                                  @kWarenLagerPlatz = @kWarenlagerPlatz,            -- int
+                                                  @kLieferantenBestellungPos = 0,                   -- int
+                                                  @kBenutzer = @kBenutzer,                          -- int
+                                                  @fAnzahl = @fAnzahl,                              -- decimal(28, 14)
+                                                  @fEkEinzel = @fEKEinzel,                          -- decimal(28, 14)
+                                                  @cLieferscheinNr = &#39;&#39;,                            -- varchar(255)
+                                                  @cChargenNr = @cCharge,                           -- varchar(255)
+                                                  @dMHD = @dMhd,                                    -- datetime
+                                                  @dGeliefertAm = NULL,                             -- datetime
+                                                  @cKommentar = @cKommentar,                        -- varchar(255)
+                                                  @kGutschriftPos = 0,                              -- int
+                                                  @kLHM = 0,                                        -- int
+                                                  @kSessionId = 0,                                  -- int
+                                                  @kBuchungsart = @kBuchungsArt,                    -- int
+                                                  @kBestellPosUmlagerung = 0,                       -- int
+                                                  @kRMRetourePos = 0,                               -- int
+                                                  @nHistorieNichtSchreiben = 1,                     -- int
+                                                  @kWarenlagerEingang = @kWarenlagerEingang OUTPUT; -- int
+
+			--Diese Buchung darf nicht ans FFN &#252;bertragen werden, daher aus tStockRef l&#246;schen.
+            DELETE FROM FulfillmentNetwork.tStockRef
+            WHERE kWarenLagerEingang = @kWarenlagerEingang;
+
+
+			INSERT INTO dbo.tArtikelHistory
+			  (
+				 kWarenLagerPlatz, kArtikel, fAnzahl, dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+				 fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert
+			  )
+			  SELECT WLE.kWarenLagerPlatz,
+					WLE.kArtikel,SUM(WLE.fAnzahl) ,
+					GETDATE() AS dErstellt,
+					WLE.kBenutzer,
+					0 AS kWarenLagerEingang,
+					@kBestellPos AS  kBestellPos,
+					ISNULL(WLE.kGutschriftPos,0),
+					ISNULL(WLE.fEKEinzel,
+					ISNULL(dbo.tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+					&#39;FFN-Lieferschein erfolgreich gel&#246;scht und Bestand zur&#252;ckgebucht!&#39;,
+					WLE.kBuchungsart,
+					0 AS kLieferscheinPos,
+					MAX(tlagerbestand.fLagerbestandEigen) AS fLagerBestandGesamt, 
+	   				MAX(LagerBestandAufPlatz.fAnzahl) AS fLagerBestand, -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+					WLE.kLieferantenBestellungPos,
+					WLE.cLieferscheinNr,
+					WLE.cChargenNr,
+					WLE.dMHD,
+					ISNULL(dbo.tlagerbestand.fVerfuegbar,0),
+					ISNULL(dbo.tlagerbestand.fInAuftraegen,0)
+			  FROM dbo.tWarenlagerEingang AS WLE
+			  JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = WLE.kArtikel
+			  JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = WLE.kArtikel
+			  OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fAnzahl
+						   FROM dbo.tWarenLagerEingang
+						   WHERE dbo.tWarenLagerEingang.kArtikel = WLE.kArtikel
+						   AND dbo.tWarenLagerEingang.kWarenLagerPlatz = WLE.kWarenlagerPlatz) AS LagerBestandAufPlatz
+			  WHERE kWarenlagerEingang = @kWarenlagereingang
+			  GROUP BY WLE.kWarenLagerPlatz,WLE.kArtikel,WLE.kBenutzer,ISNULL(WLE.kGutschriftPos,0),ISNULL(WLE.fEKEinzel, ISNULL(dbo.tArtikel.fEKNetto,0.0)),
+						WLE.cKommentar, WLE.kBuchungsart, WLE.kLieferantenBestellungPos,WLE.cLieferscheinNr,WLE.cChargenNr,WLE.dMHD,dbo.tlagerbestand.fInAuftraegen,
+						dbo.tlagerbestand.fVerfuegbar;
+
+
+            FETCH NEXT FROM pos_cursor
+            INTO @kArtikel,
+                 @fAnzahl,
+                 @fEKEinzel,
+                 @cCharge,
+                 @dMhd,
+				 @kBestellPos;
+        END;
+
+        CLOSE pos_cursor;
+        DEALLOCATE pos_cursor;
+
+		--Lieferschein l&#246;schen
+        EXEC Versand.spLieferscheinLoeschen @xLieferschein = NULL,           -- xml
+                                            @kLieferschein = @kLieferschein; -- int
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        DECLARE @ErrorMessage NVARCHAR(4000);
+        DECLARE @ErrorSeverity INT;
+        DECLARE @ErrorState INT;
+        ROLLBACK TRANSACTION;
+        SELECT @ErrorMessage = ERROR_MESSAGE(),
+               @ErrorSeverity = ERROR_SEVERITY(),
+               @ErrorState = ERROR_STATE();
+        RAISERROR(@ErrorMessage, @ErrorSeverity, @ErrorState);
+    END CATCH;
+END;</code></pre>
+</body>
+</html>

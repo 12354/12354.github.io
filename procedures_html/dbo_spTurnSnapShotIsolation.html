@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spTurnSnapShotIsolation</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spTurnSnapShotIsolation</h1>
+    <p><strong>Description:</strong> Mit der Stored procedure kann Snapshot Isolation für die Datenbank aktiviert werden. Für die Express Edition wird es unterbunden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spTurnSnapShotIsolation]
+@nAktiv TINYINT,     -- 0 Aus, 1 An
+@cMandant NVARCHAR(50),	 -- Der Mandant f&#252;r den die option aktiviert werden soll
+@nReturn INT OUT	 -- 0 Erfolgreich geschaltet
+
+-- Funktion: Mit dieser Procedur wird snapshot Isolation f&#252;r den Mandanten geschaltet
+	
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+
+BEGIN
+
+	DECLARE @DatabaseSQL VARCHAR(500);
+	DECLARE @DatabaseSQL2 VARCHAR(500);
+
+	--Zum pr&#252;fen on aktiv:
+	--SELECT is_read_committed_snapshot_on FROM sys.databases WHERE name= &#39;Eazybusiness&#39;
+
+
+	IF (LEFT(CAST(SERVERPROPERTY(&#39;ProductVersion&#39;) AS VARCHAR), 4) &lt;=  10.0)
+	BEGIN
+
+		SET @nReturn = -1; -- Nur aktivierbar ab SQL server 2008
+
+	END;
+	ELSE IF (CAST(serverproperty(&#39;Edition&#39;) AS VARCHAR) LIKE &#39;&amp;Express%&#39;)
+	BEGIN
+
+		SET @nReturn = -2; -- Nicht f&#252;r express Edition
+
+	END;
+	ELSE
+	BEGIN
+		IF(@nAktiv = 1) 
+		BEGIN
+
+			SET @DatabaseSQL = &#39;ALTER DATABASE &#39; + @cMandant + &#39; SET ALLOW_SNAPSHOT_ISOLATION ON;&#39;;
+			SET @DatabaseSQL2 = &#39;ALTER DATABASE &#39; + @cMandant + &#39; SET READ_COMMITTED_SNAPSHOT ON WITH ROLLBACK IMMEDIATE;&#39;;
+
+		END;
+		ELSE
+		BEGIN
+
+		    SET @DatabaseSQL = &#39;ALTER DATABASE &#39; + @cMandant + &#39; SET ALLOW_SNAPSHOT_ISOLATION OFF;&#39;;
+			SET @DatabaseSQL2 = &#39;ALTER DATABASE &#39; + @cMandant + &#39; SET READ_COMMITTED_SNAPSHOT OFF WITH ROLLBACK IMMEDIATE;&#39;;
+
+		END;
+
+		EXEC (@DatabaseSQL);
+		EXEC (@DatabaseSQL2);
+		SET @nReturn = 0;
+
+	END;
+
+
+END;</code></pre>
+</body>
+</html>

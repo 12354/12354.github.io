@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>pps.spUpdateScrapRatio</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>pps.spUpdateScrapRatio</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure kann für die übergebenen Artikel die Ausschuss Rate neu Berechnet werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE pps.spUpdateScrapRatio @Artikel AS pps.TYPE_spUpdateScrapRatio READONLY
+AS
+DECLARE @retry INT = 5;
+WHILE @retry &gt; 0
+BEGIN
+    BEGIN TRY
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF (@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION
+        END
+
+
+        IF EXISTS (SELECT 1 FROM @Artikel)
+        BEGIN
+            UPDATE pps.tProdCondition
+            SET tProdCondition.nRejectsRatio = t1.fRatio
+            FROM pps.tProdCondition
+                JOIN
+                (
+                    SELECT tProdCondition.kArtikel,
+                           tProdCondition.kZustand,
+                           AVG(tWorkJobResult.fRatio) AS fRatio
+                    FROM pps.tProdCondition
+                        JOIN pps.tWorkJob
+                            ON tProdCondition.kArtikel = tWorkJob.kArtikel
+                        JOIN pps.tWorkJobResult
+                            ON tWorkJob.kWorkJob = tWorkJobResult.kWorkJob
+                               AND tProdCondition.kZustand = tWorkJobResult.kZustand
+                    GROUP BY tProdCondition.kArtikel,
+                             tProdCondition.kZustand
+                ) AS t1
+                    ON t1.kArtikel = tProdCondition.kArtikel
+                       AND t1.kZustand = tProdCondition.kZustand
+                JOIN @Artikel AS artikel
+                    ON artikel.kArtikel = tProdCondition.kArtikel
+            WHERE tProdCondition.kZustand &lt;&gt; 1
+        END
+        ELSE
+        BEGIN
+            UPDATE pps.tProdCondition
+            SET tProdCondition.nRejectsRatio = t1.fRatio
+            FROM pps.tProdCondition
+                JOIN
+                (
+                    SELECT tProdCondition.kArtikel,
+                           tProdCondition.kZustand,
+                           AVG(tWorkJobResult.fRatio) AS fRatio
+                    FROM pps.tProdCondition
+                        JOIN pps.tWorkJob
+                            ON tProdCondition.kArtikel = tWorkJob.kArtikel
+                        JOIN pps.tWorkJobResult
+                            ON tWorkJob.kWorkJob = tWorkJobResult.kWorkJob
+                               AND tProdCondition.kZustand = tWorkJobResult.kZustand
+                    GROUP BY tProdCondition.kArtikel,
+                             tProdCondition.kZustand
+                ) AS t1
+                    ON t1.kArtikel = tProdCondition.kArtikel
+                       AND t1.kZustand = tProdCondition.kZustand
+            WHERE tProdCondition.kZustand &lt;&gt; 1
+        END
+        SET @retry = 0;
+        IF (@TranCount = 0)
+        BEGIN
+            COMMIT TRANSACTION
+        END
+    END TRY
+    BEGIN CATCH
+        IF (ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)
+        BEGIN
+            SET @retry = @retry - 1;
+            ROLLBACK
+        END
+        ELSE
+        BEGIN
+            SET @retry = 0;
+            THROW;
+        END
+    END CATCH
+END</code></pre>
+</body>
+</html>

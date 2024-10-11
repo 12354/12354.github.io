@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verkauf.spAuftragEckdatenBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Verkauf.spAuftragEckdatenBerechnen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Verkauf].[spAuftragEckdatenBerechnen]
+	@Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen READONLY
+AS
+BEGIN
+	IF NOT EXISTS(SELECT * FROM @Auftrag WHERE [@Auftrag].kAuftrag &gt; 0)
+	BEGIN
+		RETURN 0;
+	END
+
+	IF(OBJECT_ID(&#39;tempdb..#TempAuftragKeys&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #TempAuftragKeys;
+	END
+
+	CREATE TABLE #TempAuftragKeys
+	(
+		kAuftrag INT PRIMARY KEY NOT NULL
+	);
+
+	INSERT INTO #TempAuftragKeys (kAuftrag)
+	SELECT DISTINCT [@Auftrag].kAuftrag
+	FROM @Auftrag
+	WHERE [@Auftrag].kAuftrag &gt; 0
+
+	-- Vorbereitung
+	DECLARE @OldContextInfo VARBINARY(128);
+	DECLARE @retry INT;
+	DECLARE @CreatedTransaction INT;
+	DECLARE @roundToDigits INT = 4;
+
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	DECLARE @hash VARBINARY(128);
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;Verkauf.spAuftragEckdatenBerechnen&#39;);
+
+	CREATE TABLE #TempDataEckdaten
+	(
+		kAuftrag INT PRIMARY KEY,
+		dLetzterVersand DATETIME,
+		dGedruckt DATETIME,
+		dGemailt DATETIME,
+		dVersandMail DATETIME,
+		dZahlungsMail DATETIME,
+		fWertNetto DECIMAL(25,13),
+		fWertBrutto DECIMAL(25,13),
+		fZahlung DECIMAL(25,13),
+		fGutschrift DECIMAL(25,13),
+		nIstNachnahme BIT,
+		dBezahlt DATETIME,
+		nIstKomplettRetourniert BIT,
+		nAnzahlPakete INT,
+		nAnzahlVersendetePakete INT,
+		nRechnungStatus TINYINT,
+		nZahlungStatus INT,
+		nKomplettAusgeliefert INT,
+		fWertRechnungNetto DECIMAL(25,13),
+		fWertRechnungBrutto DECIMAL(25,13),
+		nIstFuerAuslieferungGesperrt INT,
+		cRechnungsnummern NVARCHAR(200) NULL,
+		nError INT NOT NULL DEFAULT 0,
+		nStorno BIT NOT NULL DEFAULT 0,
+		nType TINYINT NOT NULL DEFAULT 0,
+		kZahlungsart INT,
+		fOffenerWert DECIMAL(25,13),
+		fOffenerWertOhneStorno DECIMAL(25,13),
+		nIstUmlagerung BIT NOT NULL,
+		nPrio INT NOT NULL,
+		dErstellt DATETIME NOT NULL
+	);
+
+	INSERT INTO #TempDataEckdaten
+	(
+		kAuftrag,
+		dLetzterVersand,
+		dGedruckt,
+		dGemailt,
+		dVersandMail,
+		dZahlungsMail,
+		fWertNetto,
+		fWertBrutto,
+		fZahlung,
+		fGutschrift,
+		nIstNachnahme,
+		dBezahlt,
+		nIstKomplettRetourniert,
+		nAnzahlPakete,
+		nAnzahlVersendetePakete,
+		nRechnungStatus,
+		nZahlungStatus,
+		nKomplettAusgeliefert,
+		fWertRechnungNetto,
+		fWertRechnungBrutto,
+		nIstFuerAuslieferungGesperrt,
+		cRechnungsnummern,
+		nStorno,
+		nType,
+		kZahlungsart,
+		nIstUmlagerung,
+		nPrio,
+		dErstellt
+	)
+	SELECT	DISTINCT tAuftrag.kAuftrag,
+			tAuftragEckdaten.dLetzterVersand,
+			tAuftragEckdaten.dGedruckt,
+			tAuftragEckdaten.dGemailt,
+			tAuftragEckdaten.dVersandMail,
+			tAuftragEckdaten.dZahlungsMail,
+			ISNULL(tAuftragEckdaten.fWertNetto, 0.0),
+			ISNULL(tAuftragEckdaten.fWertBrutto, 0.0),
+			ISNULL(tAuftragEckdaten.fZahlung, 0.0),
+			ISNULL(tAuftragEckdaten.fGutschrift, 0.0),
+			ISNULL(tAuftragEckdaten.nIstNachnahme, 0),
+			tAuftragEckdaten.dBezahlt,
+			ISNULL(tAuftragEckdaten.nIstKomplettRetourniert, 0),
+			ISNULL(tAuftragEckdaten.nAnzahlPakete, 0),
+			ISNULL(tAuftragEckdaten.nAnzahlVersendetePakete, 0),
+			ISNULL(tAuftragEckdaten.nRechnungStatus, 0),
+			ISNULL(tAuftragEckdaten.nZahlungStatus, 0),
+			tAuftrag.nKomplettAusgeliefert,
+			ISNULL(tAuftragEckdaten.fWertRechnungNetto, 0.0),
+			ISNULL(tAuftragEckdaten.fWertRechnungBrutto, 0.0),
+			ISNULL(tAuftragEckdaten.nIstFuerAuslieferungGesperrt, 0),
+			LEFT(tAuftragEckdaten.cRechnungsnummern, 200),
+			tAuftrag.nStorno,
+			tAuftrag.nType,
+			tAuftrag.kZahlungsart,
+			CASE WHEN tAuftrag.nType = 2 THEN 1 ELSE 0 END,
+			tAuftrag.nLieferPrioritaet,
+			tAuftrag.dErstellt
+	FROM Verkauf.tAuftrag
+	JOIN #TempAuftragKeys AS AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag
+	LEFT JOIN Verkauf.tAuftragEckdaten ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag;
+
+
+	--
+	-- Auftragszustand neu berechnen
+	--
+
+	-- Invalide St&#252;cklisten
+	UPDATE #TempDataEckdaten
+		SET #TempDataEckdaten.nError = #TempDataEckdaten.nError | 1
+	FROM #TempDataEckdaten
+	JOIN
+	(
+		SELECT DISTINCT tAuftragPosition.kAuftrag
+		FROM Verkauf.tAuftragPosition
+		JOIN #TempDataEckdaten ON #TempDataEckdaten.kAuftrag = tAuftragPosition.kAuftrag
+		WHERE tAuftragPosition.kAuftragStueckliste &lt;&gt; 0
+		GROUP BY tAuftragPosition.kAuftrag, tAuftragPosition.kAuftragStueckliste
+		HAVING COUNT(*) = 1
+			OR SUM(CASE WHEN tAuftragPosition.kAuftragStueckliste = tAuftragPosition.kAuftragPosition THEN 1 ELSE 0 END) &lt;&gt; 1
+			OR SUM(CASE WHEN tAuftragPosition.kAuftragStueckliste = tAuftragPosition.kAuftragPosition THEN 0 ELSE 1 END) = 0
+	) AS BrokenItems ON BrokenItems.kAuftrag = #TempDataEckdaten.kAuftrag;
+
+	-- Invalide Konfigurationen
+	UPDATE #TempDataEckdaten
+		SET #TempDataEckdaten.nError = #TempDataEckdaten.nError | 2
+	FROM #TempDataEckdaten
+	JOIN (
+		SELECT DISTINCT tAuftragPosition.kAuftrag
+		FROM Verkauf.tAuftragPosition
+		JOIN #TempDataEckdaten ON #TempDataEckdaten.kAuftrag = tAuftragPosition.kAuftrag
+		WHERE tAuftragPosition.kKonfigVater &lt;&gt; 0
+		GROUP BY tAuftragPosition.kAuftrag, tAuftragPosition.kKonfigVater
+		HAVING SUM(CASE WHEN tAuftragPosition.kKonfigVater = tAuftragPosition.kAuftragPosition THEN 1 ELSE 0 END) &lt;&gt; 1
+	) AS BrokenItems ON BrokenItems.kAuftrag = #TempDataEckdaten.kAuftrag
+
+	-- Auftrag ohne Positionen
+	UPDATE #TempDataEckdaten
+		SET #TempDataEckdaten.nError = #TempDataEckdaten.nError | 4
+	FROM #TempDataEckdaten
+	LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = #TempDataEckdaten.kAuftrag
+	WHERE tAuftragPosition.kAuftragPosition IS NULL;
+
+	-- Auftrag mit Artikelpositionen dessen Artikel es nicht mehr gibt
+	UPDATE #TempDataEckdaten
+		SET #TempDataEckdaten.nError = #TempDataEckdaten.nError | 16
+	FROM #TempDataEckdaten
+	JOIN (
+		SELECT DISTINCT tAuftragposition.kAuftrag
+		FROM Verkauf.tAuftragposition
+		LEFT JOIN dbo.tArtikel ON tArtikel.kArtikel = tAuftragPosition.kArtikel
+		WHERE tAuftragposition.nType = 1 AND tArtikel.kArtikel IS NULL
+	) AS BrokenItems ON BrokenItems.kAuftrag = #TempDataEckdaten.kAuftrag;
+
+
+	--
+	-- Auftragspositionen
+	--
+	CREATE TABLE #TempDataPositionEckdaten
+	(
+		kAuftrag INT NOT NULL,
+		kArtikel INT,
+		kAuftragPosition INT,
+		nArtikelTyp INT,
+		fAnzahlOffen DECIMAL(25,13),
+		fAnzahlGeliefert DECIMAL(25,13),
+		fAnzahlGutgeschrieben DECIMAL(25,13),
+		fAnzahlAufRechnung DECIMAL(25,13),
+		nIstDropshippingLieferbar BIT,
+		fWertNetto DECIMAL(25,13),
+		fWertBrutto DECIMAL(25,13),
+		nIstKomplettRetourniert BIT,
+		fTeilmengenfaktorLager DECIMAL(25, 13) NULL,
+		nIstStuecklistenVater BIT NOT NULL,
+		nIstUmlagerung BIT NOT NULL,
+		nPrio INT NOT NULL,
+		nPrioDatum INT NOT NULL,
+		nVersandSperre BIT NOT NULL,
+		nError INT
+	);
+	CREATE NONCLUSTERED INDEX IX_TempDataPositionEckdaten ON #TempDataPositionEckdaten(kAuftrag);
+
+	INSERT INTO #TempDataPositionEckdaten
+	(
+	   kAuftrag,
+	   kArtikel,
+	   kAuftragPosition,
+	   nArtikelTyp,
+	   fAnzahlOffen,
+	   fAnzahlGeliefert,
+	   fAnzahlGutgeschrieben,
+	   fAnzahlAufRechnung,
+	   nIstDropshippingLieferbar,
+	   fWertNetto,
+	   fWertBrutto,
+	   nIstKomplettRetourniert,
+	   fTeilmengenfaktorLager,
+	   nIstStuecklistenVater,
+	   nIstUmlagerung,
+	   nPrio,
+	   nPrioDatum,
+	   nVersandSperre,
+	   nError
+	)
+	SELECT #TempDataEckdaten.kAuftrag,
+		  tAuftragPosition.kArtikel,
+		  tAuftragPosition.kAuftragPosition,
+		  CASE
+				WHEN tArtikel.kArtikel IS NULL THEN 0		-- Freiposition
+				WHEN tArtikel.cLagerVariation &lt;&gt; &#39;N&#39; THEN 1	-- Einfacher Variationsartikel
+				WHEN tArtikel.cLagerAktiv = &#39;N&#39; THEN 2		-- Artikel ohne Lagerbestand
+				WHEN tArtikel.nIstTeilmengenArtikel = 1 THEN 4 -- Teilmengen Artikel
+				ELSE 3								   -- Artikel mit Lagerbestand
+		  END AS nArtikelTyp,
+		  ISNULL(tAuftragPositionEckdaten.fAnzahlOffen, 0.0),
+		  ISNULL(tAuftragPositionEckdaten.fAnzahlGeliefert, 0.0),
+		  ISNULL(tAuftragPositionEckdaten.fAnzahlGutgeschrieben, 0.0),
+		  ISNULL(tAuftragPositionEckdaten.fAnzahlAufRechnung, 0.0),
+		  ISNULL(tAuftragPositionEckdaten.nIstDropshippingLieferbar, 0),
+		  ROUND(ISNULL(tAuftragPositionEckdaten.fWertNetto, 0.0), @roundToDigits),
+		  ROUND(ISNULL(tAuftragPositionEckdaten.fWertBrutto, 0.0), @roundToDigits),
+		  ISNULL(tAuftragPositionEckdaten.nIstKomplettRetourniert, 0),
+		  ISNULL(tAuftragPositionTeilmengen.fLagerFactor, 1),
+		  CASE WHEN tAuftragPosition.kAuftragStueckliste = tAuftragPosition.kAuftragPosition THEN 1 ELSE 0 END,
+		  #TempDataEckdaten.nIstUmlagerung,
+		  #TempDataEckdaten.nPrio,
+		  ISNULL(DATEDIFF(SECOND, DATEFROMPARTS(2021, 01, 01), #TempDataEckdaten.dErstellt), 0) AS nPrioDatum,
+		  ISNULL(tAuftragPositionEckdaten.nVersandSperre, 0),
+		  #TempDataEckdaten.nError
+	FROM Verkauf.tAuftragPosition
+	JOIN #TempDataEckdaten ON #TempDataEckdaten.kAuftrag = tAuftragPosition.kAuftrag
+	LEFT JOIN dbo.tArtikel ON tArtikel.kArtikel = tAuftragPosition.kArtikel
+	LEFT JOIN Verkauf.tAuftragPositionEckdaten ON tAuftragPositionEckdaten.kAuftragPosition = tAuftragPosition.kAuftragPosition
+	LEFT JOIN Verkauf.tAuftragPositionTeilmengen ON tAuftragPositionTeilmengen.kAuftragPosition = tAuftragPosition.kAuftragPosition;
+
+	UPDATE #TempDataPositionEckdaten
+	SET #TempDataPositionEckdaten.fAnzahlOffen = CASE
+														WHEN #TempDataEckdaten.nType NOT IN (1,2,6,7) OR #TempDataEckdaten.nStorno = 1 OR tAuftragPosition.nType NOT IN (0,1,10,11,15,17,18,19,20) OR #TempDataEckdaten.nKomplettAusgeliefert = 2
+															THEN 0.0
+														WHEN tAuftragPosition.fAnzahl - ISNULL(IIF(#TempDataPositionEckdaten.nIstStuecklistenVater = 1, ROUND(Lieferschein.fAnzahlGeliefert, 5), Lieferschein.fAnzahlGeliefert), 0) - ISNULL(Rechnungsdaten.fGutgeschriebenLiefermenge, 0) - ISNULL(Gutschriften.GutgeschriebenLiefermenge, 0) &lt; 0
+															THEN 0.0
+														ELSE tAuftragPosition.fAnzahl - ISNULL(IIF(#TempDataPositionEckdaten.nIstStuecklistenVater = 1, ROUND(Lieferschein.fAnzahlGeliefert, 5), Lieferschein.fAnzahlGeliefert), 0) - ISNULL(Rechnungsdaten.fGutgeschriebenLiefermenge, 0) - ISNULL(Gutschriften.GutgeschriebenLiefermenge, 0)
+													END,
+		  #TempDataPositionEckdaten.fAnzahlGeliefert = ISNULL(IIF(#TempDataPositionEckdaten.nIstStuecklistenVater = 1, ROUND(Lieferschein.fAnzahlGeliefert, 5), Lieferschein.fAnzahlGeliefert), 0.0),
+		  #TempDataPositionEckdaten.fAnzahlGutgeschrieben = ISNULL(Gutschriften.Gutgeschrieben, 0.0) + ISNULL(Rechnungsdaten.fGutgeschrieben, 0.0),
+		  #TempDataPositionEckdaten.nIstDropshippingLieferbar = CASE WHEN DropshippingLieferbarkeit.kArtikel IS NULL THEN 0 ELSE 1 END,
+		  #TempDataPositionEckdaten.nIstKomplettRetourniert = CASE WHEN Retouren.fAnzahlRetourniert IS NOT NULL AND Retouren.fAnzahlRetourniert = tAuftragPosition.fAnzahl
+																		THEN 1
+																		ELSE 0
+																END,
+		  #TempDataPositionEckdaten.fAnzahlAufRechnung = ISNULL(Rechnungsdaten.fAnzahlAufRechnung, 0.0),
+		  #TempDataPositionEckdaten.fWertNetto = ROUND(ISNULL(tAuftragPosition.fWertNettoGesamtFixiert, tAuftragPosition.fAnzahl * tAuftragPosition.fVKNetto * (1.0 - (tAuftragPosition.fRabatt / 100.0))), @roundToDigits),
+		  #TempDataPositionEckdaten.fWertBrutto = ROUND(ISNULL(tAuftragPosition.fWertBruttoGesamtFixiert, tAuftragPosition.fAnzahl * tAuftragPosition.fVKNetto * (1.0 - (tAuftragPosition.fRabatt / 100.0)) * (1.0 + (tAuftragPosition.fMwSt / 100.0))), @roundToDigits),
+		  #TempDataPositionEckdaten.nVersandSperre = CASE WHEN VersandsperreArtikel.kArtikel IS NOT NULL THEN 1 ELSE 0 END
+	FROM #TempDataPositionEckdaten
+	JOIN #TempDataEckdaten ON #TempDataEckdaten.kAuftrag = #TempDataPositionEckdaten.kAuftrag
+	LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #TempDataPositionEckdaten.kAuftragPosition
+	LEFT JOIN (
+		SELECT
+			kBestellpos AS kAuftragsposition,
+			SUM(fAnzahl) AS fAnzahlGeliefert
+		FROM dbo.tlieferscheinPos
+		GROUP BY kBestellpos
+	) AS Lieferschein ON Lieferschein.kAuftragsposition = #TempDataPositionEckdaten.kAuftragposition
+	LEFT JOIN (
+		SELECT
+			tGutschriftPos.kBestellPos AS kAuftragposition,
+			SUM(CASE
+					WHEN tGutschriftPos.nAuftragsmengeReduzieren = 1
+						THEN ISNULL(tGutschriftPos.nAnzahl, 0)
+					ELSE 0
+			END) AS Gutgeschrieben,
+			SUM(CASE
+					WHEN tGutschriftPos.nLiefermengeReduzieren = 1
+						THEN ISNULL(tGutschriftPos.nAnzahl, 0)
+					ELSE 0
+			END) AS GutgeschriebenLiefermenge
+		FROM dbo.tGutschriftPos
+		JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+		WHERE tGutschriftPos.kRechnungPosition IS NULL
+			AND tgutschrift.nStorno = 0
+			AND tgutschrift.nStornoTyp = 0
+		GROUP BY tGutschriftPos.kBestellPos
+		UNION ALL
+		SELECT
+			tGutschriftPos.kBestellPos AS kAuftragposition,
+			SUM(CASE
+					WHEN tGutschriftPos.nAuftragsmengeReduzieren = 1
+						THEN ISNULL(tGutschriftPos.nAnzahl, 0)
+					ELSE 0
+			END) AS Gutgeschrieben,
+			SUM(CASE
+					WHEN tGutschriftPos.nLiefermengeReduzieren = 1
+						THEN ISNULL(tGutschriftPos.nAnzahl, 0)
+					ELSE 0
+			END) AS GutgeschriebenLiefermenge
+		FROM dbo.tGutschriftPos
+		JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+		WHERE tGutschriftPos.kRechnungPosition = 0
+			AND tgutschrift.nStorno = 0
+			AND tgutschrift.nStornoTyp = 0
+		GROUP BY tGutschriftPos.kBestellPos
+	) AS Gutschriften ON Gutschriften.kAuftragposition = #TempDataPositionEckdaten.kAuftragposition
+	LEFT JOIN (
+		SELECT
+			tRechnungPosition.kAuftragPosition,
+			SUM(CASE
+					WHEN tRechnungPosition.fAnzahl - ISNULL(GutschriftPos.fAnzahlAufRechnungReduzieren, 0) &gt; 0.0
+							THEN tRechnungPosition.fAnzahl - ISNULL(GutschriftPos.fAnzahlAufRechnungReduzieren, 0)
+					ELSE 0.0
+			END) AS fAnzahlAufRechnung,
+			SUM(ISNULL(GutschriftPos.fGutgeschrieben, 0)) AS fGutgeschrieben,
+			SUM(ISNULL(GutschriftPos.fGutgeschriebenLiefermenge, 0)) AS fGutgeschriebenLiefermenge
+		FROM Rechnung.tRechnung
+		JOIN Rechnung.tRechnungPosition ON tRechnungPosition.kRechnung = tRechnung.kRechnung
+		LEFT JOIN (
+			SELECT
+				tGutschriftPos.kRechnungPosition,
+				SUM(CASE WHEN tGutschriftPos.nAuftragsmengeReduzieren = 1 THEN tGutschriftPos.nAnzahl ELSE 0 END) AS fGutgeschrieben,
+				SUM(CASE WHEN tGutschriftPos.nLiefermengeReduzieren = 1 THEN tGutschriftPos.nAnzahl ELSE 0 END) AS fGutgeschriebenLiefermenge,
+				SUM(CASE WHEN tGutschriftPos.nAuftragsmengeReduzieren = 0 THEN tGutschriftPos.nAnzahl ELSE 0 END) AS fAnzahlAufRechnungReduzieren
+			FROM dbo.tGutschriftPos
+			JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+			WHERE tgutschrift.nStorno = 0
+				AND tgutschrift.nStornoTyp = 0
+			GROUP BY tGutschriftPos.kRechnungPosition) AS GutschriftPos ON GutschriftPos.kRechnungPosition = tRechnungPosition.kRechnungPosition
+		WHERE tRechnung.nStorno = 0
+		GROUP BY tRechnungPosition.kAuftragPosition
+	) AS Rechnungsdaten ON Rechnungsdaten.kAuftragPosition = #TempDataPositionEckdaten.kAuftragPosition
+	LEFT JOIN (
+		  SELECT DISTINCT tliefartikel.tArtikel_kArtikel AS kArtikel
+		  FROM dbo.tliefartikel
+		  WHERE tliefartikel.nDropShipping &gt; 0
+	) AS DropshippingLieferbarkeit ON DropshippingLieferbarkeit.kArtikel = #TempDataPositionEckdaten.kArtikel
+	LEFT JOIN (
+		SELECT
+			tlieferscheinpos.kBestellpos AS kAuftragPosition,
+			SUM(tRMRetourePos.fAnzahl) AS fAnzahlRetourniert
+		FROM dbo.tLieferscheinPos
+		JOIN dbo.tRMRetourePos ON tRMRetourePos.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+		GROUP BY tLieferscheinPos.kBestellpos
+	) AS Retouren ON Retouren.kAuftragPosition = #TempDataPositionEckdaten.kAuftragPosition
+	LEFT JOIN (
+		SELECT DISTINCT tArtikelType.kArtikel
+		FROM Artikel.tArtikelType
+		WHERE tArtikelType.uArtikelType = &#39;A6706B01-FA24-4818-A591-1A23F75C177F&#39;
+	) AS VersandsperreArtikel ON VersandsperreArtikel.kArtikel = #TempDataPositionEckdaten.kArtikel
+
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+DeadlockRetry0:
+	BEGIN TRY
+	   IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+		  MERGE Verkauf.tAuftragPositionEckdaten AS target
+			 USING (SELECT	  #TempDataPositionEckdaten.kAuftragPosition,
+						  #TempDataPositionEckdaten.kArtikel,
+						  #TempDataPositionEckdaten.nArtikelTyp,
+						  #TempDataPositionEckdaten.fAnzahlOffen,
+						  CASE WHEN #TempDataPositionEckdaten.fAnzahlGeliefert &lt; 0.0 THEN 0.0 ELSE #TempDataPositionEckdaten.fAnzahlGeliefert END AS fAnzahlGeliefert,
+						  #TempDataPositionEckdaten.fAnzahlGutgeschrieben,
+						  #TempDataPositionEckdaten.fAnzahlAufRechnung,
+						  #TempDataPositionEckdaten.nIstDropshippingLieferbar,
+						  #TempDataPositionEckdaten.fWertNetto,
+						  #TempDataPositionEckdaten.fWertBrutto,
+						  #TempDataPositionEckdaten.nIstKomplettRetourniert,
+						  #TempDataPositionEckdaten.fTeilmengenfaktorLager,
+						  #TempDataPositionEckdaten.nIstStuecklistenVater,
+						  #TempDataPositionEckdaten.nIstUmlagerung,
+						  #TempDataPositionEckdaten.kAuftrag,
+						  #TempDataPositionEckdaten.nPrio,
+						  #TempDataPositionEckdaten.nPrioDatum,
+						  #TempDataPositionEckdaten.nVersandSperre,
+						  #TempDataPositionEckdaten.nError
+					   FROM #TempDataPositionEckdaten) AS source (
+						  kAuftragPosition,
+						  kArtikel,
+						  nArtikelTyp,
+						  fAnzahlOffen,
+						  fAnzahlGeliefert,
+						  fAnzahlGutgeschrieben,
+						  fAnzahlAufRechnung,
+						  nIstDropshippingLieferbar,
+						  fWertNetto,
+						  fWertBrutto,
+						  nIstKomplettRetourniert,
+						  fTeilmengenfaktorLager,
+						  nIstStuecklistenVater,
+						  nIstUmlagerung,
+						  kAuftrag,
+						  nPrio,
+						  nPrioDatum,
+						  nVersandSperre,
+						  nError
+					   )  ON (target.kAuftragPosition = source.kAuftragPosition)
+				WHEN MATCHED THEN
+				UPDATE SET target.nArtikelTyp = source.nArtikelTyp,
+						  target.kArtikel = source.kArtikel,
+						  target.fAnzahlOffen = CASE WHEN source.fAnzahlOffen &lt; 0.0 THEN 0.0 ELSE source.fAnzahlOffen END,
+						  target.fAnzahlGeliefert = source.fAnzahlGeliefert,
+						  target.fAnzahlGutgeschrieben = source.fAnzahlGutgeschrieben,
+						  target.fAnzahlAufRechnung = CASE WHEN source.fAnzahlAufRechnung &lt; 0.0 THEN 0.0 ELSE source.fAnzahlAufRechnung END,
+						  target.nIstDropshippingLieferbar = source.nIstDropshippingLieferbar,
+						  target.fWertNetto = source.fWertNetto,
+						  target.fWertBrutto = source.fWertBrutto,
+						  target.nIstKomplettRetourniert = source.nIstKomplettRetourniert,
+						  target.fTeilmengenfaktorLager = source.fTeilmengenfaktorLager,
+						  target.nIstStuecklistenVater = source.nIstStuecklistenVater,
+						  target.nIstUmlagerung = source.nIstUmlagerung,
+						  target.kAuftrag = source.kAuftrag,
+						  target.nPrio = source.nPrio,
+						  target.nPrioDatum = source.nPrioDatum,
+						  target.nVersandSperre = source.nVersandSperre,
+						  target.nAuftragStatus = source.nError
+				WHEN NOT MATCHED THEN
+				INSERT (kAuftragPosition,
+					   kArtikel,
+					   nArtikelTyp,
+					   fAnzahlOffen,
+					   fAnzahlGeliefert,
+					   fAnzahlGutgeschrieben,
+					   fAnzahlAufRechnung,
+					   nIstDropshippingLieferbar,
+					   fWertNetto,
+					   fWertBrutto,
+					   nIstKomplettRetourniert,
+					   fTeilmengenfaktorLager,
+					   nIstStuecklistenVater,
+					   nIstUmlagerung,
+					   kAuftrag,
+					   nPrio,
+					   nPrioDatum,
+					   nVersandSperre,
+					   nAuftragStatus)
+			VALUES (source.kAuftragPosition,
+					   source.kArtikel,
+					   source.nArtikelTyp,
+					   CASE WHEN source.fAnzahlOffen &lt; 0.0 THEN 0.0 ELSE source.fAnzahlOffen END,
+					   source.fAnzahlGeliefert,
+					   source.fAnzahlGutgeschrieben,
+					   CASE WHEN source.fAnzahlAufRechnung &lt; 0.0 THEN 0.0 ELSE source.fAnzahlAufRechnung END,
+					   source.nIstDropshippingLieferbar,
+					   source.fWertNetto,
+					   source.fWertBrutto,
+					   source.nIstKomplettRetourniert,
+					   source.fTeilmengenfaktorLager,
+					   source.nIstStuecklistenVater,
+					   source.nIstUmlagerung,
+					   source.kAuftrag,
+					   source.nPrio,
+					   source.nPrioDatum,
+					   source.nVersandSperre,
+					   source.nError);
+	   IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+	   BEGIN TRY
+		  EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+		  IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry0;
+	   END TRY
+	   BEGIN CATCH
+		  IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+	   END CATCH;
+	   THROW;
+	END CATCH
+
+	--
+	-- Auftragsdaten
+	--
+	UPDATE #TempDataEckdaten
+		SET #TempDataEckdaten.fWertNetto = ISNULL(tmpAuftragDaten.fSummeWertNetto, 0),
+			#TempDataEckdaten.fWertBrutto = ISNULL(tmpAuftragDaten.fSummeWertBrutto, 0),
+			#TempDataEckdaten.nIstKomplettRetourniert = ISNULL(tmpAuftragDaten.nIstKomplettRetourniert, 0),
+			#TempDataEckdaten.dGedruckt = tmpAuftragAusgabe.dGedruckt,
+			#TempDataEckdaten.dGemailt = tmpAuftragAusgabe.dGemailt,
+			#TempDataEckdaten.dVersandMail = tmpAuftragAusgabe.dVersandMail,
+			#TempDataEckdaten.dZahlungsMail = tmpAuftragAusgabe.dZahlungMail,
+			#TempDataEckdaten.dLetzterVersand = ISNULL(tmpVersand.dLetzterVersand, tAuftrag.dAuslieferdatum),
+			#TempDataEckdaten.nAnzahlPakete = ISNULL(tmpVersand.nAnzahlPakete, 0),
+			#TempDataEckdaten.nAnzahlVersendetePakete = ISNULL(tmpVersand.nAnzahlVersendetePakete, 0),
+			#TempDataEckdaten.nRechnungStatus = CASE
+													WHEN ISNULL(tmpAuftragDaten.fAnzahlGesamt, 0) &lt;= ISNULL(tmpRechnungDaten.fAnzahlRechnung, 0)
+														AND tmpRechnungDaten.kAuftrag IS NOT NULL
+														THEN 2
+													WHEN ISNULL(tmpAuftragDaten.fAnzahlGesamt, 0) &gt; ISNULL(tmpRechnungDaten.fAnzahlRechnung, 0)
+														AND ISNULL(tmpRechnungDaten.fAnzahlRechnung, 0) &gt; 0
+														THEN 1
+													ELSE 0
+												END,
+			#TempDataEckdaten.fWertRechnungBrutto = ISNULL(tmpRechnungDaten.fWertRechnungBrutto, 0),
+			#TempDataEckdaten.fWertRechnungNetto = ISNULL(tmpRechnungDaten.fWertRechnungNetto, 0),
+			#TempDataEckdaten.fGutschrift = ISNULL(tmpAuftragDaten.fGutschrift, 0) + ISNULL(tmpGutschriftFrei.fGutschrift, 0),
+			#TempDataEckdaten.cRechnungsnummern = LEFT(STUFF((SELECT &#39;, &#39; + tRechnung.cRechnungsnr + CASE WHEN tRechnung.nStorno = 1 THEN &#39; (s)&#39; ELSE &#39;&#39; END
+														FROM Rechnung.tRechnung
+														JOIN Verkauf.tAuftragRechnung ON tAuftragRechnung.kRechnung = tRechnung.kRechnung
+														WHERE #TempDataEckdaten.kAuftrag = tAuftragRechnung.kAuftrag AND tRechnung.nIstEntwurf = 0
+														FOR XML PATH (&#39;&#39;)), 1, 2, &#39;&#39;), 200)
+		FROM #TempDataEckdaten
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = #TempDataEckdaten.kAuftrag
+		LEFT JOIN (
+			SELECT tAuftragPosition.kAuftrag,
+					SUM(tAuftragPosition.fAnzahl) AS fAnzahlGesamt,
+					ROUND(SUM(ISNULL(ROUND(tAuftragPosition.fWertNettoGesamtFixiert, @roundToDigits), tAuftragPositionEckdaten.fWertNetto)), 2) AS fSummeWertNetto,
+					ROUND(SUM(ISNULL(ROUND(tAuftragPosition.fWertBruttoGesamtFixiert, @roundToDigits), tAuftragPositionEckdaten.fWertBrutto)), 2) AS fSummeWertBrutto,
+					ROUND(SUM(ISNULL(tmpGutschrift.fGutschrift, 0)), 2) AS fGutschrift,
+					CASE
+						WHEN COUNT(CASE WHEN tAuftragPosition.nType IN (0, 1) THEN 1 END) &gt; 0 THEN
+							ISNULL(MIN(
+								CASE
+									WHEN tAuftragPosition.nType IN (0, 1)
+										THEN CAST(tAuftragPositionEckdaten.nIstKomplettRetourniert AS INT)
+									ELSE NULL -- Artikelpositionen und Freipositionen werden ber&#252;cksichtigt und der Rest aus der Minimum-Ermittlung ausgeschlossen
+								END
+							), 0)
+						ELSE 0
+					END AS nIstKomplettRetourniert
+			FROM Verkauf.tAuftragPosition
+			JOIN Verkauf.tAuftragPositionEckdaten ON tAuftragPositionEckdaten.kAuftragPosition = tAuftragPosition.kAuftragPosition
+			LEFT JOIN (
+				SELECT tGutschriftPos.kBestellPos,
+						SUM(ROUND(CONVERT(DECIMAL(25, 13), tGutschriftPos.nAnzahl * tGutschriftPos.fVKPreis) * CONVERT(DECIMAL(25, 13), 1.0 - CONVERT(DECIMAL(25, 13), tGutschriftPos.fRabatt / 100.0)), 4)) AS fGutschrift
+						-- entspricht SUM(ROUND((nAnzahl * fVKPreis) * (1.0 - (fRabatt / 100.0)), 4)) AS fGutschrift
+					FROM dbo.tGutschriftPos
+					JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+					WHERE tGutschriftPos.nAuftragsmengeReduzieren = 1 AND tgutschrift.nStorno = 0 AND tgutschrift.nStornoTyp = 0
+					GROUP BY tGutschriftPos.kBestellPos
+			) AS tmpGutschrift ON tmpGutschrift.kBestellPos = tAuftragPosition.kAuftragPosition
+			WHERE tAuftragPosition.nType &lt;&gt; 15
+			GROUP BY tAuftragPosition.kAuftrag
+		) AS tmpAuftragDaten ON tmpAuftragDaten.kAuftrag = #TempDataEckdaten.kAuftrag
+		LEFT JOIN (
+			SELECT tAuftragAusgabeDateien.kAuftrag,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 1 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dGedruckt,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 2 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dGemailt,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 3 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dVersandMail,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 4 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dZahlungMail
+				FROM Verkauf.tAuftragAusgabeDateien
+				WHERE tAuftragAusgabeDateien.cErrorCode IS NULL
+				GROUP BY tAuftragAusgabeDateien.kAuftrag
+			 UNION ALL
+			 SELECT tAuftragAusgabeDateien.kAuftrag,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 1 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dGedruckt,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 2 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dGemailt,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 3 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dVersandMail,
+					MAX(CASE WHEN tAuftragAusgabeDateien.nAusgabeArt = 4 THEN tAuftragAusgabeDateien.dAusgabeDatum ELSE NULL END) AS dZahlungMail
+				FROM Verkauf.tAuftragAusgabeDateien
+				WHERE tAuftragAusgabeDateien.cErrorCode = &#39;&#39;
+				GROUP BY tAuftragAusgabeDateien.kAuftrag
+		) AS tmpAuftragAusgabe ON tmpAuftragAusgabe.kAuftrag = #TempDataEckdaten.kAuftrag
+		LEFT JOIN (
+		SELECT tLieferschein.kBestellung AS kAuftrag,
+				MAX(tVersand.dVersendet) AS dLetzterVersand,
+				COUNT(tVersand.kVersand) AS nAnzahlPakete,
+				COUNT(CASE WHEN NOT tVersand.dVersendet IS NULL THEN 1 ELSE NULL END) AS nAnzahlVersendetePakete
+			FROM dbo.tVersand
+			JOIN dbo.tLieferschein ON tLieferschein.kLieferschein = tVersand.kLieferschein
+		GROUP BY tLieferschein.kBestellung
+		) AS tmpVersand ON tmpVersand.kAuftrag = #TempDataEckdaten.kAuftrag
+		LEFT JOIN (
+			SELECT tRechnungPosition.kAuftrag,
+				SUM(tRechnungPosition.fAnzahl - ISNULL(GutschriftDaten.fAnzahlKorrigiert, 0)) AS fAnzahlRechnung,
+				ROUND(SUM(ROUND(ISNULL(tRechnungPosition.fWertBruttoGesamtFixiert, tRechnungPositionEckdaten.fVKBruttoGesamt), 4) - ISNULL(GutschriftDaten.fSummeBruttoKorrigiert, 0)),2) AS fWertRechnungBrutto,
+				ROUND(SUM(ROUND(ISNULL(tRechnungPosition.fWertNettoGesamtFixiert, tRechnungPositionEckdaten.fVKNettoGesamt), 4) - ISNULL(GutschriftDaten.fSummeNettoKorrigiert, 0)), 2) AS fWertRechnungNetto
+			FROM Rechnung.tRechnungPosition
+			JOIN Rechnung.tRechnungPositionEckdaten ON tRechnungPositionEckdaten.kRechnungPosition = tRechnungPosition.kRechnungPosition
+			JOIN Rechnung.tRechnung ON tRechnung.kRechnung = tRechnungPosition.kRechnung
+			LEFT JOIN (SELECT
+							tGutschriftPos.kRechnungPosition,
+							tGutschriftPos.kBestellPos,
+							tgutschrift.kRechnung,
+							SUM(tGutschriftPos.nAnzahl) AS fAnzahlKorrigiert,
+							SUM(ROUND(CONVERT(DECIMAL(25, 13), tGutschriftPos.nAnzahl * tGutschriftPos.fVKPreis) * CONVERT(DECIMAL(25, 13), 1.0 - CONVERT(DECIMAL(25, 13), tGutschriftPos.fRabatt / 100.0)), 4)) AS fSummeBruttoKorrigiert,
+							-- entspricht SUM(ROUND((nAnzahl * fVKPreis) * (1.0 - (fRabatt / 100.0)), 4)) AS fSummeBruttoKorrigiert
+							SUM(ROUND(CONVERT(DECIMAL(25, 13), tGutschriftPos.nAnzahl * tGutschriftPos.fVKNetto) * CONVERT(DECIMAL(25, 13), 1.0 - CONVERT(DECIMAL(25, 13), tGutschriftPos.fRabatt / 100.0)), 4)) AS fSummeNettoKorrigiert
+							-- entspricht SUM(ROUND((nAnzahl * fVKNetto) * (1.0 - (fRabatt / 100.0)), 4)) AS fSummeNettoKorrigiert
+						FROM dbo.tGutschriftPos
+						JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+						WHERE tGutschriftPos.nAuftragsmengeReduzieren = 0 AND tgutschrift.nStorno = 0 AND tgutschrift.nStornoTyp = 0
+						GROUP BY tGutschriftPos.kRechnungPosition, tGutschriftPos.kBestellPos, tgutschrift.kRechnung
+				) GutschriftDaten ON (GutschriftDaten.kRechnungPosition = tRechnungPosition.kRechnungPosition) OR (GutschriftDaten.kRechnung = tRechnungPosition.kRechnung AND GutschriftDaten.kBestellPos = tRechnungPosition.kAuftragPosition)
+			WHERE tRechnung.nStorno = 0
+			GROUP BY tRechnungPosition.kAuftrag
+		) AS tmpRechnungDaten ON tmpRechnungDaten.kAuftrag = #TempDataEckdaten.kAuftrag
+		LEFT JOIN (
+			SELECT
+				Auftrag.kAuftrag,
+				ROUND(SUM(ROUND(CONVERT(DECIMAL(25, 13), tGutschriftPos.nAnzahl * tGutschriftPos.fVKPreis) * CONVERT(DECIMAL(25, 13), 1.0 - CONVERT(DECIMAL(25, 13), tGutschriftPos.fRabatt / 100.0)), 4)), 2) AS fGutschrift
+				-- entspricht ROUND(SUM(ROUND((nAnzahl * fVKPreis) * (1.0 - (fRabatt / 100.0)), 4)), 2) AS fGutschrift
+			FROM dbo.tGutschriftPos
+			JOIN (
+				SELECT tAuftragRechnung.kAuftrag, tgutschrift.kGutschrift
+				FROM Verkauf.tAuftragRechnung
+				JOIN dbo.tgutschrift ON tgutschrift.kRechnung = tAuftragRechnung.kRechnung
+				WHERE tgutschrift.nStorno = 0 AND tgutschrift.nStornoTyp = 0
+				GROUP BY tAuftragRechnung.kAuftrag, tgutschrift.kGutschrift
+			) AS Auftrag ON Auftrag.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+			WHERE (tGutschriftPos.kBestellPos IS NULL OR tGutschriftPos.kBestellPos &lt;= 0) AND tGutschriftPos.nAuftragsmengeReduzieren = 1
+			GROUP BY Auftrag.kAuftrag
+		) AS tmpGutschriftFrei ON tmpGutschriftFrei.kAuftrag =	#TempDataEckdaten.kAuftrag;
+
+	DECLARE @fRunden DECIMAL(25,13);
+	SET @fRunden = 0.009;
+	IF(ISNULL((SELECT TOP(1) dbo.teinstellungen.nRunden FROM dbo.teinstellungen), 0) &gt; 0)
+	BEGIN
+		SET @fRunden = 0.059;
+	END
+
+	UPDATE #TempDataEckdaten
+	SET #TempDataEckdaten.nZahlungStatus = ISNULL(Zahlungstatus.nZahlungStatus, 0),
+		#TempDataEckdaten.dBezahlt = CASE
+										WHEN ISNULL(Zahlungstatus.nZahlungStatus, 0) = 2
+											THEN ISNULL(Zahlungstatus.dLetztesZahlungsdatum, tAuftrag.dErstellt)
+										WHEN #TempDataEckdaten.fWertBrutto = 0.0
+											THEN tAuftrag.dErstellt
+										ELSE NULL
+									END,
+		#TempDataEckdaten.fZahlung = ISNULL(Zahlungstatus.fZahlung, 0.00),
+		#TempDataEckdaten.fOffenerWert = CASE WHEN tAuftrag.nStorno = 1 THEN 0 ELSE ISNULL(#TempDataEckdaten.fWertBrutto, 0.00) END - ISNULL(Zahlungstatus.fZahlung, 0.00) - ISNULL(#TempDataEckdaten.fGutschrift, 0.00),
+		#TempDataEckdaten.fOffenerWertOhneStorno = ISNULL(#TempDataEckdaten.fWertBrutto, 0.00) - ISNULL(Zahlungstatus.fZahlung, 0.00) - ISNULL(#TempDataEckdaten.fGutschrift, 0.00)
+	FROM #TempDataEckdaten
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = #TempDataEckdaten.kAuftrag
+	LEFT JOIN
+	(
+	    SELECT
+			Zahlungsdaten.kAuftrag,
+			CASE
+				WHEN Zahlungsdaten.nRechnungTyp IN (2, 3) AND Zahlungsdaten.nRechnungZahlungStatus = 1 --Sammelrechnungen Teilbezahlt
+					THEN 3 --Nicht ermittelbar
+				WHEN Zahlungsdaten.fZuZahlen - @fRunden &lt;= ISNULL(Zahlungsdaten.fZahlung, 0)
+					THEN 2 --Vollbezahlt
+				WHEN Zahlungsdaten.fZuZahlen &gt; ISNULL(Zahlungsdaten.fZahlung, 0) AND ISNULL(Zahlungsdaten.fZahlung, 0) &gt; 0.0
+					THEN 1 --Teilbezahlt
+				ELSE 0 --Unbezahlt
+			END AS nZahlungStatus,
+			Zahlungsdaten.dLetztesZahlungsdatum AS dLetztesZahlungsdatum,
+			Zahlungsdaten.fZahlung AS fZahlung
+		FROM
+		(
+			SELECT
+				#TempDataEckdaten.kAuftrag,
+				CASE
+					WHEN RechnungDaten.nRechnungTyp IN (2, 3) AND RechnungDaten.nRechnungZahlungStatus = 2 --Sammelrechnungen Vollbezahlt
+						THEN ISNULL(ZahlungAuftrag.fZahlung, 0.00) + #TempDataEckdaten.fWertRechnungBrutto
+					WHEN RechnungDaten.nRechnungTyp IN (2, 3) --Sammelrechnungen
+						THEN ISNULL(ZahlungAuftrag.fZahlung, 0.00)
+					ELSE ISNULL(ZahlungAuftrag.fZahlung, 0.00) + ISNULL(RechnungDaten.fZahlung, 0.00)
+				END AS fZahlung,
+				CASE
+					WHEN ZahlungAuftrag.dLetztesZahlungsdatum IS NULL AND RechnungDaten.dLetztesZahlungsdatum IS NULL
+						THEN NULL
+					WHEN ZahlungAuftrag.dLetztesZahlungsdatum IS NOT NULL AND RechnungDaten.dLetztesZahlungsdatum IS NULL
+						THEN ZahlungAuftrag.dLetztesZahlungsdatum
+					WHEN ZahlungAuftrag.dLetztesZahlungsdatum IS NULL AND RechnungDaten.dLetztesZahlungsdatum IS NOT NULL
+						THEN RechnungDaten.dLetztesZahlungsdatum
+					WHEN ZahlungAuftrag.dLetztesZahlungsdatum &gt; RechnungDaten.dLetztesZahlungsdatum
+						THEN ZahlungAuftrag.dLetztesZahlungsdatum
+					ELSE RechnungDaten.dLetztesZahlungsdatum
+				END AS dLetztesZahlungsdatum,
+				RechnungDaten.nRechnungTyp AS nRechnungTyp,
+				RechnungDaten.nRechnungZahlungStatus AS nRechnungZahlungStatus,
+				#TempDataEckdaten.nRechnungStatus,
+				CASE
+					WHEN tAuftrag.nStorno = 1
+						THEN 0
+					ELSE #TempDataEckdaten.fWertBrutto
+				END - #TempDataEckdaten.fGutschrift AS fZuZahlen
+			FROM #TempDataEckdaten
+			JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = #TempDataEckdaten.kAuftrag
+			LEFT JOIN
+			(
+				SELECT
+					tZahlung.kBestellung AS kAuftrag,
+					MAX(tZahlung.dDatum) AS dLetztesZahlungsdatum,
+					SUM(tZahlung.fBetrag) AS fZahlung
+				FROM dbo.tZahlung
+				WHERE tZahlung.kBestellung &gt; 0
+					AND (tZahlung.kRechnung IS NULL OR tZahlung.kRechnung = 0)
+					AND (tZahlung.kGutschrift IS NULL OR tZahlung.kGutschrift = 0)
+					AND tZahlung.nZahlungstyp != 1 -- Mahngeb&#252;hren ignorieren
+				GROUP BY tZahlung.kBestellung
+			) AS ZahlungAuftrag ON ZahlungAuftrag.kAuftrag = #TempDataEckdaten.kAuftrag
+			LEFT JOIN
+			(
+				SELECT
+					tAuftragRechnung.kAuftrag,
+					MAX(tRechnungEckdaten.nRechnungTyp) AS nRechnungTyp,
+					CASE
+						WHEN MIN(tRechnungEckdaten.nZahlungStatus) = 2
+							THEN 2
+						WHEN MAX(tRechnungEckdaten.nZahlungStatus) = 0
+							THEN 0
+						ELSE 1
+					END AS nRechnungZahlungStatus,
+					MAX(tRechnungEckdaten.dBezahlt) AS dLetztesZahlungsdatum,
+					SUM(tRechnungEckdaten.fZahlung) AS fZahlung
+				FROM Rechnung.tRechnungEckdaten
+				JOIN Verkauf.tAuftragRechnung ON tAuftragRechnung.kRechnung = tRechnungEckdaten.kRechnung
+				GROUP BY tAuftragRechnung.kAuftrag
+			) AS RechnungDaten ON RechnungDaten.kAuftrag = #TempDataEckdaten.kAuftrag
+		) AS Zahlungsdaten
+	) AS Zahlungstatus ON Zahlungstatus.kAuftrag = #TempDataEckdaten.kAuftrag;
+
+	-- Zahlung fehlt und Auftrag darf nicht ohne Zahlung ausgeliefet werden
+	UPDATE #TempDataEckdaten
+	SET #TempDataEckdaten.nIstFuerAuslieferungGesperrt = CASE WHEN #TempDataEckdaten.dBezahlt IS NULL AND ISNULL(tZahlungsart.nAusliefernVorZahlung, 0) &lt;= 0 THEN #TempDataEckdaten.nIstFuerAuslieferungGesperrt|0x01 ELSE #TempDataEckdaten.nIstFuerAuslieferungGesperrt&amp;0xFE END
+	FROM #TempDataEckdaten
+	LEFT JOIN dbo.tZahlungsart ON tZahlungsart.kZahlungsart = #TempDataEckdaten.kZahlungsart;
+
+	DECLARE @DeadlockRetries1 TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+DeadlockRetry1:
+	BEGIN TRY
+		SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+			SET @CreatedTransaction = 1;
+			BEGIN TRANSACTION
+		END;
+
+		MERGE Verkauf.tAuftragEckdaten AS target
+		USING (SELECT #TempDataEckdaten.kAuftrag,
+				#TempDataEckdaten.fWertNetto,
+				#TempDataEckdaten.fWertBrutto,
+				#TempDataEckdaten.fZahlung,
+				#TempDataEckdaten.fGutschrift,
+				#TempDataEckdaten.nIstNachnahme,
+				#TempDataEckdaten.nIstKomplettRetourniert,
+				#TempDataEckdaten.dGedruckt,
+				#TempDataEckdaten.dGemailt,
+				#TempDataEckdaten.dVersandMail,
+				#TempDataEckdaten.dZahlungsMail,
+				#TempDataEckdaten.dLetzterVersand,
+				#TempDataEckdaten.dBezahlt,
+				#TempDataEckdaten.nZahlungStatus,
+				#TempDataEckdaten.nRechnungStatus,
+				#TempDataEckdaten.nAnzahlPakete,
+				#TempDataEckdaten.nAnzahlVersendetePakete,
+				#TempDataEckdaten.fWertRechnungNetto,
+				#TempDataEckdaten.fWertRechnungBrutto,
+				#TempDataEckdaten.nIstFuerAuslieferungGesperrt,
+				#TempDataEckdaten.cRechnungsnummern,
+				#TempDataEckdaten.fOffenerWert,
+				#TempDataEckdaten.fOffenerWertOhneStorno
+		FROM #TempDataEckdaten) AS source (
+			kAuftrag,
+			fWertNetto,
+			fWertBrutto,
+			fZahlung,
+			fGutschrift,
+			nIstNachnahme,
+			nIstKomplettRetourniert,
+			dGedruckt,
+			dGemailt,
+			dVersandMail,
+			dZahlungsMail,
+			dLetzterVersand,
+			dBezahlt,
+			nZahlungStatus,
+			nRechnungStatus,
+			nAnzahlPakete,
+			nAnzahlVersendetePakete,
+			fWertRechnungNetto,
+			fWertRechnungBrutto,
+			nIstFuerAuslieferungGesperrt,
+			cRechnungsnummern,
+			fOffenerWert,
+			fOffenerWertOhneStorno
+			)
+	ON (target.kAuftrag = source.kAuftrag)
+	WHEN MATCHED THEN
+	UPDATE
+		SET target.fWertNetto = source.fWertNetto,
+			target.fWertBrutto = source.fWertBrutto,
+			target.fZahlung = source.fZahlung,
+			target.fGutschrift = source.fGutschrift,
+			target.nIstNachnahme = source.nIstNachnahme,
+			target.nIstKomplettRetourniert = source.nIstKomplettRetourniert,
+			target.dGedruckt = source.dGedruckt,
+			target.dGemailt = source.dGemailt,
+			target.dVersandMail = source.dVersandMail,
+			target.dZahlungsMail = source.dZahlungsMail,
+			target.dLetzterVersand = source.dLetzterVersand,
+			target.dBezahlt = source.dBezahlt,
+			target.nZahlungStatus = source.nZahlungStatus,
+			target.nRechnungStatus = source.nRechnungStatus,
+			target.nAnzahlPakete = source.nAnzahlPakete,
+			target.nAnzahlVersendetePakete = source.nAnzahlVersendetePakete,
+			target.fWertRechnungNetto = source.fWertRechnungNetto,
+			target.fWertRechnungBrutto = source.fWertRechnungBrutto,
+			target.nIstFuerAuslieferungGesperrt = source.nIstFuerAuslieferungGesperrt,
+			target.cRechnungsnummern = source.cRechnungsnummern,
+			target.fOffenerWert = source.fOffenerWert,
+			target.fOffenerWertOhneStorno = source.fOffenerWertOhneStorno
+	WHEN NOT MATCHED THEN
+	INSERT (kAuftrag,
+			fWertNetto,
+			fWertBrutto,
+			fZahlung,
+			fGutschrift,
+			nIstNachnahme,
+			nIstKomplettRetourniert,
+			dGedruckt,
+			dGemailt,
+			dVersandMail,
+			dZahlungsMail,
+			dLetzterVersand,
+			dBezahlt,
+			nZahlungStatus,
+			nRechnungStatus,
+			nAnzahlPakete,
+			nAnzahlVersendetePakete,
+			fWertRechnungNetto,
+			fWertRechnungBrutto,
+			nIstFuerAuslieferungGesperrt,
+			cRechnungsnummern,
+			fOffenerWert,
+			fOffenerWertOhneStorno
+			)
+	VALUES (source.kAuftrag,
+			source.fWertNetto,
+			source.fWertBrutto,
+			source.fZahlung,
+			source.fGutschrift,
+			source.nIstNachnahme,
+			source.nIstKomplettRetourniert,
+			source.dGedruckt,
+			source.dGemailt,
+			source.dVersandMail,
+			source.dZahlungsMail,
+			source.dLetzterVersand,
+			source.dBezahlt,
+			source.nZahlungStatus,
+			source.nRechnungStatus,
+			source.nAnzahlPakete,
+			source.nAnzahlVersendetePakete,
+			source.fWertRechnungNetto,
+			source.fWertRechnungBrutto,
+			source.nIstFuerAuslieferungGesperrt,
+			source.cRechnungsnummern,
+			source.fOffenerWert,
+			source.fOffenerWertOhneStorno);
+	IF (@DeadlockRetries1 &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+	   BEGIN TRY
+		  EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries1 OUTPUT;
+		  IF (@DeadlockRetries1 &gt; 0) GOTO DeadlockRetry1;
+	   END TRY
+	   BEGIN CATCH
+		  IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+	   END CATCH;
+	   THROW;
+	END CATCH
+
+
+--
+-- nKomplettAusgeliefert berechnen
+--
+UPDATE #TempDataEckdaten
+	SET #TempDataEckdaten.nKomplettAusgeliefert = CASE
+														WHEN OffeneMenge.fSumme &gt; 0.0 THEN 0
+														ELSE 1
+													END
+FROM #TempDataEckdaten
+JOIN (
+	SELECT
+		#TempDataPositionEckdaten.kAuftrag,
+		SUM(#TempDataPositionEckdaten.fAnzahlOffen) AS fSumme
+	FROM #TempDataPositionEckdaten
+	GROUP BY #TempDataPositionEckdaten.kAuftrag
+) AS OffeneMenge ON OffeneMenge.kAuftrag = #TempDataEckdaten.kAuftrag
+WHERE #TempDataEckdaten.nKomplettAusgeliefert &lt; 2;
+
+ DECLARE @DeadlockRetries2 TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+DeadlockRetry2:
+	BEGIN TRY
+		SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+			SET @CreatedTransaction = 1;
+			BEGIN TRANSACTION
+		END;
+
+		UPDATE
+			Verkauf.tAuftrag
+		SET tAuftrag.nAuftragStatus = #TempDataEckdaten.nError,
+			tAuftrag.nKomplettAusgeliefert = #TempDataEckdaten.nKomplettAusgeliefert
+		FROM Verkauf.tAuftrag
+		JOIN #TempDataEckdaten ON #TempDataEckdaten.kAuftrag = tAuftrag.kAuftrag;
+
+		IF (@DeadlockRetries2 &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+	   BEGIN TRY
+		  EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries2 OUTPUT;
+		  IF (@DeadlockRetries2 &gt; 0) GOTO DeadlockRetry2;
+	   END TRY
+	   BEGIN CATCH
+		  IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+	   END CATCH;
+	   THROW;
+	END CATCH
+
+	SET CONTEXT_INFO @OldContextInfo;
+
+END</code></pre>
+</body>
+</html>

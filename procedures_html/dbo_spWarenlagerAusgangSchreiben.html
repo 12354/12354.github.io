@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWarenlagerAusgangSchreiben</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWarenlagerAusgangSchreiben</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Warenlagerausgänge geschrieben werden. </p>
+    <p><strong>Long Description:</strong> <WarenAusgang>
+  <kWarenlagerEingang />
+  <kLieferscheinPos />
+  <fAnzahl />
+  <cKommentar />
+  <kBenutzer />
+  <kBuchungsart />
+</WarenAusgang></p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spWarenlagerAusgangSchreiben]
+	@xWarenlagerAusgaenge XML = NULL,
+	@kWarenLagerEingang INT = NULL,
+	@kLieferscheinPos INT = NULL,
+	@fAnzahl DECIMAL(28,14) = NULL,
+	@cKommentar VARCHAR(255) = NULL,
+	@kBenutzer INT = NULL,
+	@kBuchungsart INT = NULL,
+	@nHistorieNichtSchreiben INT = 0,
+	@kSessionID INT = NULL,
+	@kWarenlagerAusgang INT = NULL OUTPUT
+AS
+--
+-- Schreiben eines Warenlagereingangs
+--
+-- Eingabe: 
+-- 1. 
+-- EXEC [dbo].[spWarenlagerEingangSchreiben] @kArtikel = 1, @kWarenLagerPlatz = 2, ...
+--  =&gt; nur in diesem Fall ist kWarenlagerEingang als OUTPUT-Parameter valide gef&#252;llt
+-- 
+-- 2.
+-- DECLARE @xWarenlagerEingaenge XML;
+-- SET @xWarenlagerEingaenge = (SELECT ... FROM ... FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+-- EXEC [dbo].[spWarenlagerEingangSchreiben] @xWarenlagerEingaenge = @xWarenlagerEingaenge;
+-- 
+-- Fehlercodes: keine
+--
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+--INSERT INTO tQueryTrace (dDate, cTraceInfo, cQuery) VALUES (GETDATE(), OBJECT_NAME(@@PROCID), (SELECT TOP (1) sqltext.text
+--FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(dm_exec_requests.sql_handle) AS sqltext WHERE dm_exec_requests.session_id = @@SPID));
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = 0x5089;
+    --IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+    SET CONTEXT_INFO @MyContextInfo;
+    
+	DECLARE @dDatum DATETIME = GETDATE();
+	DECLARE @checkForErrors BIT = 1;
+
+	IF(OBJECT_ID(&#39;tempdb..#spWLASchreibenWarenlagerausgang&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #spWLASchreibenWarenlagerausgang;
+	END
+	CREATE TABLE #spWLASchreibenWarenlagerausgang(
+		kWarenlagerEingang INT NOT NULL,
+		kLieferscheinPos INT NULL,
+		fAnzahl DECIMAL(28,14) NOT NULL,
+		kWarenLagerPlatz INT NULL,
+		kArtikel INT NULL,
+		cKommentar VARCHAR(255) NULL,
+		dErstellt DATETIME NULL,
+		kBenutzer INT NULL,
+		kBuchungsart INT NULL,
+		kSessionId INT NULL
+	);
+	-- Tempor&#228;re Tabelle f&#252;llen
+	IF(@xWarenlagerAusgaenge IS NOT NULL)
+	BEGIN
+		INSERT INTO #spWLASchreibenWarenlagerausgang
+		(
+			kWarenlagerEingang,
+			kLieferscheinPos,
+			fAnzahl,
+			cKommentar,
+			dErstellt,
+			kBenutzer,
+			kBuchungsart,
+			kSessionId
+		)
+		SELECT DISTINCT ParamValues.ID.value(&#39;kWarenLagerEingang[1]&#39;, &#39;VARCHAR(20)&#39;),
+				ISNULL(ParamValues.ID.value(&#39;kLieferscheinPos[1]&#39;, &#39;VARCHAR(20)&#39;),0),
+				ParamValues.ID.value(&#39;fAnzahl[1]&#39;, &#39;VARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;cKommentar[1]&#39;, &#39;VARCHAR(255)&#39;),
+				GETDATE(),
+				ParamValues.ID.value(&#39;kBenutzer[1]&#39;, &#39;VARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;kBuchungsart[1]&#39;, &#39;VARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;kSessionID[1]&#39;, &#39;NVARCHAR(20)&#39;)
+			FROM @xWarenlagerAusgaenge.nodes(&#39;/WarenAusgang&#39;) AS ParamValues(ID)
+	END
+	ELSE
+	BEGIN
+		INSERT INTO #spWLASchreibenWarenlagerausgang(kWarenlagerEingang, kLieferscheinPos, fAnzahl,
+			cKommentar, dErstellt, kBenutzer, kBuchungsart, kSessionId)
+		VALUES(@kWarenLagerEingang, ISNULL(@kLieferscheinPos,0), @fAnzahl,  
+			@cKommentar, @dDatum, @kBenutzer, @kBuchungsart, @kSessionID);
+	END
+
+	-- Ausg&#228;nge zu fehlenden Eing&#228;ngen l&#246;schen
+	DELETE #spWLASchreibenWarenlagerausgang
+	FROM #spWLASchreibenWarenlagerausgang
+	LEFT JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = #spWLASchreibenWarenlagerausgang.kWarenlagerEingang
+	WHERE tWarenLagerEingang.kWarenLagerEingang IS NULL OR tWarenLagerEingang.fAnzahlAktuell &lt; #spWLASchreibenWarenlagerausgang.fAnzahl;
+	IF @@ROWCOUNT &gt; 0 AND @checkForErrors &gt; 0
+	BEGIN;
+		THROW 50000, &#39;Aufruf dbo.spWarenlagerAusgangSchreiben mit ung&#252;ltigem Warenlagereingang&#39;, 1;
+		RETURN;
+	END;
+
+	IF NOT EXISTS(SELECT 1 FROM #spWLASchreibenWarenlagerausgang)
+	BEGIN
+		IF @checkForErrors &gt; 0 
+			THROW 50000, &#39;Aufruf dbo.spWarenlagerAusgangSchreiben ohne Parameter&#39;, 1;
+		RETURN;
+	END
+
+	UPDATE #spWLASchreibenWarenlagerausgang
+		SET kWarenLagerPlatz = dbo.tWarenlagerEingang.kWarenLagerPlatz,
+			kArtikel = dbo.tWarenlagerEingang.kArtikel
+		FROM #spWLASchreibenWarenlagerausgang
+		JOIN dbo.tWarenlagerEingang ON #spWLASchreibenWarenlagerausgang.kWarenlagerEingang = dbo.tWarenlagerEingang.kWarenlagerEingang
+	
+DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+	 
+		INSERT INTO dbo.tWarenLagerAusgang (
+			kWarenLagerEingang, 
+			kLieferscheinPos, 
+			fAnzahl, 
+			kWarenLagerPlatz,
+			kArtikel, 
+			cKommentar, 
+			dErstellt, 
+			kBenutzer, 
+			kBuchungsart,
+			kSessionID)
+		SELECT 
+			#spWLASchreibenWarenlagerausgang.kWarenlagerEingang,
+			#spWLASchreibenWarenlagerausgang.kLieferscheinPos,
+			#spWLASchreibenWarenlagerausgang.fAnzahl,
+			#spWLASchreibenWarenlagerausgang.kWarenLagerPlatz,
+			#spWLASchreibenWarenlagerausgang.kArtikel,
+			#spWLASchreibenWarenlagerausgang.cKommentar,
+			#spWLASchreibenWarenlagerausgang.dErstellt,
+			#spWLASchreibenWarenlagerausgang.kBenutzer,
+			#spWLASchreibenWarenlagerausgang.kBuchungsart,
+			#spWLASchreibenWarenlagerausgang.kSessionID
+		FROM #spWLASchreibenWarenlagerausgang
+		SELECT @kWarenlagerAusgang = SCOPE_IDENTITY();
+			
+		-- WarenlagerEingang fAnzahlOffen reduzieren
+		UPDATE dbo.tWarenLagerEingang
+			SET fAnzahlAktuell = tWarenLagerEingang.fAnzahlAktuell - Result.fAnzahl
+		FROM 
+		(
+			SELECT 
+				#spWLASchreibenWarenlagerausgang.kWarenLagerEingang, 
+				SUM(#spWLASchreibenWarenlagerausgang.fAnzahl) AS fAnzahl
+			FROM #spWLASchreibenWarenlagerausgang
+			GROUP BY #spWLASchreibenWarenlagerausgang.kWarenLagerEingang
+		) AS Result
+		WHERE dbo.tWarenLagerEingang.kWarenLagerEingang = Result.kWarenLagerEingang
+
+		-- Falls Wareneingang auf 0 geht, Zeitpunkt speichern
+		UPDATE dbo.tWarenLagerEingang 
+			SET dAusgebuchtAm = LetzteWarenausgaenge.dLetzterAusgang
+		FROM 
+		(
+			SELECT #spWLASchreibenWarenlagerausgang.kWarenLagerEingang
+			FROM #spWLASchreibenWarenlagerausgang
+			GROUP BY #spWLASchreibenWarenlagerausgang.kWarenLagerEingang
+		) AS Result
+		JOIN
+		(
+			SELECT	tWarenLagerAusgang.kWarenLagerEingang,
+					MAX(tWarenLagerAusgang.dErstellt) AS dLetzterAusgang
+			FROM dbo.tWarenLagerAusgang
+			GROUP BY tWarenLagerAusgang.kWarenLagerEingang
+		) AS LetzteWarenausgaenge ON Result.kWarenLagerEingang = LetzteWarenausgaenge.kWarenLagerEingang
+		WHERE Result.kWarenlagerEingang = tWarenLagerEingang.kWarenLagerEingang
+		AND tWarenLagerEingang.fAnzahlAktuell = 0.0
+		AND tWarenLagerEingang.dAusgebuchtAm IS NULL;
+
+		  -- spUpdateLagerbestandProLager
+		DECLARE @spUpdateLagerbestandProLager TYPE_spUpdateLagerbestandProLager;
+		INSERT INTO @spUpdateLagerbestandProLager (kArtikel, kWarenlager)
+			SELECT DISTINCT #spWLASchreibenWarenlagerausgang.kArtikel, tWarenLagerPlatz.kWarenLager
+			FROM #spWLASchreibenWarenlagerausgang
+			JOIN dbo.tWarenLagerPlatz ON #spWLASchreibenWarenlagerausgang.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+		IF @@ROWCOUNT &gt; 0
+		BEGIN
+			EXEC dbo.spUpdateLagerbestandProLager @Artikel = @spUpdateLagerbestandProLager;
+		END
+
+		-- spUpdateLagerbestand
+		DECLARE @spUpdateLagerbestand AS TYPE_spUpdateLagerbestand;
+		INSERT INTO @spUpdateLagerbestand(kArtikel)
+			SELECT DISTINCT #spWLASchreibenWarenlagerausgang.kArtikel
+			FROM #spWLASchreibenWarenlagerausgang;
+		IF @@ROWCOUNT &gt; 0
+		BEGIN
+			EXEC dbo.spUpdateLagerbestand @spUpdateLagerbestand;
+		END
+		
+		IF(@nHistorieNichtSchreiben = 0)
+		BEGIN
+
+			INSERT INTO dbo.tArtikelHistory
+			(
+				kWarenLagerPlatz,kArtikel,fAnzahl,dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+				fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert, kLHM, fLagerBestandInLager,
+				cSubsetNumber,cDimensionen
+			)
+			SELECT WLA.kWarenLagerPlatz,
+			       WLA.kArtikel,
+				   CASE WHEN tWarenlagereingangSubsets.cSubsetNumber IS NULL THEN -1 * SUM(WLA.fAnzahl) ELSE -1 * SUM(WLA.fAnzahl/tWarenlagereingangSubsets.fFactor) END ,
+				   @dDatum AS dErstellt, WLA.kBenutzer,
+				   0 AS kWarenLagerEingang,
+				   ISNULL(dbo.tLieferscheinPos.kBestellPos,0) AS  kBestellPos,
+				   ISNULL(dbo.tGutschriftPos.kGutschriftPos,0) AS tGutschriftPos,
+				   ISNULL(dbo.tWarenLagerEingang.fEKEinzel, ISNULL(dbo.tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+				   SUBSTRING(ISNULL(WLA.cKommentar,&#39;&#39;) + CASE WHEN LEN(StuffedSerNos.SerNos) &gt; 0 THEN &#39; Seriennummern: &#39; + StuffedSerNos.SerNos ELSE &#39;&#39; END ,1,254) AS cKommentar,
+				   WLA.kBuchungsart,
+				   WLA.kLieferscheinPos,
+				   MAX(dbo.tlagerbestand.fLagerbestandEigen) AS fLagerBestandGesamt, 
+	   			   MAX(LagerBestand.fBestandPlatz) AS fLagerBestand,
+				   dbo.tWarenLagerEingang.kLieferantenBestellungPos,
+				   dbo.tWarenLagerEingang.cLieferscheinNr,
+				   dbo.tWarenLagerEingang.cChargenNr,
+				   dbo.tWarenLagerEingang.dMHD,
+				   ISNULL(dbo.tlagerbestand.fVerfuegbar,0.0),
+				   ISNULL(dbo.tlagerbestand.fInAuftraegen,0.0),
+				   dbo.tWarenLagerEingang.kLHM,
+				   MAX(LagerBestand.BestandInWarenlager) AS BestandInWarenlager,
+				   tWarenlagereingangSubsets.cSubsetNumber,
+				   Dimensionen.cDimensionen
+
+			FROM #spWLASchreibenWarenlagerausgang AS WLA
+			JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = WLA.kArtikel
+			JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = WLA.kArtikel
+			JOIN dbo.tWarenLagerEingang ON dbo.tWarenLagerEingang.kWarenLagerEingang = WLA.kWarenlagerEingang
+			LEFT JOIN dbo.tWarenlagereingangSubsets ON tWarenlagereingangSubsets.kWarenlagereingang = tWarenlagereingang.kWarenlagereingang
+			LEFT JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kLieferscheinPos = WLA.kLieferscheinPos
+			LEFT JOIN dbo.tGutschriftPos ON dbo.tGutschriftPos.kBestellPos = dbo.tLieferscheinPos.kBestellPos
+			OUTER APPLY (
+			 SELECT STUFF((
+					SELECT &#39;, &#39; + LEFT(tDimensionSprache.cName, 1) + &#39;: &#39; + CAST(CAST(CAST(tWarenLagerEingangSubsetDetails.fValue as decimal(12,4)) AS FLOAT) AS VARCHAR) + &#39; &#39; + tMassEinheit.cDisplayCode
+					FROM dbo.tWarenLagerEingangSubsetDetails 
+					JOIN dbo.tMassEinheit ON tMassEinheit.kMassEinheit = tWarenLagerEingangSubsetDetails.kMassEinheit 
+					JOIN dbo.tSpracheUsed ON nStandard = 1
+					JOIN subset.tDimensionSprache ON tDimensionSprache.kDimension = tWarenLagerEingangSubsetDetails.kDimension AND tDimensionSprache.kSprache = tSpracheUsed.kSprache
+					WHERE tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = tWarenLagerEingangSubsets.kWarenLagerEingangSubset
+						FOR XML PATH(&#39;&#39;)
+						), 1, 1, &#39;&#39;) AS cDimensionen
+		 
+			 ) AS Dimensionen 
+			OUTER APPLY ( SELECT STUFF((
+							SELECT &#39;,&#39; + cSeriennr  
+							FROM dbo.tLagerArtikel
+							WHERE dbo.tLagerArtikel.kLieferscheinPos = WLA.kLieferscheinPos
+							AND dbo.tLagerArtikel.kLieferscheinPos &gt; 0
+							FOR XML PATH(&#39;&#39;)) ,1,1,&#39;&#39;) AS SerNos ) AS StuffedSerNos
+		   OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fBestandPlatz, MAX(tlagerbestandProLagerLagerartikel.fBestand) AS BestandInWarenlager
+					 FROM dbo.tWarenLagerEingang
+					 JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tWarenLagerEingang.kWarenLagerPlatz
+					 LEFT JOIN dbo.tlagerbestandProLagerLagerartikel ON tlagerbestandProLagerLagerartikel.kArtikel = tWarenLagerEingang.kArtikel AND tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLagerPlatz.kWarenLager
+					 WHERE dbo.tWarenLagerEingang.kArtikel = WLA.kArtikel
+					 AND dbo.tWarenLagerEingang.kWarenLagerPlatz = WLA.kWarenlagerPlatz) AS LagerBestand
+			GROUP BY WLA.kWarenLagerPlatz,WLA.kArtikel,WLA.kBenutzer,dbo.tGutschriftPos.kGutschriftPos,ISNULL(dbo.tWarenLagerEingang.fEKEinzel, ISNULL(dbo.tArtikel.fEKNetto,0.0)),
+					 WLA.cKommentar, WLA.kBuchungsart, WLA.kLieferscheinPos,ISNULL(dbo.tLieferscheinPos.kBestellPos,0),dbo.tWarenLagerEingang.kLieferantenBestellungPos,
+					 dbo.tWarenLagerEingang.cLieferscheinNr,dbo.tWarenLagerEingang.cChargenNr,dbo.tWarenLagerEingang.dMHD,dbo.tlagerbestand.fVerfuegbar,dbo.tlagerbestand.fInAuftraegen,StuffedSerNos.SerNos,dbo.tWarenLagerEingang.kLHM,
+					 tWarenlagereingangSubsets.cSubsetNumber, Dimensionen.cDimensionen;
+		END;
+
+		DECLARE @fulfillmentStockUpdateDaten AS FulfillmentNetwork.TYPE_spStockUpdate
+		INSERT INTO @fulfillmentStockUpdateDaten
+		(
+			kArtikel,
+			kBenutzer,
+			kBuchungsart,
+			kWarenLagerPlatz,
+			kLieferantenBestellungPos,
+			fAnzahl,
+			cLieferscheinNr,
+			dMHD,
+			cCharge,
+			cKommentar,
+			kWarenLagerEingang
+		)	
+		SELECT WarenlagerAusgaenge.kArtikel,
+			WarenlagerAusgaenge.kBenutzer,
+			CASE WHEN Umlagerung.kUmlagerung IS NOT NULL OR (Lieferschein.kBestellung IS NOT NULL AND OutboundRef.kBestellung IS NULL) 
+			THEN 
+				CASE WarenlagerAusgaenge.kBuchungsart 
+					WHEN  20 THEN 60
+					WHEN 130 THEN 120
+					ELSE WarenlagerAusgaenge.kBuchungsart
+				END		
+			ELSE 
+				WarenlagerAusgaenge.kBuchungsart 	
+			END AS kBuchungsart,
+			WarenlagerAusgaenge.kWarenLagerPlatz,
+			0 AS kLieferantenBestellungPos,           
+			-1 * WarenlagerAusgaenge.fAnzahl,   
+			NULL AS cLieferscheinNr,           
+			WarenLagerEingang.dMHD,
+			WarenLagerEingang.cChargenNr,
+			WarenlagerAusgaenge.cKommentar,
+			WarenLagerEingang.kWarenLagerEingang
+		FROM #spWLASchreibenWarenlagerausgang AS WarenlagerAusgaenge
+		JOIN dbo.tWarenLagerEingang AS WarenLagerEingang ON WarenLagerEingang.kWarenLagerEingang = WarenlagerAusgaenge.kWarenlagerEingang
+		LEFT JOIN dbo.tLieferscheinPos AS LieferscheinPos ON LieferscheinPos.kLieferscheinPos = WarenlagerAusgaenge.kLieferscheinPos
+		LEFT JOIN dbo.tLieferschein AS Lieferschein ON LieferscheinPos.kLieferschein = Lieferschein.kLieferschein
+		LEFT JOIN dbo.tUmlagerung AS Umlagerung ON Umlagerung.kBestellung = Lieferschein.kBestellung
+		LEFT JOIN FulfillmentNetwork.tOutboundRef AS OutboundRef ON OutboundRef.kBestellung = Lieferschein.kBestellung
+
+		EXEC FulfillmentNetwork.spStockUpdate @Daten = @fulfillmentStockUpdateDaten	   
+
+		IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+		BEGIN TRY
+			EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+		END TRY
+		BEGIN CATCH
+			IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+		END CATCH;
+		THROW;
+	END CATCH
+ 
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH</code></pre>
+</body>
+</html>

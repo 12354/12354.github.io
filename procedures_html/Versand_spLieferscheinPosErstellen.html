@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versand.spLieferscheinPosErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Versand.spLieferscheinPosErstellen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tLieferscheinPos erstellt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Versand].[spLieferscheinPosErstellen]
+	@xLieferscheinPos XML = NULL,
+	@kLieferschein INT,
+	@kBestellPos INT,
+	@fAnzahl DECIMAL(25,13),
+	@cHinweis NVARCHAR(4000),
+	@nLagerbestandNichtBerechnen TINYINT = 0,
+	@kLieferscheinPos INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @OldContextInfo VARBINARY(128)
+SET @kLieferscheinPos = -1;
+SET @retry = 5;
+
+
+     IF(CONTEXT_INFO() IS NOT NULL)
+	  SET @OldContextInfo = CONTEXT_INFO();
+	ELSE
+	  SET @OldContextInfo = 0x0;
+
+
+WHILE @retry &gt; 0
+BEGIN
+
+	SET CONTEXT_INFO 0x5115;
+	BEGIN TRY
+
+			IF (@@TRANCOUNT = 0)
+			BEGIN
+			   SET @CreatedTransaction = 1;
+			   BEGIN TRANSACTION
+			END;
+			ELSE
+			BEGIN
+				SET @CreatedTransaction = 0;
+				SAVE TRANSACTION Savepoint1;
+			END;
+
+			IF(OBJECT_ID(&#39;tempdb..#Lieferscheinpos&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #Lieferscheinpos;
+			END
+			CREATE TABLE #Lieferscheinpos(
+				kLieferscheinPos INT,
+				kLieferschein INT,
+				kBestellPos INT,
+				fAnzahl DECIMAL(28,14),
+				cHinweis VARCHAR(4000)
+			);
+			IF(@xLieferscheinPos IS NOT NULL)
+			BEGIN
+				INSERT INTO #Lieferscheinpos(kLieferscheinPos, kLieferschein, kBestellPos, fAnzahl, cHinweis)
+					SELECT Lieferscheinpos.ID.value(&#39;kLieferscheinPos[1]&#39;, &#39;INT&#39;),
+							Lieferscheinpos.ID.value(&#39;kLieferschein[1]&#39;, &#39;INT&#39;),
+							Lieferscheinpos.ID.value(&#39;kBestellPos[1]&#39;, &#39;INT&#39;),
+							Lieferscheinpos.ID.value(&#39;fAnzahl[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							Lieferscheinpos.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(4000)&#39;)
+						FROM @xLieferscheinPos.nodes(&#39;LieferscheinPos&#39;) AS Lieferscheinpos(ID);
+			END
+			ELSE
+			BEGIN
+				INSERT INTO #Lieferscheinpos(kLieferscheinPos, kLieferschein, kBestellPos, fAnzahl, cHinweis)
+					VALUES(@kLieferscheinPos, @kLieferschein, @kBestellPos, @fAnzahl, @cHinweis);
+			END
+			
+			CREATE TABLE #LieferscheinPosKeys(kLieferscheinPos INT NOT NULL)
+
+			INSERT INTO #LieferscheinPosKeys(kLieferscheinPos)
+			SELECT InsertLieferscheinPos.kLieferscheinPos
+			FROM (INSERT INTO dbo.tLieferscheinPos(kLieferschein, kBestellPos, fAnzahl, cHinweis)
+				OUTPUT inserted.kLieferscheinPos
+				SELECT
+					kLieferschein, 
+					kBestellPos, 
+					fAnzahl, 
+					cHinweis
+				FROM #Lieferscheinpos) InsertLieferscheinPos
+
+			SET @kLieferscheinPos = (SELECT MAX(#LieferscheinPosKeys.kLieferscheinPos) FROM #LieferscheinPosKeys);
+
+			SET CONTEXT_INFO @OldContextInfo;		
+
+			INSERT INTO Rechnung.tRechnungLieferscheinPosition(kRechnungPosition, kLieferscheinPosition, fAnzahlAufRechnung)
+			SELECT 
+				MIN(tRechnungPosition.kRechnungPosition), 
+				tLieferscheinPos.kLieferscheinPos, 
+				tLieferscheinPos.fAnzahl
+			FROM dbo.tLieferscheinPos
+			JOIN #LieferscheinPosKeys ON #LieferscheinPosKeys.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+			JOIN Rechnung.tRechnungPosition ON tRechnungPosition.kAuftragPosition = tLieferscheinPos.kBestellPos
+			JOIN Rechnung.tRechnungEckdaten ON tRechnungEckdaten.kRechnung = tRechnungPosition.kRechnung
+			JOIN Rechnung.tRechnung ON tRechnung.kRechnung = tRechnungEckdaten.kRechnung
+			LEFT JOIN (
+				SELECT tRechnungLieferscheinPosition.kRechnungPosition, SUM(tRechnungLieferscheinPosition.fAnzahlAufRechnung) AS fAnzahlAufRechnung
+				FROM Rechnung.tRechnungLieferscheinPosition
+				GROUP BY tRechnungLieferscheinPosition.kRechnungPosition
+			) RechnungLieferscheinPosition ON RechnungLieferscheinPosition.kRechnungPosition = tRechnungPosition.kRechnungPosition
+			WHERE tRechnungPosition.fAnzahl &gt;= ISNULL(RechnungLieferscheinPosition.fAnzahlAufRechnung, 0) + tLieferscheinPos.fAnzahl AND tRechnungEckdaten.nKorrigiert = 0 AND tRechnung.nStorno = 0
+			GROUP BY tLieferscheinPos.kLieferscheinPos, tLieferscheinPos.fAnzahl
+
+            IF(@nLagerbestandNichtBerechnen = 0)
+            BEGIN
+        
+                DECLARE @Auftrag Verkauf.TYPE_spAuftragEckdatenBerechnen
+        
+                INSERT INTO @Auftrag (kAuftrag)
+                SELECT tAuftragPosition.kAuftrag
+                FROM #Lieferscheinpos
+                         JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #Lieferscheinpos.kBestellPos
+                GROUP BY tAuftragPosition.kAuftrag
+        
+                EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag;
+        
+            END;
+
+			DROP TABLE #Lieferscheinpos;
+			SET @retry = -1;
+			SET CONTEXT_INFO @OldContextInfo;
+		IF (@CreatedTransaction = 1)
+			COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				IF(@CreatedTransaction = 1)
+				    ROLLBACK TRAN;
+				ELSE
+				    ROLLBACK TRAN Savepoint1;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:01&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+				IF(@CreatedTransaction = 1)
+				   ROLLBACK TRAN;
+				ELSE
+				   ROLLBACK TRAN Savepoint1;
+
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO @OldContextInfo;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO @OldContextInfo;	
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spFBABestandAbgleichVorbereiten</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spFBABestandAbgleichVorbereiten</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[spFBABestandAbgleichVorbereiten]
+AS
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	--
+	-- Best&#228;nde zu inaktiven/gel&#246;schten Benutzern auf 0 setzen
+	-- Das machen wir da diese Best&#228;nde nicht ausgeliefert werden k&#246;nnen und da es bei mehreren Accounts zu Problemen kam wenn diese auf EU umgestellt wurden
+	--
+	UPDATE pf_amazon_angebot_fba
+		SET pf_amazon_angebot_fba.nQuantity = 0.0,
+			pf_amazon_angebot_fba.nQtyReserved = 0.0,
+			pf_amazon_angebot_fba.nQtyInboundWorking = 0.0,
+			pf_amazon_angebot_fba.nQtyInboundShipped = 0.0,
+			pf_amazon_angebot_fba.nQtyReceiving = 0.0
+	FROM dbo.pf_amazon_angebot_fba
+	JOIN dbo.pf_user ON pf_amazon_angebot_fba.kUser = pf_user.kUser
+	WHERE dbo.pf_user.nAktiv = 0
+
+	--
+	-- Bestandsf&#252;hrung f&#252;r Artikel aktivieren die bei Amazon Bestand haben
+	--
+	UPDATE tArtikel 
+		SET tArtikel.cLagerAktiv = &#39;Y&#39;
+	FROM dbo.tArtikel
+	JOIN Amazon.vFBABestand ON dbo.tArtikel.kArtikel = vFBABestand.kArtikel
+	WHERE    tArtikel.cLagerAktiv = &#39;N&#39;
+			AND vFBABestand.nBestand + vFBABestand.nBestandReserviert &gt; 0.0;
+
+	--
+	-- nFulfillment bei Warenlager korrigieren, wenn falsch gesetzt
+	--
+	UPDATE dbo.tWarenlager
+		SET tWarenlager.nFulfillment = 2 -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+	FROM dbo.tWarenlager
+	WHERE
+		tWarenLager.nFulfillment NOT IN (2, 4) -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+		AND tWarenlager.kUser &gt; 0;
+
+	--
+	-- Inaktive Lager aktivieren wenn dort noch Bestand liegt
+	--
+	UPDATE dbo.tWarenlager
+		SET dbo.tWarenlager.nAktiv = 1
+	FROM dbo.tWarenlager
+	JOIN
+	(
+		SELECT kUser
+		FROM Amazon.vFBABestand
+		GROUP BY kUser
+	) AS Benutzer ON dbo.tWarenlager.kUser = Benutzer.kUser
+	WHERE dbo.tWarenLager.nAktiv &lt;&gt; 1
+
+	/*
+	***
+	*** Warenlager holen und verarbeiten, die schon existieren und keinen Eintrag in WarenlagerMarktplatzmapping haben
+	***
+	*/
+	IF OBJECT_ID(&#39;tempdb..#ExistingWarenlager&#39;) IS NOT NULL
+	BEGIN
+		DROP TABLE #ExistingWarenlager;
+	END
+
+	CREATE TABLE #ExistingWarenlager
+	(
+		kWarenlager INT,
+		cMarketplaceID NVARCHAR(50),
+		cRegion NVARCHAR(2),
+		kUser INT,
+		cName NVARCHAR(255),
+		kFirma INT,
+		nFulfillment INT
+	);
+
+	INSERT INTO #ExistingWarenlager (kWarenlager, cMarketplaceID, cRegion, kUser, cName, nFulfillment)
+		SELECT
+			tWarenLager.kWarenLager,
+            CASE WHEN ISNULL(pf_user.cId2, &#39;&#39;) != &#39;&#39; AND Benutzer.cRegion = &#39;EU&#39;
+                THEN pf_user.cId2
+				ELSE Benutzer.cMarketplaceID
+            END AS cMarketplaceId,
+			Benutzer.cRegion,
+			tWarenLager.kUser,
+			pf_user.cName,
+			tWarenLager.nFulfillment
+		FROM dbo.tWarenLager
+		LEFT JOIN Amazon.WarenlagerMarktplatzMapping ON WarenlagerMarktplatzMapping.kWarenlager = tWarenLager.kWarenLager
+		JOIN
+		(
+			SELECT 
+				vFBABestand.kUser,
+				vFBABestand.cRegion,
+				MIN(vFBABestand.cMarketplaceID) AS cMarketplaceID, 
+				ROW_NUMBER() OVER (PARTITION BY vFBABestand.kUser ORDER BY vFBABestand.kUser ASC) AS Rownum
+			FROM Amazon.vFBABestand
+			WHERE vFBABestand.cRegion IS NOT NULL
+			GROUP BY vFBABestand.kUser, 
+				vFBABestand.cRegion
+		) AS Benutzer ON Benutzer.kUser = tWarenLager.kUser
+			AND Benutzer.Rownum = 1
+		JOIN dbo.pf_user ON pf_user.kUser = tWarenLager.kUser
+		WHERE (tWarenLager.nFulfillment = 2 
+				OR tWarenLager.nFulfillment = 4)
+			AND WarenlagerMarktplatzMapping.kWarenlager IS NULL
+			AND pf_user.cName IS NOT NULL;
+
+	IF EXISTS (SELECT 1 FROM #ExistingWarenlager)
+	BEGIN
+		UPDATE dbo.tWarenLager
+		SET tWarenLager.cName = CASE WHEN #ExistingWarenlager.nFulfillment = 2
+									THEN &#39;FBA (&#39; + #ExistingWarenlager.cRegion + &#39;): &#39; + #ExistingWarenlager.cName
+									ELSE &#39;FBA (&#39; + #ExistingWarenlager.cRegion + &#39;) (Pending): &#39; + #ExistingWarenlager.cName 
+								END,
+			tWarenLager.cKuerzel = CASE WHEN #ExistingWarenlager.nFulfillment = 2
+										THEN &#39;FBA&#39;
+										ELSE &#39;FBA (Pending)&#39;
+									END
+		FROM dbo.tWarenLager
+		JOIN #ExistingWarenlager ON #ExistingWarenlager.kWarenlager = tWarenLager.kWarenLager;
+	
+		INSERT INTO Amazon.WarenlagerMarktplatzMapping (kWarenlager, cMarketplaceID, cRegion)
+			SELECT
+				#ExistingWarenlager.kWarenlager,
+				#ExistingWarenlager.cMarketplaceID,
+				#ExistingWarenlager.cRegion
+			FROM #ExistingWarenlager;
+	END;
+
+	/*
+	***
+	*** Holt alle fehlenden Warenlager
+	***
+	*/
+	IF OBJECT_ID(&#39;tempdb..#WarenlagerMarktplatzMapping&#39;) IS NOT NULL
+	BEGIN
+		DROP TABLE #WarenlagerMarktplatzMapping;
+	END
+
+	CREATE TABLE #WarenlagerMarktplatzMapping
+	(
+		kId INT IDENTITY(1,1),
+		cMarketplaceID NVARCHAR(50),
+		cRegion NVARCHAR(10),
+		kUser INT,
+		cName NVARCHAR(255),
+		kFirma INT,
+		nFulfillment INT,
+		nGeteilterBestand BIT
+	);
+
+	--
+	-- Verarbeite Lager vom Fulfillment-Typ 2
+	--
+	INSERT INTO #WarenlagerMarktplatzMapping (cMarketplaceID, cRegion, kUser, cName, kFirma, nFulfillment, nGeteilterBestand)
+		SELECT
+            CASE WHEN ISNULL(pf_user.cId2, &#39;&#39;) != &#39;&#39; AND Benutzer.cRegion = &#39;EU&#39;
+                THEN pf_user.cId2
+				ELSE Benutzer.cMarketplaceID
+            END AS cMarketplaceId,
+			Benutzer.cRegion,
+			Benutzer.kUser,
+			pf_user.cName,
+			pf_user.kFirma,
+			2 AS nFulfillment,
+			0
+		FROM 
+		(
+			SELECT 
+				vFBABestand.kUser,
+				vFBABestand.cRegion,
+				MIN(vFBABestand.cMarketplaceID) AS cMarketplaceID
+			FROM Amazon.vFBABestand
+			WHERE vFBABestand.cRegion IS NOT NULL
+			GROUP BY vFBABestand.kUser, 
+				vFBABestand.cRegion
+		) AS Benutzer
+		LEFT JOIN 
+		(
+			SELECT
+				WarenlagerMarktplatzMapping.kWarenlager,
+				WarenlagerMarktplatzMapping.cMarketplaceID,
+				tWarenLager.kUser,
+				WarenlagerMarktplatzMapping.cRegion
+			FROM Amazon.WarenlagerMarktplatzMapping 
+			JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+			WHERE tWarenLager.nFulfillment = 2
+		) AS Mapping ON Mapping.kUser = Benutzer.kUser
+			AND Mapping.cRegion = Benutzer.cRegion
+		LEFT JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = Mapping.kWarenlager
+		JOIN dbo.pf_user ON pf_user.kUser = Benutzer.kUser
+		WHERE tWarenLager.kWarenlager IS NULL
+			AND pf_user.cName IS NOT NULL;
+
+	--
+	-- Verarbeite Lager vom Fulfillment-Typ 4
+	--
+	INSERT INTO #WarenlagerMarktplatzMapping (cMarketplaceID, cRegion, kUser, cName, kFirma, nFulfillment, nGeteilterBestand)
+		SELECT
+			Benutzer.cMarketplaceID,
+			Benutzer.cRegion,
+			Benutzer.kUser,
+			pf_user.cName,
+			pf_user.kFirma,
+			4 AS nFulfillment,
+			0
+		FROM 
+		(
+			SELECT 
+				vFBABestand.kUser,
+				vFBABestand.cRegion,
+				MIN(vFBABestand.cMarketplaceID) AS cMarketplaceID
+			FROM Amazon.vFBABestand
+			WHERE vFBABestand.cRegion IS NOT NULL
+			GROUP BY vFBABestand.kUser, 
+				vFBABestand.cRegion
+		) AS Benutzer
+		LEFT JOIN 
+		(
+			SELECT
+				WarenlagerMarktplatzMapping.kWarenlager,
+				WarenlagerMarktplatzMapping.cMarketplaceID,
+				tWarenLager.kUser,
+				WarenlagerMarktplatzMapping.cRegion
+			FROM Amazon.WarenlagerMarktplatzMapping 
+			JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+			WHERE tWarenLager.nFulfillment = 4
+		) AS Mapping ON Mapping.kUser = Benutzer.kUser
+			AND Mapping.cRegion = Benutzer.cRegion
+		LEFT JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = Mapping.kWarenlager
+		JOIN dbo.pf_user ON pf_user.kUser = Benutzer.kUser
+		WHERE tWarenLager.kWarenlager IS NULL
+			AND pf_user.cName IS NOT NULL;
+
+	IF EXISTS (SELECT 1 FROM dbo.pf_user WHERE pf_user.nGeteilterWarenbestandEUGB = 1)
+	BEGIN
+		INSERT INTO #WarenlagerMarktplatzMapping (cMarketplaceID, cRegion, kUser, cName, kFirma, nFulfillment, nGeteilterBestand)
+			SELECT
+				CASE WHEN ISNULL(pf_user.cId2, &#39;&#39;) != &#39;&#39; AND Benutzer.cRegion = &#39;EU&#39;
+					THEN pf_user.cId2
+					ELSE Benutzer.cMarketplaceID
+				END AS cMarketplaceId,
+				Benutzer.cRegion,
+				Benutzer.kUser,
+				pf_user.cName,
+				pf_user.kFirma,
+				2 AS nFulfillment,
+				1 AS nGeteilterBestand
+			FROM 
+			(
+				SELECT 
+					vFBABestand.kUser,
+					CASE WHEN pf_user.nGeteilterWarenbestandEUGB = 1 AND vFBABestand.cRegion = &#39;GB&#39;
+						THEN &#39;EU&#39;
+						ELSE vFBABestand.cRegion
+					END AS cRegion,
+					MIN(vFBABestand.cMarketplaceID) AS cMarketplaceID
+				FROM Amazon.vFBABestand
+				JOIN dbo.pf_user ON pf_user.kUser = vFBABestand.kUser
+				WHERE vFBABestand.cRegion IS NOT NULL
+					AND (vFBABestand.cRegion = &#39;EU&#39; OR vFBABestand.cRegion = &#39;GB&#39;)
+				GROUP BY vFBABestand.kUser, 
+					CASE WHEN pf_user.nGeteilterWarenbestandEUGB = 1 AND vFBABestand.cRegion = &#39;GB&#39;
+						THEN &#39;EU&#39;
+						ELSE vFBABestand.cRegion
+					END
+			) AS Benutzer
+			LEFT JOIN 
+			(
+				SELECT
+					WarenlagerMarktplatzMapping.kWarenlager,
+					WarenlagerMarktplatzMapping.cMarketplaceID,
+					tWarenLager.kUser,
+					WarenlagerMarktplatzMapping.cRegion,
+					WarenlagerMarktplatzMapping.nGeteilterBestand
+				FROM Amazon.WarenlagerMarktplatzMapping 
+				JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+				WHERE tWarenLager.nFulfillment = 2
+					AND WarenlagerMarktplatzMapping.nGeteilterBestand = 1
+			) AS Mapping ON Mapping.kUser = Benutzer.kUser
+				AND Mapping.cRegion = Benutzer.cRegion
+			LEFT JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = Mapping.kWarenlager
+			JOIN dbo.pf_user ON pf_user.kUser = Benutzer.kUser
+			WHERE tWarenLager.kWarenlager IS NULL
+				AND pf_user.cName IS NOT NULL
+				AND pf_user.nGeteilterWarenbestandEUGB = 1;
+
+		INSERT INTO #WarenlagerMarktplatzMapping (cMarketplaceID, cRegion, kUser, cName, kFirma, nFulfillment, nGeteilterBestand)
+			SELECT
+				CASE WHEN ISNULL(pf_user.cId2, &#39;&#39;) != &#39;&#39; AND Benutzer.cRegion = &#39;EU&#39;
+					THEN pf_user.cId2
+					ELSE Benutzer.cMarketplaceID
+				END AS cMarketplaceId,
+				Benutzer.cRegion,
+				Benutzer.kUser,
+				pf_user.cName,
+				pf_user.kFirma,
+				4 AS nFulfillment,
+				1 AS nGeteilterBestand
+			FROM 
+			(
+				SELECT 
+					vFBABestand.kUser,
+					CASE WHEN pf_user.nGeteilterWarenbestandEUGB = 1 AND vFBABestand.cRegion = &#39;GB&#39;
+						THEN &#39;EU&#39;
+						ELSE vFBABestand.cRegion
+					END AS cRegion,
+					MIN(vFBABestand.cMarketplaceID) AS cMarketplaceID
+				FROM Amazon.vFBABestand
+				JOIN dbo.pf_user ON pf_user.kUser = vFBABestand.kUser
+				WHERE vFBABestand.cRegion IS NOT NULL
+					AND (vFBABestand.cRegion = &#39;EU&#39; OR vFBABestand.cRegion = &#39;GB&#39;)
+				GROUP BY vFBABestand.kUser, 
+					CASE WHEN pf_user.nGeteilterWarenbestandEUGB = 1 AND vFBABestand.cRegion = &#39;GB&#39;
+						THEN &#39;EU&#39;
+						ELSE vFBABestand.cRegion
+					END
+			) AS Benutzer
+			LEFT JOIN 
+			(
+				SELECT
+					WarenlagerMarktplatzMapping.kWarenlager,
+					WarenlagerMarktplatzMapping.cMarketplaceID,
+					tWarenLager.kUser,
+					WarenlagerMarktplatzMapping.cRegion,
+					WarenlagerMarktplatzMapping.nGeteilterBestand
+				FROM Amazon.WarenlagerMarktplatzMapping 
+				JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+				WHERE tWarenLager.nFulfillment = 4
+					AND WarenlagerMarktplatzMapping.nGeteilterBestand = 1
+			) AS Mapping ON Mapping.kUser = Benutzer.kUser
+				AND Mapping.cRegion = Benutzer.cRegion
+			LEFT JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = Mapping.kWarenlager
+			JOIN dbo.pf_user ON pf_user.kUser = Benutzer.kUser
+			WHERE tWarenLager.kWarenlager IS NULL
+				AND pf_user.cName IS NOT NULL
+				AND pf_user.nGeteilterWarenbestandEUGB = 1;
+	END
+
+	IF EXISTS (SELECT 1 FROM #WarenlagerMarktplatzMapping)
+	BEGIN
+		IF OBJECT_ID(&#39;tempdb..#InsertedWarenlager&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE #InsertedWarenlager;
+		END
+
+		CREATE TABLE #InsertedWarenlager
+		(
+			kId INT IDENTITY(1,1),
+			kWarenlager INT
+		);
+
+		INSERT INTO dbo.tWarenLager (cName, cKuerzel, cLagerTyp, cBeschreibung, cStrasse, cPLZ, cOrt, cLand, cAnsprechpartnerAnrede, cAnsprechpartnerVorname, 
+				cAnsprechpartnerName, cAnsprechpartnerTel, cAnsprechpartnerFax, cAnsprechpartnerEMail, cAnsprechpartnerAbteilung, cBundesland, kFirma, kUser,
+				nFulfillment, nLagerplatzVerwaltung, nAuslieferungsPrio, nPackStationAktiv, cDimension1Name, cDimension1Trennzeichen, nDimension1Laenge, nDimension1Typ,
+				cDimension2Name, cDimension2Trennzeichen, nDimension2Laenge, nDimension2Typ, cDimension3Name, cDimension3Trennzeichen, nDimension3Laenge, nDimension3Typ, 
+				cDimension4Name, cDimension4Trennzeichen, nDimension4Laenge, nDimension4Typ, cDimension5Name, cDimension5Trennzeichen, nDimension5Laenge, nDimension5Typ, 
+				cEmpfaengerFirma, kQuellLager, kZielLager, nAktiv)
+			OUTPUT Inserted.kWarenLager INTO #InsertedWarenlager
+			SELECT
+				CASE WHEN #WarenlagerMarktplatzMapping.nFulfillment = 2
+					THEN &#39;FBA (&#39; + CASE WHEN #WarenlagerMarktplatzMapping.nGeteilterBestand = 1 
+										THEN &#39;EU + GB&#39; 
+										ELSE #WarenlagerMarktplatzMapping.cRegion 
+									END + &#39;): &#39; + #WarenlagerMarktplatzMapping.cName
+					ELSE &#39;FBA (&#39; + CASE WHEN #WarenlagerMarktplatzMapping.nGeteilterBestand = 1 
+										THEN &#39;EU + GB&#39; 
+										ELSE #WarenlagerMarktplatzMapping.cRegion 
+									END + &#39;) (Pending): &#39; + #WarenlagerMarktplatzMapping.cName 
+				END AS cName,
+				CASE WHEN #WarenlagerMarktplatzMapping.nFulfillment = 2
+					THEN &#39;FBA&#39;
+					ELSE &#39;FBA (Pending)&#39;
+				END AS cKuerzel,
+				&#39;&#39; AS cLagerTyp,
+				CASE WHEN #WarenlagerMarktplatzMapping.nFulfillment = 2
+					THEN &#39;Automatisch erzeugtes Amazon FBA Lager f&#252;r &#39; + #WarenlagerMarktplatzMapping.cName
+					ELSE &#39;Automatisch erzeugtes Amazon FBA Lager (Pending) f&#252;r &#39; + #WarenlagerMarktplatzMapping.cName 
+				END AS cBeschreibung,
+				&#39;&#39; AS cStrasse,
+				&#39;&#39; AS cPLZ,
+				&#39;&#39; AS cOrt,
+				&#39;&#39; AS cLand,
+				&#39;&#39; AS cAnsprechpartnerAnrede,
+				&#39;&#39; AS cAnsprechpartnerVorname,
+				&#39;&#39; AS cAnsprechpartnerName,
+				&#39;&#39; AS cAnsprechpartnerTel,
+				&#39;&#39; AS cAnsprechpartnerFax,
+				&#39;&#39; AS cAnsprechpartnerEMail,
+				&#39;&#39; AS cAnsprechpartnerAbteilung,
+				&#39;&#39; AS cBundesland,
+				#WarenlagerMarktplatzMapping.kFirma AS kFirma,
+				#WarenlagerMarktplatzMapping.kUser,
+				#WarenlagerMarktplatzMapping.nFulfillment AS nFulfillment,
+				0 AS nLagerplatzVerwaltung,
+				0 AS nAuslieferungsPrio,
+				0 AS nPackStationAktiv,
+				&#39;&#39; AS cDimension1Name,
+				&#39;&#39; AS cDimension1Trennzeichen,
+				0 AS nDimension1Laenge,
+				0 AS nDimension1Typ,
+				&#39;&#39; AS cDimension2Name,
+				&#39;&#39; AS cDimension2Trennzeichen,
+				0 AS nDimension2Laenge,
+				0 AS nDimension2Typ,
+				&#39;&#39; AS cDimension3Name,
+				&#39;&#39; AS cDimension3Trennzeichen,
+				0 AS nDimension3Laenge,
+				0 AS nDimension3Typ,
+				&#39;&#39; AS cDimension4Name,
+				&#39;&#39; AS cDimension4Trennzeichen,
+				0 AS nDimension4Laenge,
+				0 AS nDimension4Typ,
+				&#39;&#39; AS cDimension5Name,
+				&#39;&#39; AS cDimension5Trennzeichen,
+				0 AS nDimension5Laenge,
+				0 AS nDimension5Typ,
+				&#39;&#39; AS cEmpfaengerFirma,
+				0 AS kQuellLager,
+				0 AS kZielLager,
+				1 AS nAktiv
+			FROM #WarenlagerMarktplatzMapping
+			ORDER BY #WarenlagerMarktplatzMapping.kId;
+
+		INSERT INTO Amazon.WarenlagerMarktplatzMapping (kWarenlager, cMarketplaceID, cRegion, nGeteilterBestand)
+			SELECT
+				#InsertedWarenlager.kWarenlager,
+				#WarenlagerMarktplatzMapping.cMarketplaceID,
+				#WarenlagerMarktplatzMapping.cRegion,
+				#WarenlagerMarktplatzMapping.nGeteilterBestand
+			FROM #WarenlagerMarktplatzMapping
+			JOIN #InsertedWarenlager ON #InsertedWarenlager.kId = #WarenlagerMarktplatzMapping.kId;
+	END;
+
+	--
+	-- Warenlager f&#252;r verf&#252;gbare FBA Best&#228;nde
+	--
+	DECLARE @WarenlagerBestand AS TABLE (kWarenlager INT, kUser INT);
+	INSERT INTO @WarenlagerBestand (kWarenlager, kUser)
+	SELECT
+		tWarenLager.kWarenLager AS kWarenlager,
+		tWarenLager.kUser
+	FROM dbo.tWarenLager
+	WHERE 
+		tWarenLager.kUser &gt; 0
+		AND tWarenLager.nFulfillment = 2; -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+
+	DECLARE @WarenlagerReserviert AS TABLE (kWarenlager INT, kUser INT);
+	INSERT INTO @WarenlagerReserviert (kWarenlager, kUser)
+	SELECT	tWarenLager.kWarenlager AS kWarenlager,
+			tWarenLager.kUser
+	FROM dbo.tWarenLager
+	WHERE
+		tWarenLager.kUser &gt; 0
+		AND tWarenLager.nFulfillment = 4; -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+
+	--
+	-- Warenlagerpl&#228;tze f&#252;r verf&#252;gbaren Bestand anlegen
+	--
+	INSERT INTO dbo.tWarenLagerPlatz(kWarenLager, fGewichtMax, cKommentar, fLaenge, fBreite, fHoehe, nSort, cName, kWarenLagerPlatzTyp, nStatus, dWmsInventurDatum, kWmsInventur, nPreInvStatus, nInvGezaehlt, nGesperrt, nAuslieferungGesperrt)
+	SELECT    WarenlagerBestand.kWarenLager AS kWarenLager, 
+			0.0 AS fGewichtMax, 
+			&#39;&#39; AS cKommentar, 
+			0.0 AS fLaenge, 
+			0.0 AS fBreite, 
+			0.0 AS fHoehe, 
+			0 AS nSort, 
+			&#39;Amazon FBA Lager&#39; AS cName, 
+			0 AS kWarenLagerPlatzTyp, 
+			0 AS nStatus, 
+			NULL dWmsInventurDatum, 
+			0 AS kWmsInventur, 
+			0 AS nPreInvStatus, 
+			0 AS nInvGezaehlt, 
+			0 AS nGesperrt,
+			0 AS nAuslieferungGesperrt
+	FROM @WarenlagerBestand AS WarenlagerBestand 
+	LEFT JOIN dbo.tWarenLagerPlatz ON WarenlagerBestand.kWarenLager = tWarenLagerPlatz.kWarenLager
+	WHERE    tWarenLagerPlatz.kWarenLager IS NULL;
+
+	--
+	-- Warenlagerpl&#228;tze f&#252;r reservierten Bestand anlegen
+	--
+	INSERT INTO dbo.tWarenLagerPlatz(kWarenLager, fGewichtMax, cKommentar, fLaenge, fBreite, fHoehe, nSort, cName, kWarenLagerPlatzTyp, nStatus, dWmsInventurDatum, kWmsInventur, nPreInvStatus, nInvGezaehlt, nGesperrt, nAuslieferungGesperrt)
+	SELECT    WarenlagerReserviert.kWarenLager AS kWarenLager, 
+			0.0 AS fGewichtMax, 
+			&#39;&#39; AS cKommentar, 
+			0.0 AS fLaenge, 
+			0.0 AS fBreite, 
+			0.0 AS fHoehe, 
+			0 AS nSort, 
+			&#39;Amazon FBA Lager (Pending)&#39; AS cName, 
+			0 AS kWarenLagerPlatzTyp, 
+			0 AS nStatus, 
+			NULL dWmsInventurDatum, 
+			0 AS kWmsInventur, 
+			0 AS nPreInvStatus, 
+			0 AS nInvGezaehlt, 
+			1 AS nGesperrt,
+			1 AS nAuslieferungGesperrt
+	FROM @WarenlagerReserviert AS WarenlagerReserviert
+	LEFT JOIN dbo.tWarenLagerPlatz ON WarenlagerReserviert.kWarenLager = tWarenLagerPlatz.kWarenLager
+	WHERE    tWarenLagerPlatz.kWarenLager IS NULL;
+
+	--
+	-- Fullfillmentdienstleiter zu Fullfilmentlagern anlegen
+	--	
+
+	INSERT INTO dbo.tWarenLagerFulFillmentDienstleister(kWarenLager, kFulfillmentDienstleister, nDruckLieferschein, nFaxLieferschein, nMailLieferschein, nDruckFF, nFaxFF, nMailFF, kFormularLieferschein, kFormularFulfillmentAuftrag)
+	SELECT    tWarenLager.kWarenLager AS kWarenLager, 
+			1 AS kFulfillmentDienstleister, -- WARENLAGER_FULFILLMENTDIENSTLEISTER_AMAZON (1)
+			0 AS nDruckLieferschein,
+			0 AS nFaxLieferschein,
+			0 AS nMailLieferschein,
+			0 AS nDruckFF,
+			0 AS nFaxFF,
+			0 AS nMailFF,
+			0 AS kFormularLieferschein,
+			0 AS kFormularFulfillmentAuftrag
+	FROM dbo.tWarenLager
+	LEFT JOIN dbo.tWarenLagerFulFillmentDienstleister ON tWarenLager.kWarenLager = tWarenLagerFulFillmentDienstleister.kWarenLager
+	WHERE    tWarenLager.nFulfillment = 2 -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+			AND tWarenLagerFulFillmentDienstleister.kWarenLager IS NULL;
+
+	--
+	-- Best&#228;nde zu inaktiven Benutzern l&#246;schen
+	--
+	DELETE dbo.pf_amazon_angebot_fba
+	FROM dbo.pf_amazon_angebot_fba
+	LEFT JOIN dbo.pf_user ON dbo.pf_amazon_angebot_fba.kUser = dbo.pf_user.kUser
+	WHERE ISNULL(dbo.pf_user.nAktiv, 0) &lt;&gt; 1;
+
+	--
+	-- Fehlende Eintr&#228;ge f&#252;r Pending in tlagerbestandProLagerLagerartikel anlegen
+	-- 
+	INSERT INTO dbo.tlagerbestandProLagerLagerartikel (kArtikel, kWarenlager, fBestand, fVerfuegbarGesperrt, fAuslieferungGesperrt)
+	SELECT DISTINCT vFBABestand.kArtikel,
+			tWarenLager.kWarenLager,
+			0.0 AS fBestand,
+			0.0 AS fVerfuegbarGesperrt,
+			0.0 AS fAuslieferungGesperrt
+	FROM Amazon.vFBABestand
+	JOIN dbo.tWarenLager ON vFBABestand.kUser = tWarenLager.kUser
+	LEFT JOIN dbo.tlagerbestandProLagerLagerartikel ON vFBABestand.kArtikel = tlagerbestandProLagerLagerartikel.kArtikel
+		AND tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLager.kWarenLager	
+	WHERE tlagerbestandProLagerLagerartikel.kArtikel IS NULL;
+END</code></pre>
+</body>
+</html>

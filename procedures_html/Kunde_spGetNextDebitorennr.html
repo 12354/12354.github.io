@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spGetNextDebitorennr</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spGetNextDebitorennr</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure Kunde.spGetNextDebitorennr wird die nächste freie verfügbare Debitorennummer zurückgegeben. Debitorennummern starten mit 10000</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Kunde].[spGetNextDebitorennr]
+@nextNumber Int = 0 OUTPUT
+AS
+BEGIN
+
+
+SELECT @nextNumber = 
+(
+	SELECT TOP 1 * FROM 
+	(
+		SELECT t1.nDebitorennr+1 AS nDebitorennr
+		FROM tkunde t1
+		WHERE NOT EXISTS
+		(
+			SELECT * FROM tkunde t2 WHERE t2.nDebitorennr = t1.nDebitorennr + 1
+		)
+		AND  t1.nDebitorennr+1 &gt; (SELECT CONVERT(INT,cValue) + 1 FROM tOptions WHERE cKey = &#39;nDebitorenNr&#39;)
+		AND t1.nDebitorennr IS NOT NULL
+		AND t1.nDebitorennr &gt; 10000
+		UNION --Wenn noch keine vergeben
+		SELECT CONVERT(INT,cValue) + 1 
+		FROM tOptions WHERE cKey = &#39;nDebitorenNr&#39;
+		AND NOT EXISTS 
+		(
+			SELECT * FROM tkunde t3 WHERE t3.nDebitorennr = CONVERT(INT,cValue) + 1 
+		)
+	) ot
+	ORDER BY 1
+)
+UPDATE tOptions SET cValue = @nextNumber WHERE cKey = &#39;nDebitorenNr&#39;
+
+END</code></pre>
+</body>
+</html>

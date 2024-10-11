@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sync.spLogbuchBereinigen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Sync.spLogbuchBereinigen</h1>
+    <p><strong>Description:</strong> Die Procedure löscht veraltete Logbuch Einträge.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Sync].[spLogbuchBereinigen]
+AS
+BEGIN
+	DELETE Sync.tSyncLogsitzung
+	FROM Sync.tSyncLogsitzung 
+	LEFT JOIN dbo.tLoggingConfiguration ON tSyncLogsitzung.nTyp = tLoggingConfiguration.kLogsitzungTyp
+	WHERE tSyncLogsitzung.dStart &lt; DATEADD(DAY, -ISNULL(tLoggingConfiguration.nAufbewahrungErfolgreich, 3), GETDATE())     
+		AND tSyncLogsitzung.nStatus = 16; --Erfolgreich abgeschlossen
+
+
+	DELETE Sync.tSyncLogsitzung
+	FROM Sync.tSyncLogsitzung 
+	LEFT JOIN dbo.tLoggingConfiguration ON tSyncLogsitzung.nTyp = tLoggingConfiguration.kLogsitzungTyp
+	WHERE tSyncLogsitzung.dStart &lt; DATEADD(DAY, -ISNULL(tLoggingConfiguration.nAufbewahrungFehlerhaft, 7), GETDATE())     
+		AND tSyncLogsitzung.nStatus != 16;	
+END;</code></pre>
+</body>
+</html>

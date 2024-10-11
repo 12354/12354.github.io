@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spPlusbuchung</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spPlusbuchung</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>--
+-- spPlusbuchung
+-- 
+CREATE PROCEDURE [FulfillmentNetwork].[spPlusbuchung] @kArtikel INT                 
+,                                                    @nSeriennummern INT            
+,                                                    @nCharge INT                   
+,                                                    @nMHD INT                      
+,                                                    @kWarenLager INT              
+,                                                    @kWarenLagerPlatz INT         
+,                                                    @kLieferantenBestellungPos INT
+,                                                    @kLieferantenBestellung INT
+,                                                    @kBenutzer INT                
+,                                                    @fAnzahl DECIMAL(28,14)       
+,                                                    @cLieferscheinNr VARCHAR(255) 
+,                                                    @cChargenNr VARCHAR(255)      
+,                                                    @dMHD DATETIME
+,													 @fEKNetto DECIMAL(28,14)                       
+,                                                    @dGeliefertAm DATETIME        
+,                                                    @cKommentar VARCHAR(255)      
+,                                                    @kBuchungsart INT             
+,                                                    @kBestellPosUmlagerung INT    
+,													 @kMerchantStockChange INT
+,													 @kVorgang INT
+,                                                    @cSeriennummer VARCHAR(128)    = &#39;#$KEINE$#&#39;
+,													 @cSessionId VARCHAR(100) = NULL
+,                                                    @cLogMeldung VARCHAR(8000)  
+,													 @nSpWarenlagerEingangHistorieNichtSchreiben INT = 0
+,													 @kBestellPos INT = 0
+,													 @kLieferscheinPos INT = 0
+,													 @kRmRetourePos INT = 0			
+,                                                    @kWarenlagerEingang INT        = NULL OUTPUT
+
+AS
+
+BEGIN
+
+	EXECUTE [dbo].[spWarenlagerEingangSchreiben] NULL
+	,                                            @kArtikel
+	,                                            @kWarenLagerPlatz
+	,                                            @kLieferantenBestellungPos
+	,                                            @kBenutzer
+	,                                            @fAnzahl
+	,                                            @fEKNetto
+	,                                            @cLieferscheinNr
+	,                                            @cChargenNr
+	,                                            @dMHD
+	,                                            @dGeliefertAm
+	,                                            @cKommentar
+	,                                            0
+	,                                            0
+	,                                            0
+	,                                            @kBuchungsart
+	,                                            @kBestellPosUmlagerung
+	,                                            @kRmRetourePos
+	,                                            @nSpWarenlagerEingangHistorieNichtSchreiben
+	,                                            @kWarenlagerEingang OUTPUT;
+
+
+	INSERT INTO [FulfillmentNetwork].[tMerchantStockChangeRef]
+	(
+	    [kMerchantStockChange],
+	    [kWarenlagerEingang],
+	    [kWarenlagerAusgang]
+	)
+	VALUES
+	(   @kMerchantStockChange, -- kMerchantStockChange - int
+	    @kWarenlagerEingang, -- kWarenlagerEingang - int
+	    0  -- kWarenlagerAusgang - int
+	    )
+
+	IF(@nSpWarenlagerEingangHistorieNichtSchreiben = 1)
+	   BEGIN
+		  INSERT INTO dbo.tArtikelHistory
+		  (
+			 kWarenLagerPlatz, kArtikel, fAnzahl, dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+			 fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert
+		  )
+		  SELECT WLE.kWarenLagerPlatz,
+				WLE.kArtikel,SUM(WLE.fAnzahl) ,
+				GETDATE() AS dErstellt,
+				WLE.kBenutzer,
+				0 AS kWarenLagerEingang,
+				@kBestellPos AS  kBestellPos,
+				ISNULL(WLE.kGutschriftPos,0),
+				ISNULL(WLE.fEKEinzel,
+				ISNULL(dbo.tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+				WLE.cKommentar,
+				WLE.kBuchungsart,
+				@kLieferscheinPos AS kLieferscheinPos,
+				MAX(tlagerbestand.fLagerbestandEigen) AS fLagerBestandGesamt, 
+	   			MAX(LagerBestandAufPlatz.fAnzahl) AS fLagerBestand, -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+				WLE.kLieferantenBestellungPos,
+				WLE.cLieferscheinNr,
+				WLE.cChargenNr,
+				WLE.dMHD,
+				ISNULL(dbo.tlagerbestand.fVerfuegbar,0),
+				ISNULL(dbo.tlagerbestand.fInAuftraegen,0)
+		  FROM dbo.tWarenlagerEingang AS WLE
+		  JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = WLE.kArtikel
+		  JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = WLE.kArtikel
+		  OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fAnzahl
+					   FROM dbo.tWarenLagerEingang
+					   WHERE dbo.tWarenLagerEingang.kArtikel = WLE.kArtikel
+					   AND dbo.tWarenLagerEingang.kWarenLagerPlatz = WLE.kWarenlagerPlatz) AS LagerBestandAufPlatz
+		  WHERE kWarenlagerEingang = @kWarenlagereingang
+		  GROUP BY WLE.kWarenLagerPlatz,WLE.kArtikel,WLE.kBenutzer,ISNULL(WLE.kGutschriftPos,0),ISNULL(WLE.fEKEinzel, ISNULL(dbo.tArtikel.fEKNetto,0.0)),
+				    WLE.cKommentar, WLE.kBuchungsart, WLE.kLieferantenBestellungPos,WLE.cLieferscheinNr,WLE.cChargenNr,WLE.dMHD,dbo.tlagerbestand.fInAuftraegen,
+				    dbo.tlagerbestand.fVerfuegbar;
+	   END
+	
+
+
+	DECLARE @FulfillmentLogDaten AS FulfillmentNetwork.TYPE_spFulfillmentLogSchreiben				
+	INSERT INTO @FulfillmentLogDaten ( [kBenutzer], [dTimestamp], [cSessionId], [nLogLevel], [nMessageSource], [kLieferant], [kLieferschein], [kArtikelHistory], [kWarenlager], [kBestellung], [kLieferantenBestellung], [kFulfillmentAuftrag], [kArtikel], [cMessage])
+	VALUES											   (  @kBenutzer,    GETDATE(),  @cSessionId,           2,                1,            0,               0,                 0,  @kWarenLager,             0,  @kLieferantenBestellung,                     0,  @kArtikel, @cLogMeldung)
+
+	EXEC FulfillmentNetwork.spFulfillmentLogSchreiben @FulfillemntLogDaten = @FulfillmentLogDaten, -- TYPE_spFulfillmentLogSchreiben
+	                                                  @kVorgang = @kVorgang                -- int
+	
+
+	IF (@nSeriennummern = 1)
+	BEGIN
+		DECLARE @nAnzahlSeriennummern INT = @fAnzahl
+		--
+		-- fAnzahl x Seriennummern anlegen. 
+		-- Wird eine Seriennummer mitgegeben, wird diese verwendet, ansonsten mit &#39;#$KEINE$#&#39; gef&#252;llt. Das sollte nur bei fAnzahl = 1 passieren. Bei fAnzahl &gt; 1 wird f&#252;r die erste Seriennummer die &#252;bergebene angegeben, f&#252;r den rest &#39;#$KEINE$#&#39; 
+		--
+		IF (@cSeriennummer IS NULL OR @cSeriennummer = &#39;&#39;)
+		BEGIN
+			SET @cSeriennummer = &#39;#$KEINE$#&#39;			
+		END
+		ELSE
+		BEGIN
+			UPDATE [dbo].[tLagerArtikel] SET cSeriennr = &#39;#$KEINE$#&#39;  WHERE kWarenlager = @kWarenLager AND kArtikel = @kArtikel AND cSeriennr = @cSeriennummer AND kLieferscheinPos = 0 AND kBestellPos = 0
+		END
+		
+		WHILE (@nAnzahlSeriennummern &gt; 0)
+		BEGIN
+			INSERT INTO [dbo].[tLagerArtikel] ( [kLager], [kLagerOrt], [kArtikel], [cSeriennr],    [fEK],      [cBeschreibung1], [cBeschreibung2], [kBestellPos], [kLieferscheinPos], [kLieferant], [kWarenlager], [kLieferantenbestellung], [kPicklistePos], [kRMRetourePos] )
+			VALUES                            ( 0,        0,           @kArtikel,  @cSeriennummer, @fEKNetto, SUBSTRING(@cKommentar,0,64), &#39;&#39;,               0,             0,                  0,            @kWarenLager,  0,                        0,               0               )
+
+			SET @cSeriennummer = &#39;#$KEINE$#&#39;
+			SET @nAnzahlSeriennummern = @nAnzahlSeriennummern -1;
+
+		END
+	END
+
+
+END</code></pre>
+</body>
+</html>

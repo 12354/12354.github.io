@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spWMSWareneingangKorrigieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spWMSWareneingangKorrigieren</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spWMSWareneingangKorrigieren]
+@kBenutzer INT,         -- Der Benutzer der den Vorgang ausf&#252;hrt
+@kWarenlager INT,		 -- Warenlager auf dem wir arbeiten
+@kArtikel INT,
+@kWarenlagerPlatz INT,
+@fMenge  DECIMAL(25,13),
+@cCharge NVARCHAR(255),
+@dMhd DATETIME,
+@kSessionId INT,
+@kRMRetourPos INT = 0,
+@kLieferantenBestellungInput INT = 0,
+@kWarenLagerEingangLast INT = 0
+
+-- Funktion: Mit dieser Procedur werden Warenlagereing&#228;nge ge&#228;ndert, ohne &#252;bers ausbuchen zu gehen.
+	
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @kWarenlagereingang INT;
+DECLARE @kLieferantenBestellung INT;
+DECLARE @kLieferantenBestellungToCheck INT;
+DECLARE @fMengeWarenlagereingang DECIMAL(25,13);
+DECLARE @fMengeAktuell DECIMAL(25,13);
+DECLARE @kLieferantenBestellungPos INT;
+DECLARE @kRMRetoure INT;
+DECLARE @fRetourePosMaxAnzahl DECIMAL(25,13);
+DECLARE @nOtherRetourePos INT = 0;
+DECLARE @cInfoText NVARCHAR(255);
+DECLARE @dDateNow DATETIME;
+DECLARE @fBuchungsMenge DECIMAL(25,13);
+DECLARE @IstTeilmengenArtikel TINYINT = 0;
+DECLARE @cSubsetNumber NVARCHAR(100);
+DECLARE @kRMRetoureStatus INT;
+DECLARE @fRetourenBestand DECIMAL(25,13);
+
+IF(OBJECT_ID(&#39;tempdb..#LieferantenBestellungen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #LieferantenBestellungen;
+	END
+	CREATE TABLE #LieferantenBestellungen(
+		kLieferantenbestellung INT NOT NULL,
+	);
+
+	IF(OBJECT_ID(&#39;tempdb..#Warenlagereingaenge&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Warenlagereingaenge;
+	END
+	CREATE TABLE #Warenlagereingaenge(
+		kWarenlagereingang INT NOT NULL,
+		kLieferantenBestellung INT NULL,
+		fAnzahlAktuell DECIMAL(25,13) NOT NULL,
+		nSort INT NOT NULL,
+		dLieferdatum datetime,
+		dErstellt datetime,
+		kLieferantenBestellungPos INT
+	);
+
+	IF(OBJECT_ID(&#39;tempdb..#WarenLagerEingaengeZumAusbuchen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #WarenLagerEingaengeZumAusbuchen;
+	END
+	CREATE TABLE #WarenLagerEingaengeZumAusbuchen(
+		kWarenLagerEingang INT NOT NULL,
+		kLieferscheinPos INT NULL,
+		fAnzahl DECIMAL(25,13) NOT NULL,
+		cKommentar NVARCHAR(MAX) NULL,
+		kBenutzer INT NOT NULL,
+		kBuchungsart INT NOT NULL
+	);
+   
+BEGIN TRY
+	BEGIN TRAN T0;
+	SET @cInfoText =  &#39;WMS/Packtisch+ Wareneingang Korrekturbuchung&#39;;
+	SET @dDateNow = GETDATE();
+
+	SELECT @IstTeilmengenArtikel = nIstTeilmengenArtikel
+	FROM dbo.tArtikel 
+	WHERE kArtikel = @kArtikel;
+	
+
+	
+	IF(@IstTeilmengenArtikel = 1)
+	BEGIN
+
+		SELECT @cSubsetNumber = cSubsetNumber, @fMenge = @fMenge * tWarenLagerEingangSubsets.fFactor
+		FROM dbo.tWarenLagerEingangSubsets
+		WHERE tWarenLagerEingangSubsets.kWarenlagereingang = @kWarenLagerEingangLast;
+
+	END;
+
+
+    IF(@kRMRetourPos &gt; 0)
+	BEGIN
+
+
+        SELECT @kRMRetoure = dbo.tRMRetourePos.kRMRetoure ,@fRetourePosMaxAnzahl = dbo.tRMRetourePos.fAnzahl, @nOtherRetourePos =COUNT(OtherRetourPos.kRMRetourePos),
+               @kRMRetoureStatus = tRMStatus.nStatusTyp, @fRetourenBestand = GebuchterBestandVonRetoure.fAnzahl
+        FROM dbo.tRMRetourePos
+                 JOIN dbo.tRmStatusVerlauf ON tRmStatusVerlauf.kRMStatusVerlauf = tRMRetourePos.kRMStatusVerlauf
+                 JOIN dbo.tRMStatus ON tRMStatus.kRMStatus = tRmStatusVerlauf.kRMStatus
+                 LEFT JOIN dbo.tRMRetourePos AS OtherRetourPos ON OtherRetourPos.kRMRetoure = dbo.tRMRetourePos.kRMRetoure AND  OtherRetourPos.kRMRetourePos != dbo.tRMRetourePos.kRMRetourePos AND dbo.tRMRetourePos.fAnzahl &gt; 0
+        		OUTER APPLY (
+        						SELECT SUM(fAnzahlAktuell) AS fAnzahl
+        						FROM dbo.tWarenLagerEingang 
+        						WHERE tWarenLagerEingang.kRMRetourePos = tRMRetourePos.kRMRetourePos
+        					) AS GebuchterBestandVonRetoure
+        WHERE dbo.tRMRetourePos.kRMRetourePos = @kRMRetourPos
+        GROUP BY dbo.tRMRetourePos.kRMRetoure ,dbo.tRMRetourePos.fAnzahl,tRMStatus.nStatusTyp,GebuchterBestandVonRetoure.fAnzahl;
+
+
+
+
+        IF(@fRetourePosMaxAnzahl &lt; @fMenge)
+		BEGIN
+
+			RAISERROR (&#39;ERROR_WMSWareneingangKorrigieren_2&#39;, 16, 1);
+			RETURN;
+		END;
+
+		SET @cInfoText =  &#39;WMS/Packtisch+ Retouren Korrekturbuchung&#39;;
+
+		DECLARE @nZustandyTyp TINYINT;
+
+		SELECT @nZustandyTyp = tZustand.nTyp
+		FROM dbo.tRMRetourePos
+	    JOIN dbo.tZustand ON tZustand.kZustand = tRMRetourePos.kZustand
+	    WHERE tRMRetourePos.kRMRetourePos = @kRMRetourPos;
+
+		-- Komplette retourpos l&#246;schen ?
+		IF(@fRetourePosMaxAnzahl = @fMenge AND @nOtherRetourePos &gt; 0)
+		BEGIN
+
+			DELETE FROM  dbo.tRMRetourePos WHERE dbo.tRMRetourePos.kRMRetourePos = @kRMRetourPos;
+			DELETE FROM  dbo.tRmStatusVerlauf WHERE dbo.tRmStatusVerlauf.kRMRetourePos = @kRMRetourPos;
+
+		END;
+		ELSE -- Oder Menge abziehen
+		BEGIN
+
+			--Wenn die Pos auf 0 gehen w&#252;rde , und deie Retoure Angemeldet ist, dann nicht verringern, das w&#252;rde die Pos sonst L&#246;schen und wir haben eine retoure ohne positionen
+            UPDATE dbo.tRMRetourePos SET dbo.tRMRetourePos.fAnzahl =  CASE WHEN @kRMRetoureStatus = 0 AND dbo.tRMRetourePos.fAnzahl - @fMenge &lt;= 0
+                                                                               THEN dbo.tRMRetourePos.fAnzahl
+                                                                           ELSE (dbo.tRMRetourePos.fAnzahl - @fMenge) END
+            WHERE dbo.tRMRetourePos.kRMRetourePos = @kRMRetourPos;
+
+
+        END;
+
+		-- Zugehoerige SerNo L&#246;schen
+		DELETE FROM dbo.tLagerArtikel
+		WHERE kLagerArtikel IN (SELECT TOP (CAST(@fMenge AS INT)) LgArt.kLagerArtikel
+							    FROM dbo.tLagerArtikel AS LgArt
+								WHERE LgArt.kRMRetourePos = @kRMRetourPos
+							    ORDER BY LgArt.kLagerArtikel DESC);
+
+
+        IF NOT EXISTS( SELECT kArtikel FROM tArtikel WHERE kArtikel = @kArtikel AND cLageraktiv = &#39;Y&#39; AND kArtikel &gt; 0) OR
+        		   (@nZustandyTyp = 2) OR ISNULL(@fRetourenBestand,0) = 0 -- Status erst angemeldet, keine WEs zum buchen, raus
+        
+        BEGIN		
+		  COMMIT TRAN T0; 
+		  RETURN;
+		END;
+	END;
+
+
+
+    INSERT INTO #Warenlagereingaenge
+    SELECT dbo.twarenlagereingang.kWarenlagereingang,dbo.tLieferantenBestellungPos.kLieferantenBestellung,dbo.twarenlagereingang.fAnzahlAktuell - ISNULL(twarenlagereingang.fAnzahlReserviertPickpos,0),
+     CASE WHEN (dbo.tLieferantenBestellungPos.fMenge - dbo.tLieferantenBestellungPos.fMengeGeliefert) &lt; 0 
+               THEN 0 WHEN (dbo.tLieferantenBestellungPos.fMenge - dbo.tLieferantenBestellungPos.fMengeGeliefert) &gt; 0 
+			   THEN 1 
+			   ELSE 2 END AS nSort, dbo.tLieferantenBestellung.dLieferdatum, dbo.tLieferantenBestellung.derstellt,dbo.tLieferantenBestellungPos.kLieferantenBestellungPos
+    FROM  dbo.twarenlagereingang
+    LEFT JOIN vStandardArtikel AS tartikel ON tArtikel.kArtikel = dbo.twarenlagereingang.kartikel 
+    LEFT JOIN dbo.tWarenlagerPlatz ON dbo.tWarenlagerPlatz.kWarenlagerPLatz = dbo.tWarenlagerEingang.kWarenlagerPlatz
+    LEFT JOIN dbo.tLieferantenBestellungPos ON dbo.tLieferantenBestellungPos.kLieferantenBestellungPos = dbo.twarenlagereingang.kLieferantenBestellungPos
+    LEFT JOIN dbo.tLieferantenBestellung ON dbo.tLieferantenBestellung.kLieferantenBestellung = dbo.tLieferantenBestellungPos.kLieferantenBestellung
+	LEFT JOIN dbo.tWarenLagerEingangSubsets ON dbo.tWarenLagerEingangSubsets.kwarenlagereingang = twarenlagereingang.kwarenlagereingang
+    WHERE  ((tWarenLagerEingang.kWarenLagerPlatz = @kWarenlagerPlatz AND tArtikel.kArtikel = @kArtikel) OR (dbo.tWarenLagerEingang.kRMRetourePos = @kRMRetourPos AND dbo.tWarenLagerEingang.kRMRetourePos &gt; 0))
+    AND dbo.twarenlagereingang.fAnzahlAktuell &gt; 0  
+    AND dbo.twarenlagerplatz.kwarenlager = @kWarenlager
+    AND (dbo.twarenlagereingang.kSessionID = @kSessionId OR @kSessionId = 0)
+	AND (@kLieferantenBestellungInput = 0 OR tLieferantenBestellung.kLieferantenBestellung = @kLieferantenBestellungInput)
+    AND (@dMhd IS NULL OR CONVERT(NVARCHAR(255), dbo.tWarenlagerEingang.dMHD, 104) = CONVERT(NVARCHAR(255), CONVERT(Datetime,@dMhd) , 104)) 
+    AND (@cCharge = &#39;&#39; OR @cCharge IS NULL OR cChargenNr = @cCharge)
+	AND (@cSubsetNumber IS NULL OR @cSubsetNumber = tWarenLagerEingangSubsets.cSubsetNumber);
+
+
+    DECLARE CUR_Warenlagereingang CURSOR LOCAL FAST_FORWARD FOR 
+    SELECT tWe.kWarenlagereingang,tWe.kLieferantenBestellung,tWe.fAnzahlAktuell,tWe.kLieferantenBestellungPos
+    FROM #Warenlagereingaenge AS tWe
+    ORDER BY tWe.nSort,tWe.dLieferdatum DESC,tWe.dErstellt;
+
+
+    OPEN CUR_Warenlagereingang
+    FETCH NEXT FROM CUR_Warenlagereingang INTO  @kWarenlagereingang,@kLieferantenBestellung,@fMengeWarenlagereingang,@kLieferantenBestellungPos
+
+    SET @fMengeAktuell = @fMenge;
+
+    WHILE (@@FETCH_STATUS = 0 AND @fMengeAktuell &gt; 0)
+    BEGIN
+
+		  -- Lieferantenbestellpos , MengeOffen anpassen
+		 IF (@kLieferantenBestellungPos IS NOT NULL AND @kLieferantenBestellungPos &gt; 0)
+		 BEGIN
+
+
+		   DECLARE @xLieferantenBestellungPos AS XML;
+		   SET @xLieferantenBestellungPos = (
+			SELECT dbo.tLieferantenBestellungPos.kLieferantenbestellungPos AS kLieferantenbestellungPos, dbo.tLieferantenBestellungPos.kLieferantenbestellung AS kLieferantenbestellung, 
+					dbo.tLieferantenBestellungPos.kArtikel AS kArtikel, dbo.tLieferantenBestellungPos.cArtNr, dbo.tLieferantenBestellungPos.cLieferantenArtNr, 
+					dbo.tLieferantenBestellungPos.cName, dbo.tLieferantenBestellungPos.cLieferantenBezeichnung,
+					dbo.tLieferantenBestellungPos.fUST, dbo.tLieferantenBestellungPos.fMenge, dbo.tLieferantenBestellungPos.cHinweis, 
+					dbo.tLieferantenBestellungPos.fEKNetto, dbo.tLieferantenBestellungPos.nPosTyp, dbo.tLieferantenBestellungPos.cNameLieferant, 
+					dbo.tLieferantenBestellungPos.nLiefertage, dbo.tLieferantenBestellungPos.dLieferdatum, dbo.tLieferantenBestellungPos.nSort,
+					dbo.tLieferantenBestellungPos.kLieferscheinPos, 
+					dbo.tLieferantenBestellungPos.fMengeGeliefert -  (CASE WHEN @fMengeAktuell &gt;= @fMengeWarenlagereingang THEN @fMengeWarenlagereingang ELSE @fMengeAktuell END)  fMengeGeliefert, 
+					dbo.tLieferantenBestellungPos.cVPEEinheit, dbo.tLieferantenBestellungPos.nVPEMenge
+				FROM dbo.tLieferantenBestellungPos
+				WHERE dbo.tLieferantenBestellungPos.kLieferantenBestellungPos = @kLieferantenBestellungPos
+				FOR XML PATH(&#39;LieferantenbestellungPos&#39;), TYPE );
+
+	   
+
+		   EXEC Lieferantenbestellung.spLieferantenBestellungPosBearbeiten @xLieferantenbestellungPos = @xLieferantenBestellungPos;
+
+	    END;
+    
+		IF(@kLieferantenBestellungPos IS NOT NULL AND NOT EXISTS (SELECT * FROM #LieferantenBestellungen WHERE kLieferantenbestellung = @kLieferantenBestellung))
+		BEGIN
+			INSERT INTO #LieferantenBestellungen (kLieferantenbestellung) VALUES (@kLieferantenBestellung);
+		END;
+
+
+		IF(@fMengeAktuell &gt;= @fMengeWarenlagereingang)
+		BEGIN
+			SET @fMengeAktuell = @fMengeAktuell - @fMengeWarenlagereingang;
+			SET @fBuchungsMenge = @fMengeWarenlagereingang
+		END;
+		ELSE
+		BEGIN
+			SET @fBuchungsMenge = @fMengeAktuell
+			SET @fMengeAktuell = 0;
+		END;
+
+		DECLARE @kBuchungart AS INT = 30;
+		IF(@kRMRetourPos &gt; 0)
+		BEGIN
+			SET @kBuchungart= 170;
+		END;	
+		INSERT INTO #WarenLagerEingaengeZumAusbuchen VALUES (@kWarenlagereingang,0,@fBuchungsMenge,@cInfoText,@kBenutzer,@kBuchungart);
+
+		FETCH NEXT FROM CUR_Warenlagereingang INTO  @kWarenlagereingang,@kLieferantenBestellung,@fMengeWarenlagereingang,@kLieferantenBestellungPos;
+
+    END;
+
+    CLOSE CUR_Warenlagereingang;
+    DEALLOCATE CUR_Warenlagereingang;	
+    
+	DECLARE @xWarenlagerEingaengeZumAusbuchen XML;
+	SET @xWarenlagerEingaengeZumAusbuchen = (
+	SELECT WLE.kWarenLagerEingang AS kWarenLagerEingang,WLE.kLieferscheinPos AS kLieferscheinPos,WLE.fAnzahl AS fAnzahl,WLE.cKommentar AS cKommentar,WLE.kBenutzer AS kBenutzer,WLE.kBuchungsart AS kBuchungsart
+	FROM #WarenLagerEingaengeZumAusbuchen AS WLE
+	FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+	);
+
+
+	-- Warenlagerausg&#228;nge schreiben
+	IF EXISTS(SELECT * FROM #WarenLagerEingaengeZumAusbuchen WHERE fAnzahl &gt; 0)
+	BEGIN
+		IF(@IstTeilmengenArtikel = 1)
+		BEGIN
+		    EXEC subset.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = @xWarenlagerEingaengeZumAusbuchen, @nKeepFactor = 1;
+		END;
+		ELSE
+		BEGIN
+			EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerEingaengeZumAusbuchen;
+		END;
+
+
+	    
+	END;
+
+
+	--
+	-- SerNos ausbuchen f&#252;r Artikel ohne SerNo verfolgung
+	--
+	IF(@kRMRetourPos = 0 AND @fMenge%1 = 0)
+	BEGIN
+
+	DELETE FROM dbo.tLagerArtikel
+		WHERE kLagerArtikel IN (
+		SELECT TOP (CAST (@fMenge AS INT)) kLagerArtikel
+		FROM dbo.tLagerArtikel
+		WHERE tLagerArtikel.kArtikel = @kArtikel
+		AND cSeriennr = &#39;#$KEINE$#&#39;
+		AND kLieferscheinPos = 0
+		ORDER BY kLagerArtikel DESC )
+
+
+	END;
+
+    --
+    -- Lieferantenbestellungen Updaten. Es k&#246;nnte sich der Status ge&#228;ndern haben
+    --
+
+    DECLARE CUR_LieferantenBestellungen CURSOR LOCAL FAST_FORWARD FOR 
+    SELECT #LieferantenBestellungen.kLieferantenbestellung
+    FROM #LieferantenBestellungen 
+
+    OPEN CUR_LieferantenBestellungen
+    FETCH NEXT FROM CUR_LieferantenBestellungen INTO  @kLieferantenBestellungToCheck
+
+    WHILE (@@FETCH_STATUS = 0)
+    BEGIN
+
+
+    EXEC Lieferantenbestellung.spLieferantenBestellungStatusUpdate 
+                                        @kLieferantenbestellung = @kLieferantenBestellungToCheck,
+                                        @nStatusAuchZuruecksetzten = 1;
+
+    FETCH NEXT FROM CUR_LieferantenBestellungen INTO @kLieferantenBestellungToCheck
+    END 
+
+    CLOSE CUR_LieferantenBestellungen
+    DEALLOCATE CUR_LieferantenBestellungen	
+
+
+    IF(@fMengeAktuell != 0 /*AND @kRMRetourPos = 0*/) --Erstmal ausklammern, wei&#223; nicht genau wof&#252;r dieser check war
+    BEGIN
+	   RAISERROR (&#39;Menge konnte nicht komplett ausgebucht werden. Menge ist nicht vorhanden oder f&#252;r eine Pickliste reserviert. Die Buchung wurde zur&#252;ckgesetzt.&#39;, 16, 1)
+	   RETURN;
+    END;
+
+
+
+    COMMIT TRAN T0; 
+
+
+   	DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+
+	INSERT INTO @typeArtikel (kArtikel)
+	SELECT DISTINCT tWarenLagerEingang.kArtikel AS kArtikel
+	FROM #WarenLagerEingaengeZumAusbuchen AS WLE
+	JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = WLE.kWarenLagerEingang
+
+	IF(EXISTS(SELECT * FROM @typeArtikel))
+	BEGIN
+		EXEC dbo.spUpdatelagerbestand @typeArtikel;
+	END;
+
+	
+	IF(@kRMRetourPos &gt; 0)
+	BEGIN
+
+		DECLARE @Auftraege AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+
+		INSERT INTO @Auftraege ( kAuftrag )
+		SELECT tRMRetoure.kBestellung
+		FROM dbo.tRMRetourePos
+		JOIN dbo.tRMRetoure ON tRMRetoure.kRMRetoure = tRMRetourePos.kRMRetoure
+		WHERE tRMRetourePos.kRMRetourePos = @kRMRetourPos;
+
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftraege;	
+
+	END;
+
+
+END TRY
+BEGIN CATCH
+
+    ROLLBACK TRAN T0;
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    SET @ErrorMessage =  ERROR_MESSAGE();
+
+    RAISERROR (@ErrorMessage, 
+		  16,
+		  1);
+END CATCH;</code></pre>
+</body>
+</html>

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RM.spGutschriftErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>RM.spGutschriftErstellen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [RM].[spGutschriftErstellen]
+    @kBestellung INT,
+	@kRechnung INT,
+	@kBenutzer INT,
+	@kFirma INT,
+	@cStatusText NVARCHAR(255),
+	@kGutschrift INT OUTPUT
+AS
+    SET NOCOUNT ON;
+    SET ANSI_NULLS ON;
+    SET ANSI_NULL_DFLT_ON ON;
+    SET ANSI_PADDING ON;
+    SET CONCAT_NULL_YIELDS_NULL ON;
+    SET XACT_ABORT OFF;
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+		
+    BEGIN TRY
+		
+		--Daten aus dem Auftrag holen
+		DECLARE @kKunde AS INT;
+		DECLARE @cErloeskonto AS NVARCHAR(64);
+		DECLARE @cWaehrung AS NVARCHAR(20);
+		DECLARE @fFaktor AS DECIMAL(25,13);
+		DECLARE @kSprache AS INT;
+		DECLARE @kRechnungsAdresse AS INT;
+		DECLARE @nPlatform AS INT;
+		DECLARE @fVersandlandWaehrungFaktor AS DECIMAL(25,13);
+
+		SELECT  @kKunde = vRechnung.kKunde,
+				@cErloeskonto = &#39;&#39;,
+				@cWaehrung = vRechnung.cWaehrung,
+				@fFaktor = vRechnung.fWaehrungsfaktor,
+				@kSprache = vRechnung.kSprache,
+				@kRechnungsAdresse = 0,
+				@nPlatform = vRechnung.kPlattform,
+				@fVersandlandWaehrungFaktor = vRechnung.fVersandlandWaehrungsfaktor
+		FROM Rechnung.vRechnung WHERE vRechnung.kRechnung = @kRechnung;
+
+        BEGIN TRANSACTION;
+			
+			--tgutschrift hat kein Autoincrement	
+			DECLARE @id AS INT = 0;
+			EXEC spGetAndUpdatePK &#39;tGutschrift&#39;, @id OUTPUT;
+					
+			--Laufende Nr f&#252;r Gutschrift ermitteln
+			DECLARE @gutschriftNr AS VARCHAR(30);
+			EXEC spGetNextNummer &#39;Gutschrift&#39;,@kFirma,0, @gutschriftNr OUTPUT;
+				
+			DECLARE @cError VARCHAR(255) = &#39;&#39;
+			IF (@kKunde &lt;= 0)
+			BEGIN
+				SET @cError = &#39;Es konnte kein Kunde f&#252;r die Rechnungskorrektur ermittelt werden.&#39;;
+				RAISERROR(@cError, 18, 1);		
+			END
+			
+			IF (ISNULL(@gutschriftNr,&#39;&#39;) = &#39;&#39;)
+			BEGIN
+				SET @cError = &#39;Es konnte keine Rechnungskorrekturnummer erstellt werden.&#39;;
+				RAISERROR(@cError, 18, 1);		
+			END
+						
+			--Wenn es noch keine Rechnungsadresse gibt, dann wird eine erstellt
+			IF (@kRechnungsAdresse = 0) 
+			BEGIN
+			  
+				DECLARE @rechnungsAdresseId AS INT = 0;
+				EXEC spGetAndUpdatePK &#39;trechnungsadresse&#39;, @rechnungsAdresseId OUTPUT;
+
+				INSERT INTO dbo.trechnungsadresse 
+				(
+						kRechnungsAdresse,
+						kKunde,
+						cFirma,
+						cAnrede,
+						cTitel,
+						cVorname,
+						cName,
+						cStrasse,
+						cPLZ,
+						cOrt,
+						cLand,
+						cTel,
+						cZusatz,
+						cAdresszusatz,
+						cPostID,
+						cMobil,
+						cMail,
+						cFax,
+						cBundesland,
+						cISO,
+						cKundenNr
+				  )
+				  (
+					SELECT 
+						@rechnungsAdresseId, 
+						tKunde.kKunde,
+						tAdresse.cFirma,
+						tAdresse.cAnrede,
+						tAdresse.cTitel,
+						tAdresse.cVorname,
+						tAdresse.cName,
+						tAdresse.cStrasse,
+						tAdresse.cPLZ,
+						tAdresse.cOrt,
+						tAdresse.cLand,
+						tAdresse.cTel,
+						tAdresse.cZusatz,
+						tAdresse.cAdressZusatz,
+						tAdresse.cPostID,
+						tAdresse.cMobil,
+						tAdresse.cMail,
+						tAdresse.cFax,
+						tAdresse.cBundesland,
+						tAdresse.cISO,
+						tKunde.cKundenNr
+					FROM dbo.tkunde 
+					JOIN dbo.tAdresse ON tAdresse.kKunde = tKunde.kKunde AND tAdresse.nTyp = 1 AND tAdresse.nStandard = 1
+					WHERE tkunde.kKunde = @kKunde
+				);  
+
+				SET @kRechnungsAdresse = @rechnungsAdresseId;
+			END;
+									
+			INSERT INTO dbo.tgutschrift 
+			(	
+				kGutschrift, 
+				kRechnung, 
+				kKunde,
+				kBenutzer,
+				dErstellt,
+				cErloeskonto,
+				cWaehrung,
+				fFaktor,
+				kFirma,
+				kSprache,
+				kRechnungsAdresse,
+				kPlattform,
+				fVersandlandWaehrungFaktor,
+				cStatus,
+				cGutschriftNr,
+				cVersandlandWaehrung
+			)		
+			(
+				SELECT 
+					@id,
+					@kRechnung,
+					@kKunde,
+					@kBenutzer,
+					GETDATE(),
+					@cErloeskonto,
+					BestellungDaten.cWaehrung,
+					BestellungDaten.fWaehrungsfaktor,
+					@kFirma,
+					@kSprache,
+					@kRechnungsAdresse,
+					@nPlatform,
+					@fVersandlandWaehrungFaktor,
+					@cStatusText,
+					@gutschriftNr,
+					CASE WHEN ISNULL(cVersandlandWaehrung,&#39;&#39;) = &#39;&#39; 
+					THEN
+						(SELECT TOP 1 cEAMapping FROM tWaehrung WHERE nStandard = 1)
+					ELSE
+						cVersandlandWaehrung
+					END
+				FROM Rechnung.vRechnung AS BestellungDaten 
+				WHERE BestellungDaten.kRechnung = @kRechnung 
+			);
+			SELECT @kGutschrift = @id;			
+        COMMIT;
+    END TRY
+    BEGIN CATCH
+        SELECT  @ErrorMessage = ERROR_MESSAGE() ,
+                @ErrorSeverity = ERROR_SEVERITY() ,
+                @ErrorState = ERROR_STATE();
+        ROLLBACK;
+        RAISERROR (	@ErrorMessage, 
+					@ErrorSeverity,
+					@ErrorState
+		);
+        
+        RETURN;
+    END CATCH;</code></pre>
+</body>
+</html>

@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spWarenLagerPlatzLöschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spWarenLagerPlatzLöschen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Warenlagerplätze gelöscht werden. Beim löschen werden alle betroffenen Tabellen korrigiert.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spWarenLagerPlatzL&#246;schen]
+@kWarenlagerPlatz INT
+	
+-- Funktion: Mit dieser Procedur werden Warenlagereing&#228;nge ge&#228;ndert, ohne &#252;bers ausbuchen zu gehen.
+-- Vor dem Aufruf der SP sollte bereits sichergestellt sein das sich keine Ware und keine Boxen auf dem Platz befinden.
+
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @cDeletedNameText AS VARCHAR(50);
+
+BEGIN
+
+	     --
+		-- WarenlagerArtikelPlatz entfernen
+		--
+		  DELETE dbo.tWarenlagerPlatzArtikel WITH(ROWLOCK)
+	       FROM dbo.tWarenlagerPlatzArtikel WITH(ROWLOCK)
+		  WHERE dbo.tWarenlagerPlatzArtikel.kWarenLagerPlatz = @kWarenlagerPlatz
+		  AND dbo.tWarenlagerPlatzArtikel.cKommentar_1 IS NULL AND dbo.tWarenlagerPlatzArtikel.cKommentar_1 IS NULL;
+						
+		--
+		-- LHMs auf den Platz l&#246;schen
+		--	
+		   DELETE tLHM WITH(ROWLOCK)
+		   FROM tLHM WITH(ROWLOCK)
+		   WHERE tLHM.kWarenLagerPlatz = @kWarenlagerPlatz;
+
+		--
+		-- Pl&#228;tze in Lagerbereichen L&#246;schen
+		--
+		   DELETE dbo.tWMSLagerBereichPlatz 
+		   FROM dbo.tWMSLagerBereichPlatz	
+		   WHERE dbo.tWMSLagerBereichPlatz.kWarenLagerPlatz = @kWarenlagerPlatz;
+
+		   --
+		   -- Vorgabepl&#228;tze l&#246;schen
+		   --
+		   UPDATE dbo.tWarenlagerartikeloptionen
+		   SET kWarenLagerPlatz = NULL
+		   WHERE  tWarenlagerartikeloptionen.kWarenLagerPlatz = @kWarenlagerPlatz;
+
+
+		   -- Falls bestand drauf war, wird der Status gel&#246;scht gesetzt. Der Platz bleibt f&#252;r die Historie bestehen.
+		   IF EXISTS(SELECT * FROM dbo.tWarenLagerEingang  
+				   WHERE kWarenLagerPlatz = @kWarenlagerPlatz)
+		   BEGIN
+
+		     SET @cDeletedNameText = &#39; (Geloescht am &#39;;
+
+		     SELECT cName FROM dbo.tWarenlagerPlatz
+			WHERE kWarenLagerPlatz = @kWarenlagerPlatz;
+
+		     UPDATE dbo.tWarenlagerPlatz
+			SET nStatus = 4, cName =  LEFT(tWarenlagerPlatz.cName + @cDeletedNameText +LEFT(CONVERT(NVARCHAR, GETDATE(), 120), 20) + &#39;)&#39;,50)
+			WHERE kWarenLagerPlatz = @kWarenlagerPlatz;
+
+
+		   END;
+		   ELSE -- Keine Artikel auf Platz gewesen ? Dann komplett l&#246;schen
+		   BEGIN
+
+		     DELETE FROM tWarenlagerPlatz
+			WHERE kWarenLagerPlatz = @kWarenlagerPlatz;
+
+		   END;
+
+END;</code></pre>
+</body>
+</html>

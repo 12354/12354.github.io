@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenAusliefern_LokaleLager</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenAusliefern_LokaleLager</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenAusliefern_LokaleLager]
+
+-- M&#246;gliche Fehler:
+-- Diese SP ist fehlerfrei
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+@nLieferscheinProLager AS INT,
+@kBenutzer AS INT,
+@kSessionId AS INT
+
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+    SAVE TRANSACTION spPA_LokaleLager
+ELSE
+    BEGIN TRANSACTION;
+
+BEGIN TRY
+    DECLARE @OldContextInfo VARBINARY(128)
+    SET @OldContextInfo = ISNULL(CONTEXT_INFO(), 0x0000);
+    SET CONTEXT_INFO 0x5129;
+
+    DECLARE @xLieferschein XML;
+    DECLARE @xLieferscheinPos XML;
+
+    -- Lieferscheine anlegen
+    IF (@nLieferscheinProLager = 0)
+    BEGIN
+		SET @xLieferschein =
+		(
+			SELECT 
+				tAuftrag.kAuftrag AS kBestellung,
+				@kBenutzer AS kBenutzer,
+				tAuftrag.cAuftragsNr + &#39;-&#39; + STUFF(&#39;000&#39;, 4-LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1) AS cLieferscheinNr,
+				&#39;&#39; AS cHinweis,
+				NULL AS dMailVersand,
+				NULL AS dGedruckt,
+				0 AS nFulfillment,
+				0 AS kLieferantenBestellung,
+				@kSessionId AS kSessionId
+			FROM Verkauf.tAuftrag
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+			JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+									AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste 
+									AND dbo.tPickliste.kSessionId = @kSessionId
+			JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager 
+									AND dbo.tWarenLager.nFulfillment = 0
+			LEFT JOIN (
+				SELECT 
+					dbo.tLieferschein.kBestellung,
+					CAST(REVERSE(LEFT(REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr)), CHARINDEX(&#39;-&#39;, REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr))) - 1)) AS INT) + 1 AS nNummer
+				FROM dbo.tLieferschein
+				GROUP BY dbo.tLieferschein.kBestellung
+			) AS LieferNummer ON LieferNummer.kBestellung = tAuftrag.kAuftrag
+			GROUP BY tAuftrag.kAuftrag, tAuftrag.cAuftragsNr, LieferNummer.nNummer
+			FOR XML PATH(&#39;Lieferschein&#39;), TYPE
+		);
+		
+		IF (@xLieferschein IS NOT NULL) 
+		BEGIN
+			EXEC Versand.spLieferscheinErstellen 
+				@xLieferschein = @xLieferschein,
+				@kBestellung = NULL,
+				@kBenutzer = NULL,
+				@cLieferscheinNr = NULL,
+				@cHinweis = NULL,
+				@dMailVersand = NULL,
+				@dGedruckt = NULL,
+				@nFulfillment = NULL,
+				@kLieferantenBestellung = NULL,
+				@kSessionId = NULL,
+				@kLieferschein = NULL;
+		END
+
+		-- Lieferscheinpositionen anlegen
+		SET @xLieferscheinPos = 
+		(
+			SELECT 
+				dbo.tlieferschein.kLieferschein AS kLieferschein,
+				dbo.tPicklistePos.kBestellPos AS kBestellPos,
+				SUM(dbo.tPicklistePos.fAnzahl) AS fAnzahl,
+				&#39;&#39; AS cHinweis
+			FROM Verkauf.tAuftrag 
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+			JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+				AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+			JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager AND dbo.tWarenLager.nFulfillment = 0
+			JOIN dbo.tlieferschein ON dbo.tlieferschein.kBestellung = tAuftragPosition.kAuftrag AND dbo.tlieferschein.kSessionId = @kSessionId AND dbo.tLieferschein.nFulfillment = 0 AND dbo.tLieferschein.kLieferantenBestellung = 0
+			GROUP BY dbo.tlieferschein.kLieferschein, dbo.tPicklistePos.kBestellPos
+			FOR XML PATH (&#39;LieferscheinPos&#39;), TYPE
+		);
+
+		IF (@xLieferscheinPos IS NOT NULL)
+		BEGIN
+			EXEC Versand.spLieferscheinPosErstellen
+				@xLieferscheinPos = @xLieferscheinPos,
+				@kLieferschein = NULL,
+				@kBestellPos = NULL,
+				@fAnzahl = NULL,
+				@cHinweis = NULL,
+				@kLieferscheinPos = NULL;
+
+			-- Picklistenpositionen auf ausgeliefert setzen
+			UPDATE dbo.tPicklistePos
+			SET
+				dbo.tPicklistePos.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+			FROM dbo.tPicklistePos 
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos 
+				AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+			JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager AND dbo.tWarenLager.nFulfillment = 0
+			JOIN dbo.tlieferschein ON dbo.tlieferschein.kBestellung = tAuftragPosition.kAuftrag AND dbo.tlieferschein.kSessionId = @kSessionId AND dbo.tLieferschein.nFulfillment = 0 AND dbo.tLieferschein.kLieferantenBestellung = 0
+			JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition AND dbo.tLieferscheinPos.kLieferschein = dbo.tlieferschein.kLieferschein
+		END
+    END ELSE BEGIN
+		SET @xLieferschein =
+		(
+			SELECT 
+				tAuftrag.kAuftrag AS kBestellung,
+				@kBenutzer AS kBenutzer,
+				tAuftrag.cAuftragsNr + &#39;-&#39; + STUFF(&#39;000&#39;, 4-LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1) AS cLieferscheinNr,
+				&#39;&#39; AS cHinweis, -- cHinweis
+				NULL AS dMailVersand,
+				NULL AS dGedruckt,
+				0 AS nFulfillment,
+				dbo.tPickliste.kPickliste AS kLieferantenBestellung,  -- Tempor&#228;r hier PicklistenId eintragen um die sp&#228;ter zuzuordnen
+				@kSessionId AS kSessionId
+			FROM Verkauf.tAuftrag
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+			JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+				AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.kWarenLager &gt; 0
+			JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager AND dbo.tWarenLager.nFulfillment = 0
+			LEFT JOIN (
+				SELECT 
+					dbo.tLieferschein.kBestellung,
+					CAST(REVERSE(LEFT(REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr)), CHARINDEX(&#39;-&#39;, REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr))) - 1)) AS INT) + 1 AS nNummer
+				FROM dbo.tLieferschein
+				GROUP BY dbo.tLieferschein.kBestellung
+			) AS LieferNummer ON LieferNummer.kBestellung = tAuftrag.kAuftrag
+			GROUP BY tAuftrag.kAuftrag, tAuftrag.cAuftragsNr, dbo.tPickliste.kPickliste, LieferNummer.nNummer, dbo.tWarenLager.nFulfillment
+			FOR XML PATH(&#39;Lieferschein&#39;), TYPE
+		);
+
+		IF (@xLieferschein IS NOT NULL)
+		BEGIN
+			EXEC Versand.spLieferscheinErstellen 
+				@xLieferschein = @xLieferschein,
+				@kBestellung = NULL,
+				@kBenutzer = NULL,
+				@cLieferscheinNr = NULL,
+				@cHinweis = NULL,
+				@dMailVersand = NULL,
+				@dGedruckt = NULL,
+				@nFulfillment = NULL,
+				@kLieferantenBestellung = NULL,
+				@kSessionId = NULL,
+				@kLieferschein = NULL;
+		END
+
+		-- Lieferscheinpositionen anlegen
+		SET @xLieferscheinPos = 
+		(
+			SELECT 
+				dbo.tlieferschein.kLieferschein AS kLieferschein,
+				dbo.tPicklistePos.kBestellPos AS kBestellPos,
+				SUM(dbo.tPicklistePos.fAnzahl) AS fAnzahl,
+				&#39;&#39; AS cHinweis
+			FROM Verkauf.tAuftrag
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+			JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+				AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.kWarenLager &gt; 0
+			JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager AND dbo.tWarenLager.nFulfillment = 0
+			JOIN dbo.tlieferschein ON dbo.tlieferschein.kBestellung = tAuftrag.kAuftrag  AND dbo.tlieferschein.kSessionId = @kSessionId AND dbo.tlieferschein.nFulfillment = 0 AND dbo.tlieferschein.kLieferantenBestellung = dbo.tPickliste.kPickliste
+			GROUP BY dbo.tlieferschein.kLieferschein, dbo.tPicklistePos.kBestellPos
+			FOR XML PATH (&#39;LieferscheinPos&#39;), TYPE
+		);
+		
+		IF (@xLieferscheinPos IS NOT NULL)
+		BEGIN
+			EXEC Versand.spLieferscheinPosErstellen
+				@xLieferscheinPos = @xLieferscheinPos,
+				@kLieferschein = NULL,
+				@kBestellPos = NULL,
+				@fAnzahl = NULL,
+				@cHinweis = NULL,
+				@kLieferscheinPos = NULL;
+
+			-- Picklistenpositionen auf ausgeliefert setzen
+			UPDATE dbo.tPicklistePos
+			SET
+				dbo.tPicklistePos.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+			FROM dbo.tPicklistePos 
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos   	
+			JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.kWarenLager &gt; 0
+			JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager AND dbo.tWarenLager.nFulfillment = 0
+			JOIN dbo.tlieferschein ON dbo.tlieferschein.kBestellung = tAuftragPosition.kAuftrag  AND dbo.tlieferschein.kSessionId = @kSessionId AND dbo.tlieferschein.nFulfillment = 0 AND dbo.tlieferschein.kLieferantenBestellung = dbo.tPickliste.kPickliste
+			JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition AND dbo.tLieferscheinPos.kLieferschein = dbo.tlieferschein.kLieferschein
+			WHERE tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20)
+		END
+
+		UPDATE
+			dbo.tLieferschein
+		SET
+			dbo.tLieferschein.kLieferantenBestellung = 0
+		FROM
+			dbo.tLieferschein 
+		WHERE
+			dbo.tLieferschein.kSessionId = @kSessionId AND dbo.tLieferschein.kLieferantenBestellung &gt; 0
+    END
+
+    IF @TranCounter = 0 
+	   COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @TranCounter = 0
+	BEGIN
+	   IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION;
+	END
+    ELSE
+	BEGIN
+	   IF XACT_STATE() &lt;&gt; -1
+	   BEGIN
+			IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION spPA_LokaleLager;
+		END
+	END
+
+    SET CONTEXT_INFO @OldContextInfo;
+
+    DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

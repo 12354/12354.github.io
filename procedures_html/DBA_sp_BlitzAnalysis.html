@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DBA.sp_BlitzAnalysis</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>DBA.sp_BlitzAnalysis</h1>
+    <p><strong>Description:</strong> Analyse der Historien-Daten der sp_Blitz-Prozeduren (falls diese gespeichert wurden) (Teil des First Responder Toolkits von Brent Ozar)</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [DBA].[sp_BlitzAnalysis] (
+@Help TINYINT = 0,
+@StartDate DATETIMEOFFSET(7) = NULL,
+@EndDate DATETIMEOFFSET(7) = NULL,
+@OutputDatabaseName NVARCHAR(256) = &#39;DBAtools&#39;,
+@OutputSchemaName NVARCHAR(256) = N&#39;dbo&#39;,
+@OutputTableNameBlitzFirst NVARCHAR(256) = N&#39;BlitzFirst&#39;, 
+@OutputTableNameFileStats NVARCHAR(256) = N&#39;BlitzFirst_FileStats&#39;,
+@OutputTableNamePerfmonStats NVARCHAR(256)  = N&#39;BlitzFirst_PerfmonStats&#39;,
+@OutputTableNameWaitStats NVARCHAR(256) = N&#39;BlitzFirst_WaitStats&#39;,
+@OutputTableNameBlitzCache NVARCHAR(256) = N&#39;BlitzCache&#39;,
+@OutputTableNameBlitzWho NVARCHAR(256) = N&#39;BlitzWho&#39;,
+@Servername NVARCHAR(128) = @@SERVERNAME,
+@Databasename NVARCHAR(128) = NULL,
+@BlitzCacheSortorder NVARCHAR(20) = N&#39;cpu&#39;,
+@MaxBlitzFirstPriority INT = 249,
+@ReadLatencyThreshold INT = 100,
+@WriteLatencyThreshold INT = 100,
+@WaitStatsTop TINYINT = 10,
+@Version VARCHAR(30) = NULL OUTPUT,
+@VersionDate DATETIME = NULL OUTPUT,
+@VersionCheckMode BIT = 0,
+@BringThePain BIT = 0,
+@Maxdop INT = 1,
+@Debug BIT = 0
+)
+AS 
+SET NOCOUNT ON;
+SET STATISTICS XML OFF;
+
+SELECT @Version = &#39;8.10&#39;, @VersionDate = &#39;20220718&#39;;
+
+IF(@VersionCheckMode = 1)
+BEGIN
+	RETURN;
+END;
+
+IF (@Help = 1) 
+BEGIN 
+	PRINT &#39;EXEC DBA.sp_BlitzAnalysis 
+@StartDate = NULL,		/* Specify a datetime or NULL will get an hour ago */
+@EndDate = NULL,		/* Specify a datetime or NULL will get an hour of data since @StartDate */
+@OutputDatabaseName = N&#39;&#39;DBA&#39;&#39;,		/* Specify the database name where where we can find your logged blitz data */
+@OutputSchemaName = N&#39;&#39;dbo&#39;&#39;,		/* Specify the schema */
+@OutputTableNameBlitzFirst = N&#39;&#39;BlitzFirst&#39;&#39;,		/* Table name where you are storing sp_BlitzFirst output, Set to NULL to ignore */ 
+@OutputTableNameFileStats = N&#39;&#39;BlitzFirst_FileStats&#39;&#39;,		/* Table name where you are storing sp_BlitzFirst filestats output, Set to NULL to ignore */ 
+@OutputTableNamePerfmonStats  = N&#39;&#39;BlitzFirst_PerfmonStats&#39;&#39;,		/* Table name where you are storing sp_BlitzFirst Perfmon output, Set to NULL to ignore */ 
+@OutputTableNameWaitStats = N&#39;&#39;BlitzFirst_WaitStats&#39;&#39;,		/* Table name where you are storing sp_BlitzFirst Wait stats output, Set to NULL to ignore */ 
+@OutputTableNameBlitzCache = N&#39;&#39;BlitzCache&#39;&#39;,		/* Table name where you are storing sp_BlitzCache output, Set to NULL to ignore */ 
+@OutputTableNameBlitzWho = N&#39;&#39;BlitzWho&#39;&#39;,		/* Table name where you are storing sp_BlitzWho output, Set to NULL to ignore */
+@Databasename = NULL,		/* Filters results for BlitzCache, FileStats (will also include tempdb), BlitzWho. Leave as NULL for all databases */
+@MaxBlitzFirstPriority = 249,		/* Max priority to include in the results */
+@BlitzCacheSortorder = &#39;&#39;cpu&#39;&#39;,		/* Accepted values &#39;&#39;all&#39;&#39; &#39;&#39;cpu&#39;&#39; &#39;&#39;reads&#39;&#39; &#39;&#39;writes&#39;&#39; &#39;&#39;duration&#39;&#39; &#39;&#39;executions&#39;&#39; &#39;&#39;memory grant&#39;&#39; &#39;&#39;spills&#39;&#39; */
+@WaitStatsTop = 3,		/* Controls the top for wait stats only */
+@Maxdop = 1,		/* Control the degree of parallelism that the queries within this proc can use if they want to*/
+@Debug = 0;		/* Show sp_BlitzAnalysis SQL commands in the messages tab as they execute */
+
+/*
+Additional parameters:
+@ReadLatencyThreshold INT		/* Default: 100 - Sets the threshold in ms to compare against io_stall_read_average_ms in your filestats table */
+@WriteLatencyThreshold INT		/* Default: 100 - Sets the threshold in ms to compare against io_stall_write_average_ms in your filestats table */
+@BringThePain BIT		/* Default: 0 - If you are getting more than 4 hours of data with blitzcachesortorder set to &#39;&#39;all&#39;&#39; you will need to set BringThePain to 1 */
+*/&#39;;
+	RETURN;
+END
+
+/* Declare all local variables required */
+DECLARE @FullOutputTableNameBlitzFirst NVARCHAR(1000); 
+DECLARE @FullOutputTableNameFileStats NVARCHAR(1000);
+DECLARE @FullOutputTableNamePerfmonStats NVARCHAR(1000);
+DECLARE @FullOutputTableNameWaitStats NVARCHAR(1000);
+DECLARE @FullOutputTableNameBlitzCache NVARCHAR(1000);
+DECLARE @FullOutputTableNameBlitzWho NVARCHAR(1000);
+DECLARE @Sql NVARCHAR(MAX);
+DECLARE @NewLine NVARCHAR(2) = CHAR(13);
+DECLARE @IncludeMemoryGrants BIT;
+DECLARE @IncludeSpills BIT;
+
+/* Validate the database name */
+IF (DB_ID(@OutputDatabaseName) IS NULL)
+BEGIN
+	RAISERROR(&#39;Invalid database name provided for parameter @OutputDatabaseName: %s&#39;,11,0,@OutputDatabaseName);
+	RETURN;
+END
+
+/* Set fully qualified table names */
+SET @FullOutputTableNameBlitzFirst = QUOTENAME(@OutputDatabaseName)+N&#39;.&#39;+QUOTENAME(@OutputSchemaName)+N&#39;.&#39;+QUOTENAME(@OutputTableNameBlitzFirst);
+SET @FullOutputTableNameFileStats = QUOTENAME(@OutputDatabaseName)+N&#39;.&#39;+QUOTENAME(@OutputSchemaName)+N&#39;.&#39;+QUOTENAME(@OutputTableNameFileStats+N&#39;_Deltas&#39;);
+SET @FullOutputTableNamePerfmonStats = QUOTENAME(@OutputDatabaseName)+N&#39;.&#39;+QUOTENAME(@OutputSchemaName)+N&#39;.&#39;+QUOTENAME(@OutputTableNamePerfmonStats+N&#39;_Actuals&#39;);
+SET @FullOutputTableNameWaitStats = QUOTENAME(@OutputDatabaseName)+N&#39;.&#39;+QUOTENAME(@OutputSchemaName)+N&#39;.&#39;+QUOTENAME(@OutputTableNameWaitStats+N&#39;_Deltas&#39;);
+SET @FullOutputTableNameBlitzCache = QUOTENAME(@OutputDatabaseName)+N&#39;.&#39;+QUOTENAME(@OutputSchemaName)+N&#39;.&#39;+QUOTENAME(@OutputTableNameBlitzCache);
+SET @FullOutputTableNameBlitzWho = QUOTENAME(@OutputDatabaseName)+N&#39;.&#39;+QUOTENAME(@OutputSchemaName)+N&#39;.&#39;+QUOTENAME(@OutputTableNameBlitzWho+N&#39;_Deltas&#39;);
+
+IF OBJECT_ID(&#39;tempdb.dbo.#BlitzFirstCounts&#39;) IS NOT NULL 
+BEGIN
+	DROP TABLE #BlitzFirstCounts;
+END
+
+CREATE TABLE #BlitzFirstCounts (
+	[Priority] TINYINT NOT NULL,
+	[FindingsGroup] VARCHAR(50) NOT NULL,
+	[Finding] VARCHAR(200) NOT NULL,
+	[TotalOccurrences] INT NULL,
+	[FirstOccurrence] DATETIMEOFFSET(7) NULL,
+	[LastOccurrence] DATETIMEOFFSET(7) NULL
+);
+
+/* Validate variables and set defaults as required */
+IF (@BlitzCacheSortorder IS NULL) 
+BEGIN 
+	SET @BlitzCacheSortorder = N&#39;cpu&#39;;
+END 
+
+SET @BlitzCacheSortorder = LOWER(@BlitzCacheSortorder);
+
+IF (@OutputTableNameBlitzCache IS NOT NULL AND @BlitzCacheSortorder NOT IN (N&#39;all&#39;,N&#39;cpu&#39;,N&#39;reads&#39;,N&#39;writes&#39;,N&#39;duration&#39;,N&#39;executions&#39;,N&#39;memory grant&#39;,N&#39;spills&#39;))
+BEGIN
+	RAISERROR(&#39;Invalid sort option specified for @BlitzCacheSortorder, supported values are &#39;&#39;all&#39;&#39;, &#39;&#39;cpu&#39;&#39;, &#39;&#39;reads&#39;&#39;, &#39;&#39;writes&#39;&#39;, &#39;&#39;duration&#39;&#39;, &#39;&#39;executions&#39;&#39;, &#39;&#39;memory grant&#39;&#39;, &#39;&#39;spills&#39;&#39;&#39;,11,0) WITH NOWAIT;
+	RETURN;
+END
+
+/* Set @Maxdop to 1 if NULL was passed in */
+IF (@Maxdop IS NULL)
+BEGIN
+	SET @Maxdop = 1;
+END
+
+/* iF @Maxdop is set higher than the core count just set it to 0 */
+IF (@Maxdop &gt; (SELECT CAST(cpu_count AS INT) FROM sys.dm_os_sys_info))
+BEGIN
+	SET @Maxdop = 0;
+END
+
+/* We need to check if your SQL version has memory grant and spills columns in sys.dm_exec_query_stats */
+SELECT @IncludeMemoryGrants = 
+	CASE 
+		WHEN (EXISTS(SELECT * FROM sys.all_columns WHERE [object_id] = OBJECT_ID(&#39;sys.dm_exec_query_stats&#39;) AND name = &#39;max_grant_kb&#39;)) THEN 1
+		ELSE 0
+	END;
+
+SELECT @IncludeSpills = 
+	CASE
+		WHEN (EXISTS(SELECT * FROM sys.all_columns WHERE [object_id] = OBJECT_ID(&#39;sys.dm_exec_query_stats&#39;) AND name = &#39;max_spills&#39;)) THEN 1 
+		ELSE 0
+	END;
+
+
+IF (@StartDate IS NULL)
+BEGIN 
+	RAISERROR(&#39;Setting @StartDate to: 1 hour ago&#39;,0,0) WITH NOWAIT;
+	/* Set StartDate to be an hour ago */
+	SET @StartDate = DATEADD(HOUR,-1,SYSDATETIMEOFFSET());
+
+	IF (@EndDate IS NULL)
+	BEGIN 
+		RAISERROR(&#39;Setting @EndDate to: Now&#39;,0,0) WITH NOWAIT;
+		/* Get data right up to now */
+		SET @EndDate = SYSDATETIMEOFFSET();
+	END
+END 
+
+IF (@EndDate IS NULL)
+BEGIN 
+	/* Default to an hour of data or SYSDATETIMEOFFSET() if now is earlier than the hour added to @StartDate */
+	IF(DATEADD(HOUR,1,@StartDate) &lt; SYSDATETIMEOFFSET())
+	BEGIN 
+		RAISERROR(&#39;@EndDate was NULL - Setting to return 1 hour of information, if you want more then set @EndDate aswell&#39;,0,0) WITH NOWAIT;
+		SET @EndDate = DATEADD(HOUR,1,@StartDate);
+	END
+	ELSE 
+	BEGIN 
+		RAISERROR(&#39;@EndDate was NULL - Setting to SYSDATETIMEOFFSET()&#39;,0,0) WITH NOWAIT;
+		SET @EndDate = SYSDATETIMEOFFSET();
+	END
+END 
+
+/* Default to dbo schema if NULL is passed in */
+IF (@OutputSchemaName IS NULL) 
+BEGIN 
+	SET @OutputSchemaName = &#39;dbo&#39;;
+END
+
+/* Prompt the user for @BringThePain = 1 if they are searching a timeframe greater than 4 hours and they are using BlitzCacheSortorder = &#39;all&#39; */
+IF(@BlitzCacheSortorder = &#39;all&#39; AND DATEDIFF(HOUR,@StartDate,@EndDate) &gt; 4 AND @BringThePain = 0)
+BEGIN
+	RAISERROR(&#39;Wow! hold up now, are you sure you wanna do this? Are sure you want to query over 4 hours of data with @BlitzCacheSortorder set to &#39;&#39;all&#39;&#39;? IF you do then set @BringThePain = 1 but I gotta warn you this might hurt a bit!&#39;,11,1) WITH NOWAIT;
+	RETURN;
+END
+
+/* Output report window information */
+SELECT 
+	@Servername AS [ServerToReportOn],
+	CAST(1 AS NVARCHAR(20)) + N&#39; - &#39;+ CAST(@MaxBlitzFirstPriority AS NVARCHAR(20)) AS [PrioritesToInclude],
+	@StartDate AS [StartDatetime],
+	@EndDate AS [EndDatetime];;
+
+
+/* BlitzFirst data */
+SET @Sql = N&#39;
+INSERT INTO #BlitzFirstCounts ([Priority],[FindingsGroup],[Finding],[TotalOccurrences],[FirstOccurrence],[LastOccurrence])
+SELECT 
+[Priority],
+[FindingsGroup],
+[Finding],
+COUNT(*) AS [TotalOccurrences],
+MIN(CheckDate) AS [FirstOccurrence],
+MAX(CheckDate) AS [LastOccurrence]
+FROM &#39;+@FullOutputTableNameBlitzFirst+N&#39;
+WHERE [ServerName] = @Servername
+AND [Priority] BETWEEN 1 AND @MaxBlitzFirstPriority
+AND CheckDate BETWEEN @StartDate AND @EndDate
+AND [CheckID] &gt; -1
+GROUP BY [Priority],[FindingsGroup],[Finding];
+
+IF EXISTS(SELECT 1 FROM #BlitzFirstCounts) 
+BEGIN 
+	SELECT 
+	[Priority],
+	[FindingsGroup],
+	[Finding],
+	[TotalOccurrences],
+	[FirstOccurrence],
+	[LastOccurrence]
+	FROM #BlitzFirstCounts
+	ORDER BY [Priority] ASC,[TotalOccurrences] DESC;
+END
+ELSE 
+BEGIN 
+	SELECT N&#39;&#39;No findings with a priority between 1 and &#39;&#39;+CAST(@MaxBlitzFirstPriority AS NVARCHAR(10))+N&#39;&#39; found for this period&#39;&#39;;
+END
+SELECT 
+ [ServerName]
+,[CheckDate]
+,[CheckID]
+,[Priority]
+,[Finding]
+,[URL]
+,[Details]
+,[HowToStopIt]
+,[QueryPlan]
+,[QueryText] 
+FROM &#39;+@FullOutputTableNameBlitzFirst+N&#39; Findings
+WHERE [ServerName] = @Servername
+AND [Priority] BETWEEN 1 AND @MaxBlitzFirstPriority
+AND [CheckDate] BETWEEN @StartDate AND @EndDate
+AND [CheckID] &gt; -1
+ORDER BY CheckDate ASC,[Priority] ASC
+OPTION (RECOMPILE, MAXDOP &#39;+CAST(@Maxdop AS NVARCHAR(2))+N&#39;);&#39;;
+
+
+RAISERROR(&#39;Getting BlitzFirst info from %s&#39;,0,0,@FullOutputTableNameBlitzFirst) WITH NOWAIT;
+
+IF (@Debug = 1)
+BEGIN 
+	PRINT @Sql;
+END
+
+IF (OBJECT_ID(@FullOutputTableNameBlitzFirst) IS NULL) 
+BEGIN
+	IF (@OutputTableNameBlitzFirst IS NULL)
+	BEGIN
+		RAISERROR(&#39;BlitzFirst data skipped&#39;,10,0);
+		SELECT N&#39;Skipped logged BlitzFirst data as NULL was passed to parameter @OutputTableNameBlitzFirst&#39;;
+	END
+	ELSE
+	BEGIN
+		RAISERROR(&#39;Table provided for BlitzFirst data: %s does not exist&#39;,10,0,@FullOutputTableNameBlitzFirst);
+		SELECT N&#39;No BlitzFirst data available as the table cannot be found&#39;;
+	END
+
+END
+ELSE /* Table exists then run the query */
+BEGIN 
+	EXEC sp_executesql @Sql,
+	N&#39;@StartDate DATETIMEOFFSET(7),
+	@EndDate DATETIMEOFFSET(7),
+	@Servername NVARCHAR(128),
+	@MaxBlitzFirstPriority INT&#39;,
+	@StartDate=@StartDate, 
+	@EndDate=@EndDate,
+	@Servername=@Servername,
+	@MaxBlitzFirstPriority = @MaxBlitzFirstPriority;
+END
+
+/* Blitz WaitStats data */
+SET @Sql = N&#39;SELECT 
+[ServerName], 
+[CheckDate], 
+[wait_type], 
+[WaitsRank],
+[WaitCategory], 
+[Ignorable], 
+[ElapsedSeconds], 
+[wait_time_ms_delta], 
+[wait_time_minutes_delta], 
+[wait_time_minutes_per_minute], 
+[signal_wait_time_ms_delta], 
+[waiting_tasks_count_delta],
+ISNULL((CAST([wait_time_ms_delta] AS DECIMAL(38,2))/NULLIF(CAST([waiting_tasks_count_delta] AS DECIMAL(38,2)),0)),0) AS [wait_time_ms_per_wait]
+FROM 
+(
+	SELECT
+	[ServerName], 
+	[CheckDate], 
+	[wait_type], 
+	[WaitCategory], 
+	[Ignorable], 
+	[ElapsedSeconds], 
+	[wait_time_ms_delta], 
+	[wait_time_minutes_delta], 
+	[wait_time_minutes_per_minute], 
+	[signal_wait_time_ms_delta], 
+	[waiting_tasks_count_delta],
+	ROW_NUMBER() OVER(PARTITION BY [CheckDate] ORDER BY [CheckDate] ASC,[wait_time_ms_delta] DESC) AS [WaitsRank]
+	FROM &#39;+@FullOutputTableNameWaitStats+N&#39; AS [Waits]
+	WHERE [ServerName] = @Servername
+	AND [CheckDate] BETWEEN @StartDate AND @EndDate
+) TopWaits
+WHERE [WaitsRank] &lt;= @WaitStatsTop
+ORDER BY 
+[CheckDate] ASC, 
+[wait_time_ms_delta] DESC
+OPTION(RECOMPILE, MAXDOP &#39;+CAST(@Maxdop AS NVARCHAR(2))+N&#39;);&#39;
+
+RAISERROR(&#39;Getting wait stats info from %s&#39;,0,0,@FullOutputTableNameWaitStats) WITH NOWAIT;
+
+IF (@Debug = 1)
+BEGIN 
+	PRINT @Sql;
+END
+
+IF (OBJECT_ID(@FullOutputTableNameWaitStats) IS NULL) 
+BEGIN
+	IF (@OutputTableNameWaitStats IS NULL)
+	BEGIN
+		RAISERROR(&#39;Wait stats data skipped&#39;,10,0);
+		SELECT N&#39;Skipped logged wait stats data as NULL was passed to parameter @OutputTableNameWaitStats&#39;;
+	END
+	ELSE
+	BEGIN
+		RAISERROR(&#39;Table provided for wait stats data: %s does not exist&#39;,10,0,@FullOutputTableNameWaitStats);
+		SELECT N&#39;No wait stats data available as the table cannot be found&#39;;
+	END
+END
+ELSE /* Table exists then run the query */
+BEGIN
+	EXEC sp_executesql @Sql,
+	N&#39;@StartDate DATETIMEOFFSET(7),
+	@EndDate DATETIMEOFFSET(7),
+	@Servername NVARCHAR(128),
+	@WaitStatsTop TINYINT&#39;,
+	@StartDate=@StartDate, 
+	@EndDate=@EndDate,
+	@Servername=@Servername, 
+	@WaitStatsTop=@WaitStatsTop;
+END
+
+/* BlitzFileStats info */ 
+SET @Sql = N&#39;
+SELECT 
+[ServerName], 
+[CheckDate],
+CASE 
+	WHEN MAX([io_stall_read_ms_average]) &gt; @ReadLatencyThreshold THEN &#39;&#39;Yes&#39;&#39;
+	WHEN MAX([io_stall_write_ms_average]) &gt; @WriteLatencyThreshold THEN &#39;&#39;Yes&#39;&#39;
+	ELSE &#39;&#39;No&#39;&#39; 
+END AS [io_stall_ms_breached],
+LEFT([PhysicalName],LEN([PhysicalName])-CHARINDEX(&#39;&#39;\&#39;&#39;,REVERSE([PhysicalName]))+1) AS [PhysicalPath],
+SUM([SizeOnDiskMB]) AS [SizeOnDiskMB], 
+SUM([SizeOnDiskMBgrowth]) AS [SizeOnDiskMBgrowth], 
+MAX([io_stall_read_ms]) AS [max_io_stall_read_ms], 
+MAX([io_stall_read_ms_average]) AS [max_io_stall_read_ms_average], 
+@ReadLatencyThreshold AS [is_stall_read_ms_threshold],
+SUM([num_of_reads]) AS [num_of_reads], 
+SUM([megabytes_read]) AS [megabytes_read], 
+MAX([io_stall_write_ms]) AS [max_io_stall_write_ms], 
+MAX([io_stall_write_ms_average]) AS [max_io_stall_write_ms_average], 
+@WriteLatencyThreshold AS [io_stall_write_ms_average],
+SUM([num_of_writes]) AS [num_of_writes], 
+SUM([megabytes_written]) AS [megabytes_written]
+FROM &#39;+@FullOutputTableNameFileStats+N&#39;
+WHERE [ServerName] = @Servername
+AND [CheckDate] BETWEEN @StartDate AND @EndDate
+&#39;
++CASE
+	WHEN @Databasename IS NOT NULL THEN N&#39;AND [DatabaseName] IN (N&#39;&#39;tempdb&#39;&#39;,@Databasename)
+&#39;
+	ELSE N&#39;&#39;
+END
++N&#39;GROUP BY 
+[ServerName], 
+[CheckDate],
+LEFT([PhysicalName],LEN([PhysicalName])-CHARINDEX(&#39;&#39;\&#39;&#39;,REVERSE([PhysicalName]))+1)
+ORDER BY 
+[CheckDate] ASC
+OPTION (RECOMPILE, MAXDOP &#39;+CAST(@Maxdop AS NVARCHAR(2))+N&#39;);&#39;
+
+RAISERROR(&#39;Getting FileStats info from %s&#39;,0,0,@FullOutputTableNameFileStats) WITH NOWAIT;
+
+IF (@Debug = 1)
+BEGIN 
+	PRINT @Sql;
+END
+
+IF (OBJECT_ID(@FullOutputTableNameFileStats) IS NULL) 
+BEGIN
+	IF (@OutputTableNameFileStats IS NULL)
+	BEGIN
+		RAISERROR(&#39;File stats data skipped&#39;,10,0);
+		SELECT N&#39;Skipped logged File stats data as NULL was passed to parameter @OutputTableNameFileStats&#39;;
+	END
+	ELSE
+	BEGIN
+		RAISERROR(&#39;Table provided for FileStats data: %s does not exist&#39;,10,0,@FullOutputTableNameFileStats);
+		SELECT N&#39;No File stats data available as the table cannot be found&#39;;
+	END
+END
+ELSE /* Table exists then run the query */
+BEGIN 
+	EXEC sp_executesql @Sql,
+	N&#39;@StartDate DATETIMEOFFSET(7),
+	@EndDate DATETIMEOFFSET(7),
+	@Servername NVARCHAR(128),
+	@Databasename NVARCHAR(128),
+	@ReadLatencyThreshold INT,
+	@WriteLatencyThreshold INT&#39;,
+	@StartDate=@StartDate, 
+	@EndDate=@EndDate,
+	@Servername=@Servername,
+	@Databasename = @Databasename,
+	@ReadLatencyThreshold = @ReadLatencyThreshold,
+	@WriteLatencyThreshold = @WriteLatencyThreshold;
+END
+
+/* Blitz Perfmon stats*/
+SET @Sql = N&#39;
+SELECT 
+    [ServerName]
+	,[CheckDate]
+	,[counter_name]
+    ,[object_name]
+    ,[instance_name]
+    ,[cntr_value]
+FROM &#39;+@FullOutputTableNamePerfmonStats+N&#39;
+WHERE [ServerName] = @Servername
+AND CheckDate BETWEEN @StartDate AND @EndDate
+ORDER BY 
+	[CheckDate] ASC,
+	[counter_name] ASC
+OPTION (RECOMPILE, MAXDOP &#39;+CAST(@Maxdop AS NVARCHAR(2))+N&#39;);&#39;
+
+RAISERROR(&#39;Getting Perfmon info from %s&#39;,0,0,@FullOutputTableNamePerfmonStats) WITH NOWAIT;
+
+IF (@Debug = 1)
+BEGIN 
+	PRINT @Sql;
+END
+
+IF (OBJECT_ID(@FullOutputTableNamePerfmonStats) IS NULL) 
+BEGIN
+	IF (@OutputTableNamePerfmonStats IS NULL)
+	BEGIN
+		RAISERROR(&#39;Perfmon stats data skipped&#39;,10,0);
+		SELECT N&#39;Skipped logged Perfmon stats data as NULL was passed to parameter @OutputTableNamePerfmonStats&#39;;
+	END
+	ELSE
+	BEGIN
+		RAISERROR(&#39;Table provided for Perfmon stats data: %s does not exist&#39;,10,0,@FullOutputTableNamePerfmonStats);
+		SELECT N&#39;No Perfmon data available as the table cannot be found&#39;;
+	END
+END
+ELSE /* Table exists then run the query */
+BEGIN 
+	EXEC sp_executesql @Sql,
+	N&#39;@StartDate DATETIMEOFFSET(7),
+	@EndDate DATETIMEOFFSET(7),
+	@Servername NVARCHAR(128)&#39;,
+	@StartDate=@StartDate, 
+	@EndDate=@EndDate,
+	@Servername=@Servername;
+END
+
+/* Blitz cache data */
+RAISERROR(&#39;Sortorder for BlitzCache data: %s&#39;,0,0,@BlitzCacheSortorder) WITH NOWAIT;
+
+/* Set intial CTE */
+SET @Sql = N&#39;WITH CheckDates AS (
+SELECT DISTINCT CheckDate 
+FROM &#39;
++@FullOutputTableNameBlitzCache
++N&#39;
+WHERE [ServerName] = @Servername
+AND [CheckDate] BETWEEN @StartDate AND @EndDate&#39;
++@NewLine
++CASE
+	WHEN @Databasename IS NOT NULL THEN N&#39;AND [DatabaseName] = @Databasename&#39;+@NewLine
+	ELSE N&#39;&#39;
+END
++N&#39;)&#39;
+;
+
+SET @Sql += @NewLine;
+
+/* Append additional CTEs based on sortorder */
+SET @Sql += (
+SELECT CAST(N&#39;,&#39; AS NVARCHAR(MAX))
++[SortOptions].[Aliasname]+N&#39; AS (
+SELECT
+	[ServerName]
+    ,&#39;+[SortOptions].[Aliasname]+N&#39;.[CheckDate]
+	,[Sortorder]
+	,[TimeFrameRank]
+	,ROW_NUMBER() OVER(ORDER BY [&#39;+[SortOptions].[Columnname]+N&#39;] DESC) AS [OverallRank]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryText]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[DatabaseName]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageCPU]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalCPU]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentCPUByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageDuration]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalDuration]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentDurationByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageReads]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalReads]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentReadsByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageWrites]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalWrites]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentWritesByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[ExecutionCount]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[ExecutionWeight]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentExecutionsByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[ExecutionsPerMinute]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PlanCreationTime]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PlanCreationTimeHours]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[LastExecutionTime]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PlanHandle]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[SqlHandle]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[SQL Handle More Info]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryHash]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[Query Hash More Info]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryPlanHash]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[StatementStartOffset]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[StatementEndOffset]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryPlan]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[NumberOfPlans]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[NumberOfDistinctPlans]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinUsedGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxUsedGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentMemoryGrantUsed]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AvgMaxMemoryGrant]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AvgSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryPlanCost]
+FROM CheckDates
+CROSS APPLY (
+	SELECT TOP (5) 	
+	[ServerName]
+    ,&#39;+[SortOptions].[Aliasname]+N&#39;.[CheckDate]
+	,&#39;+QUOTENAME(UPPER([SortOptions].[Sortorder]),N&#39;&#39;&#39;&#39;)+N&#39; AS [Sortorder]
+	,ROW_NUMBER() OVER(ORDER BY [&#39;+[SortOptions].[Columnname]+N&#39;] DESC) AS [TimeFrameRank]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryText]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[DatabaseName]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageCPU]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalCPU]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentCPUByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageDuration]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalDuration]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentDurationByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageReads]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalReads]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentReadsByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageWrites]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalWrites]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentWritesByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[ExecutionCount]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[ExecutionWeight]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentExecutionsByType]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[ExecutionsPerMinute]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PlanCreationTime]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PlanCreationTimeHours]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[LastExecutionTime]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PlanHandle]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[SqlHandle]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[SQL Handle More Info]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryHash]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[Query Hash More Info]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryPlanHash]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[StatementStartOffset]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[StatementEndOffset]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AverageReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalReturnedRows]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryPlan]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[NumberOfPlans]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[NumberOfDistinctPlans]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinUsedGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxUsedGrantKB]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[PercentMemoryGrantUsed]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AvgMaxMemoryGrant]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MinSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[MaxSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[TotalSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[AvgSpills]
+	,&#39;+[SortOptions].[Aliasname]+N&#39;.[QueryPlanCost]
+	FROM &#39;+@FullOutputTableNameBlitzCache+N&#39; AS &#39;+[SortOptions].[Aliasname]+N&#39;
+	WHERE [ServerName] = @Servername
+	AND [CheckDate] BETWEEN @StartDate AND @EndDate
+	AND [&#39;+[SortOptions].[Aliasname]+N&#39;].[CheckDate] = [CheckDates].[CheckDate]&#39;
+	+@NewLine
+	+CASE
+		WHEN @Databasename IS NOT NULL THEN N&#39;AND [&#39;+[SortOptions].[Aliasname]+N&#39;].[DatabaseName] = @Databasename&#39;+@NewLine
+		ELSE N&#39;&#39;
+	END
+	+CASE 
+		WHEN [Sortorder] = N&#39;cpu&#39; THEN N&#39;AND [TotalCPU] &gt; 0&#39;
+		WHEN [Sortorder] = N&#39;reads&#39; THEN N&#39;AND [TotalReads] &gt; 0&#39;
+		WHEN [Sortorder] = N&#39;writes&#39; THEN N&#39;AND [TotalWrites] &gt; 0&#39;
+		WHEN [Sortorder] = N&#39;duration&#39; THEN N&#39;AND [TotalDuration] &gt; 0&#39;
+		WHEN [Sortorder] = N&#39;executions&#39; THEN N&#39;AND [ExecutionCount] &gt; 0&#39;
+		WHEN [Sortorder] = N&#39;memory grant&#39; THEN N&#39;AND [MaxGrantKB] &gt; 0&#39;
+		WHEN [Sortorder] = N&#39;spills&#39; THEN N&#39;AND [MaxSpills] &gt; 0&#39;
+		ELSE N&#39;&#39;
+	END
+	+N&#39;
+	ORDER BY [&#39;+[SortOptions].[Columnname]+N&#39;] DESC) &#39;+[SortOptions].[Aliasname]+N&#39;
+)&#39;
+FROM (VALUES
+		(N&#39;cpu&#39;,N&#39;TopCPU&#39;,N&#39;TotalCPU&#39;),
+		(N&#39;reads&#39;,N&#39;TopReads&#39;,N&#39;TotalReads&#39;),
+		(N&#39;writes&#39;,N&#39;TopWrites&#39;,N&#39;TotalWrites&#39;),
+		(N&#39;duration&#39;,N&#39;TopDuration&#39;,N&#39;TotalDuration&#39;),
+		(N&#39;executions&#39;,N&#39;TopExecutions&#39;,N&#39;ExecutionCount&#39;),
+		(N&#39;memory grant&#39;,N&#39;TopMemoryGrants&#39;,N&#39;MaxGrantKB&#39;),
+		(N&#39;spills&#39;,N&#39;TopSpills&#39;,N&#39;MaxSpills&#39;)
+	) SortOptions(Sortorder,Aliasname,Columnname)
+WHERE
+	CASE /* for spills and memory grant sorts make sure the underlying columns exist in the DMV otherwise do not include them */
+		WHEN (@IncludeMemoryGrants = 0 OR @IncludeMemoryGrants IS NULL) AND ([SortOptions].[Sortorder] = N&#39;memory grant&#39; OR [SortOptions].[Sortorder] = N&#39;all&#39;) THEN NULL
+		WHEN (@IncludeSpills = 0 OR @IncludeSpills IS NULL) AND ([SortOptions].[Sortorder] = N&#39;spills&#39; OR [SortOptions].[Sortorder] = N&#39;all&#39;) THEN NULL
+		ELSE [SortOptions].[Sortorder]
+	END = ISNULL(NULLIF(@BlitzCacheSortorder,N&#39;all&#39;),[SortOptions].[Sortorder])
+FOR XML PATH(N&#39;&#39;), TYPE).value(N&#39;.[1]&#39;, N&#39;NVARCHAR(MAX)&#39;);
+
+SET @Sql += @NewLine;
+
+/* Build the select statements to return the data after CTE declarations */
+SET @Sql += (
+SELECT STUFF((
+SELECT @NewLine
++N&#39;UNION ALL&#39;
++@NewLine
++N&#39;SELECT *
+FROM &#39;+[SortOptions].[Aliasname]
+FROM (VALUES
+		(N&#39;cpu&#39;,N&#39;TopCPU&#39;,N&#39;TotalCPU&#39;),
+		(N&#39;reads&#39;,N&#39;TopReads&#39;,N&#39;TotalReads&#39;),
+		(N&#39;writes&#39;,N&#39;TopWrites&#39;,N&#39;TotalWrites&#39;),
+		(N&#39;duration&#39;,N&#39;TopDuration&#39;,N&#39;TotalDuration&#39;),
+		(N&#39;executions&#39;,N&#39;TopExecutions&#39;,N&#39;ExecutionCount&#39;),
+		(N&#39;memory grant&#39;,N&#39;TopMemoryGrants&#39;,N&#39;MaxGrantKB&#39;),
+		(N&#39;spills&#39;,N&#39;TopSpills&#39;,N&#39;MaxSpills&#39;)
+	) SortOptions(Sortorder,Aliasname,Columnname)
+WHERE
+	CASE /* for spills and memory grant sorts make sure the underlying columns exist in the DMV otherwise do not include them */
+		WHEN (@IncludeMemoryGrants = 0 OR @IncludeMemoryGrants IS NULL) AND ([SortOptions].[Sortorder] = N&#39;memory grant&#39; OR [SortOptions].[Sortorder] = N&#39;all&#39;) THEN NULL
+		WHEN (@IncludeSpills = 0 OR @IncludeSpills IS NULL) AND ([SortOptions].[Sortorder] = N&#39;spills&#39; OR [SortOptions].[Sortorder] = N&#39;all&#39;) THEN NULL
+		ELSE [SortOptions].[Sortorder]
+	END = ISNULL(NULLIF(@BlitzCacheSortorder,N&#39;all&#39;),[SortOptions].[Sortorder])
+FOR XML PATH(N&#39;&#39;), TYPE).value(N&#39;.[1]&#39;, N&#39;NVARCHAR(MAX)&#39;),1,11,N&#39;&#39;)
+);
+
+/* Append Order By */
+SET @Sql += @NewLine
++N&#39;ORDER BY 
+	[Sortorder] ASC,
+	[CheckDate] ASC,
+	[TimeFrameRank] ASC&#39;;
+
+/* Append OPTION(RECOMPILE, MAXDOP) to complete the statement */
+SET @Sql += @NewLine
++N&#39;OPTION(RECOMPILE, MAXDOP &#39;+CAST(@Maxdop AS NVARCHAR(2))+N&#39;);&#39;;
+
+RAISERROR(&#39;Getting BlitzCache info from %s&#39;,0,0,@FullOutputTableNameBlitzCache) WITH NOWAIT;
+
+IF (@Debug = 1)
+BEGIN 
+	PRINT SUBSTRING(@Sql, 0, 4000);
+	PRINT SUBSTRING(@Sql, 4000, 8000);
+	PRINT SUBSTRING(@Sql, 8000, 12000);
+	PRINT SUBSTRING(@Sql, 12000, 16000);
+	PRINT SUBSTRING(@Sql, 16000, 20000);
+	PRINT SUBSTRING(@Sql, 20000, 24000);
+	PRINT SUBSTRING(@Sql, 24000, 28000);
+END
+
+IF (OBJECT_ID(@FullOutputTableNameBlitzCache) IS NULL) 
+BEGIN
+	IF (@OutputTableNameBlitzCache IS NULL)
+	BEGIN
+		RAISERROR(&#39;BlitzCache data skipped&#39;,10,0);
+		SELECT N&#39;Skipped logged BlitzCache data as NULL was passed to parameter @OutputTableNameBlitzCache&#39;;
+	END
+	ELSE
+	BEGIN
+		RAISERROR(&#39;Table provided for BlitzCache data: %s does not exist&#39;,10,0,@FullOutputTableNameBlitzCache);
+		SELECT N&#39;No BlitzCache data available as the table cannot be found&#39;;
+	END
+END
+ELSE /* Table exists then run the query */
+BEGIN
+	EXEC sp_executesql @Sql,
+	N&#39;@Servername NVARCHAR(128),
+	@Databasename NVARCHAR(128),
+	@BlitzCacheSortorder NVARCHAR(20),
+	@StartDate DATETIMEOFFSET(7),
+	@EndDate DATETIMEOFFSET(7)&#39;,
+	@Servername = @Servername,
+	@Databasename = @Databasename,
+	@BlitzCacheSortorder = @BlitzCacheSortorder,
+	@StartDate = @StartDate,
+	@EndDate = @EndDate;
+END
+
+
+
+/* BlitzWho data */
+SET @Sql = N&#39;
+SELECT [ServerName]
+      ,[CheckDate]
+      ,[elapsed_time]
+      ,[session_id]
+      ,[database_name]
+      ,[query_text_snippet]
+      ,[query_plan]
+      ,[live_query_plan]
+      ,[query_cost]
+      ,[status]
+      ,[wait_info]
+      ,[top_session_waits]
+      ,[blocking_session_id]
+      ,[open_transaction_count]
+      ,[is_implicit_transaction]
+      ,[nt_domain]
+      ,[host_name]
+      ,[login_name]
+      ,[nt_user_name]
+      ,[program_name]
+      ,[fix_parameter_sniffing]
+      ,[client_interface_name]
+      ,[login_time]
+      ,[start_time]
+      ,[request_time]
+      ,[request_cpu_time]
+      ,[degree_of_parallelism]
+      ,[request_logical_reads]
+      ,[Logical_Reads_MB]
+      ,[request_writes]
+      ,[Logical_Writes_MB]
+      ,[request_physical_reads]
+      ,[Physical_reads_MB]
+      ,[session_cpu]
+      ,[session_logical_reads]
+      ,[session_logical_reads_MB]
+      ,[session_physical_reads]
+      ,[session_physical_reads_MB]
+      ,[session_writes]
+      ,[session_writes_MB]
+      ,[tempdb_allocations_mb]
+      ,[memory_usage]
+      ,[estimated_completion_time]
+      ,[percent_complete]
+      ,[deadlock_priority]
+      ,[transaction_isolation_level]
+      ,[last_dop]
+      ,[min_dop]
+      ,[max_dop]
+      ,[last_grant_kb]
+      ,[min_grant_kb]
+      ,[max_grant_kb]
+      ,[last_used_grant_kb]
+      ,[min_used_grant_kb]
+      ,[max_used_grant_kb]
+      ,[last_ideal_grant_kb]
+      ,[min_ideal_grant_kb]
+      ,[max_ideal_grant_kb]
+      ,[last_reserved_threads]
+      ,[min_reserved_threads]
+      ,[max_reserved_threads]
+      ,[last_used_threads]
+      ,[min_used_threads]
+      ,[max_used_threads]
+      ,[grant_time]
+      ,[requested_memory_kb]
+      ,[grant_memory_kb]
+      ,[is_request_granted]
+      ,[required_memory_kb]
+      ,[query_memory_grant_used_memory_kb]
+      ,[ideal_memory_kb]
+      ,[is_small]
+      ,[timeout_sec]
+      ,[resource_semaphore_id]
+      ,[wait_order]
+      ,[wait_time_ms]
+      ,[next_candidate_for_memory_grant]
+      ,[target_memory_kb]
+      ,[max_target_memory_kb]
+      ,[total_memory_kb]
+      ,[available_memory_kb]
+      ,[granted_memory_kb]
+      ,[query_resource_semaphore_used_memory_kb]
+      ,[grantee_count]
+      ,[waiter_count]
+      ,[timeout_error_count]
+      ,[forced_grant_count]
+      ,[workload_group_name]
+      ,[resource_pool_name]
+      ,[context_info]
+      ,[query_hash]
+      ,[query_plan_hash]
+      ,[sql_handle]
+      ,[plan_handle]
+      ,[statement_start_offset]
+      ,[statement_end_offset]
+  FROM &#39;+@FullOutputTableNameBlitzWho+N&#39;
+  WHERE [ServerName] = @Servername
+  AND ([CheckDate] BETWEEN @StartDate AND @EndDate OR [start_time] BETWEEN CAST(@StartDate AS DATETIME) AND CAST(@EndDate AS DATETIME))
+  &#39;
+  +CASE
+	WHEN @Databasename IS NOT NULL THEN N&#39;AND [database_name] = @Databasename
+  &#39;
+  	ELSE N&#39;&#39;
+  END
++N&#39;ORDER BY [CheckDate] ASC
+  OPTION (RECOMPILE, MAXDOP &#39;+CAST(@Maxdop AS NVARCHAR(2))+N&#39;);&#39;;
+
+RAISERROR(&#39;Getting BlitzWho info from %s&#39;,0,0,@FullOutputTableNameBlitzWho) WITH NOWAIT;
+
+IF (@Debug = 1)
+BEGIN 
+	PRINT @Sql;
+END
+
+IF (OBJECT_ID(@FullOutputTableNameBlitzWho) IS NULL) 
+BEGIN
+	IF (@OutputTableNameBlitzWho IS NULL)
+	BEGIN
+		RAISERROR(&#39;BlitzWho data skipped&#39;,10,0);
+		SELECT N&#39;Skipped logged BlitzWho data as NULL was passed to parameter @OutputTableNameBlitzWho&#39;;
+	END
+	ELSE
+	BEGIN
+		RAISERROR(&#39;Table provided for BlitzWho data: %s does not exist&#39;,10,0,@FullOutputTableNameBlitzWho);
+		SELECT N&#39;No BlitzWho data available as the table cannot be found&#39;;
+	END
+END
+ELSE
+BEGIN 
+	EXEC sp_executesql @Sql,
+	N&#39;@StartDate DATETIMEOFFSET(7),
+	@EndDate DATETIMEOFFSET(7),
+	@Servername NVARCHAR(128),
+	@Databasename NVARCHAR(128)&#39;,
+	@StartDate=@StartDate, 
+	@EndDate=@EndDate,
+	@Servername=@Servername,
+	@Databasename = @Databasename;
+END</code></pre>
+</body>
+</html>

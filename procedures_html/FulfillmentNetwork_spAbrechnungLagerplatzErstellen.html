@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spAbrechnungLagerplatzErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spAbrechnungLagerplatzErstellen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spAbrechnungLagerplatzErstellen]
+    @kLieferant AS INT ,
+    @kWarenlager AS INT ,
+    @kBenutzer AS INT ,
+    @Daten AS TYPE_spAbrechnungLagerplatzErstellen READONLY ,
+    @nPreview TINYINT = 0 ,
+    @cSessionId AS [NVARCHAR](255)
+AS
+    DECLARE @MODUS_PLATZ INT = 1;
+    DECLARE @MODUS_TYPBEREICH INT = 2;
+    DECLARE @MODUS_TYP INT = 3;
+    DECLARE @MODUS_BEREICH INT = 4;
+    DECLARE @MODUS_LAGER INT = 5;
+
+    DECLARE @MODUS AS INT = 0;
+
+    IF ( @kWarenlager = 0 )
+        BEGIN
+            DECLARE @cError NVARCHAR(255) = &#39;Es wurde kein kWarenlager &#252;bergeben&#39;;
+            RAISERROR(@cError, 11, 1);		
+            RETURN -1;
+        END;
+    IF @nPreview = 0
+        BEGIN
+            DELETE  FROM FulfillmentNetwork.tAbrechnungLagerplatz
+            WHERE   kLieferant = @kLieferant
+                    AND kWarenlager = @kWarenlager;
+
+            DELETE  FROM FulfillmentNetwork.tAbrechnungLagerplatzPreview
+            WHERE   cSessionId = @cSessionId
+                    OR dZeitstempel &lt; DATEADD(DAY, -2, GETDATE());
+
+            INSERT  INTO FulfillmentNetwork.tAbrechnungLagerplatz
+                    SELECT  @kLieferant AS kLieferant ,
+                            kWarenLagerPlatz ,
+                            kWarenLagerPlatzTyp ,
+                            kWMSLagerBereich ,
+                            @kWarenlager AS kWarenlager ,
+                            CASE WHEN ( kWarenLagerPlatz &gt; 0 )
+                                 THEN @MODUS_PLATZ
+                                 WHEN kWarenLagerPlatzTyp &gt; 0
+                                      AND kWMSLagerBereich &gt; 0
+                                 THEN @MODUS_TYPBEREICH
+                                 WHEN kWarenLagerPlatzTyp &gt; 0 THEN @MODUS_TYP
+                                 WHEN kWMSLagerBereich &gt; 0 THEN @MODUS_BEREICH
+                                 ELSE @MODUS_LAGER
+                            END AS nModus ,
+                            nLagerkostenBerechnung ,
+                            kArtikel ,
+                            @kBenutzer AS kBenutzer
+                    FROM    @Daten;
+        END;
+    ELSE
+        BEGIN
+            DELETE  FROM FulfillmentNetwork.tAbrechnungLagerplatzPreview
+            WHERE   ( kLieferant = @kLieferant
+                      AND kWarenlager = @kWarenlager
+                    )
+                    OR dZeitstempel &lt; DATEADD(DAY, -2, GETDATE());
+
+            INSERT  INTO FulfillmentNetwork.tAbrechnungLagerplatzPreview
+                    SELECT  @kLieferant AS kLieferant ,
+                            kWarenLagerPlatz ,
+                            kWarenLagerPlatzTyp ,
+                            kWMSLagerBereich ,
+                            @kWarenlager AS kWarenlager ,
+                            CASE WHEN ( kWarenLagerPlatz &gt; 0 )
+                                 THEN @MODUS_PLATZ
+                                 WHEN kWarenLagerPlatzTyp &gt; 0
+                                      AND kWMSLagerBereich &gt; 0
+                                 THEN @MODUS_TYPBEREICH
+                                 WHEN kWarenLagerPlatzTyp &gt; 0 THEN @MODUS_TYP
+                                 WHEN kWMSLagerBereich &gt; 0 THEN @MODUS_BEREICH
+                                 ELSE @MODUS_LAGER
+                            END AS nModus ,
+                            nLagerkostenBerechnung ,
+                            kArtikel ,
+                            @kBenutzer AS kBenutzer ,
+                            @cSessionId AS cSessionId ,
+                            GETDATE() AS dZeitstempel
+                    FROM    @Daten;
+		
+        END;</code></pre>
+</body>
+</html>

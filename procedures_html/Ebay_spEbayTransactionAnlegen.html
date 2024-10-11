@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ebay.spEbayTransactionAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Ebay.spEbayTransactionAnlegen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.ebay_transaction geschrieben werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Ebay].[spEbayTransactionAnlegen]
+	@kBuyer INT,
+	@AdjustmentAmount DECIMAL(25,13),
+	@AmountPaid DECIMAL(25,13),
+	@BestOfferSale TINYINT,
+	@BuyerPaidStatus NVARCHAR(255),
+	@ConvertedAdjustmentAmount DECIMAL(25,13),
+	@ConvertedAmountPaid DECIMAL(25,13),
+	@ConvertedTransactionPrice DECIMAL(25,13),
+	@CreateDate DATETIME,
+	@FL_CommentText NVARCHAR(255),
+	@FL_CommentType NVARCHAR(255),
+	@FL_TargeUser NVARCHAR(255),
+	@FR_CommentText NVARCHAR(255),
+	@FR_CommentType NVARCHAR(255),
+	@FR_TargetUser NVARCHAR(255),
+	@FinalValueFee DECIMAL(25,13),
+	@PaidTime DATETIME,
+	@QuantityPurchased INT,
+	@ShippedTime DATETIME,
+	@SSS_ExpeditedService TINYINT,
+	@SSS_ShippingInsuranceCost DECIMAL(25,13),
+	@SSS_ShippingService NVARCHAR(255),
+	@SSS_ShippingServiceAdditionalCost DECIMAL(25,13),
+	@SSS_ShippingServiceCost DECIMAL(25,13),
+	@Status_BuyerSelectedShipping TINYINT,
+	@Status_CheckoutStatus NVARCHAR(255),
+	@Status_CompleteStatus NVARCHAR(255),
+	@Stauts_eBayPaymentStatus NVARCHAR(255),
+	@Status_LastTimeModified DATETIME,
+	@Status_PaymentMethodUsed NVARCHAR(255),
+	@TransactionID NVARCHAR(255),
+	@TransactionPrice DECIMAL(25,13),
+	@Status TINYINT,
+	@ItemID NVARCHAR(255),
+	@dZahlungsdatum DATETIME,
+	@kBestellung INT,
+	@kAlien TINYINT,
+	@VAT DECIMAL(25,13),
+	@nCheckout TINYINT,
+	@cDispute NVARCHAR(255),
+	@cDisputeInfo NVARCHAR(512),
+	@kEigenschaftKombi INT,
+	@VariationTitle NVARCHAR(255),
+	@SKU NVARCHAR(64),
+	@SiteID INT,
+	@nKonfikt TINYINT,
+	@Currency NVARCHAR(255),
+	@kEbayUser INT,
+	@nZuletztAktualisiert BIGINT,
+	@kTransaction INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+
+DECLARE @UseLotSize BIT = 0;
+
+SELECT @UseLotSize = ISNULL(TRY_CONVERT(BIT, cValue), 0)
+  FROM dbo.tOptions
+ WHERE cKey = &#39;eBay.ArtikelMengeMultiplizieren&#39;
+
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5108;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			DECLARE @nLotSize INT = 1;
+
+			IF (@UseLotSize = 1)
+			BEGIN
+				SELECT @nLotSize = ISNULL(ebay_item.LotSize, 1)
+				  FROM dbo.ebay_item 
+				 WHERE ebay_item.ItemId = @ItemID;
+		    END
+			
+			DECLARE @kArtikel INT;
+			SELECT @kArtikel = kArtikel
+				FROM dbo.tArtikel 
+				WHERE dbo.tArtikel.cArtNr = @SKU;
+			INSERT INTO dbo.ebay_transaction(kBuyer, AdjustmentAmount, AmountPaid, BestOfferSale, BuyerPaidStatus, ConvertedAdjustmentAmount, 
+											ConvertedAmountPaid, ConvertedTransactionPrice, CreateDate, FL_CommentText, FL_CommentType, FL_TargetUser, 
+											FR_CommentText, FR_CommentType, FR_TargetUser, FinalValueFee, PaidTime, QuantityPurchased, ShippedTime, 
+											SSS_ExpeditedService, SSS_ShippingInsuranceCost, SSS_ShippingService, SSS_ShippingServiceAdditionalCost, 
+											SSS_ShippingServiceCost, Status_BuyerSelectedShipping, Status_CheckoutStatus, Status_CompleteStatus, 
+											Stauts_eBayPaymentStatus, Status_LastTimeModified, Status_PaymentMethodUsed, TransactionID, TransactionPrice, 
+											Status, ItemID, dZahlungsdatum, kBestellung, kAlien, VAT, nCheckout, cDispute, cDisputeInfo, kEigenschaftKombi, 
+											VariationTitle, SKU, SiteID, nKonflikt, Currency, kEbayUser, nZuletztAktualisiert)
+				VALUES(@kBuyer, @AdjustmentAmount, @AmountPaid, @BestOfferSale, @BuyerPaidStatus, @ConvertedAdjustmentAmount, @ConvertedAmountPaid,
+						@ConvertedTransactionPrice, @CreateDate, @FL_CommentText, @FL_CommentType, @FL_TargeUser, @FR_CommentText, @FR_CommentType,
+						@FR_TargetUser, @FinalValueFee, @PaidTime, @QuantityPurchased, @ShippedTime, @SSS_ExpeditedService, @SSS_ShippingInsuranceCost,
+						@SSS_ShippingService, @SSS_ShippingServiceAdditionalCost, @SSS_ShippingServiceCost, @Status_BuyerSelectedShipping, 
+						@Status_CheckoutStatus, @Status_CompleteStatus, @Stauts_eBayPaymentStatus, @Status_LastTimeModified, @Status_PaymentMethodUsed,
+						@TransactionID, @TransactionPrice, @Status, @ItemID, @dZahlungsdatum, @kBestellung, @kAlien, @VAT, @nCheckout, @cDispute, 
+						@cDisputeInfo, @kEigenschaftKombi, @VariationTitle, @SKU, @SiteID, @nKonfikt, @Currency, @kEbayUser, @nZuletztAktualisiert);
+			SELECT @kTransaction = SCOPE_IDENTITY();
+			-- Verkaufte Menge von Angebot abziehen, wenn keine Variationen aktiv sind
+			UPDATE dbo.ebay_item
+				SET dbo.ebay_item.Quantity = dbo.ebay_item.Quantity - @QuantityPurchased
+				FROM dbo.ebay_item 
+				WHERE dbo.ebay_item.ItemID = @ItemID
+					AND (dbo.ebay_item.nVariationenAktiv IS NULL
+					OR dbo.ebay_item.nVariationenAktiv = 0);
+			-- Verkaufte Menge von ebay_item2kombi abziehen, wenn Variationen aktiv sind
+			UPDATE dbo.ebay_item2kombi
+				SET fAnzahl = fAnzahl - @QuantityPurchased
+				FROM dbo.ebay_item 
+				JOIN dbo.ebay_item2kombi ON dbo.ebay_item2kombi.kItem = dbo.ebay_item.kItem
+										AND dbo.ebay_item2kombi.kEigenschaftKombi = @kEigenschaftKombi
+				WHERE dbo.ebay_item.nVariationenAktiv &lt;&gt; 0
+					AND dbo.ebay_item.ItemID = @ItemID;
+			IF(@kArtikel IN(SELECT kArtikel FROM dbo.tArtikel) AND @QuantityPurchased &gt; 0.0)
+			BEGIN
+				INSERT INTO dbo.tExterneReservierung ( kKey,
+				                                   kArtikel,
+				                                   nTyp,
+				                                   fAnzahl)
+					VALUES (@kTransaction, @kArtikel, 1,  @QuantityPurchased * @nLotSize);
+				INSERT INTO dbo.tExterneReservierung ( kKey,
+				                                       kArtikel,
+				                                       nTyp,
+				                                       fAnzahl)
+					SELECT @kTransaction, dbo.tStueckliste.kArtikel, 1, dbo.tStueckliste.fAnzahl * @QuantityPurchased * @nLotSize
+						FROM dbo.tStueckliste
+						JOIN dbo.tArtikel ON dbo.tArtikel.kStueckliste = dbo.tStueckliste.kStueckliste
+						WHERE dbo.tArtikel.kArtikel = @kArtikel;
+				DECLARE @Type_spUpdateLagerbestand TYPE_spUpdateLagerbestand;
+				INSERT INTO @Type_spUpdateLagerbestand (kArtikel)
+					SELECT kArtikel
+						FROM dbo.tExterneReservierung
+						WHERE tExterneReservierung.kKey = @kTransaction
+							AND tExterneReservierung.nTyp = 1;
+				EXEC dbo.spUpdateLagerbestand @Type_spUpdateLagerbestand;
+			END									
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

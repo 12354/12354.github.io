@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spWarenlagerAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spWarenlagerAnlegen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spWarenlagerAnlegen]
+	@cFFNName AS NVARCHAR(255)
+, 	@cFFNKuerzel AS NVARCHAR(255)
+, 	@cFFNStrasse AS NVARCHAR(255)
+, 	@cFFNPLZ AS NVARCHAR(255)
+, 	@cFFNOrt AS NVARCHAR(255)
+, 	@cFFNLand AS NVARCHAR(255)
+, 	@cFFNEmpfaengerFirma AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerAnrede AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerVorname AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerName AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerTel AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerFax AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerEMail AS NVARCHAR(255)
+, 	@cFFNAnsprechpartnerAbteilung AS NVARCHAR(255)
+, 	@cFFNBundesland AS NVARCHAR(255)
+, 	@cFfnWarehouseId AS NVARCHAR(255)
+, 	@kFirma AS INT
+,	@kWarenlager INT = NULL OUTPUT
+
+AS
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+	DECLARE @ErrorMessage NVARCHAR(4000);
+	DECLARE @ErrorSeverity INT;
+	DECLARE @ErrorState INT;
+	DECLARE @retry INT;
+	SET @retry = 5;
+	WHILE @retry &gt; 0
+	BEGIN
+		BEGIN TRY
+		BEGIN TRANSACTION
+
+		--
+		-- JTL-Fulfillment Network Defines
+		--
+
+		-- jtlWarenlagerBase.Generated.cs FulfillmentTyp
+		DECLARE @FULFILLMENTTYP AS INT;
+		SET @FULFILLMENTTYP = 3;
+
+		-- jtlResources.defines.cs WarenLagerTypen
+		DECLARE @WARENLAGER_FULFILLMENTDIENSTLEISTER_JTL AS INT;
+		SET @WARENLAGER_FULFILLMENTDIENSTLEISTER_JTL = 2;
+
+
+		--
+		-- Warenlager anlegen
+		--
+
+		-- &#220;bergebene Parameter zuweisen
+		DECLARE @cName AS NVARCHAR(255) = @cFFNName;
+		DECLARE @cKuerzel AS NVARCHAR(255) = @cFFNKuerzel;
+		DECLARE @cStrasse AS NVARCHAR(255) = @cFFNStrasse ;
+		DECLARE @cPLZ AS NVARCHAR(255) =@cFFNPLZ;
+		DECLARE @cOrt AS NVARCHAR(255) = @cFFNOrt;
+		DECLARE @cLand AS NVARCHAR(255) = @cFFNLand;
+		DECLARE @cAnsprechpartnerAnrede AS NVARCHAR(255) = @cFFNAnsprechpartnerAnrede;
+		DECLARE @cAnsprechpartnerVorname AS NVARCHAR(255) =@cFFNAnsprechpartnerVorname;
+		DECLARE @cAnsprechpartnerName AS NVARCHAR(255) = @cFFNAnsprechpartnerName;
+		DECLARE @cAnsprechpartnerTel AS NVARCHAR(255) = @cFFNAnsprechpartnerTel;
+		DECLARE @cAnsprechpartnerFax AS NVARCHAR(255) = @cFFNAnsprechpartnerFax;
+		DECLARE @cAnsprechpartnerEMail AS NVARCHAR(255) =@cFFNAnsprechpartnerEMail;
+		DECLARE @cAnsprechpartnerAbteilung AS NVARCHAR(255) =@cFFNAnsprechpartnerAbteilung;
+		DECLARE @cBundesland AS NVARCHAR(255) =@cFFNBundesland;
+		DECLARE @cEmpfaengerFirma AS NVARCHAR(255) =@cFFNEmpfaengerFirma;
+
+
+		-- Fest definierte Parameter f&#252;r ein JTL-Fulfillment Network Warenlager
+		DECLARE @nFulfillment AS INT = @FULFILLMENTTYP;
+		DECLARE @cLagerTyp AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @cBeschreibung AS NVARCHAR(255) = &#39;Automatisch angelegtes JTL-Fulfillment Network Warenlager&#39;;;
+		DECLARE @kUser AS INT = 0;
+		DECLARE @nLagerplatzVerwaltung AS INT = 0;
+		DECLARE @nAuslieferungsPrio AS INT = 0;
+		DECLARE @nPackStationAktiv AS INT = 0;
+		DECLARE @cDimension1Name AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @cDimension1Trennzeichen AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @nDimension1Laenge AS INT = 0;
+		DECLARE @nDimension1Typ AS INT = 0;
+		DECLARE @cDimension2Name AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @cDimension2Trennzeichen AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @nDimension2Laenge AS INT = 0;
+		DECLARE @nDimension2Typ AS INT = 0;
+		DECLARE @cDimension3Name AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @cDimension3Trennzeichen AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @nDimension3Laenge AS INT = 0;
+		DECLARE @nDimension3Typ AS INT = 0;
+		DECLARE @cDimension4Name AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @cDimension4Trennzeichen AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @nDimension4Laenge AS INT = 0;
+		DECLARE @nDimension4Typ AS INT = 0;
+		DECLARE @cDimension5Name AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @cDimension5Trennzeichen AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @nDimension5Laenge AS INT = 0;
+		DECLARE @nDimension5Typ AS INT = 0;
+		DECLARE @kQuellLager AS INT = 0;
+		DECLARE @kZielLager AS INT = 0;
+		DECLARE @nAktiv AS INT = 1;
+
+
+		INSERT INTO [dbo].[tWarenLager] ( 	[cName], 	[cKuerzel], [cLagerTyp], 	[cBeschreibung], 	[cStrasse], [cPLZ], [cOrt], [cLand], 	[cAnsprechpartnerAnrede], 	[cAnsprechpartnerVorname], 	[cAnsprechpartnerName], [cAnsprechpartnerTel], 	[cAnsprechpartnerFax], 	[cAnsprechpartnerEMail], 	[cAnsprechpartnerAbteilung], 	[cBundesland], 	[kFirma], 	[kUser], 	[nFulfillment], [nLagerplatzVerwaltung], 	[nAuslieferungsPrio], 	[nPackStationAktiv], 	[cDimension1Name], 	[cDimension1Trennzeichen], 	[nDimension1Laenge], 	[nDimension1Typ], 	[cDimension2Name], 	[cDimension2Trennzeichen], 	[nDimension2Laenge], 	[nDimension2Typ], 	[cDimension3Name], 	[cDimension3Trennzeichen], 	[nDimension3Laenge], 	[nDimension3Typ], 	[cDimension4Name], 	[cDimension4Trennzeichen], 	[nDimension4Laenge], 	[nDimension4Typ], 	[cDimension5Name], 	[cDimension5Trennzeichen], 	[nDimension5Laenge], 	[nDimension5Typ], 	[cEmpfaengerFirma], [kQuellLager], 	[kZielLager], 	[nAktiv], 	[cFfnWarehouseId] 	)
+		VALUES 							( 	@cName, 	@cKuerzel, 	@cLagerTyp, 	@cBeschreibung, 	@cStrasse, 	@cPLZ, 	@cOrt, 	@cLand, 	@cAnsprechpartnerAnrede, 	@cAnsprechpartnerVorname, 	@cAnsprechpartnerName, 	@cAnsprechpartnerTel, 	@cAnsprechpartnerFax, 	@cAnsprechpartnerEMail, 	@cAnsprechpartnerAbteilung, 	@cBundesland, 	@kFirma, 	@kUser, 	@nFulfillment, 	@nLagerplatzVerwaltung, 	@nAuslieferungsPrio, 	@nPackStationAktiv, 	@cDimension1Name, 	@cDimension1Trennzeichen, 	@nDimension1Laenge, 	@nDimension1Typ, 	@cDimension2Name, 	@cDimension2Trennzeichen, 	@nDimension2Laenge, 	@nDimension2Typ, 	@cDimension3Name, 	@cDimension3Trennzeichen, 	@nDimension3Laenge, 	@nDimension3Typ, 	@cDimension4Name, 	@cDimension4Trennzeichen, 	@nDimension4Laenge, 	@nDimension4Typ, 	@cDimension5Name, 	@cDimension5Trennzeichen, 	@nDimension5Laenge, 	@nDimension5Typ, 	@cEmpfaengerFirma, 	@kQuellLager, 	@kZielLager, 	@nAktiv, 	@cFfnWarehouseId 	)
+			
+		SELECT
+		@kWarenlager = SCOPE_IDENTITY();
+
+
+		--
+		-- Warenlagerpl&#228;tze anlegen
+		--
+
+		DECLARE @fGewichtMax AS DECIMAL(25,13) = 0.0;
+		DECLARE @cKommentar AS NVARCHAR(255) = &#39;&#39;;
+		DECLARE @fLaenge AS DECIMAL(25,13) = 0;
+		DECLARE @fBreite AS DECIMAL(25,13) = 0;
+		DECLARE @fHoehe AS DECIMAL(25,13) = 0;
+		DECLARE @nSort AS INT = 0;
+		DECLARE @kWarenLagerPlatzTyp AS INT = 0;
+		DECLARE @nStatus AS INT = 0;
+		DECLARE @dWmsInventurDatum AS NVARCHAR(255) = NULL;
+		DECLARE @kWmsInventur AS INT = 0;
+		DECLARE @nPreInvStatus AS INT = 0;
+		DECLARE @nInvGezaehlt AS INT = 0;
+		DECLARE @nGesperrt AS INT = 0;
+		DECLARE @nAuslieferungGesperrt AS INT = 0;
+
+		
+		INSERT INTO dbo.tWarenLagerPlatz
+		(
+			kWarenLager,
+			fGewichtMax,
+			cKommentar,
+			fLaenge,
+			fBreite,
+			fHoehe,
+			nSort,
+			cName,
+			kWarenLagerPlatzTyp,
+			nStatus,
+			dWmsInventurDatum,
+			kWmsInventur,
+			nPreInvStatus,
+			nInvGezaehlt,
+			nGesperrt,
+            nAuslieferungGesperrt
+		)
+		VALUES
+		(@kWarenlager, @fGewichtMax, @cKommentar, @fLaenge, @fBreite, @fHoehe, @nSort, SUBSTRING(@cName,0,50), 0, @nStatus,
+		 @dWmsInventurDatum, @kWmsInventur, @nPreInvStatus, @nInvGezaehlt, @nGesperrt, @nAuslieferungGesperrt),
+		(@kWarenlager, @fGewichtMax, @cKommentar, @fLaenge, @fBreite, @fHoehe, @nSort, SUBSTRING(@cName,0,39) + &#39; - Gesperrt&#39;,
+		 10, @nStatus, @dWmsInventurDatum, @kWmsInventur, @nPreInvStatus, @nInvGezaehlt, 1, 1);
+
+        -- Trigger verhindert, dass nAuslieferungGesperrt beim Anlegen auf 1 gesetzt wird
+        -- daher an dieser Stelle den zuletzt eingef&#252;gten Lagerplatz noch einmal aktualisieren
+        
+        DECLARE @kWarenlagerPlatz AS INT = 0;
+        SELECT	@kWarenlagerPlatz = SCOPE_IDENTITY();
+        
+        UPDATE dbo.tWarenLagerPlatz
+        SET nAuslieferungGesperrt = 1
+        WHERE kWarenLagerPlatz = @kWarenlagerPlatz
+
+		--
+		-- Fulfillment-Dienstleister zu Fulfillmentlager anlegen
+		--
+		DECLARE @kFulfillmentDienstleister AS INT = @WARENLAGER_FULFILLMENTDIENSTLEISTER_JTL;
+		DECLARE @nDruckLieferschein AS INT = 0;
+		DECLARE @nFaxLieferschein AS INT = 0;
+		DECLARE @nMailLieferschein AS INT = 0;
+		DECLARE @nDruckFF AS INT = 0;
+		DECLARE @nFaxFF AS INT = 0;
+		DECLARE @nMailFF AS INT = 0;
+		DECLARE @kFormularLieferschein AS INT = 0;
+		DECLARE @kFormularFulfillmentAuftrag AS INT = 0;
+
+		INSERT INTO dbo.[tWarenlagerFulfillmentDienstleister] 	( 	[kWarenLager], 	[kFulfillmentDienstleister], 	[nDruckLieferschein], 	[nFaxLieferschein], [nMailLieferschein], 	[nDruckFF], [nFaxFF], 	[nMailFF], 	[kFormularLieferschein], 	[kFormularFulfillmentAuftrag] 	)
+		VALUES 													( 	@kWarenLager, 	@kFulfillmentDienstleister, 	@nDruckLieferschein, 	@nFaxLieferschein, 	@nMailLieferschein, 	@nDruckFF, 	@nFaxFF, 	@nMailFF, 	@kFormularLieferschein, 	@kFormularFulfillmentAuftrag 	)
+				
+		--
+		-- tlagerbestandProLagerLagerartikel mit allen Lager-Artikeln f&#252;r Bestandsberechnung f&#252;llen
+		--				
+		INSERT INTO tlagerbestandProLagerLagerartikel(kArtikel, kWarenlager, fBestand, fVerfuegbarGesperrt, fAuslieferungGesperrt)
+		SELECT Artikel.kArtikel, @kWarenlager, 0.0, 0.0, 0.0 
+		FROM tArtikel Artikel;
+
+
+		SET @retry = -1;
+		COMMIT
+		END TRY
+		BEGIN CATCH
+
+
+		IF (ERROR_NUMBER() = 1205)
+		BEGIN
+			SET @retry = @retry - 1;
+			ROLLBACK;
+			IF (@retry = 0)
+			BEGIN
+				SELECT
+					@ErrorMessage = ERROR_MESSAGE()
+				,	@ErrorSeverity = ERROR_SEVERITY()
+				,	@ErrorState = ERROR_STATE();
+				RAISERROR ( @ErrorMessage,
+				@ErrorSeverity,
+				@ErrorState
+				);
+
+				RETURN;
+			END
+			WAITFOR DELAY &#39;00:00:00:5&#39;;
+		END
+		ELSE
+		BEGIN
+			SET @retry = -1;
+			SELECT
+				@ErrorMessage = ERROR_MESSAGE()
+			,	@ErrorSeverity = ERROR_SEVERITY()
+			,	@ErrorState = ERROR_STATE();
+			ROLLBACK;
+			RAISERROR ( @ErrorMessage,
+			@ErrorSeverity,
+			@ErrorState
+			);
+
+			RETURN;
+		END
+
+
+		END CATCH
+
+	END</code></pre>
+</body>
+</html>

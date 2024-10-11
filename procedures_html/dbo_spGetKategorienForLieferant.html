@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGetKategorienForLieferant</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGetKategorienForLieferant</h1>
+    <p><strong>Description:</strong> Die Stored Procedure gibt alle Kategorien für den übergebenen Lieferanten zurück.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGetKategorienForLieferant]	 
+@kLieferant INT
+AS
+BEGIN
+	IF(@kLieferant = 0)
+	BEGIN
+
+		SELECT	dbo.tKategorie.kKategorie, 
+				dbo.tKategorieSprache.cName, 
+				dbo.tkategorie.kOberKategorie 
+		FROM dbo.tkategorie
+		JOIN dbo.tKategorieSprache ON dbo.tKategorieSprache.kKategorie = dbo.tKategorie.kKategorie
+			AND dbo.tKategorieSprache.kPlattform = 1
+		JOIN dbo.tSpracheUsed ON 1 = 1 
+			AND tSpracheUsed.nStandard = 1 
+			AND tKategorieSprache.kSprache = tSpracheUsed.kSprache;
+
+	END
+	ELSE
+	BEGIN
+		
+		WITH LieferantenKategorien AS
+		(
+			SELECT	dbo.tkategorie.kKategorie,
+					dbo.tkategorie.kOberKategorie
+			FROM dbo.tliefartikel
+			JOIN dbo.tArtikel ON dbo.tliefartikel.tArtikel_kArtikel = dbo.tArtikel.kArtikel
+			JOIN dbo.tkategorieartikel ON dbo.tArtikel.kArtikel = dbo.tkategorieartikel.kArtikel
+			JOIN dbo.tkategorie ON dbo.tkategorieartikel.kKategorie = dbo.tkategorie.kKategorie
+			WHERE dbo.tliefartikel.tLieferant_kLieferant = @kLieferant
+			GROUP BY	dbo.tkategorie.kKategorie,
+						dbo.tkategorie.kOberKategorie
+			UNION ALL
+			SELECT	dbo.tkategorie.kKategorie,
+					dbo.tkategorie.kOberKategorie
+			FROM dbo.tkategorie
+			JOIN LieferantenKategorien ON dbo.tkategorie.kKategorie = LieferantenKategorien.kOberKategorie
+		)
+		SELECT	dbo.tKategorieSprache.cName,
+				dbo.tkategorie.kKategorie,
+				dbo.tkategorie.kOberKategorie
+		FROM LieferantenKategorien
+		JOIN dbo.tkategorie ON LieferantenKategorien.kKategorie = dbo.tkategorie.kKategorie
+		JOIN dbo.tSpracheUsed ON nStandard = 1
+		JOIN dbo.tKategorieSprache ON dbo.tkategorie.kKategorie = dbo.tKategorieSprache.kKategorie
+			AND dbo.tKategorieSprache.kSprache = dbo.tSpracheUsed.kSprache
+			AND dbo.tKategorieSprache.kPlattform = 1
+		GROUP BY	dbo.tKategorieSprache.cName,
+					dbo.tkategorie.kKategorie,
+					dbo.tkategorie.kOberKategorie
+
+	END
+END</code></pre>
+</body>
+</html>

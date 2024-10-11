@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spZulaufShopAktualisieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spZulaufShopAktualisieren</h1>
+    <p><strong>Description:</strong> Die Stored Procedure füllt die Felder dZuluafVerfuegbarAm und nZulaufVerfuegbarAm in dbo.tArtikel. Sie wird beim Abgleich ausgeführt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spZulaufShopAktualisieren]
+--
+-- Die SP f&#252;llt die Felder dZulaufVerfuegbarAm und nZulaufVerfuegbarAm in tArtikel
+-- 
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+    DECLARE @cOptionZuletztAktualisiert AS VARCHAR(30);
+    SET @cOptionZuletztAktualisiert = &#39;ShopZulaufZuletztAktualisiert&#39;;
+ 
+    --
+    -- Pr&#252;fen ob Aktualisierung &#252;berhaupt erfolgen soll
+    --
+    IF(ISNULL((SELECT cValue FROM dbo.tOptions WHERE cKey = &#39;ShopZulaufAktualisieren&#39;), 1) = 0)
+    BEGIN
+        RETURN;
+    END;
+ 
+    --
+    -- Pr&#252;fen ob Aktualisierung immer erfolgen soll
+    --
+    IF(ISNULL((SELECT cValue FROM dbo.tOptions WHERE cKey = &#39;ShopZulaufImmerAktualisieren&#39;), 1) = 0)
+    BEGIN
+        --
+        -- Pr&#252;fen ob die letzte Aktualisierung l&#228;nger als 24 Stunden her ist
+        --
+        IF((SELECT DATEDIFF(hour, CONVERT(DATETIME, (SELECT ISNULL((SELECT cValue FROM dbo.tOptions WHERE cKey = @cOptionZuletztAktualisiert), CONVERT(VARCHAR(20), DATEADD(day, -1, GETDATE())))), 102), GETDATE())) &lt; 24)
+        BEGIN
+            RETURN;
+        END;
+    END;
+ 
+    -- Zul&#228;ufe f&#252;r die Lagerartikel in den tArtikel schreiben (inkl. Zulauf l&#246;schen, deshalb der LEFT JOIN)
+    DECLARE @tArtikel AS TABLE (kArtikel INT NOT NULL);
+
+    UPDATE dbo.tArtikel
+    SET dZulaufVerfuegbarAm = vNaechsterZulaufLagerartikel.dLieferdatum,
+        nZulaufVerfuegbarMenge = ISNULL(vNaechsterZulaufLagerartikel.fAnzahlZulauf, 0)
+    OUTPUT INSERTED.kArtikel
+    INTO @tArtikel
+    FROM dbo.tArtikel
+    LEFT JOIN Abgleich.vNaechsterZulaufLagerartikel ON vNaechsterZulaufLagerartikel.kArtikel = tArtikel.kArtikel
+    WHERE	(tArtikel.kStueckliste = 0 OR tArtikel.kStueckliste IS NULL)
+			AND
+			(
+				CONVERT(DATE, tArtikel.dZulaufVerfuegbarAm) &lt;&gt; vNaechsterZulaufLagerartikel.dLieferdatum
+				OR tArtikel.nZulaufVerfuegbarMenge &lt;&gt; ISNULL(vNaechsterZulaufLagerartikel.fAnzahlZulauf, 0)
+			);
+ 
+    -- Zul&#228;ufe f&#252;r die St&#252;cklistenv&#228;ter in den tArtikel schreiben
+	UPDATE dbo.tArtikel
+	SET tArtikel.dZulaufVerfuegbarAm = vLagerbestandStueckliste.dLieferdatum,
+		tArtikel.nZulaufVerfuegbarMenge = ISNULL(vLagerbestandStueckliste.fZulauf, 0)
+	FROM 
+	(
+		SELECT DISTINCT tStueckliste.kStueckliste
+		FROM @tArtikel AS tArtikel
+		JOIN dbo.tStueckliste ON tStueckliste.kArtikel = tArtikel.kArtikel
+	) AS Stueckliste
+	JOIN dbo.tArtikel ON tArtikel.kStueckliste = Stueckliste.kStueckliste
+	JOIN dbo.vLagerbestandStueckliste ON vLagerbestandStueckliste.kStueckliste = Stueckliste.kStueckliste
+	WHERE	(tArtikel.kStueckliste &lt;&gt; 0)
+			AND 
+			(
+				CONVERT(DATE, tArtikel.dZulaufVerfuegbarAm) &lt;&gt; vLagerbestandStueckliste.dLieferdatum
+				OR tArtikel.nZulaufVerfuegbarMenge &lt;&gt; ISNULL(vLagerbestandStueckliste.fZulauf, 0)
+			);
+ 
+    --
+    -- Letzte Aktualisierung in tOptions schreiben
+    --
+    MERGE INTO dbo.tOptions AS Ziel
+    USING (SELECT CONVERT(VARCHAR, GETDATE(), 102) AS Zeitstempel) AS Source
+    ON (Ziel.cKey = @cOptionZuletztAktualisiert)
+    WHEN MATCHED THEN
+        UPDATE SET Ziel.cValue = Source.Zeitstempel
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (cKey, cValue)
+        VALUES (@cOptionZuletztAktualisiert, Source.Zeitstempel);
+ 
+END;</code></pre>
+</body>
+</html>

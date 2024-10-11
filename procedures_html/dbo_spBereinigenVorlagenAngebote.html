@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spBereinigenVorlagenAngebote</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spBereinigenVorlagenAngebote</h1>
+    <p><strong>Description:</strong> Die Procedure lösche alle Ebay Angebotsvorlagen ohne korrekte Zuordnung aus der Datenbank.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spBereinigenVorlagenAngebote]
+AS
+SET NOCOUNT OFF;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+    DELETE FROM ebay_item
+    WHERE Status = 88;
+
+    DELETE FROM ebay_item
+    WHERE kArtikel NOT IN( SELECT kArtikel
+                           FROM tArtikel )
+	  AND kArtikel &gt; 0;
+
+    DELETE FROM ebay_attributSetArray
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+
+    DELETE FROM ebay_attributSetArray
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+   
+
+    DELETE FROM ebay_data_htmltemplatetagcontent
+    WHERE kEbayItem NOT IN( SELECT kItem
+                            FROM ebay_item );
+
+    DELETE FROM ebay_InternationalShippingServiceOption
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+
+    DELETE FROM ebay_item2kombi
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+
+    DELETE FROM ebay_item2xsell
+    WHERE kEbayItem NOT IN( SELECT kItem
+                            FROM ebay_item );
+
+    DELETE FROM ebay_planung
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+
+    DELETE FROM ebay_ShippingServiceOptions
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+
+    DELETE FROM ebay_ShippingServiceOptions
+    WHERE kItem NOT IN( SELECT kItem
+                        FROM ebay_item );
+END;</code></pre>
+</body>
+</html>

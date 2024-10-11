@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steuern.spUstIdKorrigieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Steuern.spUstIdKorrigieren</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Steuern.spUstIdKorrigieren 
+    @AuftragKey AS INT,
+    @UstId AS NVARCHAR(25),
+    @Kommentar AS NVARCHAR(100),
+    @BenutzerKey AS INT,
+    @Korrekturoptionen AS INT --KorrigierenKorrekturdatum = 0, KorrigierenBelegdatum = 1
+AS
+BEGIN
+    DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+DeadlockRetry:
+    BEGIN TRY
+        IF(@AuftragKey IS NULL OR @AuftragKey &lt;= 0)
+        BEGIN
+            RETURN;
+        END
+        
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+        -- Start vom Code
+        
+        -- leere UstIds in Rechnungen und Gutschriften updaten ohne Vorgang zu stornieren
+        DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+        DECLARE @NewContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, &#39;Rechnung.spRechnungEckdatenBerechnen&#39;);
+
+        SET CONTEXT_INFO @NewContextInfo;
+
+        UPDATE Rechnung.tRechnung
+        SET tRechnung.cUstId = @UstId
+        FROM Rechnung.tRechnung
+        JOIN Verkauf.tAuftragRechnung ON tAuftragRechnung.kRechnung = tRechnung.kRechnung
+        WHERE tRechnung.nStorno = 0
+            AND (tRechnung.cUstId IS NULL OR tRechnung.cUstId = &#39;&#39;)
+            AND tAuftragRechnung.kAuftrag = @AuftragKey
+
+        SET CONTEXT_INFO @OldContextInfo;
+
+        IF(OBJECT_ID(&#39;tempdb..#TempRechnungDaten&#39;) IS NOT NULL)
+        BEGIN
+            DROP TABLE #TempRechnungDaten;
+        END
+        
+        CREATE TABLE #TempRechnungDaten
+        (
+            kRechnung INT PRIMARY KEY NOT NULL,
+            nIstEntwurf BIT NOT NULL
+        );
+
+        INSERT INTO #TempRechnungDaten(kRechnung, nIstEntwurf)
+        SELECT DISTINCT 
+            tAuftragRechnung.kRechnung,
+            tRechnung.nIstEntwurf
+        FROM Verkauf.tAuftragRechnung
+        JOIN Rechnung.tRechnung ON tRechnung.kRechnung = tAuftragRechnung.kRechnung
+        WHERE tRechnung.nStorno = 0
+            AND ISNULL(tRechnung.cUstId, &#39;&#39;) &lt;&gt; ISNULL(@UstId, &#39;&#39;)
+            AND tAuftragRechnung.kAuftrag IN (@AuftragKey)
+
+        IF(OBJECT_ID(&#39;tempdb..#TempRechnungskorrekturDaten&#39;) IS NOT NULL)
+        BEGIN
+            DROP TABLE #TempRechnungskorrekturDaten;
+        END
+        
+        CREATE TABLE #TempRechnungskorrekturDaten
+        (
+            kGutschrift INT PRIMARY KEY NOT NULL,
+            nIstEntwurf BIT NOT NULL,
+            kRechnung INT NOT NULL
+        );
+        
+        INSERT INTO #TempRechnungskorrekturDaten(kGutschrift, nIstEntwurf, kRechnung)
+        SELECT DISTINCT 
+            tgutschrift.kGutschrift,
+            IIF(ISNULL(tgutschrift.cGutschriftNr, &#39;&#39;) = &#39;&#39;, 1, 0),
+            #TempRechnungDaten.kRechnung
+        FROM dbo.tgutschrift 
+        JOIN #TempRechnungDaten ON #TempRechnungDaten.kRechnung = tgutschrift.kRechnung
+        WHERE tgutschrift.nStornoTyp = 0
+            AND tgutschrift.nStorno = 0
+
+        DECLARE @RechnungLieferscheinPositionen Steuern.TYPE_spRechnungAnlegenLieferscheinPositionen
+        
+        INSERT INTO @RechnungLieferscheinPositionen(kRechnungPosition, kLieferscheinPosition, fAnzahlAufRechnung)
+        SELECT tRechnungLieferscheinPosition.kRechnungPosition,
+               tRechnungLieferscheinPosition.kLieferscheinPosition,
+               tRechnungLieferscheinPosition.fAnzahlAufRechnung
+        FROM Rechnung.tRechnungLieferscheinPosition
+        JOIN Rechnung.tRechnungPosition ON tRechnungPosition.kRechnungPosition = tRechnungLieferscheinPosition.kRechnungPosition
+        JOIN #TempRechnungDaten ON #TempRechnungDaten.kRechnung = tRechnungPosition.kRechnung
+        WHERE #TempRechnungDaten.nIstEntwurf = 0
+
+        IF(OBJECT_ID(&#39;tempdb..#TempZahlungDaten&#39;) IS NOT NULL)
+        BEGIN
+            DROP TABLE #TempZahlungDaten;
+        END
+        
+        CREATE TABLE #TempZahlungDaten
+        (
+            kZahlung INT PRIMARY KEY NOT NULL,
+            kAuftrag INT NULL,
+            kRechnung INT NULL,
+            kGutschrift INT NULL
+        );
+
+        INSERT INTO #TempZahlungDaten
+        (
+            kZahlung,
+            kAuftrag,
+            kRechnung,
+            kGutschrift
+        )
+        SELECT 
+            tZahlung.kZahlung,
+            tZahlung.kBestellung,
+            tZahlung.kRechnung,
+            tZahlung.kGutschrift
+        FROM dbo.tZahlung
+        LEFT JOIN #TempRechnungDaten ON #TempRechnungDaten.kRechnung = tZahlung.kRechnung
+        LEFT JOIN #TempRechnungskorrekturDaten ON #TempRechnungskorrekturDaten.kGutschrift = tZahlung.kGutschrift
+        WHERE #TempRechnungDaten.kRechnung IS NOT NULL
+            OR #TempRechnungskorrekturDaten.kGutschrift IS NOT NULL
+
+        UPDATE dbo.tZahlung
+        SET tZahlung.kRechnung = NULL,
+            tZahlung.kGutschrift = NULL
+        FROM dbo.tZahlung
+        JOIN #TempZahlungDaten ON #TempZahlungDaten.kZahlung = tZahlung.kZahlung
+
+        --Rechnungskorrekturen stornieren
+        DECLARE @RechnungskorrekturenStornieren AS Steuern.TYPE_spRechnungskorrekturStornieren
+
+        INSERT INTO @RechnungskorrekturenStornieren(kGutschrift)
+        SELECT #TempRechnungskorrekturDaten.kGutschrift 
+        FROM #TempRechnungskorrekturDaten
+        WHERE #TempRechnungskorrekturDaten.nIstEntwurf = 0
+
+        EXECUTE Steuern.spRechnungskorrekturStornieren 
+            @Rechnungskorrekturen = @RechnungskorrekturenStornieren, 
+            @Kommentar = @Kommentar, 
+            @BenutzerKey = @BenutzerKey
+
+        --Rechnungen stornieren
+        UPDATE dbo.tgutschrift
+        SET tgutschrift.kRechnung = NULL
+        FROM dbo.tgutschrift
+        JOIN #TempRechnungskorrekturDaten ON #TempRechnungskorrekturDaten.kGutschrift = tgutschrift.kGutschrift
+        WHERE #TempRechnungskorrekturDaten.nIstEntwurf = 1
+
+        DECLARE @RechnungenStornieren AS Steuern.TYPE_spRechnungStornieren
+
+        INSERT INTO @RechnungenStornieren(kRechnung)
+        SELECT #TempRechnungDaten.kRechnung
+        FROM #TempRechnungDaten
+        WHERE #TempRechnungDaten.nIstEntwurf = 0
+
+        EXECUTE Steuern.spRechnungStornieren 
+            @Rechnungen = @RechnungenStornieren,
+            @Kommentar = @Kommentar,
+            @BenutzerKey = @BenutzerKey
+
+        --UstId korrigieren
+        UPDATE Verkauf.tAuftrag
+        SET tAuftrag.cUstId = @UstId
+        WHERE tAuftrag.kAuftrag = @AuftragKey
+
+        UPDATE Rechnung.tRechnung
+        SET tRechnung.cUstId = @UstId
+        FROM Rechnung.tRechnung
+        JOIN #TempRechnungDaten ON #TempRechnungDaten.kRechnung = tRechnung.kRechnung
+        WHERE #TempRechnungDaten.nIstEntwurf = 1
+
+        --Rechnungen erstellen
+        DECLARE @RechnungMapping XML
+        DECLARE @RechnungPositionMapping XML
+        DECLARE @RechnungenAnlegen Steuern.TYPE_spRechnungAnlegen
+
+        INSERT INTO @RechnungenAnlegen(kRechnung)
+        SELECT #TempRechnungDaten.kRechnung 
+        FROM #TempRechnungDaten
+        WHERE #TempRechnungDaten.nIstEntwurf = 0
+
+        EXECUTE Steuern.spRechnungAnlegen
+            @AuftragKey = @AuftragKey,
+            @Rechnungen = @RechnungenAnlegen,
+            @RechnungLieferscheinPositionen = @RechnungLieferscheinPositionen,
+            @UstId = @UstId,
+            @BenutzerKey = @BenutzerKey,
+            @Korrekturoptionen = @Korrekturoptionen,
+            @RechnungMapping = @RechnungMapping OUTPUT,
+            @RechnungPositionMapping = @RechnungPositionMapping OUTPUT
+
+        IF(OBJECT_ID(&#39;tempdb..#TempRechnungMapping&#39;) IS NOT NULL)
+        BEGIN
+            DROP TABLE #TempRechnungMapping;
+        END
+        
+        CREATE TABLE #TempRechnungMapping
+        (
+            kRechnung INT PRIMARY KEY NOT NULL,
+            kNewRechnung INT NOT NULL
+        );
+
+        INSERT INTO #TempRechnungMapping(kRechnung, kNewRechnung)
+        SELECT 
+            ParamValues.ID.value(&#39;kRechnung[1]&#39;, &#39;INT&#39;) AS kRechnung, 
+            ParamValues.ID.value(&#39;kNewRechnung[1]&#39;, &#39;INT&#39;) AS kNewRechnung
+        FROM @RechnungMapping.nodes(&#39;/RechnungMappings/RechnungMapping&#39;) AS ParamValues(ID)
+
+        --Rechnungskorrekturen erstellen
+        DECLARE @RechnungskorrekturMapping XML
+        DECLARE @RechnungskorrekturenAnlegen Steuern.TYPE_spRechnungskorrekturAnlegen
+        DECLARE @RechnungskorrekturPositionsmapping Steuern.TYPE_spRechnungskorrekturAnlegenPositionsmapping
+
+        INSERT INTO @RechnungskorrekturenAnlegen(kGutschrift, kNewRechnung)
+        SELECT #TempRechnungskorrekturDaten.kGutschrift, #TempRechnungMapping.kNewRechnung 
+        FROM #TempRechnungskorrekturDaten
+        JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = #TempRechnungskorrekturDaten.kGutschrift
+        JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = tgutschrift.kRechnung
+        WHERE #TempRechnungskorrekturDaten.nIstEntwurf = 0
+
+        INSERT INTO @RechnungskorrekturPositionsmapping(kRechnungPosition, kNewRechnungPosition)
+        SELECT ParamValues.ID.value(&#39;kRechnungPosition[1]&#39;, &#39;INT&#39;), ParamValues.ID.value(&#39;kNewRechnungPosition[1]&#39;, &#39;INT&#39;)
+        FROM @RechnungPositionMapping.nodes(&#39;/RechnungPositionMappings/RechnungPositionMapping&#39;) AS ParamValues(ID);
+
+        EXECUTE Steuern.spRechnungskorrekturAnlegen 
+            @Rechnungskorrekturen = @RechnungskorrekturenAnlegen,
+            @Positionsmapping = @RechnungskorrekturPositionsmapping,
+            @BenutzerKey = @BenutzerKey,
+            @Korrekturoptionen = @Korrekturoptionen,
+            @RechnungskorrekturMapping = @RechnungskorrekturMapping OUTPUT
+
+        IF(OBJECT_ID(&#39;tempdb..#TempRechnungskorrekturMapping&#39;) IS NOT NULL)
+        BEGIN
+            DROP TABLE #TempRechnungskorrekturMapping;
+        END
+        
+        CREATE TABLE #TempRechnungskorrekturMapping
+        (
+            kGutschrift INT PRIMARY KEY NOT NULL,
+            kNewGutschrift INT NOT NULL
+        );
+
+        INSERT INTO #TempRechnungskorrekturMapping(kGutschrift, kNewGutschrift)
+        SELECT 
+            ParamValues.ID.value(&#39;kGutschrift[1]&#39;, &#39;INT&#39;) AS kGutschrift, 
+            ParamValues.ID.value(&#39;kNewGutschrift[1]&#39;, &#39;INT&#39;) AS kNewGutschrift
+        FROM @RechnungskorrekturMapping.nodes(&#39;/RechnungskorrekturMappings/RechnungskorrekturMapping&#39;) AS ParamValues(ID)
+
+        UPDATE dbo.tgutschrift
+        SET tgutschrift.kRechnung = #TempRechnungMapping.kNewRechnung
+        FROM dbo.tgutschrift
+        JOIN #TempRechnungskorrekturDaten ON #TempRechnungskorrekturDaten.kGutschrift = tgutschrift.kGutschrift
+        JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = #TempRechnungskorrekturDaten.kRechnung
+        WHERE #TempRechnungskorrekturDaten.nIstEntwurf = 1
+
+        UPDATE dbo.tGutschriftPos
+        SET tGutschriftPos.kRechnungPosition = [@RechnungskorrekturPositionsmapping].kNewRechnungPosition
+        FROM dbo.tGutschriftPos
+        JOIN #TempRechnungskorrekturDaten ON #TempRechnungskorrekturDaten.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift
+        JOIN @RechnungskorrekturPositionsmapping ON [@RechnungskorrekturPositionsmapping].kRechnungPosition = tGutschriftPos.kRechnungPosition
+        WHERE #TempRechnungskorrekturDaten.nIstEntwurf = 1
+
+        UPDATE dbo.tZahlung
+        SET tZahlung.kRechnung = IIF(#TempZahlungDaten.kRechnung IS NULL, NULL, #TempRechnungMapping.kNewRechnung),
+            tZahlung.kGutschrift = IIF(#TempZahlungDaten.kGutschrift IS NULL, NULL, #TempRechnungskorrekturMapping.kNewGutschrift)
+        FROM dbo.tZahlung
+        JOIN #TempZahlungDaten ON #TempZahlungDaten.kZahlung = tZahlung.kZahlung
+        LEFT JOIN #TempRechnungMapping ON #TempRechnungMapping.kRechnung = #TempZahlungDaten.kRechnung
+        LEFT JOIN #TempRechnungskorrekturMapping ON #TempRechnungskorrekturMapping.kGutschrift = #TempZahlungDaten.kGutschrift
+        
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spExtrahiereKostenAusSettlement</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spExtrahiereKostenAusSettlement</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>--
+-- Amazon.spExtrahiereKostenAusSettlement
+--
+CREATE PROCEDURE [Amazon].[spExtrahiereKostenAusSettlement] AS
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+	DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+	DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+	--IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+	SET CONTEXT_INFO @MyContextInfo;
+DeadlockRetry:
+	BEGIN TRY
+		-- Start vom Code
+		IF OBJECT_ID(&#39;tempdb..#Auftragsgebuehren&#39;, &#39;U&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE #Auftragsgebuehren;
+		END		
+
+		-- Geb&#252;hren mit Auftragsbezug
+		CREATE TABLE #Auftragsgebuehren (
+			cOrderId NVARCHAR(50) COLLATE DATABASE_DEFAULT NOT NULL,
+			cSKU NVARCHAR(50) COLLATE DATABASE_DEFAULT NOT NULL,
+			nKostentyp TINYINT NOT NULL,
+			fSumme DECIMAL (23,2) NOT NULL,
+			cBeschreibung NVARCHAR(100) COLLATE DATABASE_DEFAULT NOT NULL,
+			dBerechnungszeitpunktUtc DATETIME2 NOT NULL,
+			kSettlementPos BIGINT NOT NULL,
+			fAuftragsSumme DECIMAL (23,2) NULL
+		);
+		INSERT INTO #Auftragsgebuehren (cOrderId, cSKU, nKostentyp, fSumme, cBeschreibung, dBerechnungszeitpunktUtc, kSettlementPos)
+		SELECT
+			pf_amazon_settlementpos.OrderId,
+			pf_amazon_settlementpos.SKU,
+			tSettlementPosKostentypen.nKostentyp AS nKostentyp,
+			pf_amazon_settlementpos.Amount,
+			pf_amazon_settlementpos.AmountDescription,
+			pf_amazon_settlementpos.PostedDateTime,
+			pf_amazon_settlementpos.kMessageId
+		FROM pf_amazon_settlementpos
+		LEFT JOIN Verkauf.tAuftragkosten ON tAuftragkosten.kSettlementPos = pf_amazon_settlementpos.kMessageId
+		JOIN Amazon.tSettlementPosKostentypen ON tSettlementPosKostentypen.cAmountType = pf_amazon_settlementpos.AmountType 
+			AND tSettlementPosKostentypen.cAmountDescription = pf_amazon_settlementpos.AmountDescription
+		WHERE pf_amazon_settlementpos.AmountType != &#39;ItemPrice&#39; 
+			AND pf_amazon_settlementpos.Amount IS NOT NULL 
+			AND pf_amazon_settlementpos.AmountDescription IS NOT NULL 
+			AND tSettlementPosKostentypen.nKostentyp IS NOT NULL 
+			AND pf_amazon_settlementpos.OrderId &lt;&gt; &#39;&#39; 
+			AND tAuftragkosten.kSettlementPos IS NULL;
+
+		;WITH AmazonBestellungEckdaten AS (
+			-- Summe der Positionswerte
+			SELECT
+				pf_amazon_bestellung.cOriginalOrderId COLLATE DATABASE_DEFAULT AS cOrderId,
+				SUM(pf_amazon_bestellungpos.fItemPrice) AS fSumme
+			FROM pf_amazon_bestellung
+			JOIN pf_amazon_bestellungpos ON pf_amazon_bestellungpos.kAmazonBestellung = pf_amazon_bestellung.kAmazonBestellung
+			GROUP BY pf_amazon_bestellung.cOriginalOrderId
+		),
+		AuftragEckdaten AS (
+			SELECT
+				tAuftragPosition.kAuftrag,
+				pf_amazon_bestellung.cOriginalOrderId COLLATE DATABASE_DEFAULT AS cOrderId,
+				SUM(CAST(tAuftragPosition.fAnzahl AS DECIMAL(25, 13)) * CAST(pf_amazon_bestellungpos.fItemPrice AS DECIMAL(25, 13)) /
+					CAST(pf_amazon_bestellungpos.nQuantityPurchased AS DECIMAL(25,13))) AS fSumme
+			FROM
+				Verkauf.tAuftragPosition
+			JOIN pf_amazon_bestellungpos ON pf_amazon_bestellungpos.kAmazonBestellungPos = tAuftragPosition.kAmazonBestellungPos
+			JOIN pf_amazon_bestellung ON pf_amazon_bestellung.kAmazonBestellung = pf_amazon_bestellungpos.kAmazonBestellung
+			WHERE pf_amazon_bestellungpos.nQuantityPurchased != 0
+			GROUP BY tAuftragPosition.kAuftrag, pf_amazon_bestellung.cOriginalOrderId
+		)
+		INSERT INTO Verkauf.tAuftragkosten (kAuftrag, kAuftragPosition, cSKU, nKostentyp, fSumme, cBeschreibung, dBerechnungsdatumUtc, dErstelltUtc, kSettlementPos)
+		SELECT
+			AuftragEckdaten.kAuftrag,
+			NULL AS kAuftragPosition,
+			CASE WHEN LEN(#Auftragsgebuehren.cSKU) &gt; 0 THEN LEFT(#Auftragsgebuehren.cSKU, 30) ELSE NULL END AS cSKU,
+			#Auftragsgebuehren.nKostentyp,
+			CAST(#Auftragsgebuehren.fSumme AS DECIMAL(25, 13)) * AuftragEckdaten.fSumme / AmazonBestellungEckdaten.fSumme,
+			#Auftragsgebuehren.cBeschreibung,
+			#Auftragsgebuehren.dBerechnungszeitpunktUtc,
+			GETUTCDATE(),
+			#Auftragsgebuehren.kSettlementPos
+		FROM #Auftragsgebuehren
+		JOIN AmazonBestellungEckdaten ON AmazonBestellungEckdaten.cOrderId = #Auftragsgebuehren.cOrderId
+		JOIN AuftragEckdaten ON AuftragEckdaten.cOrderId = #Auftragsgebuehren.cOrderId
+		WHERE AmazonBestellungEckdaten.fSumme != 0;
+
+		-- Ende vom Code
+	END TRY
+	BEGIN CATCH
+		BEGIN TRY
+			DECLARE @DeadlockRetries TINYINT = 0;
+			EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+		END TRY
+		BEGIN CATCH
+			IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+		END CATCH;
+		THROW;
+	END CATCH
+
+	SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+	SET CONTEXT_INFO @OldContextInfo;
+	THROW;
+END CATCH</code></pre>
+</body>
+</html>

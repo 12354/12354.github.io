@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGetNewDruckJob</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGetNewDruckJob</h1>
+    <p><strong>Description:</strong> Die Stored Procedure ermittelt den nächsten verfügbaren Druckauftrag.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGetNewDruckJob]  
+	@kWarenlager INT, 
+	@kWarenlagerPlatz INT
+-- Holt sich anhand vom Warenlager und ggf. WarenlagerPlatz den n&#228;chsten offenen Druckjob   
+-- Muss als Procedure und Transaction aufgerufen werden, damit bei parallelen DruckJobs nicht die Dokumente doppelt gedruckt werden  
+AS    
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @retry INT = 5;
+WHILE @retry &gt; 0
+BEGIN      
+    BEGIN TRY  
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END
+	   DECLARE @kDruckQueue INT  
+	
+	   SELECT @kDruckQueue = tDruckqueue.kDruckQueue  
+		  FROM tdruckqueue WITH(NOLOCK)
+		  JOIN twarenlagerplatz WITH(NOLOCK) ON tDruckQueue.kWarenlagerPlatz = tWarenlagerPlatz.kWarenlagerPlatz 
+		  WHERE tWarenlagerPlatz.kWarenlager = @kWarenlager  
+			 AND tDruckqueue.nStatus = 10  
+			 AND (ISNULL(@kWarenlagerPlatz,0) = 0 or tWarenlagerPlatz.kWarenlagerPlatz = @kWarenlagerPlatz)  
+		  ORDER BY dZeitstempel DESC
+
+	   IF (@kDruckQueue &gt; 0)  
+	   BEGIN  
+	   -- Sorgt daf&#252;r, dass dieser Job von keinem anderen ausgef&#252;hrt wird  
+	   UPDATE tDruckQueue WITH(ROWLOCK) 
+		  SET nStatus = 20 
+		  WHERE kDruckQueue = @kDruckQueue  
+	   END  
+	   SELECT @kDruckQueue
+	   
+	   SET @retry = 0;
+        IF(@TranCount = 0)
+        BEGIN           
+            COMMIT TRANSACTION      
+        END
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END</code></pre>
+</body>
+</html>

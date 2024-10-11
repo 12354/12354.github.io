@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWarenlagerEingangSchreiben</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWarenlagerEingangSchreiben</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Wareneingang erstellt werden. Wareneingängge können ausschließlich über die Procedure erstellt werden.</p>
+    <p><strong>Long Description:</strong> <WarenEingang>
+  <kArtikel />
+  <!--  INT NOT NULL -->
+  <kWarenLagerPlatz />
+  <!--  INT NOT NULL -->
+  <kLieferantenBestellungPos />
+  <!--  INT NULL -->
+  <kBenutzer />
+  <!--  INT NOT NULL -->
+  <fAnzahl />
+  <!--  DECIMAL(28,14) NOT NULL -->
+  <fEkEinzel />
+  <!--  DECIMAL(28,14) NULL -->
+  <cLieferscheinNr />
+  <!--  VARCHAR(255) NULL -->
+  <cChargenNr />
+  <!--  VARCHAR(255) NULL -->
+  <dMHD />
+  <!--  DATETIME NULL -->
+  <dGeliefertAm />
+  <!--  DATETIME NULL -->
+  <cKommentar />
+  <!--  VARCHAR(255) NULL -->
+  <kGutschriftPos />
+  <!--  INT NULL -->
+  <kLHM />
+  <!--  INT NULL -->
+  <kSessionId />
+  <!--  INT NULL -->
+  <kBuchungsart />
+  <!--  INT NOT NULL -->
+  <kBestellPosUmlagerung />
+  <!--  INT NULL -->
+  <kRMRetourePos />
+  <!--  INT NULL -->
+</WarenEingang></p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spWarenlagerEingangSchreiben]
+	@xWarenlagerEingaenge XML = NULL,
+
+	@kArtikel INT = NULL,
+	@kWarenLagerPlatz INT = NULL,
+	@kLieferantenBestellungPos INT = NULL,
+	@kBenutzer INT = NULL,
+	@fAnzahl DECIMAL(28,14) = NULL,
+	@fEkEinzel DECIMAL(28,14) = NULL,
+	@cLieferscheinNr VARCHAR(255) = NULL,
+	@cChargenNr VARCHAR(255) = NULL,
+	@dMHD DATETIME = NULL,
+	@dGeliefertAm DATETIME = NULL,
+	@cKommentar VARCHAR(255) = NULL,
+	@kGutschriftPos INT = NULL,
+	@kLHM INT = NULL,
+	@kSessionId INT = NULL,
+	@kBuchungsart INT = NULL,
+	@kBestellPosUmlagerung INT = NULL,
+	@kRMRetourePos  INT = NULL,
+	@nHistorieNichtSchreiben INT = 0,
+	@kWarenlagerEingang INT = NULL OUTPUT
+AS
+--
+-- Schreiben eines Warenlagereingangs
+--
+-- Eingabe: 
+-- 1. 
+-- EXEC [dbo].[spWarenlagerEingangSchreiben] @kArtikel = 1, @kWarenLagerPlatz = 2, ...
+--  =&gt; nur in diesem Fall ist kWarenlagerEingang als OUTPUT-Parameter valide gef&#252;llt
+-- 
+-- 2.
+-- DECLARE @xWarenlagerEingaenge XML;
+-- SET @xWarenlagerEingaenge = (SELECT ... FROM ... FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+-- EXEC [dbo].[spWarenlagerEingangSchreiben] @xWarenlagerEingaenge = @xWarenlagerEingaenge;
+-- 
+-- Fehlercodes: keine
+--
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+BEGIN TRY
+--INSERT INTO tQueryTrace (dDate, cTraceInfo, cQuery) VALUES (GETDATE(), OBJECT_NAME(@@PROCID), (SELECT TOP (1) sqltext.text
+--FROM sys.dm_exec_requests CROSS APPLY sys.dm_exec_sql_text(dm_exec_requests.sql_handle) AS sqltext WHERE dm_exec_requests.session_id = @@SPID));
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = 0x5091;
+    --IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+    SET CONTEXT_INFO @MyContextInfo;
+
+	IF (OBJECT_ID(&#39;tempdb..#spWLESchreibenWarenlagereingang&#39;) IS NOT NULL) DROP TABLE #spWLESchreibenWarenlagereingang;
+	CREATE TABLE #spWLESchreibenWarenlagereingang (
+		kArtikel INT NOT NULL,
+		kWarenLagerPlatz INT NOT NULL,
+		kLieferantenBestellungPos INT NULL,
+		kBenutzer INT NOT NULL,
+		fAnzahl DECIMAL(28,14) NOT NULL,
+		fEKEinzel DECIMAL(28,14) NOT NULL,
+		cLieferscheinNr VARCHAR(255) NULL,
+		cChargenNr VARCHAR(255) NULL,
+		dMHD DATETIME NULL,
+		dGeliefertAM DATETIME NULL,
+		cKommentar VARCHAR(255) NULL,
+		kGutschriftPos INT NULL,
+		kLHM INT NULL,
+		kSessionId INT NULL,
+		kWarenLagerEingang_Ursprung INT NULL,
+		kBuchungsart INT NOT NULL,
+		kBestellPosUmlagerung INT NULL,
+		kRMRetourePos INT NULL
+	);
+
+	IF(@xWarenlagerEingaenge IS NOT NULL)
+	BEGIN
+		INSERT INTO #spWLESchreibenWarenlagereingang(
+				kArtikel, kWarenLagerPlatz, kLieferantenBestellungPos, kBenutzer, fAnzahl, fEKEinzel, 
+				cLieferscheinNr, cChargenNr, dMHD, dGeliefertAM, cKommentar, kGutschriftPos, kLHM, kSessionId, kBuchungsart,kBestellPosUmlagerung,kRMRetourePos)
+			SELECT ParamValues.ID.value(&#39;kArtikel[1]&#39;,&#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kWarenlagerPlatz[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kLieferantenBestellungPos[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kBenutzer[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;fAnzahl[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;fEKEinzel[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;cLieferscheinNr[1]&#39;, &#39;VARCHAR(255)&#39;),
+					CASE WHEN ParamValues.ID.value(&#39;cChargenNr[1]&#39;, &#39;VARCHAR(255)&#39;) = &#39;&#39;
+						THEN NULL
+						ELSE ParamValues.ID.value(&#39;cChargenNr[1]&#39;, &#39;VARCHAR(255)&#39;)
+					END,
+					ParamValues.ID.value(&#39;dMHD[1]&#39;, &#39;datetime&#39;),				
+					ParamValues.ID.value(&#39;dGeliefertAM[1]&#39;, &#39;datetime&#39;),
+					ParamValues.ID.value(&#39;cKommentar[1]&#39;, &#39;VARCHAR(255)&#39;),
+					ParamValues.ID.value(&#39;kGutschriftPos[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kLHM[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kSessionId[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kBuchungsart[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kBestellPosUmlagerung[1]&#39;, &#39;VARCHAR(20)&#39;),
+					ParamValues.ID.value(&#39;kRMRetourePos[1]&#39;, &#39;VARCHAR(20)&#39;)
+			FROM @xWarenlagerEingaenge.nodes(&#39;/WarenEingang&#39;) AS ParamValues(ID)		
+	END	ELSE BEGIN
+		IF @kArtikel IS NOT NULL
+		BEGIN
+			INSERT INTO #spWLESchreibenWarenlagereingang(
+				kArtikel, kWarenLagerPlatz, kLieferantenBestellungPos, kBenutzer, fAnzahl, fEKEinzel, 
+				cLieferscheinNr, cChargenNr, dMHD, dGeliefertAM, cKommentar, kGutschriftPos, kLHM, kSessionId, kBuchungsart,kBestellPosUmlagerung,kRMRetourePos)
+			VALUES(@kArtikel, @kWarenLagerPlatz, @kLieferantenBestellungPos, @kBenutzer, @fAnzahl, @fEkEinzel,
+				@cLieferscheinNr, CASE WHEN @cChargenNr =&#39;&#39; THEN NULL ELSE @cChargenNr END, @dMHD, @dGeliefertAm, @cKommentar, @kGutschriftPos, @kLHM, @kSessionId, @kBuchungsart,@kBestellPosUmlagerung,@kRMRetourePos);
+		END
+	END
+
+	-- Artikel l&#246;schen die es nicht mehr gibt
+	DELETE #spWLESchreibenWarenlagereingang
+	FROM #spWLESchreibenWarenlagereingang
+	LEFT JOIN Bestand.vBestandsartikel ON vBestandsartikel.kArtikel = #spWLESchreibenWarenlagereingang.kArtikel
+	WHERE vBestandsartikel.kArtikel IS NULL;
+
+	-- WLE auf ung&#252;ltige Warenlagerpl&#228;tze verhindern
+	DELETE #spWLESchreibenWarenlagereingang
+	FROM #spWLESchreibenWarenlagereingang
+	LEFT JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = #spWLESchreibenWarenlagereingang.kWarenLagerPlatz
+	LEFT JOIN Bestand.vWarenlager ON vWarenlager.kWarenLager = tWarenLagerPlatz.kWarenLager
+	WHERE vWarenlager.kWarenLager IS NULL OR tWarenLagerPlatz.kWarenLagerPlatz IS NULL;
+
+	IF NOT EXISTS(SELECT 1 FROM #spWLESchreibenWarenlagereingang)
+	BEGIN
+		RETURN;
+	END
+
+	DECLARE @dDatum DATETIME = GETDATE();
+	DECLARE @nEingangsrechnung TINYINT = (SELECT TOP (1) ISNULL(tOptions.cValue, 0) FROM dbo.tOptions WHERE tOptions.cKey = &#39;EingangsrechnungNutzen&#39;);
+
+	--
+	-- Fehlende WarenlagerplatzArtikel Kombinationen anlegen
+	--
+	INSERT INTO dbo.tWarenLagerPlatzArtikel(kWarenLagerPlatz, kArtikel)
+		SELECT DISTINCT 
+			#spWLESchreibenWarenlagereingang.kWarenLagerPlatz, 
+			#spWLESchreibenWarenlagereingang.kArtikel 
+		FROM #spWLESchreibenWarenlagereingang 
+		LEFT JOIN dbo.tWarenLagerPlatzArtikel ON #spWLESchreibenWarenlagereingang.kArtikel = dbo.tWarenLagerPlatzArtikel.kArtikel
+			AND #spWLESchreibenWarenlagereingang.kWarenLagerPlatz = dbo.tWarenLagerPlatzArtikel.kWarenLagerPlatz
+		WHERE tWarenLagerPlatzArtikel.kArtikel IS NULL;
+
+
+	DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+       
+	    INSERT INTO dbo.tWarenLagerEingang
+		(
+			kArtikel,
+			kWarenLagerPlatz,
+			kLieferantenBestellungPos,
+			kBenutzer,
+			fAnzahl,
+			fEKEinzel,
+			cLieferscheinNr,
+			cChargenNr,
+			dMHD,
+			dErstellt,
+			dGeliefertAM,
+			cKommentar,
+			kGutschriftPos,
+			kWarenLagerAusgang,
+			kLHM,
+			fAnzahlAktuell,
+			fAnzahlReserviertPickpos,
+			kSessionID,
+			kWarenLagerEingang_Ursprung,
+			kBuchungsart,
+			kBestellPosUmlagerung,
+			kRMRetourePos,
+			nGLDBerechnungMitEingangsrechnung
+		)
+		SELECT	
+			#spWLESchreibenWarenlagereingang.kArtikel, 
+			#spWLESchreibenWarenlagereingang.kWarenLagerPlatz, 
+			#spWLESchreibenWarenlagereingang.kLieferantenBestellungPos, 
+			#spWLESchreibenWarenlagereingang.kBenutzer,
+			#spWLESchreibenWarenlagereingang.fAnzahl, 
+			ISNULL(#spWLESchreibenWarenlagereingang.fEKEinzel, ISNULL(dbo.tArtikel.fEKNetto,0.0)),
+			#spWLESchreibenWarenlagereingang.cLieferscheinNr, 
+			CASE 
+				WHEN #spWLESchreibenWarenlagereingang.cChargenNr = &#39;&#39; THEN NULL 
+				ELSE #spWLESchreibenWarenlagereingang.cChargenNr 
+			END AS cChargenNr, 
+			#spWLESchreibenWarenlagereingang.dMHD, 
+			@dDatum, 
+			#spWLESchreibenWarenlagereingang.dGeliefertAM, 
+			#spWLESchreibenWarenlagereingang.cKommentar, 
+			#spWLESchreibenWarenlagereingang.kGutschriftPos, 
+			NULL, 
+			#spWLESchreibenWarenlagereingang.kLHM, 
+			#spWLESchreibenWarenlagereingang.fAnzahl, 
+			0.0, 
+			#spWLESchreibenWarenlagereingang.kSessionId, 
+			NULL,
+			#spWLESchreibenWarenlagereingang.kBuchungsart,
+			#spWLESchreibenWarenlagereingang.kBestellPosUmlagerung,
+			#spWLESchreibenWarenlagereingang.kRMRetourePos,
+			@nEingangsrechnung
+			FROM #spWLESchreibenWarenlagereingang 
+			LEFT JOIN dbo.tArtikel WITH (NOLOCK) ON #spWLESchreibenWarenlagereingang.kArtikel = dbo.tArtikel.kArtikel
+		SELECT @kWarenlagerEingang = SCOPE_IDENTITY();
+
+		-- spUpdateLagerbestandProLager
+		DECLARE @spUpdateLagerbestandProLager TYPE_spUpdateLagerbestandProLager;
+		INSERT INTO @spUpdateLagerbestandProLager (kArtikel, kWarenlager)
+			SELECT DISTINCT #spWLESchreibenWarenlagereingang.kArtikel, tWarenLagerPlatz.kWarenLager
+			FROM #spWLESchreibenWarenlagereingang
+			JOIN dbo.tWarenLagerPlatz ON #spWLESchreibenWarenlagereingang.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+		IF @@ROWCOUNT &gt; 0
+		BEGIN
+			EXEC dbo.spUpdateLagerbestandProLager @Artikel = @spUpdateLagerbestandProLager;
+		END
+
+		-- spUpdateLagerbestand
+		DECLARE @spUpdateLagerbestand AS TYPE_spUpdateLagerbestand;
+		INSERT INTO @spUpdateLagerbestand(kArtikel)
+			SELECT DISTINCT #spWLESchreibenWarenlagereingang.kArtikel
+			FROM #spWLESchreibenWarenlagereingang;
+		IF @@ROWCOUNT &gt; 0
+		BEGIN
+			EXEC dbo.spUpdateLagerbestand @spUpdateLagerbestand;
+		END
+		
+		IF(@nHistorieNichtSchreiben = 0)
+		BEGIN
+			INSERT INTO dbo.tArtikelHistory
+			  (
+				 kWarenLagerPlatz, kArtikel, fAnzahl, dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+				 fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert,fLagerBestandInLager
+			  )
+			  SELECT WLE.kWarenLagerPlatz,
+					WLE.kArtikel,SUM(WLE.fAnzahl) ,
+					@dDatum AS dErstellt,
+					WLE.kBenutzer,
+					0 AS kWarenLagerEingang,
+					0 AS  kBestellPos,
+					ISNULL(WLE.kGutschriftPos,0),
+					ISNULL(WLE.fEKEinzel,
+					ISNULL(dbo.tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+					WLE.cKommentar,
+					WLE.kBuchungsart,
+					0 AS kLieferscheinPos,
+					MAX(tlagerbestand.fLagerbestandEigen) AS fLagerBestandGesamt, 
+	   				MAX(LagerBestand.fBestandPlatz) AS fLagerBestand, -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+					WLE.kLieferantenBestellungPos,
+					WLE.cLieferscheinNr,
+					WLE.cChargenNr,
+					WLE.dMHD,
+					ISNULL(dbo.tlagerbestand.fVerfuegbar,0),
+					ISNULL(dbo.tlagerbestand.fInAuftraegen,0),
+				    MAX(LagerBestand.BestandInWarenlager) AS BestandInWarenlager
+			  FROM #spWLESchreibenWarenlagereingang AS WLE
+			  JOIN dbo.tlagerbestand ON dbo.tlagerbestand.kArtikel = WLE.kArtikel
+			  JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = WLE.kArtikel
+			  OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fBestandPlatz, MAX(tlagerbestandProLagerLagerartikel.fBestand) AS BestandInWarenlager
+					 FROM dbo.tWarenLagerEingang
+					 JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tWarenLagerEingang.kWarenLagerPlatz
+					 LEFT JOIN dbo.tlagerbestandProLagerLagerartikel ON tlagerbestandProLagerLagerartikel.kArtikel = tWarenLagerEingang.kArtikel AND tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLagerPlatz.kWarenLager
+					 WHERE dbo.tWarenLagerEingang.kArtikel = WLE.kArtikel
+					 AND dbo.tWarenLagerEingang.kWarenLagerPlatz = WLE.kWarenlagerPlatz) AS LagerBestand
+	 
+			  GROUP BY WLE.kWarenLagerPlatz,WLE.kArtikel,WLE.kBenutzer,ISNULL(WLE.kGutschriftPos,0),ISNULL(WLE.fEKEinzel, ISNULL(dbo.tArtikel.fEKNetto,0.0)),
+						WLE.cKommentar, WLE.kBuchungsart, WLE.kLieferantenBestellungPos,WLE.cLieferscheinNr,WLE.cChargenNr,WLE.dMHD,dbo.tlagerbestand.fInAuftraegen,
+						dbo.tlagerbestand.fVerfuegbar;
+		END
+
+		DECLARE @fulfillmentStockUpdateDaten AS FulfillmentNetwork.TYPE_spStockUpdate
+		INSERT INTO @fulfillmentStockUpdateDaten
+		(
+			kArtikel,
+			kBenutzer,
+			kBuchungsart,
+			kWarenLagerPlatz,
+			kLieferantenBestellungPos,
+			fAnzahl,
+			cLieferscheinNr,
+			dMHD,
+			cCharge,
+			cKommentar,
+			kWarenLagerEingang,
+			kSessionId
+		)	
+		SELECT kArtikel,
+				kBenutzer,
+				kBuchungsart,
+				kWarenLagerPlatz,
+				kLieferantenBestellungPos,           
+				fAnzahl,     
+				cLieferscheinNr,           
+				dMHD,
+				cChargenNr,
+				cKommentar,
+				@kWarenlagerEingang,
+				kSessionId
+		FROM #spWLESchreibenWarenlagereingang 
+		EXEC FulfillmentNetwork.spStockUpdate @Daten = @fulfillmentStockUpdateDaten
+		IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH
+	SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH</code></pre>
+</body>
+</html>

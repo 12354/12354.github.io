@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWarenLagerEingangSplitt</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWarenLagerEingangSplitt</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spWarenLagerEingangSplitt]
+	@kWarenLagerEingang INT,             -- Warenlagereingang der geplittet werden soll
+	@nSplittMenge DECIMAL(25,13),  -- Die Menge die abgesplittet werden soll
+	@kOutWarenLagerEingang INT OUTPUT    -- die Neue Warenlagereinheit die abgesplittet wurde
+
+-- Funktion: Diese Procedur splittet die &#252;bergebene Lagereinheit und erstellt eine neue mit der &#252;bergebenen Menge
+
+AS 
+DECLARE @TableVar TABLE(Nummer INT)
+DECLARE @kWarenLagerEingangNew INT
+DECLARE @nAnzahlAktuellAltWle  DECIMAL(25,13)
+DECLARE @fAnzahlReserviertPickpos DECIMAL(25,13)
+DECLARE @dQuellDatum DATETIME
+DECLARE @OldContextInfo VARBINARY(128)
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN TRY
+	SELECT 0;
+
+	IF(@nSplittMenge IS not NULL AND @nSplittMenge &gt; 0)
+	BEGIN
+		-- Virtuelle Tabelle erstellen
+		SELECT * INTO #WarenLagerEingang 
+			FROM dbo.tWarenLagerEingang  WITH(NOLOCK) 
+			WHERE dbo.tWarenLagerEingang.kWarenLagerEingang = @kWarenLagerEingang;	
+
+		SELECT @nAnzahlAktuellAltWle = #WarenLagerEingang.fAnzahlAktuell , @dQuellDatum =  #WarenLagerEingang.dErstellt
+			FROM #WarenLagerEingang 
+			WHERE #WarenLagerEingang.kWarenLagerEingang = @kWarenLagerEingang;
+
+		IF(@nAnzahlAktuellAltWle &gt;= @nSplittMenge)
+		BEGIN	  
+			SELECT @fAnzahlReserviertPickpos = fAnzahlReserviertPickpos 
+			FROM dbo.tWarenLagerEingang WITH(NOLOCK) 
+			WHERE kWarenLagerEingang = @kWarenLagerEingang;
+	        
+			IF(@fAnzahlReserviertPickpos &gt; 0)
+				SET @fAnzahlReserviertPickpos = @fAnzahlReserviertPickpos - @nSplittMenge;
+	
+			-- Bestand auf alten Wle verringern
+			UPDATE dbo.tWarenLagerEingang WITH(ROWLOCK) 
+			SET fAnzahl = (fAnzahl - @nSplittMenge),fAnzahlAktuell = (fAnzahlAktuell - @nSplittMenge),fAnzahlReserviertPickpos = @fAnzahlReserviertPickpos
+			WHERE kWarenLagerEingang = @kWarenLagerEingang;
+
+			-- PK der Virtuellen Tabelle dropen, damit er in der reallen erstellt werden kann
+			ALTER TABLE #WarenLagerEingang DROP COLUMN kWarenLagerEingang;
+ 
+			IF(CONTEXT_INFO() IS NOT NULL)
+			BEGIN
+			  SET @OldContextInfo = CONTEXT_INFO()
+			END;
+			ELSE
+			BEGIN
+			  SET @OldContextInfo = 0x0000
+			END;
+
+			SET CONTEXT_INFO 0x5085; -- Keine Trigger hier zwischen
+		
+			  -- neuen Wle anlegen mit werten vom alten
+			INSERT INTO tWarenLagerEingang  WITH(ROWLOCK) 
+			SELECT #WarenLagerEingang.* FROM #WarenLagerEingang;
+
+			-- Menge im neuen Wle setzten
+			SET @kWarenLagerEingangNew = SCOPE_IDENTITY();
+
+
+			SET CONTEXT_INFO @OldContextInfo;
+
+			UPDATE dbo.tWarenLagerEingang  WITH(ROWLOCK) 
+			SET fAnzahl = @nSplittMenge,fAnzahlAktuell = @nSplittMenge, dErstellt = @dQuellDatum,kWarenLagerEingang_Ursprung = @kWarenLagerEingang, fAnzahlReserviertPickpos = @nSplittMenge
+			WHERE kWarenLagerEingang = @kWarenLagerEingangNew;
+  
+			--Return ist PK vom neuen Wle
+			SET @kOutWarenLagerEingang = @kWarenLagerEingangNew;
+		END;
+		ELSE
+		BEGIN
+			SELECT -203000017; -- es wird versucht mehr zu splitten als auf der Lagereingang ist, dies mu&#223; vorher abgefangen werden
+		END;
+	END;
+END TRY
+
+BEGIN CATCH	
+	SELECT -203000018;
+END CATCH</code></pre>
+</body>
+</html>

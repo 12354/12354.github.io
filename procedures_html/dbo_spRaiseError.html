@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spRaiseError</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spRaiseError</h1>
+    <p><strong>Description:</strong> Die Stored Procedure wird intern für das Errorhandling genutzt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spRaiseError]
+	@ErrorNumber INT,
+	@ErrorData XML,
+	@WithRollback BIT = 1
+AS 
+BEGIN
+	DECLARE @kErrorId VARCHAR(100);
+	DECLARE @kErrorMessage INT;
+	SELECT @kErrorMessage = kErrorMessage 
+		FROM dbo.tSqlErrorMessages
+		WHERE kErrorMessage = @ErrorNumber;
+	IF(@kErrorMessage IS NULL)
+	BEGIN
+		RAISERROR(&#39;Nicht referenzierter Fehler %s wurde geworfen.&#39;, 18,1, @ErrorNumber);
+		RETURN
+	END
+	IF(@@TRANCOUNT &gt; 0 AND @WithRollback = 1)
+	BEGIN
+		ROLLBACK;
+	END	
+	INSERT INTO dbo.tSqlError 
+	(
+		kErrorMessage,
+		cErrorData
+	)
+	VALUES 
+	(
+		@ErrorNumber,
+		@ErrorData
+	);
+	SET @kErrorId = CAST(SCOPE_IDENTITY() AS VARCHAR(100));
+	RAISERROR(&#39;SQLError %s&#39;, 18, 1, @kErrorId);
+END</code></pre>
+</body>
+</html>

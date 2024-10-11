@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spBereinigenInaktiveArtikel</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spBereinigenInaktiveArtikel</h1>
+    <p><strong>Description:</strong> Die Procedure löscht alle inaktiven Artikel dauerhaft aus der Datenbank.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spBereinigenInaktiveArtikel]
+AS
+     SET NOCOUNT OFF;
+     SET ANSI_NULLS ON;
+     SET ANSI_NULL_DFLT_ON ON;
+     SET ANSI_PADDING ON;
+     SET CONCAT_NULL_YIELDS_NULL ON;
+     SET XACT_ABORT OFF;
+    BEGIN
+        DELETE item
+        FROM dbo.tArtikel AS item
+        -- TODO: Auftrag, Warenlagereingang, Retouren, Lieferantenbestellung -&gt; Sollte der Artikel dort in Verwendung sein, darf er nicht mehr gel&#246;scht werden
+        WHERE item.cAktiv = &#39;N&#39;
+              AND NOT EXISTS
+        (
+            SELECT 1
+            FROM Artikel.tArtikelType AS ArtT
+            WHERE item.kArtikel = ArtT.kArtikel
+                  AND ArtT.uArtikelType IN(&#39;0200D767-9A5C-4B6A-882E-051FFA69A9D2&#39;, &#39;B268BC2F-55D4-468D-B55A-A6317DD78D0E&#39;)
+        );
+    END;</code></pre>
+</body>
+</html>

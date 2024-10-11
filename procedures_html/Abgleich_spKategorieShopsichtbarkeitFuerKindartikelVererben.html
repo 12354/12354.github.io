@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abgleich.spKategorieShopsichtbarkeitFuerKindartikelVererben</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Abgleich.spKategorieShopsichtbarkeitFuerKindartikelVererben</h1>
+    <p><strong>Description:</strong> Die Procedure wird im Abgleich aufgerufen um Sichtbarkeiten im Shop zu vererben.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Abgleich].[spKategorieShopsichtbarkeitFuerKindartikelVererben] 
+	@kShop INT,
+	@kKategorie INT,
+	@nLoeschen INT 
+
+AS 
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+
+	DELETE dbo.tQueue
+		WHERE tQueue.kPlattform = 0
+			AND tQueue.cName = &#39;tKategorie&#39;
+			AND tQueue.nAction = 2
+			AND tQueue.kOption1 = 0
+			AND tQueue.kOption2 = 0
+			AND tQueue.kShop = @kShop
+			AND tQueue.kWert = @kKategorie;
+
+	CREATE TABLE #tkategorieArtikel
+	(
+		kArtikel INT
+	);
+	INSERT INTO #tkategorieArtikel (kArtikel)
+	SELECT DISTINCT tArtikel.kArtikel FROM dbo.tkategorieartikel
+	JOIN dbo.tArtikel ON tArtikel.kArtikel = tkategorieartikel.kArtikel
+	LEFT JOIN
+	(
+		-- Normale Variationen nicht bei Kassen-Shops aktivieren
+		SELECT tArtikel.kArtikel
+		FROM dbo.tArtikel
+		JOIN dbo.teigenschaft ON tArtikel.kArtikel = teigenschaft.kArtikel
+		JOIN dbo.tShop ON tShop.kShop = @kShop
+		WHERE tArtikel.nIstVater = 0
+			AND tShop.nTyp = 4
+	) AS NichtAktivieren ON tArtikel.kArtikel = NichtAktivieren.kArtikel
+	WHERE tkategorieartikel.kKategorie = @kKategorie
+		AND tArtikel.cAktiv = &#39;Y&#39;
+		AND NichtAktivieren.kArtikel IS NULL;
+
+	IF (@nLoeschen = 0)
+	BEGIN
+		-- tKategorieShop
+		MERGE INTO dbo.tKategorieShop
+		USING (
+			SELECT DISTINCT kKategorie FROM dbo.tkategorieShop
+			WHERE kKategorie = @kKategorie
+		) AS Source(kKategorie)
+		ON tKategorieShop.kKategorie = Source.kKategorie AND kShop = @kShop
+		WHEN MATCHED THEN
+			UPDATE SET cInet = &#39;Y&#39; 
+		WHEN NOT MATCHED BY TARGET THEN
+			INSERT (kKategorie, kShop, cInet, cDelInet, nInBearbeitung) VALUES (@kKategorie, @kShop, &#39;Y&#39;, &#39;&#39;, 0);
+		
+		-- tArtikelShop
+		MERGE INTO dbo.tArtikelShop
+		USING ( 
+			SELECT kArtikel FROM #tkategorieArtikel
+		) AS Source(kArtikel)
+		ON tArtikelShop.kArtikel = Source.kArtikel AND tArtikelShop.kShop = @kShop
+		WHEN MATCHED THEN 
+			UPDATE SET cInet = &#39;Y&#39;,
+				nAktion = 1
+		WHEN NOT MATCHED BY TARGET THEN
+			INSERT (kArtikel, kShop, cInet, cDelInet) VALUES (Source.kArtikel, @kShop, &#39;Y&#39;, &#39;N&#39;);
+		
+		-- tArtikelBildPlattform
+		UPDATE dbo.tArtikelbildPlattform
+			SET nInet = 1
+		FROM dbo.tArtikelbildPlattform
+		JOIN dbo.tArtikel ON tArtikel.kArtikel = tArtikelbildPlattform.kArtikel
+		JOIN dbo.tkategorieartikel ON tkategorieartikel.kArtikel = tArtikel.kArtikel
+		WHERE tArtikel.cAktiv = &#39;Y&#39; 
+			AND tkategorieartikel.kKategorie = @kKategorie 
+			AND tArtikelbildPlattform.kPlattform = 2 
+			AND tArtikelbildPlattform.nInet = 0
+			AND tArtikelbildPlattform.kShop = @kShop;
+		
+		-- tEigenschaftWertPict
+		UPDATE dbo.tEigenschaftWertPict
+			SET nInet = 1
+		FROM dbo.tEigenschaftWertPict
+			JOIN dbo.tEigenschaftWert ON tEigenschaftWert.kEigenschaftWert = tEigenschaftWertPict.kEigenschaftWert
+			JOIN dbo.tEigenschaft ON tEigenschaft.kEigenschaft = tEigenschaftWert.kEigenschaft
+			JOIN dbo.tArtikel ON tArtikel.kArtikel = tEigenschaft.kArtikel
+			JOIN dbo.tkategorieartikel ON tkategorieartikel.kArtikel = tArtikel.kArtikel
+		WHERE tkategorieartikel.kKategorie IN (SELECT kKategorie FROM dbo.ifKategoriebaum(@kKategorie))
+			AND tEigenschaftWertPict.nInet = 0				
+			AND tEigenschaftWertPict.kShop = @kShop;
+	END;
+	ELSE
+	BEGIN
+		CREATE TABLE #KategorieArtikelNotToDelete
+		(
+			kArtikel INT
+		);
+
+		INSERT INTO #KategorieArtikelNotToDelete ( kArtikel )
+			SELECT #tKategorieArtikel.kArtikel FROM dbo.tkategorieartikel
+			JOIN dbo.tKategorieShop ON tKategorieShop.kKategorie = tkategorieartikel.kKategorie
+			JOIN #tKategorieArtikel ON #tKategorieArtikel.kArtikel = tkategorieartikel.kArtikel
+			WHERE tKategorieShop.kKategorie != @kKategorie;
+
+		DELETE FROM dbo.tkategorieShop 
+		WHERE tkategorieShop.kKategorie = @kKategorie 
+			AND tKategorieShop.kShop = @kShop;
+
+		DELETE dbo.tArtikelShop  
+		FROM 
+			dbo.tArtikelShop 
+		LEFT JOIN 
+			dbo.tArtikel ON tArtikel.kArtikel = tArtikelShop.kArtikel
+		LEFT JOIN 
+			dbo.tkategorieartikel ON tkategorieartikel.kArtikel = tArtikelShop.kArtikel 
+		WHERE tArtikelShop.kShop = @kShop 
+			AND tkategorieartikel.kKategorie = @kKategorie
+			AND tArtikelShop.kArtikel NOT IN 
+			(
+				SELECT #KategorieArtikelNotToDelete.kArtikel
+				FROM #KategorieArtikelNotToDelete
+			);
+
+		DROP TABLE #KategorieArtikelNotToDelete;
+	END;
+
+	DROP TABLE #tkategorieArtikel;
+END;</code></pre>
+</body>
+</html>

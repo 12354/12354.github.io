@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spBestandsUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spBestandsUpdate</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spBestandsUpdate] @BestandsUpdateDaten AS FulfillmentNetwork.[TYPE_spBestandsUpdate] READONLY
+,                                                @kBenutzer INT
+, @kVorgang INT
+, @cSessionId VARCHAR(100)
+AS
+BEGIN
+		--
+		-- Konstanten: Buchungsarten
+		--
+		DECLARE @BUCHUNGSART_WARENEINGANG INT = 10
+		DECLARE @BUCHUNGSART_WARENAUSGANG INT = 20
+		DECLARE @BUCHUNGSART_KORREKTURBUCHUNG INT = 30
+		DECLARE @BUCHUNGSART_INVENTURBUCHUNG INT = 90
+		DECLARE @BUCHUNGSART_ZUSTANDSAENDERUNG INT = 150
+		DECLARE @BUCHUNGSART_SONSTIGE INT = 70
+		DECLARE @BUCHUNGSART_RETOURE INT = 170
+
+		--
+		-- Parameter
+		--
+		DECLARE @kArtikel INT
+		DECLARE @kBuchungsart INT
+		DECLARE @nSeriennummern INT
+		DECLARE @nCharge INT
+		DECLARE @nMHD INT
+		DECLARE @fAnzahl DECIMAL(28,14)
+		DECLARE @fEKNetto DECIMAL(28,14)
+		DECLARE @kWarenlager INT
+		DECLARE @kWarenlagerPlatz INT
+		DECLARE @cChargenNr VARCHAR(255)
+		DECLARE @cSeriennummer VARCHAR(128)
+		DECLARE @dMHD DATETIME
+		DECLARE @cKommentar VARCHAR(255)
+		DECLARE @kUmlagerung INT
+		DECLARE @kStreckenlagerPlatz INT
+		DECLARE @dGebucht datetime
+		DECLARE @kBestellPosUmlagerung int
+		DECLARE @cLieferscheinNr varchar(255)
+		DECLARE @kLieferantenBestellung int
+		DECLARE @cArtNr varchar(255)
+		DECLARE @cName varchar(255)
+		DECLARE @cOutboundItemId VARCHAR(255)
+		DECLARE @kMerchantStockChange INT
+		DECLARE @kRmRetourePos INT
+		DECLARE @cJfsku varchar(255)
+		DECLARE @nGesperrt TINYINT
+		--
+		-- Cursor &#252;ber alle Buchungen
+		--
+		DECLARE buchungen_cursor CURSOR FAST_FORWARD LOCAL
+		FOR
+		SELECT 
+			Daten.kArtikel,
+			Daten.cArtNr,
+			Artikelbeschreibung.cName,
+			Daten.nSeriennummern,
+			Daten.nCharge,
+			Daten.nMHD,
+			Daten.fEKNetto,
+			Daten.kBuchungsart,
+			Daten.fAnzahl,
+			Daten.cChargenNr,
+			Daten.dMHD,
+			Daten.cKommentar,
+			Daten.cLieferscheinNr,
+			Daten.dGebucht,
+			Daten.cSeriennummer,
+			Daten.kWarenlager,
+			Daten.kWarenlagerPlatz,
+			Daten.kUmlagerung,
+			Daten.kStreckenlagerPlatz,
+			Daten.kBestellPosUmlagerung,
+			Daten.kLieferantenBestellung,
+			Daten.cOutboundItemId,
+			Daten.kMerchantStockChange,
+			Daten.kRmRetourePos,
+			FulfillmentNetwork.tProductRef.cJfsku,
+			Platz.nGesperrt
+
+		FROM  @BestandsUpdateDaten AS Daten
+				  JOIN dbo.tWarenLagerPlatz AS Platz ON Platz.kWarenLagerPlatz = Daten.kWarenlagerPlatz
+				  JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = Daten.kArtikel
+				  JOIN dbo.tArtikelBeschreibung AS Artikelbeschreibung ON Artikelbeschreibung.kArtikel = Daten.kArtikel AND Artikelbeschreibung.kPlattform = 1
+				  JOIN dbo.tSpracheUsed AS Sprache ON Sprache.kSprache = Artikelbeschreibung.kSprache AND Sprache.nStandard = 1
+		ORDER BY Daten.cJfsku, Daten.nStockVersion
+		
+		
+
+		OPEN buchungen_cursor
+		FETCH NEXT FROM buchungen_cursor INTO @kArtikel, @cArtNr,@cName, @nSeriennummern, @nCharge, @nMHD,@fEKNetto, @kBuchungsart, @fAnzahl, @cChargenNr, @dMHD, @cKommentar, @cLieferscheinNr,@dGebucht,@cSeriennummer,@kWarenlager, @kWarenlagerPlatz, @kUmlagerung, @kStreckenlagerPlatz, @kBestellPosUmlagerung, @kLieferantenBestellung, @cOutboundItemId,@kMerchantStockChange, @kRmRetourePos,@cJfsku,@nGesperrt
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+
+			DECLARE @bGebucht TINYINT = 0;
+			DECLARE @kGutschriftPos int = 0
+			DECLARE @kLHM int = 0
+			DECLARE @kSessionId int = 0
+			DECLARE @fEkEinzel decimal(28,14) = CAST(0 AS DECIMAL(28,14))			
+			DECLARE @nHistorieNichtSchreiben int = 0
+			DECLARE @kWarenlagerEingang int = 0
+			DECLARE @kLieferantenBestellungPos INT = 0
+			DECLARE @cMessage VARCHAR(255) = LTRIM(RTRIM(REPLACE(@cKommentar,&#39;[Fulfillment]&#39;,&#39;&#39;)))
+			--
+			-- Wenn es eine Lieferantenbestellung f&#252;r diesen WE gab, dann Lieferatenbestellungspos aktualisieren
+			--
+			IF (@kLieferantenBestellung &gt; 0 AND ABS(@fAnzahl) &gt; 0) --ABS damit auch Minusbuchungen funktionieren
+			BEGIN				
+				DECLARE @fAnzahlZuBuchen DECIMAL(28, 14) = @fAnzahl;
+				DECLARE @fMenge DECIMAL(28, 14);
+				DECLARE @fMengeGeliefert DECIMAL(28, 14);
+
+				DECLARE lieferantenbestellungCursor CURSOR FAST_FORWARD READ_ONLY FOR
+				SELECT LieferantenBestellungPos.kLieferantenBestellungPos AS kLieferantenbestellungPos,
+					   LieferantenBestellungPos.fMenge,
+					   LieferantenBestellungPos.fMengeGeliefert
+				FROM dbo.tLieferantenBestellungPos AS LieferantenBestellungPos
+				WHERE LieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung
+					  AND LieferantenBestellungPos.kArtikel = @kArtikel;
+				OPEN lieferantenbestellungCursor;
+
+				FETCH NEXT FROM lieferantenbestellungCursor
+				INTO @kLieferantenbestellungPos,
+					 @fMenge,
+					 @fMengeGeliefert;
+				
+				
+				WHILE @@FETCH_STATUS = 0 AND ABS(@fAnzahlZuBuchen) &gt; 0
+				BEGIN
+
+					DECLARE @fMengeOffen DECIMAL(28, 14) = @fMenge - @fMengeGeliefert;
+					DECLARE @nStatus AS INT;
+					DECLARE @xLieferantenbestellungPos AS XML;
+
+					IF (@fMengeOffen &gt; 0) AND (@fAnzahl &gt; 0)
+					BEGIN
+						DECLARE @fMengeBuchen DECIMAL(28, 14) =
+								(
+									SELECT MIN(x) FROM (VALUES (@fMengeOffen), (@fAnzahlZuBuchen)) AS value (x)
+								);
+
+						SET @xLieferantenbestellungPos =
+						(
+							SELECT LieferantenBestellungPos.kLieferantenBestellungPos AS kLieferantenbestellungPos,
+								   LieferantenBestellungPos.kLieferantenBestellung AS kLieferantenbestellung,
+								   LieferantenBestellungPos.kArtikel,
+								   LieferantenBestellungPos.cArtNr,
+								   LieferantenBestellungPos.cLieferantenArtNr,
+								   LieferantenBestellungPos.cName,
+								   LieferantenBestellungPos.cLieferantenBezeichnung,
+								   LieferantenBestellungPos.fUST,
+								   LieferantenBestellungPos.fMenge,
+								   LieferantenBestellungPos.cHinweis,
+								   LieferantenBestellungPos.fEKNetto,
+								   LieferantenBestellungPos.nPosTyp,
+								   LieferantenBestellungPos.cNameLieferant,
+								   LieferantenBestellungPos.nLiefertage,
+								   @dGebucht AS dLieferdatum,
+								   LieferantenBestellungPos.nSort,
+								   LieferantenBestellungPos.kLieferscheinPos,
+								   LieferantenBestellungPos.fMengeGeliefert + @fMengeBuchen AS fMengeGeliefert,
+								   LieferantenBestellungPos.cVPEEinheit,
+								   LieferantenBestellungPos.nVPEMenge
+							FROM dbo.tLieferantenBestellungPos AS LieferantenBestellungPos
+							WHERE LieferantenBestellungPos.kLieferantenBestellungPos = @kLieferantenbestellungPos
+							FOR XML PATH(&#39;LieferantenbestellungPos&#39;), TYPE
+						);      
+
+						SELECT @nStatus = LieferantenBestellung.nStatus
+						FROM dbo.tLieferantenBestellung AS LieferantenBestellung;
+
+						IF (@nStatus &lt;&gt; 20) --Damit man noch was auf die LB buchen kann, auch wenn diese bereits abgeschlossen ist
+						BEGIN
+							EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusAendern @kLieferantenBestellung = @kLieferantenBestellung,
+																							   @nStatus = 20;
+						END;
+
+						EXECUTE Lieferantenbestellung.spLieferantenBestellungPosBearbeiten @xLieferantenbestellungPos;
+						EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusUpdate @kLieferantenBestellung;
+						--
+						-- Wenn es eine Umlagerung war, dann aus Streckenlager ausbuchen
+						--
+										DECLARE @cLogMessageStrecke VARCHAR(8000)
+						IF (@kUmlagerung &gt; 0)
+						BEGIN
+							SET @cLogMessageStrecke = &#39;Artikel &#39; + @cArtNr + &#39; wurde erfolgreich aus dem Streckenlager gebucht.&#39;;
+							IF(NOT @cMessage = &#39;&#39;)
+							BEGIN
+								SET @cLogMessageStrecke = @cLogMessageStrecke + &#39; Kommentar: &#39; + @cMessage;
+							END
+							EXECUTE [FulfillmentNetwork].spMinusbuchung @kArtikel
+							,                                           @nSeriennummern
+							,                                           @nCharge
+							,                                           @nMHD
+							,                                           @kStreckenlagerPlatz
+							,                                           @fMengeBuchen
+							,                                           @kBenutzer
+							,                                           &#39;Ausbuchen aus Streckenlager [Fulfillment]&#39;
+							,                                           @cChargenNr
+							,                                           @dMHD
+							,                                           @kUmlagerung
+							,											@kMerchantStockChange
+							,											@kVorgang
+							,											@cSeriennummer
+							,											@cSessionId
+							,											@cLogMessageStrecke
+						END
+
+						SET @fAnzahlZuBuchen = @fAnzahlZuBuchen - @fMengeBuchen;
+					END ELSE IF (@fAnzahl &lt; 0 AND @kBuchungsart = @BUCHUNGSART_KORREKTURBUCHUNG)  --IF (@fMengeOffen &gt; 0)
+					BEGIN
+						-- Korrekturbuchung f&#252;r einen Inbound
+						-- Hier werden die Mengen der Lieferantenbestellung angepasst						
+						DECLARE @QuantityToReduce DECIMAL(28, 14) =
+								(
+									SELECT MIN(x) FROM (VALUES (@fMengeGeliefert), (ABS(@fAnzahlZuBuchen))) AS value (x)
+								) * -1;
+								
+						SET @xLieferantenbestellungPos =
+						(
+							SELECT LieferantenBestellungPos.kLieferantenBestellungPos AS kLieferantenbestellungPos,
+								   LieferantenBestellungPos.kLieferantenBestellung AS kLieferantenbestellung,
+								   LieferantenBestellungPos.kArtikel,
+								   LieferantenBestellungPos.cArtNr,
+								   LieferantenBestellungPos.cLieferantenArtNr,
+								   LieferantenBestellungPos.cName,
+								   LieferantenBestellungPos.cLieferantenBezeichnung,
+								   LieferantenBestellungPos.fUST,
+								   LieferantenBestellungPos.fMenge,
+								   LieferantenBestellungPos.cHinweis,
+								   LieferantenBestellungPos.fEKNetto,
+								   LieferantenBestellungPos.nPosTyp,
+								   LieferantenBestellungPos.cNameLieferant,
+								   LieferantenBestellungPos.nLiefertage,
+								   @dGebucht AS dLieferdatum,
+								   LieferantenBestellungPos.nSort,
+								   LieferantenBestellungPos.kLieferscheinPos,
+								   LieferantenBestellungPos.fMengeGeliefert + @QuantityToReduce AS fMengeGeliefert,
+								   LieferantenBestellungPos.cVPEEinheit,
+								   LieferantenBestellungPos.nVPEMenge
+							FROM dbo.tLieferantenBestellungPos AS LieferantenBestellungPos
+							WHERE LieferantenBestellungPos.kLieferantenBestellungPos = @kLieferantenbestellungPos
+							FOR XML PATH(&#39;LieferantenbestellungPos&#39;), TYPE
+						);      
+
+						SELECT @nStatus = LieferantenBestellung.nStatus
+						FROM dbo.tLieferantenBestellung AS LieferantenBestellung;
+
+						IF (@nStatus &lt;&gt; 20) --Damit man noch was auf die LB buchen kann, auch wenn diese bereits abgeschlossen ist
+						BEGIN
+							EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusAendern @kLieferantenBestellung = @kLieferantenBestellung,
+																							   @nStatus = 20;
+						END;
+
+						EXECUTE Lieferantenbestellung.spLieferantenBestellungPosBearbeiten @xLieferantenbestellungPos;
+						EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusUpdate @kLieferantenBestellung;					
+					
+						--
+						-- Wenn es eine Umlagerung war, dann PlusBuchung in Streckenlager
+						--
+						IF (@kUmlagerung &gt; 0)
+						BEGIN							
+							SET @cLogMessageStrecke = &#39;Artikel &#39; + @cArtNr + &#39; wurde erfolgreich in das Streckenlager eingebucht.&#39;;
+							IF(NOT @cMessage = &#39;&#39;)
+							BEGIN
+								SET @cLogMessageStrecke = @cLogMessageStrecke + &#39; Kommentar: &#39; + @cMessage;
+							END
+							DECLARE @fPlusBuchung DECIMAL(28, 14) = ABS(@QuantityToReduce)
+							DECLARE @dGeliefertAm DATETIME = GETDATE()
+							EXECUTE [FulfillmentNetwork].spPlusbuchung @kArtikel
+							,                                           @nSeriennummern
+							,                                           @nCharge
+							,                                           @nMHD
+							,										    @kWarenLager
+							,                                           @kStreckenlagerPlatz
+							,											@kLieferantenBestellungPos
+							,											@kLieferantenBestellung
+							,                                           @kBenutzer
+							,                                           @fPlusBuchung
+							,											@cLieferscheinNr
+							,                                           @cChargenNr
+							,                                           @dMHD
+							,											@fEKNetto
+							,											@dGeliefertAm
+							,											&#39;Einbuchen in Streckenlager [Fulfillment]&#39;							
+							,											@BUCHUNGSART_KORREKTURBUCHUNG
+							,											@kBestellPosUmlagerung
+							,											@kMerchantStockChange
+							,											@kVorgang
+							,											@cSeriennummer
+							,											@cSessionId
+							,											@cLogMessageStrecke
+							,											0 -- Historie in spWarenlagerEingangSchreiben schreiben
+							,											0 -- kBestellPos
+							,											0 -- kLieferscheinPos
+							,											0 -- kRmRetourePos
+						END
+
+
+						SET @fAnzahlZuBuchen = @fAnzahlZuBuchen + @QuantityToReduce;
+					END;
+
+					DECLARE @ArtikelToUpdate AS TYPE_spUpdateLagerbestand
+					INSERT @ArtikelToUpdate
+					(
+						kArtikel
+					)
+					VALUES
+					(
+						@kArtikel
+					)
+					EXEC dbo.spUpdateLagerbestand @ArtikelToUpdate
+					
+					FETCH NEXT FROM lieferantenbestellungCursor
+					INTO @kLieferantenbestellungPos,
+						 @fMenge,
+						 @fMengeGeliefert;
+				END;
+
+				CLOSE lieferantenbestellungCursor;
+				DEALLOCATE lieferantenbestellungCursor;
+
+				-- Wenn Position nicht in der Lieferantenbestellung vorhanden, dann wird die Position hinzugef&#252;gt
+				IF EXISTS(SELECT * FROM tLieferantenBestellung WHERE NOT EXISTS
+							(
+								SELECT * FROM tLieferantenBestellungPos 
+								WHERE kLieferantenBestellung = tLieferantenBestellung.kLieferantenBestellung
+								AND kArtikel = @kArtikel
+							) AND tLieferantenBestellung.kLieferantenBestellung = @kLieferantenBestellung)
+				BEGIN					
+					DECLARE @xLieferantenbestellungPosNeu AS XML;
+					DECLARE @kLieferantenbestellungPosNeu INT = 0;
+					
+					SELECT * INTO #ProductData FROM dbo.vStandardArtikel WHERE kArtikel = @kArtikel
+					
+					DECLARE @fMwst decimal(28,14) = (SELECT TOP 1 fMwst FROM #ProductData);
+					DECLARE @cVPEEinheit varchar(255) = (SELECT TOP 1 cVPEEinheit FROM #ProductData);
+					DECLARE @nVPE INT = (SELECT TOP 1 nVPE FROM #ProductData);
+
+					EXECUTE [Lieferantenbestellung].[spLieferantenBestellungPosErstellen] 
+						   @kLieferantenbestellung
+						  ,@xLieferantenbestellungPos
+						  ,@nStatus
+						  ,@kArtikel
+						  ,@cArtNr
+						  ,&#39;&#39;
+						  ,@cName
+						  ,NULL
+						  ,@fMwst
+						  ,@fAnzahl
+						  ,&#39;Zusatzbuchung durch Fulfiller&#39;
+						  ,@fEKNetto
+						  ,1
+						  ,NULL
+						  ,NULL
+						  ,NULL
+						  ,0
+						  ,NULL
+						  ,@cVPEEinheit
+						  ,@nVPE
+						  ,@kLieferantenbestellungPosNeu OUTPUT
+
+					DROP TABLE #ProductData
+						
+				END
+
+				IF (@fAnzahlZuBuchen &gt; 0)
+				BEGIN
+
+					SET @xLieferantenbestellungPos =
+					(
+						SELECT TOP 1
+							   LieferantenBestellungPos.kLieferantenBestellungPos AS kLieferantenbestellungPos,
+							   LieferantenBestellungPos.kLieferantenBestellung  AS kLieferantenbestellung,
+							   LieferantenBestellungPos.kArtikel,
+							   LieferantenBestellungPos.cArtNr,
+							   LieferantenBestellungPos.cLieferantenArtNr,
+							   LieferantenBestellungPos.cName,
+							   LieferantenBestellungPos.cLieferantenBezeichnung,
+							   LieferantenBestellungPos.fUST,
+							   LieferantenBestellungPos.fMenge,
+							   LieferantenBestellungPos.cHinweis,
+							   LieferantenBestellungPos.fEKNetto,
+							   LieferantenBestellungPos.nPosTyp,
+							   LieferantenBestellungPos.cNameLieferant,
+							   LieferantenBestellungPos.nLiefertage,
+							   @dGebucht AS dLieferdatum,
+							   LieferantenBestellungPos.nSort,
+							   LieferantenBestellungPos.kLieferscheinPos,
+							   LieferantenBestellungPos.fMengeGeliefert + @fAnzahlZuBuchen AS fMengeGeliefert,
+							   LieferantenBestellungPos.cVPEEinheit,
+							   LieferantenBestellungPos.nVPEMenge
+						FROM dbo.tLieferantenBestellungPos AS LieferantenBestellungPos
+						WHERE LieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung
+							  AND LieferantenBestellungPos.kArtikel = @kArtikel
+						FOR XML PATH(&#39;LieferantenbestellungPos&#39;), TYPE
+					);  
+
+					SELECT @nStatus = LieferantenBestellung.nStatus
+					FROM dbo.tLieferantenBestellung AS LieferantenBestellung;
+
+					IF (@nStatus &lt;&gt; 20) --Damit man noch was auf die LB buchen kann, auch wenn diese bereits abgeschlossen ist
+					BEGIN
+						EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusAendern @kLieferantenBestellung = @kLieferantenBestellung,
+																						   @nStatus = 20;
+					END;
+
+					EXECUTE Lieferantenbestellung.spLieferantenBestellungPosBearbeiten @xLieferantenbestellungPos;
+					EXECUTE Lieferantenbestellung.spLieferantenBestellungStatusUpdate @kLieferantenBestellung;
+
+					SET @fAnzahlZuBuchen = 0;
+				END;
+
+				 SELECT @fEkEinzel = MAX(LieferantenBestellungPos.fEKNetto)
+					FROM dbo.tLieferantenBestellungPos AS LieferantenBestellungPos
+					WHERE LieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung
+						  AND LieferantenBestellungPos.kArtikel = @kArtikel;
+			END
+					
+
+			--
+			-- Wenn es Plusbuchungen gab, dann WarenlagerEing&#228;nge schreiben
+			--
+			IF (@fAnzahl &gt; 0 AND (@kBuchungsart = @BUCHUNGSART_WARENEINGANG OR @kBuchungsart = @BUCHUNGSART_KORREKTURBUCHUNG OR @kBuchungsart = @BUCHUNGSART_INVENTURBUCHUNG OR @kBuchungsart = @BUCHUNGSART_RETOURE))
+			BEGIN
+				DECLARE @cLogMessage VARCHAR(8000)	
+				DECLARE @fAnzahlVerfuegbar DECIMAL(28,14) = 0
+				DECLARE @fAnzahlGesperrt DECIMAL(28,14) = 0
+				IF(@nGesperrt = 1)
+				BEGIN
+					SET @fAnzahlVerfuegbar = 0;
+					SET @fAnzahlGesperrt = @fAnzahl;
+				END
+				ELSE
+				BEGIN
+					SET @fAnzahlVerfuegbar = @fAnzahl;
+					SET @fAnzahlGesperrt = 0;
+				END
+				
+				SET @cLogMessage = &#39;Plusbuchung f&#252;r Artikel &#39; + @cJfsku + &#39;, Menge: &#39; + FORMAT(@fAnzahlVerfuegbar, &#39;0.####&#39;, &#39;de-de&#39;)+ &#39;, f&#252;r verf&#252;gbaren Bestand gesperrt: &#39; + FORMAT(@fAnzahlGesperrt, &#39;0.####&#39;, &#39;de-de&#39;)
+
+				IF (@dMHD IS NOT NULL)
+				BEGIN
+					SET @cLogMessage = @cLogMessage + &#39; MHD: &#39; + FORMAT(@dMHD,&#39;yyyy MMMM dd&#39;);
+				END
+
+				IF(@cChargenNr IS NOT NULL AND NOT @cChargenNr = &#39;&#39;)
+				BEGIN
+					SET @cLogMessage = @cLogMessage + &#39; Charge: &#39; + @cChargenNr;
+				END
+
+				IF(NOT @cMessage = &#39;&#39;)
+				BEGIN
+					SET @cLogMessage = @cLogMessage + &#39; Kommentar: &#39; + @cMessage;
+				END
+
+				DECLARE @nSeriennummernErstellen INT = @nSeriennummern
+				--
+				-- Bei einer Umlagerung wurde die Seriennummer bereits wieder frei gegeben und dem richtigen Lager zugeordnet
+				--
+				IF(@kUmlagerung &gt; 0)
+				BEGIN
+					SET @nSeriennummernErstellen = 0;
+				END
+				
+				IF(@fEkEinzel IS NOT NULL AND @fEkEinzel &gt; 0)
+				BEGIN
+					SET @fEKNetto = @fEkEinzel;
+				END
+				IF(@fEKNetto IS NULL)
+				BEGIN
+					SET @fEKNetto = CAST(0 AS DECIMAL(28,14));
+				END				
+				
+
+				DECLARE @kBestellPos INT = 0;
+				Declare @kLieferscheinPos INT = 0;
+
+				IF (@cOutboundItemId &lt;&gt; &#39;&#39;) 
+				BEGIN
+					SELECT @kLieferscheinPos=p.kLieferscheinPos,@kBestellPos=lp.kBestellPos FROM dbo.tFulfillmentAuftragPos p
+					JOIN dbo.tLieferscheinPos lp ON lp.kLieferscheinPos=p.kLieferscheinPos
+					WHERE kFulfillmentAuftragPos = CONVERT(INT,@cOutboundItemId)
+				END
+
+				EXECUTE [FulfillmentNetwork].[spPlusbuchung] @kArtikel
+				,                                            @nSeriennummernErstellen
+				,                                            @nCharge
+				,                                            @nMHD
+				,                                            @kWarenLager
+				,                                            @kWarenLagerPlatz
+				,                                            @kLieferantenBestellungPos
+				,											 @kLieferantenBestellung
+				,                                            @kBenutzer
+				,                                            @fAnzahl
+				,                                            @cLieferscheinNr
+				,                                            @cChargenNr
+				,                                            @dMHD
+				,											 @fEKNetto
+				,                                            @dGebucht
+				,                                            @cKommentar
+				,                                            @kBuchungsart
+				,                                            0
+				,											 @kMerchantStockChange
+				,											 @kVorgang
+				,											 @cSeriennummer
+				,											 @cSessionId
+				,											 @cLogMessage
+				,											 1 --FulfillmentNetwork.spPlusbuchung schreibt die Historie, nicht spWarenlagerEingangSchreiben
+				,											 @kBestellPos
+				,											 @kLieferscheinPos
+				,											 @kRmRetourePos							
+				SET @bGebucht = 1;
+			END
+
+			--
+			-- Wenn es eine Minusbuchung war, dann aus JTL-Fulfillment Lager ausbuchen
+			--
+			IF (@fAnzahl &lt; 0 AND (@kBuchungsart = @BUCHUNGSART_KORREKTURBUCHUNG  OR @kBuchungsart = @BUCHUNGSART_INVENTURBUCHUNG  OR @kBuchungsart = @BUCHUNGSART_RETOURE))
+			BEGIN
+				DECLARE @fAnzahlAuszubuchen DECIMAL(28,14) = @fAnzahl * -1;
+				DECLARE @cLogMessageMinus VARCHAR(8000)
+				
+				DECLARE @kBestellPosMinusbuchung INT = 0;
+				DECLARE @kLieferscheinPosMinusbuchung INT = 0;
+
+				IF (@cOutboundItemId &lt;&gt; &#39;&#39;) 
+				BEGIN
+					SELECT @kLieferscheinPosMinusbuchung=p.kLieferscheinPos,@kBestellPosMinusbuchung=lp.kBestellPos FROM dbo.tFulfillmentAuftragPos p
+					JOIN dbo.tLieferscheinPos lp ON lp.kLieferscheinPos=p.kLieferscheinPos
+					WHERE kFulfillmentAuftragPos = CONVERT(INT,@cOutboundItemId)
+				END				
+
+				DECLARE @fAnzahlVerfuegbarMinus DECIMAL(28,14) = 0
+				DECLARE @fAnzahlGesperrtMinus DECIMAL(28,14) = 0
+				IF(@nGesperrt = 1)
+				BEGIN
+					SET @fAnzahlVerfuegbarMinus = 0;
+					SET @fAnzahlGesperrtMinus = @fAnzahl;
+				END
+				ELSE
+				BEGIN
+					SET @fAnzahlVerfuegbarMinus = @fAnzahl;
+					SET @fAnzahlGesperrtMinus = 0;
+				END
+				
+				SET @cLogMessageMinus = &#39;Minusbuchung f&#252;r Artikel &#39; + @cJfsku + &#39;, Menge: &#39; + FORMAT(@fAnzahlVerfuegbarMinus, &#39;0.####&#39;, &#39;de-de&#39;) + &#39;, f&#252;r verf&#252;gbaren Bestand gesperrt: &#39; + FORMAT(@fAnzahlGesperrtMinus, &#39;0.####&#39;, &#39;de-de&#39;)
+
+				IF (@dMHD IS NOT NULL)
+				BEGIN
+					SET @cLogMessageMinus = @cLogMessageMinus + &#39; MHD: &#39; + FORMAT(@dMHD,&#39;yyyy MMMM dd&#39;);
+				END
+
+				IF(@cChargenNr IS NOT NULL AND NOT @cChargenNr = &#39;&#39;)
+				BEGIN
+					SET @cLogMessageMinus = @cLogMessageMinus + &#39; Charge: &#39; + @cChargenNr;
+				END
+
+				IF(NOT @cMessage = &#39;&#39;)
+				BEGIN
+					SET @cLogMessageMinus = @cLogMessageMinus + &#39; Kommentar: &#39; + @cMessage;
+				END
+
+				EXEC FulfillmentNetwork.spMinusbuchung @kArtikel = @kArtikel,                 -- int
+				                                       @nSeriennummern = @nSeriennummern,           -- int
+				                                       @nCharge = @nCharge,                  -- int
+				                                       @nMHD = @nMHD,                     -- int
+				                                       @kWarenlagerPlatz = @kWarenlagerPlatz,         -- int
+				                                       @fAnzahlAuszubuchen = @fAnzahlAuszubuchen,    -- decimal(28, 14)
+				                                       @kBenutzer = @kBenutzer,                -- int
+				                                       @cKommentar = @cKommentar,              -- varchar(255)
+				                                       @cChargenNr = @cChargenNr,              -- varchar(255)
+				                                       @dMHD = @dMHD, -- datetime
+				                                       @kUmlagerung = null,              -- int
+				                                       @kMerchantStockChange = @kMerchantStockChange,     -- int
+													   @kVorgang = @kVorgang,     -- int
+				                                       @cSeriennummer = @cSeriennummer,           -- varchar(128)
+				                                       @cSessionId = @cSessionId,              -- varchar(100)
+				                                       @cLogMeldung = @cLogMessageMinus,             -- varchar(8000)
+				                                       @kLieferscheinPos = @kLieferscheinPosMinusbuchung,         -- int
+				                                       @kPickliste = 0,               -- int
+				                                       @nHistorieNichtSchreiben = 0   -- int
+		
+
+				SET @bGebucht = 1
+			END
+
+			IF(@bGebucht = 0)
+			BEGIN
+				DECLARE @err AS NVARCHAR(255) = N&#39;Buchung f&#252;r den Artikel &#39; + @cArtNr + &#39; mit der Menge &#39; + FORMAT(@fAnzahl, &#39;0.####&#39;, &#39;de-de&#39;) + &#39; nicht erfolgt&#39;;
+				RAISERROR(@err, 15,1);
+				RETURN;
+			END
+
+
+
+				FETCH NEXT FROM buchungen_cursor INTO @kArtikel, @cArtNr,@cName, @nSeriennummern, @nCharge, @nMHD, @fEKNetto, @kBuchungsart, @fAnzahl, @cChargenNr, @dMHD, @cKommentar, @cLieferscheinNr,@dGebucht,@cSeriennummer, @kWarenlager, @kWarenlagerPlatz, @kUmlagerung, @kStreckenlagerPlatz, @kBestellPosUmlagerung, @kLieferantenBestellung, @cOutboundItemId, @kMerchantStockChange, @kRMRetourePos,@cJfsku,@nGesperrt
+		END
+
+		CLOSE buchungen_cursor
+		DEALLOCATE buchungen_cursor
+
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWarenlagerAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWarenlagerAnlegen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden neue Warenlager angelegt. Alle Informationen zum Warenlager werden übergeben.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spWarenlagerAnlegen]
+	@cName NVARCHAR(255),
+	@cKuerzel NVARCHAR(255),
+	@cLagerTyp NVARCHAR(255),
+	@cBeschreibung NVARCHAR(255),
+	@cStrasse NVARCHAR(255),
+	@cPLZ NVARCHAR(255),
+	@cOrt NVARCHAR(255),
+	@cLand NVARCHAR(255),
+	@cAnsprechpartnerAnrede NVARCHAR(255),
+	@cAnsprechpartnerVorname NVARCHAR(255),
+	@cAnsprechpartnerName NVARCHAR(255),
+	@cAnsprechpartnerTel NVARCHAR(255),
+	@cAnsprechpartnerFax NVARCHAR(255),
+	@cAnsprechpartnerEMail NVARCHAR(255),
+	@cAnsprechpartnerAbteilung NVARCHAR(255),
+	@cBundesland NVARCHAR(100),
+	@kFirma INT,
+	@kUser INT,
+	@nFulfillment INT,
+	@nLagerplatzVerwaltung INT,
+	@nAuslieferungsPrio INT,
+	@nPackStationAktiv INT,
+	@cDimension1Name NVARCHAR(255),
+	@cDimension1Trennzeichen NVARCHAR(1),
+	@nDimension1Laenge INT,
+	@nDimension1Typ INT,
+	@cDimension2Name NVARCHAR(255),
+	@cDimension2Trennzeichen NVARCHAR(1),
+	@nDimension2Laenge INT,
+	@nDimension2Typ INT,
+	@cDimension3Name NVARCHAR(255),
+	@cDimension3Trennzeichen NVARCHAR(1),
+	@nDimension3Laenge INT,
+	@nDimension3Typ INT,
+	@cDimension4Name NVARCHAR(255),
+	@cDimension4Trennzeichen NVARCHAR(1),
+	@nDimension4Laenge INT,
+	@nDimension4Typ INT,
+	@cDimension5Name NVARCHAR(255),
+	@cDimension5Trennzeichen NVARCHAR(1),
+	@nDimension5Laenge INT,
+	@nDimension5Typ INT,
+	@cEmpfaengerFirma NVARCHAR(255),
+	@kQuellLager INT,
+	@kZielLager INT,
+	@nAktiv INT,
+	@cFfnWarehouseId NVARCHAR(50), 
+	@kWarenlager INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @errorMessage NVARCHAR(4000);
+DECLARE @errorSeverity INT;
+DECLARE @errorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	BEGIN TRY
+		BEGIN TRANSACTION
+			DECLARE @nFulfillmentDienstleister INT
+			INSERT INTO dbo.tWarenLager(cName, cKuerzel, cLagerTyp, cBeschreibung, cStrasse, cPLZ, cOrt, cLand, cAnsprechpartnerAnrede, cAnsprechpartnerVorname,
+										cAnsprechpartnerName, cAnsprechpartnerTel, cAnsprechpartnerFax, cAnsprechpartnerEMail, cAnsprechpartnerAbteilung,
+										cBundesland, kFirma, kUser, nFulfillment, nLagerplatzVerwaltung, nAuslieferungsPrio, nPackStationAktiv, cDimension1Name,
+										cDimension1Trennzeichen, nDimension1Laenge, nDimension1Typ, cDimension2Name, cDimension2Trennzeichen, nDimension2Laenge,
+										nDimension2Typ, cDimension3Name, cDimension3Trennzeichen, nDimension3Laenge, nDimension3Typ, cDimension4Name,
+										cDimension4Trennzeichen, nDimension4Laenge, nDimension4Typ, cDimension5Name, cDimension5Trennzeichen, nDimension5Laenge,
+										nDimension5Typ, cEmpfaengerFirma, kQuellLager, kZielLager, nAktiv, cFfnWarehouseId)
+				    VALUES(@cName, @cKuerzel, @cLagerTyp, @cBeschreibung, @cStrasse, @cPLZ, @cOrt, @cLand, @cAnsprechpartnerAnrede, @cAnsprechpartnerVorname, 
+							@cAnsprechpartnerName, @cAnsprechpartnerTel, @cAnsprechpartnerFax, @cAnsprechpartnerEmail, @cAnsprechpartnerAbteilung, @cBundesland,
+							@kFirma, @kUser, @nFulfillment, @nLagerplatzVerwaltung, @nAuslieferungsPrio, @nPackStationAktiv, @cDimension1Name, @cDimension1Trennzeichen,
+							@nDimension1Laenge, @nDimension1Typ, @cDimension2Name, @cDimension2Trennzeichen, @nDimension2Laenge, @nDimension2Typ, @cDimension3Name,
+							@cDimension3Trennzeichen, @nDimension3Laenge, @nDimension3Typ, @cDimension4Name, @cDimension4Trennzeichen, @nDimension4Laenge,
+							@nDimension4Typ, @cDimension5Name, @cDimension5Trennzeichen, @nDimension5Laenge, @nDimension5Typ, @cEmpfaengerFirma, @kQuellLager,
+							@kZielLager, @nAktiv, @cFfnWarehouseId);
+			SET @kWarenlager = SCOPE_IDENTITY();
+			DECLARE @WARENLAGER_FULFILLMENTDIENSTLEISTER_UNBEKANNT AS INT = 0;
+			DECLARE @WARENLAGER_FULFILLMENTDIENSTLEISTER_AMAZON AS INT = 1;
+			DECLARE @WARENLAGER_FULFILLMENTDIENSTLEISTER_JTL AS INT = 2;
+			SELECT @nFulfillmentDienstleister = CASE WHEN @nFulfillment = 2
+														THEN @WARENLAGER_FULFILLMENTDIENSTLEISTER_AMAZON
+													WHEN @nFulfillment = 3
+														THEN @WARENLAGER_FULFILLMENTDIENSTLEISTER_JTL
+													ELSE @WARENLAGER_FULFILLMENTDIENSTLEISTER_UNBEKANNT
+											    END;
+			IF(@nLagerplatzVerwaltung = 1)
+			BEGIN
+				--
+				-- Warenlagerplatz anlegen bei nicht WMS-Lager
+				--
+				INSERT INTO dbo.tWarenLagerPlatz(kWarenLager, fGewichtMax, cKommentar, fLaenge, fBreite, fHoehe, nSort, cName, kWarenLagerPlatzTyp, nStatus,
+												dWmsInventurDatum, kWmsInventur, nPreInvStatus, nInvGezaehlt, nGesperrt)
+					VALUES(@kWarenlager, 0.0, &#39;&#39;, 0, 0, 0, 0,@cName, 0, 0, 0, 0, 0, 0, 0);
+			END	
+			IF @nFulfillmentDienstleister &gt; 0
+			BEGIN
+				--
+				-- Fulfillment-Dienstleister zu Fulfillmentlager anlegen
+				--
+				INSERT INTO dbo.tWarenlagerFulfillmentDienstleister(kWarenLager, kFulfillmentDienstleister, nDruckLieferschein, nFaxLieferschein, nMailLieferschein,
+																	nDruckFF, nFaxFF, nMailFF, kFormularLieferschein, kFormularFulfillmentAuftrag)
+					VALUES(@kWarenLager, @nFulfillmentDienstleister, 0, 0, 0, 0, 0, 0, 0, 0);
+			END	
+			--
+			-- tlagerbestandProLagerLagerartikel mit allen Lager-Artikeln f&#252;r Bestandsberechnung f&#252;llen
+			--
+			INSERT INTO dbo.tlagerbestandProLagerLagerartikel(kArtikel, kWarenlager, fBestand, fVerfuegbarGesperrt, fAuslieferungGesperrt)
+				SELECT Artikel.kArtikel, @kWarenlager AS kWarenLager, 0 AS fBestand, 0.0, 0.0
+				    FROM dbo.tArtikel AS Artikel
+				    WHERE Artikel.cLagerAktiv = &#39;Y&#39;
+						AND Artikel.kStueckliste = 0
+						AND Artikel.nIstVater = 0;				  
+			SET @retry = -1;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+		IF ERROR_NUMBER() = 1205
+		BEGIN
+			SET @retry = @retry - 1;
+			ROLLBACK;
+			IF @retry = 0
+			BEGIN
+				SELECT @errorMessage = ERROR_MESSAGE(),@errorSeverity = ERROR_SEVERITY(),@errorState = ERROR_STATE();
+				RAISERROR(@errorMessage,@errorSeverity,@errorState);
+				RETURN;
+			END
+			WAITFOR DELAY &#39;00:00:00:5&#39;;
+		END
+		ELSE
+		BEGIN
+			SET @retry = -1;
+			SELECT @errorMessage = ERROR_MESSAGE(),@errorSeverity = ERROR_SEVERITY(),@errorState = ERROR_STATE();
+			ROLLBACK;
+			RAISERROR(@errorMessage,@errorSeverity,@errorState);
+			RETURN;
+		END
+	END CATCH
+END</code></pre>
+</body>
+</html>

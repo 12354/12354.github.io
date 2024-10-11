@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spRandomArtikelEinlagerer</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spRandomArtikelEinlagerer</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spRandomArtikelEinlagerer]
+@kArtikel INT , -- Artikel die wir einlagern wollen
+@fAnzahl INT, -- Wieviele wir pro Platz einlagern
+@kWarenlager INT, -- welches Warenlager
+@AnzahlVerschPlaetze INT = 1, -- Auf wieviele randomplaetze soll die Artikel in der angegebenen anzahl gelagert werden.
+@cCharge NVARCHAR(255) = NULL,
+@dMHD DATETIME = NULL
+
+--
+-- Diese SP erstellt Warenlagereing&#228;nge auf zuf&#228;lligen Warenlagerpl&#228;tzen. Erstellt um Testdaten zu erzeugen. 
+-- Es wird versucht m&#246;glicht viele Pl&#228;tze zu belegen. Warenlagereing&#228;nge werden immer mit menge 1 erstellt.
+-- !!! DIESE SP WIRD NICHT PRODUKTIV VERDENDET !!!!
+--
+
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @xWarenlagerEingaenge2 XML;
+
+
+
+BEGIN TRY
+
+	IF(OBJECT_ID(&#39;tempdb..#WarenLagerEingaengeRandom&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #WarenLagerEingaengeRandom;
+	END
+	CREATE TABLE #WarenLagerEingaengeRandom (
+		kWarenlagerPlatz INT NOT NULL,
+		fAnzahl DECIMAL(28,14) NOT NULL
+	);
+
+
+
+	INSERT INTO #WarenLagerEingaengeRandom (kWarenlagerPlatz,fAnzahl)
+	SELECT TOP (@AnzahlVerschPlaetze) tWarenLagerPlatz.kWarenLagerPlatz, @fAnzahl AS Anzahl
+	FROM dbo.tWarenLagerPlatz
+	WHERE tWarenLagerPlatz.nStatus = 0
+	AND tWarenLagerPlatz.kWarenLager = 9
+	AND tWarenLagerPlatz.kWarenLagerPlatzTyp = 1
+	ORDER BY NEWID();
+
+
+
+	SET @xWarenlagerEingaenge2 = (
+	SELECT @kArtikel AS kArtikel,
+	kWarenlagerPlatz AS kWarenlagerPlatz,
+	0 AS kLieferantenBestellungPos, 
+	1 AS kBenutzer,
+	fAnzahl AS fAnzahl,
+	0 AS fEKEinzel,
+	&#39;&#39; AS cLieferscheinNr, 
+	@cCharge AS cChargenNr,
+	@dMHD AS dMHD,
+	&#39;RandomArtikelEinlagerer&#39; AS cKommentar,
+	0 AS kGutschriftPos, 
+	0 AS kWarenLagerAusgang, 
+	0 AS kLHM, 
+	fAnzahl  AS fAnzahlAktuell, 
+	0.0 AS fAnzahlReserviertPickpos, 
+	0 AS kSessionId,
+	0 AS kWarenLagerEingang_Ursprung, 
+	100 AS kBuchungsart,
+	 0 AS kBestellPosUmlagerung,
+	 0 AS kRMRetourePos,
+	  NULL AS dGeliefertAm
+	FROM #WarenLagerEingaengeRandom
+	FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+	);
+
+
+	IF EXISTS(SELECT * FROM #WarenLagerEingaengeRandom)
+	BEGIN
+
+	EXEC dbo.[spWarenlagerEingangSchreiben] 
+	   		  @xWarenlagerEingaenge = @xWarenlagerEingaenge2;
+		
+	END;
+
+
+END TRY
+
+BEGIN CATCH
+
+			SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+
+			RAISERROR (	@ErrorMessage, 
+						@ErrorSeverity,
+						@ErrorState);
+		
+END CATCH;</code></pre>
+</body>
+</html>

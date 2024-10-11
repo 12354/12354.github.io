@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spKundenDatenDelete</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spKundenDatenDelete</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spKundenDatenDelete]
+	@Kunden Maintenance.TYPE_spKundenDatenDelete READONLY
+AS
+BEGIN
+	IF(OBJECT_ID(&#39;tempdb..#Kunde&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Kunde;
+	END
+	CREATE TABLE #Kunde(kKunde INT,
+						nObfuskieren BIT,
+						nAuftraegeRechnungenBearbeiten BIT,
+						nAlterAuftraegeRechnungenInJahrenFuerLoeschung INT 
+					);
+
+	INSERT INTO #Kunde(kKunde, nObfuskieren, nAuftraegeRechnungenBearbeiten, nAlterAuftraegeRechnungenInJahrenFuerLoeschung)
+	SELECT [@Kunden].kKunde, 
+			[@Kunden].nObfuskieren, 
+			[@Kunden].nAuftraegeRechnungenBearbeiten, 
+			[@Kunden].nAlterAuftraegeRechnungenInJahrenFuerLoeschung 
+	FROM @Kunden;
+
+	DELETE FROM #Kunde
+	WHERE #Kunde.kKunde IN (
+		SELECT tkunde.kKunde
+		FROM dbo.ebay_transaction
+		JOIN dbo.ebay_buyer ON ebay_buyer.kBuyer = ebay_transaction.kBuyer
+		JOIN dbo.tkunde ON tkunde.kBuyer = ebay_buyer.kBuyer
+		WHERE ebay_transaction.Status = 4
+	)
+
+	IF(NOT EXISTS(SELECT * FROM #Kunde))
+	BEGIN
+		RETURN;
+	END
+
+	IF(OBJECT_ID(&#39;tempdb..#Ausgabe&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Ausgabe;
+	END
+	CREATE TABLE #Ausgabe(Tabellenname VARCHAR(255), AnzahlObfuskiert INT, ObfuskierteDatensaetze XML, AnzahlGeloescht INT, GeloeschteDatensaetze XML);
+
+	IF(OBJECT_ID(&#39;tempdb..#Auftraege&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Auftraege;
+	END
+	CREATE TABLE #Auftraege(kKunde INT, kAuftrag INT, BestellNr VARCHAR(100), Erstelldatum DATETIME, TageBisLoeschbarkeit INT);
+
+	INSERT INTO #Auftraege (kKunde,
+							kAuftrag,
+	                        BestellNr,
+	                        Erstelldatum,
+							TageBisLoeschbarkeit)
+	SELECT	Kunden.kKunde,
+			tAuftrag.kAuftrag,
+			tAuftrag.cAuftragsNr,
+			tAuftrag.dErstellt,
+			DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt))
+	FROM Verkauf.tAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftrag.kKunde;
+
+	--
+	-- Verkauf.tAuftragAdresse
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;Verkauf.tAuftragAdresse&#39;);
+
+	DECLARE @Adresse_Delete TABLE(kAuftrag INT);
+
+	DELETE Verkauf.tAuftragAdresse
+	OUTPUT Deleted.kAuftrag INTO @Adresse_Delete
+	FROM Verkauf.tAuftragAdresse
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragAdresse.kAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftragAdresse.kKunde
+							AND Kunden.nObfuskieren = 0
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt)) &lt;= 0;
+
+	DECLARE @Adresse_Obfuskiert TABLE(kAuftrag INT);
+
+	UPDATE Verkauf.tAuftragAdresse
+	SET cFirma = &#39;DELETED&#39;,
+		tAuftragAdresse.cAnrede = &#39;DELETED&#39;,
+		tAuftragAdresse.cTitel = &#39;DELETED&#39;,
+		tAuftragAdresse.cVorname = &#39;DELETED&#39;,
+		tAuftragAdresse.cName = &#39;DELETED&#39;,
+		tAuftragAdresse.cStrasse = &#39;DELETED&#39;,
+		tAuftragAdresse.cPLZ = &#39;DELETED&#39;,
+		tAuftragAdresse.cOrt = &#39;DELETED&#39;,
+		tAuftragAdresse.cLand = &#39;DELETED&#39;,
+		tAuftragAdresse.cTel = &#39;DELETED&#39;,
+		tAuftragAdresse.cZusatz = &#39;DELETED&#39;,
+		tAuftragAdresse.cAdressZusatz = &#39;DELETED&#39;,
+		tAuftragAdresse.cPostID = &#39;DELETED&#39;,
+		tAuftragAdresse.cMobil = &#39;DELETED&#39;,
+		tAuftragAdresse.cMail = &#39;DELETED&#39;,
+		tAuftragAdresse.cFax = &#39;DELETED&#39;,
+		tAuftragAdresse.cBundesland = &#39;DELETED&#39;,
+		tAuftragAdresse.cISO = &#39;DEL&#39;
+	OUTPUT Inserted.kAuftrag INTO @Adresse_Obfuskiert
+	FROM Verkauf.tAuftragAdresse
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragAdresse.kAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftragAdresse.kKunde
+							AND Kunden.nObfuskieren = 1
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt)) &lt;= 0;
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @Adresse_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kAuftrag FROM @Adresse_Obfuskiert FOR XML PATH(&#39;Adresse_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @Adresse_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kAuftrag FROM @Adresse_Delete FOR XML PATH(&#39;Adresse_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;Verkauf.tAuftragAdresse&#39;;
+
+	--
+	-- tBestellung
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;Verkauf.tAufrag&#39;);
+
+	DECLARE @tAuftrag_Delete TABLE(kAuftrag INT);
+
+	DISABLE TRIGGER Verkauf.tgr_Verkauf_tAuftrag_Delete ON Verkauf.tAuftrag;
+	DELETE Verkauf.tAuftrag
+	OUTPUT Deleted.kAuftrag INTO @tAuftrag_Delete
+	FROM Verkauf.tAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftrag.kKunde
+							AND Kunden.nObfuskieren = 0
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt)) &lt;= 0;
+	ENABLE TRIGGER Verkauf.tgr_Verkauf_tAuftrag_Delete ON Verkauf.tAuftrag;
+
+	DECLARE @tPositionen TABLE (kAuftragPosition INT, kArtikel INT);
+
+	DISABLE TRIGGER Verkauf.tgr_Verkauf_tAuftragPosition_Delete ON Verkauf.tAuftragPosition;
+	DELETE Verkauf.tAuftragPosition
+	OUTPUT Deleted.kAuftragPosition, Deleted.kArtikel INTO @tPositionen
+	WHERE tAuftragPosition.kAuftrag IN (SELECT kAuftrag FROM @tAuftrag_Delete);
+	ENABLE TRIGGER Verkauf.tgr_Verkauf_tAuftragPosition_Delete ON Verkauf.tAuftragPosition;
+
+	DELETE dbo.tBestellungWMSFreigabe
+	FROM dbo.tBestellungWMSFreigabe
+	WHERE tBestellungWMSFreigabe.kBestellung IN (SELECT kAuftrag FROM @tAuftrag_Delete);
+
+	UPDATE dbo.tRMRetoure
+	SET tRMRetoure.kBestellung = 0
+	WHERE tRMRetoure.kBestellung IN (SELECT kAuftrag FROM @tAuftrag_Delete);
+
+	UPDATE dbo.tRMRetoure
+	SET tRMRetoure.kBestellungUmtausch = 0
+	WHERE tRMRetoure.kBestellungUmtausch IN (SELECT kAuftrag FROM @tAuftrag_Delete);
+	
+	DECLARE @Lagerbestand AS TYPE_spUpdateLagerbestand;
+	INSERT INTO @Lagerbestand ( kArtikel )
+	SELECT DISTINCT kArtikel
+	FROM @tPositionen;
+
+	EXEC dbo.spUpdateLagerbestand @Artikel = @Lagerbestand;
+	
+	DECLARE @tAuftrag_Obfuskiert TABLE (kAuftrag INT);
+
+	UPDATE Verkauf.tAuftrag
+	SET tAuftrag.cUstId = &#39;DELETED&#39;,
+		tAuftrag.cKundenauftragsnummer = &#39;DELETED&#39;,
+		tAuftrag.cAmazonServiceLevel = &#39;DELETED&#39;		
+	OUTPUT Inserted.kAuftrag INTO @tAuftrag_Obfuskiert
+	FROM Verkauf.tAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftrag.kKunde
+							AND Kunden.nObfuskieren = 1
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt)) &lt;= 0;
+
+
+	UPDATE Verkauf.tAuftragText
+	SET tAuftragText.cAnmerkung = &#39;DELETED&#39;,
+		tAuftragText.cHinweis = &#39;DELETED&#39;,
+		tAuftragText.cDrucktext = &#39;DELETED&#39;,
+		tAuftragText.cVorgangsstatus = &#39;DELETED&#39;
+	FROM Verkauf.tAuftragText
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragText.kAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftrag.kKunde
+							AND Kunden.nObfuskieren = 1
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt)) &lt;= 0;
+
+
+	UPDATE Verkauf.tAuftragKampagne
+	SET tAuftragKampagne.cKampagne = &#39;DELETED&#39;,
+		tAuftragKampagne.cKampagneDetail = &#39;DELETED&#39;,
+		tAuftragKampagne.cKampagneName = &#39;DELETED&#39;,
+		tAuftragKampagne.cUserAgent = &#39;DELETED&#39;,
+		tAuftragKampagne.cReferrer = &#39;DELETED&#39;
+	FROM Verkauf.tAuftragKampagne
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragKampagne.kAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAuftrag.kKunde
+							AND Kunden.nObfuskieren = 1
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tAuftrag.dErstellt)) &lt;= 0;
+
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tAuftrag_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kAuftrag FROM @tAuftrag_Obfuskiert FOR XML PATH(&#39;tAuftrag_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tAuftrag_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kAuftrag FROM @tAuftrag_Obfuskiert FOR XML PATH(&#39;tAuftrag_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;Verkauf.tAuftrag&#39;;
+
+	--
+	-- tRechnung
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;Rechnung.tRechnung&#39;);
+
+	DECLARE @tRechnung_Delete TABLE(kRechnung INT);
+
+	DELETE Rechnung.tRechnung
+	OUTPUT Deleted.kRechnung INTO @tRechnung_Delete
+	FROM Rechnung.tRechnung
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tRechnung.kKunde
+							AND Kunden.nObfuskieren = 0
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tRechnung.dErstellt)) &lt;= 0;
+
+	DECLARE @tRechnung_obfuskiert TABLE(kRechnung INT);
+
+	UPDATE Rechnung.tRechnung
+	SET tRechnung.cRechnungsnr = &#39;DELETED&#39;
+	OUTPUT Inserted.kRechnung INTO @tRechnung_obfuskiert
+	FROM Rechnung.tRechnung
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tRechnung.kKunde
+							AND Kunden.nObfuskieren = 1
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tRechnung.dErstellt)) &lt;= 0;
+
+	UPDATE Rechnung.tRechnung
+	SET tRechnung.kKunde = NULL
+	FROM Rechnung.tRechnung
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tRechnung.kKunde;
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tRechnung_obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kRechnung FROM @tRechnung_obfuskiert FOR XML PATH(&#39;tRechnung_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tRechnung_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kRechnung FROM @tRechnung_Delete FOR XML PATH(&#39;tRechnung_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;Rechnung.tRechnung&#39;;
+
+	--
+	-- tGutschrift
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES (&#39;dbo.tGutschrift&#39;);
+
+	DECLARE @tGutschrift_Delete TABLE(kGutschrift INT);
+
+	DISABLE TRIGGER ALL ON dbo.tGutschrift;
+	DELETE dbo.tGutschrift
+	OUTPUT Deleted.kGutschrift INTO @tGutschrift_Delete
+	FROM dbo.tGutschrift
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tgutschrift.kKunde
+							AND Kunden.nObfuskieren = 0
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tGutschrift.dErstellt)) &lt;= 0;
+	ENABLE TRIGGER ALL ON dbo.tgutschrift;
+
+	DISABLE TRIGGER ALL ON dbo.tGutschriftPos;
+	DELETE dbo.tGutschriftPos
+	WHERE tGutschriftPos.tGutschrift_kGutschrift IN (SELECT kGutschrift FROM @tGutschrift_Delete);
+	ENABLE TRIGGER ALL ON dbo.tGutschriftPos;
+
+	DECLARE @tGutschrift_Obfuskiert TABLE(kGutschrift INT);
+
+	UPDATE dbo.tgutschrift
+	SET tgutschrift.cKurzText = &#39;DELETED&#39;,
+		tgutschrift.cText = &#39;DELETED&#39;
+	OUTPUT Inserted.kGutschrift INTO @tGutschrift_Obfuskiert
+	FROM dbo.tgutschrift
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tgutschrift.kKunde
+							AND Kunden.nObfuskieren = 1
+							AND Kunden.nAuftraegeRechnungenBearbeiten = 1
+	WHERE DATEDIFF(DAY, GETDATE(), DATEADD(YEAR, Kunden.nAlterAuftraegeRechnungenInJahrenFuerLoeschung, tGutschrift.dErstellt)) &lt;= 0;
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tGutschrift_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kGutschrift FROM @tGutschrift_Obfuskiert FOR XML PATH(&#39;tGutschriftObfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tGutschrift_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kGutschrift FROM @tGutschrift_Delete FOR XML PATH(&#39;tGutschriftDelete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tGutschrift&#39;;
+
+	--
+	-- tAdresse
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;dbo.tAdresse&#39;);
+
+	DECLARE @AdresseDelete TABLE(kAdresse INT);
+
+	DISABLE TRIGGER ALL ON dbo.tAdresse
+	DELETE dbo.tAdresse
+	OUTPUT DELETED.kAdresse INTO @AdresseDelete  
+	FROM dbo.tAdresse
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAdresse.kKunde
+							AND Kunden.nObfuskieren = 0;
+	ENABLE TRIGGER ALL ON dbo.tAdresse
+
+	DECLARE @AdresseUpdate TABLE(kAdresse INT);
+	
+	DISABLE TRIGGER ALL ON dbo.tAdresse						
+	UPDATE dbo.tAdresse
+	SET tAdresse.kInetAdresse = 0,
+		-- kKunde
+		tAdresse.cFirma = &#39;DELETED&#39;,
+		tAdresse.cAnrede = &#39;DELETED&#39;,
+		tAdresse.cTitel = &#39;DELETED&#39;,
+		tAdresse.cVorname = &#39;DELETED&#39;,
+		tAdresse.cName = &#39;DELETED&#39;,
+		tAdresse.cStrasse = &#39;DELETED&#39;,
+		tAdresse.cPLZ = &#39;DELETED&#39;,
+		tAdresse.cOrt = &#39;DELETED&#39;,
+		tAdresse.cLand = &#39;DELETED&#39;,
+		tAdresse.cTel = &#39;DELETED&#39;,
+		tAdresse.cZusatz = &#39;DELETED&#39;,
+		tAdresse.cAdressZusatz = &#39;DELETED&#39;,
+		tAdresse.cPostID = &#39;DELETED&#39;,
+		tAdresse.cMobil = &#39;DELETED&#39;,
+		tAdresse.cMail = &#39;DELETED&#39;,
+		tAdresse.cFax = &#39;DELETED&#39;,
+		tAdresse.cBundesland = &#39;DELETED&#39;,
+		tAdresse.cISO = &#39;DEL&#39;,
+		tAdresse.cUSTID = &#39;DELETED&#39;
+		-- nStandard
+	OUTPUT Inserted.kAdresse INTO @AdresseUpdate
+	FROM dbo.tAdresse
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tAdresse.kKunde
+							AND Kunden.nObfuskieren = 1;
+	ENABLE TRIGGER ALL ON dbo.tAdresse
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @AdresseUpdate),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kAdresse FROM @AdresseUpdate FOR XML PATH(&#39;tAdresse_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @AdresseDelete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kAdresse FROM @AdresseDelete FOR XML PATH(&#39;tAdresse_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tAdresse&#39;;
+
+	--
+	-- tansprechpartner
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;dbo.tansprechpartner&#39;);
+
+	DECLARE @AnsprechpartnerDelete TABLE(kAnsprechpartner INT);
+
+	DISABLE TRIGGER ALL ON dbo.tansprechpartner	
+	DELETE dbo.tansprechpartner
+	OUTPUT DELETED.kAnsprechpartner INTO @AnsprechpartnerDelete  
+	FROM dbo.tansprechpartner
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tansprechpartner.kKunde
+							AND Kunden.nObfuskieren = 0;
+	ENABLE TRIGGER ALL ON dbo.tansprechpartner
+
+	DECLARE @AnsprechpartnerUpdate TABLE(kAnsprechpartner INT);
+	
+	DISABLE TRIGGER ALL ON dbo.tansprechpartner						
+	UPDATE dbo.tansprechpartner
+	SET tansprechpartner.cName = &#39;DELETED&#39;,
+		tansprechpartner.cTel = &#39;DELETED&#39;,
+		tansprechpartner.cFax = &#39;DELETED&#39;,
+		tansprechpartner.cMail = &#39;DELETED&#39;,
+		tansprechpartner.cAbteilung = &#39;DELETED&#39;,
+		tansprechpartner.cVorName = &#39;DELETED&#39;,
+		tansprechpartner.cAnrede = &#39;DELETED&#39;,
+		tansprechpartner.cMobil = &#39;DELETED&#39;
+	OUTPUT Inserted.kAnsprechpartner INTO @AnsprechpartnerUpdate
+	FROM dbo.tansprechpartner
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tansprechpartner.kKunde
+							AND Kunden.nObfuskieren = 1;
+	ENABLE TRIGGER ALL ON dbo.tansprechpartner
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @AnsprechpartnerUpdate),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kAnsprechpartner FROM @AnsprechpartnerUpdate FOR XML PATH(&#39;tansprechpartner_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @AnsprechpartnerDelete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kAnsprechpartner FROM @AnsprechpartnerDelete FOR XML PATH(&#39;tansprechpartner_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tansprechpartner&#39;;
+
+	--
+	-- ebay_checkout
+	--
+	INSERT INTO #Ausgabe ( Tabellenname)
+	VALUES(&#39;dbo.ebay_checkout&#39;);
+
+	DECLARE @ebay_checkoutDelete TABLE(kEbay_checkout INT);
+
+	DELETE dbo.ebay_checkoutpos
+	FROM dbo.ebay_checkoutpos
+	JOIN dbo.ebay_checkout ON ebay_checkout.kEbayCheckout = ebay_checkoutpos.kEbayCheckout
+	JOIN dbo.ebay_buyer ON ebay_checkout.kEbayBuyer = ebay_buyer.kBuyer
+	JOIN dbo.tKunde ON tkunde.kBuyer = ebay_buyer.kBuyer
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 0;
+
+	DELETE dbo.ebay_checkout
+	OUTPUT Deleted.kEbayCheckout INTO @ebay_checkoutDelete
+	FROM dbo.ebay_checkout
+	JOIN dbo.ebay_buyer ON ebay_checkout.kEbayBuyer = ebay_buyer.kBuyer
+	JOIN dbo.tKunde ON tkunde.kBuyer = ebay_buyer.kBuyer
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 0;
+	
+	DECLARE @ebay_checkoutObfuskiert TABLE(kEbay_checkout INT);
+
+	UPDATE dbo.ebay_checkout
+	SET ebay_checkout.cVerwendungszweck = &#39;DELETED&#39;,
+		ebay_checkout.cLieferAnrede = &#39;DELETED&#39;,
+		ebay_checkout.cLieferVorname = &#39;DELETED&#39;,
+		ebay_checkout.cLieferNachname = &#39;DELETED&#39;,
+		ebay_checkout.cLieferNamenszusatz = &#39;DELETED&#39;,
+		ebay_checkout.cLieferStrasse = &#39;DELETED&#39;,
+		ebay_checkout.cLieferAdresszusatz = &#39;DELETED&#39;,
+		ebay_checkout.cLieferPLZ = &#39;DELETED&#39;,
+		ebay_checkout.cLieferOrt = &#39;DELETED&#39;,
+		ebay_checkout.cLieferOrtszusatz = &#39;DELETED&#39;,
+		ebay_checkout.cLieferLand = &#39;DELETED&#39;,
+		ebay_checkout.cLieferTel = &#39;DELETED&#39;,
+		ebay_checkout.cLieferFax = &#39;DELETED&#39;,
+		ebay_checkout.cLieferHandy = &#39;DELETED&#39;,
+		-- cZahlungsart
+		ebay_checkout.cZahlungBankName = &#39;DELETED&#39;,
+		ebay_checkout.cZahlungBLZ = &#39;DELETED&#39;,
+		ebay_checkout.cZahlungKontoNr = &#39;DELETED&#39;,
+		ebay_checkout.cZahlungKartenNr = &#39;DELETED&#39;,
+		ebay_checkout.cZahlungGueltigkeit = &#39;DELETED&#39;,
+		ebay_checkout.cZahlungCVV = &#39;DEL&#39;,
+		-- cZahlungKartenTyp
+		ebay_checkout.cZahlungInhaber = &#39;DELETED&#39;,
+		-- fVersandkosten
+		-- dErstelltAm
+		-- dAbgeschlossenAm
+		-- nStatus
+		-- nAnzahlPos
+		-- fSumme
+		-- cversandArt
+		ebay_checkout.cTel = &#39;DELETED&#39;,
+		ebay_checkout.cFax = &#39;DELETED&#39;,
+		ebay_checkout.cMobil = &#39;DELETED&#39;,
+		ebay_checkout.cEMail = &#39;DELETED&#39;,
+		ebay_checkout.cComment = &#39;DELETED&#39;,
+		ebay_checkout.cFirma = &#39;DELETED&#39;,
+		ebay_checkout.cLieferFirma = &#39;DELETED&#39;,
+		ebay_checkout.cUStID = &#39;DELETED&#39;,		        
+		ebay_checkout.cAdresszusatz = &#39;DELETED&#39;,
+		ebay_checkout.cAnrede = &#39;DELETED&#39;,
+		ebay_checkout.cVorname = &#39;DELETED&#39;,
+		ebay_checkout.cNachname = &#39;DELETED&#39;,
+		-- nCheckoutType
+		-- cPaymentStatus
+		ebay_checkout.cPLZ = &#39;DELETED&#39;,
+		ebay_checkout.cOrt = &#39;DELETED&#39;,
+		ebay_checkout.cLand = &#39;DELETED&#39;,
+		-- nNeu
+		ebay_checkout.cStrasse = &#39;DELETED&#39;,
+		-- cPaypalTransactionID
+		ebay_checkout.cPUIZahlungsdaten = &#39;DELETED&#39;
+		-- nInBearbeitung
+	OUTPUT Inserted.kEbayCheckout INTO @ebay_checkoutObfuskiert
+	FROM dbo.ebay_checkout
+	JOIN dbo.ebay_buyer ON ebay_checkout.kEbayBuyer = ebay_buyer.kBuyer
+	JOIN dbo.tkunde ON tkunde.kBuyer = ebay_buyer.kBuyer
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 1;
+
+	UPDATE #Ausgabe 
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @ebay_checkoutObfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kEbay_checkout FROM @ebay_checkoutObfuskiert FOR XML PATH(&#39;ebay_checkout_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @ebay_checkoutDelete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kEbay_checkout FROM @ebay_checkoutDelete FOR XML PATH(&#39;ebay_checkout_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.ebay_checkout&#39;;
+
+	--
+	-- ebay_buyer
+	--
+	INSERT INTO #Ausgabe (Tabellenname)
+	VALUES(&#39;dbo.ebay_buyer&#39;);
+
+	DECLARE @ebay_buyerDelete TABLE(kBuyer INT);
+
+	DELETE dbo.ebay_buyer
+	OUTPUT Deleted.kBuyer INTO @ebay_buyerDelete
+	FROM dbo.ebay_buyer
+	JOIN dbo.tKunde ON tkunde.kBuyer = ebay_buyer.kBuyer
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 0;
+	
+	DECLARE @ebay_buyerObfuskiert TABLE(kBuyer INT);
+	
+	UPDATE dbo.ebay_buyer
+	SET ebay_buyer.CityName = &#39;DELETED&#39;,
+		ebay_buyer.Country = &#39;DELETED&#39;,
+		ebay_buyer.CountryName = &#39;DELETED&#39;,
+		ebay_buyer.Name = &#39;DELETED&#39;,
+		ebay_buyer.PostalCode = &#39;DELETED&#39;,
+		ebay_buyer.Street = &#39;DELETED&#39;,
+		ebay_buyer.Street1 = &#39;DELETED&#39;,
+		ebay_buyer.Street2 = &#39;DELETED&#39;,
+		ebay_buyer.Phone = &#39;DELETED&#39;,
+		ebay_buyer.SA_CityName = &#39;DELETED&#39;,
+		ebay_buyer.SA_Country = &#39;DELETED&#39;,
+		ebay_buyer.SA_CountryName = &#39;DELETED&#39;,
+		ebay_buyer.SA_ExternalAddressID = &#39;DELETED&#39;,
+		ebay_buyer.SA_Name = &#39;DELETED&#39;,
+		ebay_buyer.SA_PostalCode = &#39;DELETED&#39;,
+		ebay_buyer.SA_StateOrProvince = &#39;DELETED&#39;,
+		ebay_buyer.SA_Street = &#39;DELETED&#39;,
+		ebay_buyer.SA_Street1 = &#39;DELETED&#39;,
+		ebay_buyer.SA_Street2 = &#39;DELETED&#39;,
+		ebay_buyer.SA_Phone = &#39;DELETED&#39;,
+		ebay_buyer.CharityID = &#39;DELETED&#39;,
+		-- ebayGoodStanding
+		ebay_buyer.EIASToken = &#39;DELETED&#39;,
+		ebay_buyer.Email = &#39;DELETED&#39;,
+		-- FeedbackPrivate
+		-- FeedbackRatingStar
+		-- FeedbackScore
+		-- IDVerified
+		-- NewUser
+		-- PositiveFeedbackPercent
+		-- PregistrationDate
+		ebay_buyer.Site = &#39;DELETED&#39;,
+		-- SiteVerified
+		ebay_buyer.Status = &#39;DELETED&#39;,
+		ebay_buyer.UserID = &#39;DELETED&#39;,
+		-- UserIdChanged
+		ebay_buyer.UserIDLastChanged = NULL,
+		ebay_buyer.VATStatus = &#39;DELETED&#39;
+	OUTPUT Deleted.kBuyer INTO @ebay_buyerObfuskiert
+	FROM dbo.ebay_buyer
+	JOIN dbo.tkunde ON tkunde.kBuyer = ebay_buyer.kBuyer
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 1;
+	
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @ebay_buyerObfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kBuyer FROM @ebay_buyerObfuskiert FOR XML PATH(&#39;ebay_buyer_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @ebay_buyerDelete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kBuyer FROM @ebay_buyerDelete FOR XML PATH(&#39;ebay_buyer_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.ebay_buyer&#39;;
+
+	--
+	-- ebay_log (nicht l&#246;schen?)
+	--
+
+	--
+	-- pf_amazon_bestellung (darf nicht gel&#246;scht werden, nur obfuskierung)
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;dbo.pf_amazon_bestellung&#39;);
+
+	DECLARE @pf_amazon_bestellungObfuskiert TABLE(kAmazonBestellung INT);
+
+	UPDATE dbo.pf_amazon_bestellung
+    SET cBuyerName = &#39;DELETED&#39;,
+        cBuyerEmail = &#39;DELETED&#39;,
+        cBuyerPhoneNumber = &#39;DELETED&#39;,
+        cBillAddress1 = &#39;DELETED&#39;,
+        cBillAddress2 = &#39;DELETED&#39;,
+        cBillAddress3 = &#39;DELETED&#39;,
+        cBillCity = &#39;DELETED&#39;,
+        cBillState = &#39;DELETED&#39;,
+        cBillPostalCode = &#39;DELETED&#39;,      
+        cRecipientName = &#39;DELETED&#39;,
+        cShipAddress1 = &#39;DELETED&#39;,
+        cShipAddress2 = &#39;DELETED&#39;,
+        cShipAddress3 = &#39;DELETED&#39;,
+        cShipCity = &#39;DELETED&#39;,
+        cShipState = &#39;DELETED&#39;,
+        cShipPostalCode = &#39;DELETED&#39;,      
+        cShipPhoneNumber = &#39;DELETED&#39;
+	OUTPUT Inserted.kAmazonBestellung INTO @pf_amazon_bestellungObfuskiert
+	FROM dbo.pf_amazon_bestellung
+	JOIN (SELECT DISTINCT pf_amazon_bestellung.kAmazonBestellung
+			FROM dbo.pf_amazon_bestellung
+			JOIN dbo.pf_amazon_bestellungpos ON pf_amazon_bestellungpos.kAmazonBestellung = pf_amazon_bestellung.kAmazonBestellung
+			JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAmazonBestellungPos = pf_amazon_bestellungpos.kAmazonBestellungPos
+			JOIN Verkauf.vAuftrag ON vAuftrag.kAuftrag = vAuftragPosition.kAuftrag
+			JOIN #Kunde AS Kunden ON Kunden.kKunde = vAuftrag.kKunde
+		) AS Result ON Result.kAmazonBestellung = pf_amazon_bestellung.kAmazonBestellung;
+	
+	UPDATE #Ausgabe 
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @pf_amazon_bestellungObfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kAmazonBestellung FROM @pf_amazon_bestellungObfuskiert FOR XML PATH(&#39;pf_amazon_bestellung_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = 0
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.pf_amazon_bestellung&#39;;
+
+	--
+	-- tLieferantenbestellungLA
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;dbo.tLieferantenbestellungLA&#39;);
+
+	DECLARE @tLieferantenBestellungLA_Delete TABLE (kLieferantenBestellungLA INT);
+
+	DELETE FROM dbo.tLieferantenBestellungLA
+	OUTPUT Deleted.kLieferantenBestellungLA INTO @tLieferantenBestellungLA_Delete
+	FROM dbo.tLieferantenBestellungLA
+	JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellungLA = tLieferantenBestellungLA.kLieferantenBestellungLA
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tLieferantenBestellung.kKunde
+							AND Kunden.nObfuskieren = 0;
+
+	DECLARE @tLieferantenBestellungLA_Obfuskiert TABLE(kLieferantenBestellungLA INT);
+
+	UPDATE dbo.tLieferantenBestellungLA
+	SET tLieferantenBestellungLA.cKundennummer = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cFirma = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cFirmenZusatz = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cAnrede = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cTitel = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cVorname = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cNachname = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cStrasse = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cAdresszusatz = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cPLZ = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cOrt = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cBundesland = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cLandISO = &#39;DEL&#39;,
+		tLieferantenBestellungLA.cTel = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cFax = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cMobil = &#39;DELETED&#39;,
+		tLieferantenBestellungLA.cMail = &#39;DELETED&#39;
+	OUTPUT Inserted.kLieferantenBestellungLA INTO @tLieferantenBestellungLA_Obfuskiert
+	FROM dbo.tLieferantenBestellungLA
+	JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellungLA = tLieferantenBestellungLA.kLieferantenBestellungLA
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tLieferantenBestellung.kKunde
+							AND Kunden.nObfuskieren = 1;
+	
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tLieferantenBestellungLA_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kLieferantenbestellungLA FROM @tLieferantenBestellungLA_Obfuskiert FOR XML PATH(&#39;tLieferantenBestellungLA_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tLieferantenBestellungLA_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kLieferantenbestellungLA FROM @tLieferantenBestellungLA_Delete FOR XML PATH(&#39;tLieferantenBestellung_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tLieferantenbestellungLA&#39;;
+
+	--
+	-- tLieferantenbestellungRA
+	--
+	INSERT INTO #Ausgabe (Tabellenname)
+	VALUES(&#39;dbo.tLieferantenbestellungRA&#39;);
+
+	DECLARE @tLieferantenBestellungRA_Delete TABLE(kLieferantenbestellungRA INT);
+
+	DELETE FROM dbo.tLieferantenBestellungRA
+	OUTPUT Deleted.kLieferantenBestellungRA INTO @tLieferantenBestellungRA_Delete
+	FROM dbo.tLieferantenBestellungRA
+	JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellungRA = tLieferantenBestellungRA.kLieferantenBestellungRA
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tLieferantenBestellung.kKunde
+							AND Kunden.nObfuskieren = 0;
+	
+	DECLARE @tLieferantenBestellungRA_Obfuskiert TABLE(kLieferantenbestellungRA INT);
+
+	UPDATE dbo.tLieferantenBestellungRA
+	SET tLieferantenBestellungRA.cFirma = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cFirmenZusatz = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cAnrede = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cTitel = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cVorname = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cNachname = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cStrasse = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cAdresszusatz = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cPLZ = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cOrt = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cBundesland = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cLandISO = &#39;DEL&#39;,
+		tLieferantenBestellungRA.cTel = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cFax = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cMobil = &#39;DELETED&#39;,
+		tLieferantenBestellungRA.cMail = &#39;DELETED&#39;
+	OUTPUT Inserted.kLieferantenBestellungRA INTO @tLieferantenBestellungRA_Obfuskiert
+	FROM dbo.tLieferantenBestellungRA
+	JOIN dbo.tLieferantenBestellung ON tLieferantenBestellung.kLieferantenBestellungRA = tLieferantenBestellungRA.kLieferantenBestellungRA
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tLieferantenBestellung.kKunde
+							AND Kunden.nObfuskieren = 1;
+	
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tLieferantenBestellungRA_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kLieferantenBestellungRA FROM @tLieferantenBestellungRA_Obfuskiert FOR XML PATH(&#39;tLieferantenBestellungRA_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tLieferantenBestellungRA_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kLieferantenBestellungRA FROM @tLieferantenBestellungRA_Delete FOR XML PATH(&#39;tLieferantenBestellungRA_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tLieferantenbestellungRA&#39;;
+	--
+	-- tKontodaten
+	--
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;dbo.tKontodaten&#39;);
+
+	DECLARE @tKontodaten_Delete TABLE(kKontoDaten INT);
+
+	DELETE dbo.tkontodaten
+	OUTPUT Deleted.kKontoDaten INTO @tKontodaten_Delete
+	FROM dbo.tkontodaten
+	JOIN #Kunde ON #Kunde.kKunde = tkontodaten.kKunde
+				AND #Kunde.nObfuskieren = 0;
+	
+	DECLARE @tKontodaten_Obfuskiert TABLE(kKontoDaten INT);
+	
+	UPDATE dbo.tkontodaten
+	SET tkontodaten.cBankName = &#39;DELETED&#39;
+	OUTPUT Inserted.kKontoDaten INTO @tKontodaten_Obfuskiert
+	FROM dbo.tkontodaten
+	JOIN #Kunde ON #Kunde.kKunde = tkontodaten.kKunde
+				AND #Kunde.nObfuskieren = 1;
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tKontodaten_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT [@tKontodaten_Obfuskiert].kKontoDaten FROM @tKontodaten_Obfuskiert FOR XML PATH(&#39;kKontoDaten&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tKontodaten_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT [@tKontodaten_Delete].kKontoDaten FROM @tKontodaten_Delete FOR XML PATH(&#39;kKontoDaten&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tKontoDaten&#39;;
+	--
+	-- tFulfillmentauftrag
+	--
+	INSERT INTO #Ausgabe (Tabellenname)
+	VALUES(&#39;dbo.tFulfillmentauftrag&#39;);
+
+	DECLARE @tFulfillmentAuftrag_Delete TABLE(kFulfillmentAuftrag INT);
+
+	DELETE FROM dbo.tFulfillmentAuftragPos
+	FROM dbo.tFulfillmentAuftragPos
+	JOIN dbo.tFulfillmentAuftrag ON tFulfillmentAuftrag.kFulfillmentAuftrag = tFulfillmentAuftragPos.kFulfillmentAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tFulfillmentAuftrag.kKunde
+							AND Kunden.nObfuskieren = 1;
+
+	DELETE FROM dbo.tFulfillmentAuftrag
+	OUTPUT Deleted.kFulfillmentAuftrag INTO @tFulfillmentAuftrag_Delete
+	FROM dbo.tFulfillmentAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tFulfillmentAuftrag.kKunde
+							AND Kunden.nObfuskieren = 1;
+	
+	DECLARE @tFulfillmentAuftrag_Obfuskiert TABLE(kFulfillmentAuftrag INT);
+	
+	UPDATE dbo.tFulfillmentAuftrag
+	SET tFulfillmentAuftrag.cKommentar = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseKundennummer = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseFirma = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseAnrede = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseTitel = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseVorname = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseName = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseStrasse = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdressePLZ = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseOrt = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseLand = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseTel = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseFax = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdresseEmail = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferAdressZusatz = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferZusatz = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cFehlermeldung = &#39;DELETED&#39;,
+		tFulfillmentAuftrag.cLieferadresseBundesland = &#39;DELETED&#39;
+	OUTPUT Inserted.kFulfillmentAuftrag INTO @tFulfillmentAuftrag_Obfuskiert
+	FROM dbo.tFulfillmentAuftrag
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tFulfillmentAuftrag.kKunde
+							AND Kunden.nObfuskieren = 1;
+	
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tFulfillmentAuftrag_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kFulfillmentAuftrag FROM @tFulfillmentAuftrag_Obfuskiert FOR XML PATH(&#39;kFulfillmentAuftrag&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tFulfillmentAuftrag_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kFulfillmentAuftrag FROM @tFulfillmentAuftrag_Delete FOR XML PATH(&#39;kFulfillmentAuftrag&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = &#39;dbo.tFulfillmentAuftrag&#39;;
+	
+	--
+    -- tPreis &amp; tPreisDetail
+    --
+	DELETE FROM dbo.tPreisDetail
+	FROM dbo.tPreisDetail
+	JOIN dbo.tPreis ON tPreis.kPreis = tPreisDetail.kPreis
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tPreis.kKunde;
+
+	DELETE FROM dbo.tPreis
+	FROM dbo.tPreis
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tPreis.kKunde;
+
+	--
+	-- tKunde
+	--
+	DECLARE @kBenutzer INT = 0;
+    SET @kBenutzer = TRY_CAST(SUBSTRING(APP_NAME(), 0, CHARINDEX(&#39; &#39;, APP_NAME())) AS INT);
+
+	INSERT INTO dbo.tLog ( dDatum ,
+	                       kBenutzer ,
+	                       cLog ,
+	                       nTyp ,
+	                       nVorgang )
+	SELECT GETDATE() AS dDatum,
+			@kBenutzer,
+			&#39;Kunde &#39; + CAST(tKunde.cKundenNr AS NVARCHAR(100)) + &#39; (&#39; + CAST(#Kunde.kKunde AS NVARCHAR(100)) + &#39;) gel&#246;scht&#39;,
+			5 AS nTyp,
+			3 AS nVorgang -- 3 gel&#246;scht
+	FROM #Kunde
+	JOIN tKunde ON tkunde.kKunde = #Kunde.kKunde;
+
+	INSERT INTO #Ausgabe(Tabellenname)
+	VALUES(&#39;dbo.tKunde&#39;);
+
+	DECLARE @tKunde_Delete TABLE(kKunde INT);
+		
+	DISABLE TRIGGER ALL ON dbo.tkunde
+	DELETE FROM dbo.tKunde
+	OUTPUT Deleted.kKunde INTO @tKunde_Delete
+	FROM dbo.tKunde 
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 0;
+	ENABLE TRIGGER ALL ON dbo.tkunde
+
+	DECLARE @tKunde_Obfuskiert TABLE(kKunde INT);
+	
+	DISABLE TRIGGER ALL ON dbo.tkunde
+	UPDATE dbo.tkunde
+	SET tkunde.kInetKunde = NULL,
+		tkunde.cKundenNr = &#39;DELETED&#39;,
+		-- dErstellt
+		-- cHeandler
+		-- fRabatt
+		-- cNewsletter
+		tKunde.cEbayName = &#39;DELETED&#39;,
+		tKunde.kBuyer = NULL,
+		tKunde.cGeburtstag = &#39;DELETED&#39;,
+		tKunde.cWWW = &#39;DELETED&#39;,
+		tKunde.cHRNr = &#39;DELETED&#39;,
+		-- kZahlungsart
+		tKunde.nDebitorennr = NULL,
+		tKunde.cSteuerNr = &#39;DELETED&#39;,
+		-- nKreditlimit
+		tKunde.kKundenDrucktext = NULL,
+		tkunde.nMahnstopp = 0,
+		tkunde.nMahnrhythmus = 0
+	OUTPUT Inserted.kKunde INTO @tKunde_Obfuskiert
+	FROM dbo.tkunde
+	JOIN #Kunde AS Kunden ON Kunden.kKunde = tkunde.kKunde
+							AND Kunden.nObfuskieren = 1;
+	ENABLE TRIGGER ALL ON dbo.tkunde
+
+	DECLARE @tInetKundeShop AS TABLE (kKunde INT, kShop INT, kInetKunde INT);
+
+	INSERT INTO @tInetKundeShop ( kKunde,
+								  kShop,
+								  kInetKunde)
+		SELECT 
+			tInetKundeShop.kKunde,
+			tInetKundeShop.kShop,
+			tInetKundeShop.kInetKunde
+		FROM dbo.tInetKundeShop 
+		JOIN #Kunde AS Kunden ON Kunden.kKunde = tInetKundeShop.kKunde;
+
+	DELETE dbo.tQueue
+	FROM dbo.tQueue
+	JOIN @tInetKundeShop AS tInetKundeShop ON tQueue.kPlattform = 0
+		AND tInetKundeShop.kShop = tQueue.kShop
+		AND tQueue.cName = &#39;tInetKunde&#39;
+		AND tQueue.kWert = tInetKundeShop.kInetKunde;
+
+	INSERT INTO dbo.tQueue ( kShop,
+							 kPlattform,
+							 cName,
+							 kWert,
+							 nAction,
+							 kOption1,
+							 kOption2)
+		SELECT 
+			tInetKundeShop.kShop AS kShop,
+			0 AS kPlattform,
+			&#39;tInetKunde&#39; AS cName,
+			tInetKundeShop.kInetKunde AS kWert,
+			2 AS nAction,
+			0 AS kOption1,
+			0 AS kOption2
+		FROM @tInetKundeShop AS tInetKundeShop;
+
+	DELETE dbo.tInetKundeShop
+	FROM dbo.tInetKundeShop
+	JOIN @tInetKundeShop AS InetKundeShop ON InetKundeShop.kShop = tInetKundeShop.kShop
+		AND InetKundeShop.kInetKunde = tInetKundeShop.kInetKunde;
+
+	INSERT INTO dbo.tLog ( dDatum,
+						   kBenutzer,
+						   cLog,
+						   nTyp,
+						   nVorgang )
+		SELECT 
+			GETDATE() AS dDatum,
+			@kBenutzer AS kBenutzer,
+			&#39;Kundendaten gel&#246;scht durch Obfuskieren: Kunde (&#39; + CONVERT(VARCHAR(200), tInetKundeShop.kKunde) + &#39;)&#39;,
+			5 AS nTyp,
+			2 AS nVorgang
+		FROM @tInetKundeShop AS tInetKundeShop;
+	
+
+	UPDATE #Ausgabe
+	SET #Ausgabe.AnzahlObfuskiert = (SELECT COUNT(1) FROM @tKunde_Obfuskiert),
+		#Ausgabe.ObfuskierteDatensaetze = (SELECT kKunde FROM @tKunde_Obfuskiert FOR XML PATH(&#39;tKunde_Obfuskiert&#39;), TYPE),
+		#Ausgabe.AnzahlGeloescht = (SELECT COUNT(1) FROM @tKunde_Delete),
+		#Ausgabe.GeloeschteDatensaetze = (SELECT kKunde FROM @tKunde_Delete FOR XML PATH(&#39;tKunde_Delete&#39;), TYPE)
+	WHERE #Ausgabe.Tabellenname = (&#39;dbo.tKunde&#39;);
+
+	SELECT *
+	FROM #Ausgabe;
+END</code></pre>
+</body>
+</html>

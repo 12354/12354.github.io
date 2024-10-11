@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spPlatzUmbuchenAusfuehren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spPlatzUmbuchenAusfuehren</h1>
+    <p><strong>Description:</strong> Die Stored Procedure dient intern als Hilfe beim Umbuchen.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spPlatzUmbuchenAusfuehren] 
+	@kWarenlagerEingang INT, 
+	@fAnzahl DECIMAL(25,13), 
+	@kWarenlagerPlatzNeu INT,
+	@kLHM INT,
+	@kBuchungsart INT, -- Falls null wird die des quell WEs genommen
+	@callerIsPickliste BIT, -- 1: Pickpos betroffen, 0: keine Pickpos betroffen
+	@kBenutzer INT,
+	@cKommentar NVARCHAR(255),
+	@kWarenlagerEingangNeu INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @kWarenlagerPlatzAlt INT;
+	DECLARE @kSessionID INT;
+	DECLARE @kLHMAlt INT;
+	DECLARE @kArtikel INT;
+	DECLARE @cCharge NVARCHAR(255)
+	DECLARE @dMhd DATETIME
+	DECLARE @kWarenLagerEingangSubset INT;
+	DECLARE	@cSubsetNumber NVARCHAR(100)
+	DECLARE @fFactor DECIMAL(25,13)
+	DECLARE @fQuantity DECIMAL(25,13)
+	DECLARE @hash VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, &#39;dbo.spPlatzUmbuchenAusfuehren&#39;);
+	SET CONTEXT_INFO @hash;
+
+	SELECT	@kWarenlagerPlatzAlt = dbo.tWarenLagerEingang.kWarenLagerPlatz,
+			@kSessionID = dbo.tWarenLagerEingang.kSessionID,
+			@kLHMAlt = dbo.tWarenLagerEingang.kLHM,
+			@kArtikel = dbo.tWarenLagerEingang.kArtikel,
+			@cCharge = dbo.tWarenLagerEingang.cChargenNr,
+			@dMhd = dbo.tWarenLagerEingang.dMHD
+	FROM dbo.tWarenLagerEingang 
+	WHERE dbo.tWarenLagerEingang.kWarenLagerEingang = @kWarenlagerEingang
+
+	-- Muss Eingang gesplittet werden: 
+	IF((SELECT dbo.twarenlagereingang.fAnzahl 
+				FROM dbo.twarenlagereingang
+				WHERE dbo.twarenlagereingang.kWarenLagerEingang = @kWarenlagerEingang) &lt;&gt; @fAnzahl
+	)
+	BEGIN
+		INSERT INTO dbo.tWarenLagerEingang
+		(
+		    kArtikel,
+		    kWarenLagerPlatz,
+		    kLieferantenBestellungPos,
+		    kBenutzer,
+		    fAnzahl,
+		    fEKEinzel,
+		    cLieferscheinNr,
+		    cChargenNr,
+		    dMHD,
+		    dErstellt,
+		    dGeliefertAM,
+		    cKommentar,
+		    kGutschriftPos,
+		    kWarenLagerAusgang,
+		    kLHM,
+		    fAnzahlAktuell,
+		    fAnzahlReserviertPickpos,
+		    kSessionID,
+		    kWarenLagerEingang_Ursprung,
+		    kBuchungsart,
+			nGLDBerechnungMitEingangsrechnung
+		)
+		SELECT dbo.tWarenLagerEingang.kArtikel,
+				@kWarenlagerplatzNeu,
+				dbo.tWarenLagerEingang.kLieferantenBestellungPos,
+				dbo.tWarenLagerEingang.kBenutzer,
+				@fAnzahl,
+				dbo.tWarenLagerEingang.fEKEinzel,
+				dbo.tWarenLagerEingang.cLieferscheinNr,
+				dbo.tWarenLagerEingang.cChargenNr,
+				dbo.tWarenLagerEingang.dMHD,
+				dbo.tWarenLagerEingang.dErstellt,
+				dbo.tWarenLagerEingang.dGeliefertAM,
+				dbo.tWarenLagerEingang.cKommentar,
+				dbo.tWarenLagerEingang.kGutschriftPos,
+				dbo.tWarenLagerEingang.kWarenLagerAusgang,
+				@kLHM,
+				@fAnzahl,
+				CASE WHEN @callerIsPickliste = 1
+					THEN @fAnzahl
+					ELSE 0.0
+				END,
+				dbo.tWarenLagerEingang.kSessionID,
+				dbo.tWarenLagerEingang.kWarenLagerEingang,
+				CASE WHEN @kBuchungsart IS NULL THEN dbo.tWarenLagerEingang.kBuchungsart ELSE @kBuchungsart END,
+				tWarenLagerEingang.nGLDBerechnungMitEingangsrechnung
+			FROM dbo.tWarenLagerEingang
+			WHERE dbo.tWarenLagerEingang.kWarenLagerEingang = @kWarenlagerEingang;
+		SELECT @kWarenlagerEingangNeu = SCOPE_IDENTITY();
+
+		UPDATE dbo.tWarenLagerEingang
+			SET fAnzahl = fAnzahl - @fAnzahl,
+				fAnzahlAktuell = fAnzahlAktuell - @fAnzahl,
+				fAnzahlReserviertPickpos = CASE WHEN @callerIsPickliste = 1
+												THEN fAnzahlReserviertPickpos - @fAnzahl
+												ELSE fAnzahlReserviertPickpos
+											END
+			WHERE kWarenLagerEingang = @kWarenlagerEingang;
+
+		SELECT @kWarenLagerEingangSubset = tWarenlagereingangSubsets.kWarenLagerEingangSubset, @cSubsetNumber = tWarenlagereingangSubsets.cSubsetNumber, @fFactor = tWarenlagereingangSubsets.fFactor
+		FROM dbo.tWarenlagereingangSubsets
+		WHERE tWarenlagereingangSubsets.kWarenlagereingang = @kWarenlagerEingang;
+
+		IF(@kWarenLagerEingangSubset IS NULL)
+			SET @fQuantity = @fAnzahl
+		ELSE
+		BEGIN
+			-- Falls es sich um einen Teilmengenartikel handelt, m&#252;ssen die subset tabellen angepasst werden
+			SET @fQuantity = @fAnzahl / @fFactor
+
+			UPDATE dbo.tWarenLagerEingangSubsets
+			SET fQuantity = fQuantity - @fQuantity
+			WHERE kWarenLagerEingangSubset = @kWarenLagerEingangSubset;
+
+			INSERT INTO dbo.tWarenLagerEingangSubsets (kWarenlagerEingang,fQuantity,fFactor,cSubsetNumber)
+			VALUES
+			(
+				@kWarenlagerEingangNeu
+				,@fQuantity
+				,@fFactor
+				,@cSubsetNumber
+			)
+			DECLARE @kWarenLagerEingangSubsetNeu INT = SCOPE_IDENTITY();
+
+			INSERT INTO dbo.tWarenLagerEingangSubsetDetails(kWarenLagerEingangSubset,kDimension,kMassEinheit,fValue,fGroundValue)
+			SELECT
+				@kWarenLagerEingangSubsetNeu
+				,SubsetDetails.kDimension
+				,SubsetDetails.kMassEinheit
+				,SubsetDetails.fValue
+				,SubsetDetails.fGroundValue
+			FROM dbo.tWarenLagerEingangSubsetDetails AS SubsetDetails
+			WHERE SubsetDetails.kWarenLagerEingangSubset = @kWarenLagerEingangSubset
+		END
+	END
+	-- Kein Warenlagereingangssplit notwendig
+	ELSE
+	BEGIN
+		UPDATE dbo.tWarenLagerEingang
+			SET kWarenLagerPlatz = @kWarenlagerPlatzNeu,
+				kLHM = @kLHM
+			WHERE kWarenLagerEingang = @kWarenlagerEingang;	   
+		SET @kWarenlagerEingangNeu  = @kWarenlagerEingang;
+	END
+
+	    
+	-- Pick LHM l&#246;schen, wenn sie leer ist
+    DELETE FROM dbo.tlhm
+    WHERE tlhm.kLHMTyp = 5
+      AND tlhm.kLHM = @kLHMAlt
+      AND NOT EXISTS (SELECT * FROM dbo.tWarenLagerEingang
+                               JOIN dbo.tPicklistePos ON tPicklistePos.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+                               WHERE tWarenLagerEingang.kLHM = tlhm.kLHM
+                               AND tPicklistePos.nStatus &lt; 40 );
+	    
+
+	-- Beim verpacken direkt von Status 10, mu&#223; kein Historieneintrag gemacht werden f&#252;r die Bewegung auf das LHM
+	IF(@kWarenlagerPlatzAlt != @kWarenlagerPLatzNeu)
+	BEGIN
+		DECLARE	@cDimensionen NVARCHAR(255)
+
+		SELECT @cSubsetNumber = tWarenlagereingangSubsets.cSubsetNumber, @cDimensionen = Dimensionen.cDimensionen, @fQuantity = tWarenlagereingangSubsets.fQuantity
+		FROM dbo.tWarenlagereingangSubsets
+		OUTER APPLY (
+			 SELECT STUFF((
+					SELECT &#39;, &#39; + LEFT(tDimensionSprache.cName, 1) + &#39;: &#39; + CAST(CAST(CAST(tWarenLagerEingangSubsetDetails.fValue as decimal(12,4)) AS FLOAT) AS VARCHAR) + &#39; &#39; + tMassEinheit.cDisplayCode
+					FROM dbo.tWarenLagerEingangSubsetDetails
+					JOIN dbo.tMassEinheit ON tMassEinheit.kMassEinheit = tWarenLagerEingangSubsetDetails.kMassEinheit 
+					JOIN dbo.tSpracheUsed ON nStandard = 1
+					JOIN subset.tDimensionSprache ON tDimensionSprache.kDimension = tWarenLagerEingangSubsetDetails.kDimension AND tDimensionSprache.kSprache = tSpracheUsed.kSprache
+					WHERE tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = tWarenLagerEingangSubsets.kWarenLagerEingangSubset
+						FOR XML PATH(&#39;&#39;)
+						), 1, 1, &#39;&#39;) AS cDimensionen
+		 
+			 ) AS Dimensionen 
+		WHERE tWarenlagereingangSubsets.kWarenlagereingang = @kWarenlagerEingang;
+
+		IF(@cSubsetNumber IS NULL)
+			SET @fQuantity = @fAnzahl
+
+		-- Warenlagereinganghistorie schreiben
+		INSERT INTO dbo.tWarenLagerEingangHistorie
+		(
+			kWarenLagerEingang,
+			kWarenLagerPlatzStart,
+			kWarenLagerPlatzZiel,
+			dZeitstempel,
+			kBenutzer,
+			cKommentar,
+			kBuchungsArt,
+			kSessionID,
+			fAnzahl,
+			kLHMStart,
+			kLHMZiel,
+			cSubsetNumber,
+			cDimensionen 
+		)
+		VALUES
+		(
+			@kWarenlagerEingangNeu,
+			@kWarenlagerPlatzAlt,
+			@kWarenlagerPLatzNeu,
+			GETDATE(),
+			@kBenutzer,
+			@cKommentar,
+			CASE WHEN @kBuchungsart IS NULL THEN 120 ELSE @kBuchungsart END, 
+			@kSessionID,
+			@fQuantity,
+			@kLHMAlt,
+			@kLHM,
+			@cSubsetNumber,
+			@cDimensionen 
+		);
+	END;
+
+	-- Warenlagerplatzartikel schreiben
+	INSERT INTO dbo.tWarenLagerPlatzArtikel(kWarenLagerPlatz, kArtikel)
+		SELECT @kWarenlagerPlatzNeu, @kArtikel
+			WHERE NOT EXISTS(SELECT * FROM dbo.tWarenLagerPlatzArtikel 
+								WHERE dbo.tWarenLagerPlatzArtikel.kArtikel = @kArtikel
+									AND dbo.tWarenLagerPlatzArtikel.kWarenLagerPlatz = @kWarenlagerPlatzNeu);
+
+	-- Bestand aktuelisieren
+	DECLARE @typeLagerbestandProLager AS TYPE_spUpdateLagerbestandProLager;
+
+	INSERT INTO @typeLagerbestandProLager (kArtikel,kWarenlager)
+    SELECT @kArtikel, tWarenLagerPlatz.kWarenLager
+	FROM dbo.tWarenLagerPlatz
+	WHERE tWarenLagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+	UNION
+	SELECT @kArtikel, tWarenLagerPlatz.kWarenLager
+	FROM dbo.tWarenLagerPlatz
+	WHERE tWarenLagerPlatz.kWarenLagerPlatz = @kWarenlagerPlatzNeu;
+
+	EXEC spUpdateLagerbestandProLager @typeLagerbestandProLager;
+
+	-- Bestand anpassen wenn WarenlagerPlatz nGesperrt = 1
+	IF(EXISTS(SELECT * FROM dbo.tWarenlagerplatz WHERE (dbo.tWarenlagerplatz.kWarenLagerPlatz = @kWarenlagerPlatzNeu OR tWarenlagerplatz.kWarenLagerPlatz = @kWarenlagerPlatzAlt)
+													AND (dbo.tWarenlagerplatz.nGesperrt = 1 OR  dbo.tWarenlagerplatz.nAuslieferungGesperrt = 1)))
+	BEGIN
+		DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+
+		INSERT INTO @typeArtikel (kArtikel)
+		SELECT @kArtikel;
+
+		EXEC spUpdateLagerbestand @typeArtikel;
+	END
+
+	--------
+
+	DECLARE @AnzahlWarenlager AS INT
+	SELECT @AnzahlWarenlager = COUNT(DISTINCT kWarenlager) FROM @typeLagerbestandProLager 
+	
+	--Gibt es ein Warenlager Wechsel?
+	IF(@AnzahlWarenlager = 2)
+	BEGIN
+
+		DECLARE @fEKEinzel AS DECIMAL(25,13)
+		DECLARE @fLagerBestandGesamt AS DECIMAL(25,13)
+		DECLARE @fLagerBestandAlt AS DECIMAL(25,13)
+		DECLARE @fLagerBestandNeu AS DECIMAL(25,13)
+		DECLARE @fVerfuegbar AS DECIMAL(25,13)
+		DECLARE @fReserviert AS DECIMAL(25,13)
+		DECLARE @kLieferantenBestellungPos AS INT
+		DECLARE @date AS DATETIME = GETDATE()
+		DECLARE @fLagerBestandInLagerQuell AS DECIMAL(25,13)
+		DECLARE @fLagerBestandInLagerZiel AS DECIMAL(25,13)
+		DECLARE @kWarenlagerQuell INT;
+		DECLARE @kWarenlagerZiel INT;
+
+		SELECT @kWarenlagerQuell = kWarenlager
+		FROM tWarenlagerplatz
+		WHERE tWarenlagerplatz.kWarenlagerplatz = @kWarenlagerPlatzAlt;
+
+		SELECT @kWarenlagerZiel = kWarenlager
+		FROM tWarenlagerplatz
+		WHERE tWarenlagerplatz.kWarenlagerplatz = @kWarenlagerPlatzNeu;
+
+
+		SELECT
+			@fEKEinzel = ISNULL(WLE.fEKEinzel, ISNULL(Artikel.fEKNetto,0.0)),
+			@kLieferantenBestellungPos = WLE.kLieferantenBestellungPos,
+			@fLagerBestandGesamt = Lagerbestand.fLagerbestandEigen,
+			@fLagerBestandAlt = ISNULL(LagerBestandAufPlatz.fAnzahl,0.0),
+			@fLagerBestandNeu = ISNULL(LagerBestandAufPlatzNeu.fAnzahl,0.0),
+			@fVerfuegbar = ISNULL(Lagerbestand.fVerfuegbar,0.0),
+			@fReserviert = ISNULL(Lagerbestand.fInAuftraegen,0.0),
+			@fLagerBestandInLagerQuell = ISNULL(QuellBestand.fBestand,0.0),
+			@fLagerBestandInLagerZiel = ISNULL(ZielBestand.fBestand,0.0)
+		FROM dbo.tArtikel AS Artikel
+		JOIN dbo.tlagerbestand AS Lagerbestand ON Lagerbestand.kArtikel = Artikel.kArtikel
+		JOIN dbo.tWarenLagerEingang AS WLE ON WLE.kWarenLagerEingang = @kWarenlagerEingang
+		LEFT JOIN dbo.tlagerbestandProLagerLagerartikel AS QuellBestand ON QuellBestand.kArtikel = Artikel.kArtikel AND QuellBestand.kWarenlager = @kWarenlagerQuell
+		LEFT JOIN dbo.tlagerbestandProLagerLagerartikel AS ZielBestand ON ZielBestand.kArtikel = Artikel.kArtikel AND ZielBestand.kWarenlager = @kWarenlagerZiel
+		OUTER APPLY (SELECT	SUM(AlleWLE.fAnzahlAktuell) AS fAnzahl
+					FROM dbo.tWarenLagerEingang AS AlleWLE
+					WHERE AlleWLE.kArtikel = Artikel.kArtikel
+					AND AlleWLE.kWarenLagerPlatz = @kWarenlagerPlatzAlt) AS LagerBestandAufPlatz
+		OUTER APPLY (SELECT	SUM(AlleWLE.fAnzahlAktuell) AS fAnzahl
+					FROM dbo.tWarenLagerEingang AS AlleWLE
+					WHERE AlleWLE.kArtikel = Artikel.kArtikel
+					AND AlleWLE.kWarenLagerPlatz = @kWarenlagerPlatzNeu) AS LagerBestandAufPlatzNeu
+
+		WHERE Artikel.kArtikel = @kArtikel
+
+		INSERT INTO dbo.tArtikelHistory
+		(
+			kArtikel,
+			kBenutzer,
+			kBuchungsArt,
+			kWarenLagerPlatz,
+			kLieferscheinPos,
+			kLieferantenBestellungPos,
+			kBestellPos,
+			kGutschriftPos,
+			fAnzahl,
+			dMHD,
+			cChargenNr,
+			cKommentar,
+			kWarenEingang,
+			dGebucht,
+			fEKNetto,
+			fLagerBestandGesamt,
+			fLagerBestand,
+			fVerfuegbar,
+			fReserviert,
+			fLagerBestandInLager
+		)
+		VALUES
+		(	@kArtikel,                        -- kArtikel - int
+			@kBenutzer,                       -- kBenutzer - int
+			@kBuchungsart,                    -- kBuchungsart - int
+			@kWarenlagerPlatzAlt,             -- kWarenLagerPlatz - int
+			0,                                -- kLieferscheinPos - int
+			@kLieferantenBestellungPos,       -- kLieferantenBestellungPos - int
+			0,                                -- kBestellPos - int
+			0,                                -- kGutschriftPos - int
+			@fAnzahl * -1,                    -- fAnzahl - decimal(25,13)
+			@dMhd,                            -- dMHD - datetime
+			@cCharge,                         -- cCharge - varchar(255)
+			@cKommentar,                      -- cKommentar - varchar(255)
+			0,                                -- kWarenLagerEingang - int
+			@date,                            -- dGebucht - datetime
+			@fEKEinzel,                       -- fEKNetto - decimal(25,13)
+			@fLagerBestandGesamt - @fAnzahl,  -- fLagerBestandGesamt - decimal(25,13)
+			@fLagerBestandAlt,                -- fLagerBestand - decimal(25,13)
+			@fVerfuegbar - @fAnzahl,          -- fVerfuegbar - decimal(25,13)
+			@fReserviert,                      -- fReserviert - decimal(25,13)
+			@fLagerBestandInLagerQuell
+		),
+		(	@kArtikel,                        -- kArtikel - int
+			@kBenutzer,                       -- kBenutzer - int
+			@kBuchungsart,                    -- kBuchungsart - int
+			@kWarenlagerPlatzNeu,             -- kWarenLagerPlatz - int
+			0,                                -- kLieferscheinPos - int
+			0,                                -- kLieferantenBestellungPos - int
+			0,                                -- kBestellPos - int
+			0,                                -- kGutschriftPos - int
+			@fAnzahl,                         -- fAnzahl - decimal(28, 14)
+			@dMhd,                            -- dMHD - datetime
+			@cCharge,                         -- cCharge - varchar(255)
+			@cKommentar,                      -- cKommentar - varchar(255)
+			0,                                -- kWarenLagerEingang - int
+			DATEADD(ms, 2, @date),            -- dGebucht - datetime - Fuer spaetere ansicht in der sortierung zwei ms dazuzaehlen 
+			@fEKEinzel,                       -- fEKNetto - decimal(28, 14)
+			@fLagerBestandGesamt,             -- fLagerBestandGesamt - decimal(28, 14)
+			@fLagerBestandNeu,                -- fLagerBestand - decimal(28, 14)
+			@fVerfuegbar,                     -- fVerfuegbar - decimal(28, 14)
+			@fReserviert,                      -- fReserviert - decimal(28, 14)
+			@fLagerBestandInLagerZiel
+		);
+		
+	END;
+
+	DECLARE @WeChange INT =
+	(
+		SELECT COUNT(*) FROM tWarenLagerPlatz WeNeu
+		JOIN tWarenLagerPlatz WeAlt ON WeAlt.nGesperrt != WeNeu.nGesperrt
+		WHERE WeNeu.kWarenLagerPlatz = @kWarenlagerPlatzNeu AND WeAlt.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+	)
+
+	IF (@WeChange &gt; 0) OR (@AnzahlWarenlager = 2)
+	BEGIN
+		--
+		-- FFN Stock Update
+		--
+		DECLARE @stockUpdate AS FulfillmentNetwork.TYPE_spStockUpdate;
+		INSERT INTO @stockUpdate
+		(
+			kArtikel,
+			kBenutzer,
+			kBuchungsart,
+			kWarenLagerPlatz,
+			kLieferantenBestellungPos,
+			fAnzahl,
+			cLieferscheinNr,
+			dMHD,
+			cCharge,
+			cKommentar,
+			kWarenLagerEingang,
+			kSessionId
+		)
+		VALUES
+		(	@kArtikel,            -- kArtikel - int
+			@kBenutzer,           -- kBenutzer - int
+			CASE WHEN @kBuchungsart IS NULL THEN (SELECT TOP 1 kBuchungsart FROM tWarenLagerEingang WHERE kWarenLagerEingang=@kWarenlagerEingang) ELSE @kBuchungsart END,
+			@kWarenlagerPlatzAlt, -- kWarenLagerPlatz - int
+			0,                    -- kLieferantenBestellungPos - int
+			@fAnzahl * -1,        -- fAnzahl - decimal(28, 14)
+			NULL,                 -- cLieferscheinNr - varchar(255)
+			@dMhd,                -- dMHD - datetime
+			@cCharge,             -- cCharge - varchar(255)
+			@cKommentar,          -- cKommentar - varchar(255)
+			@kWarenlagerEingang,  -- kWarenLagerEingang - int
+			0                     -- kSessionId - int
+			),
+		(	@kArtikel,              -- kArtikel - int
+			@kBenutzer,             -- kBenutzer - int
+			CASE WHEN @kBuchungsart IS NULL THEN (SELECT TOP 1 kBuchungsart FROM tWarenLagerEingang WHERE kWarenLagerEingang=@kWarenlagerEingangNeu) ELSE @kBuchungsart END,
+			@kWarenlagerPlatzNeu,   -- kWarenLagerPlatz - int
+			0,                      -- kLieferantenBestellungPos - int
+			@fAnzahl,               -- fAnzahl - decimal(28, 14)
+			NULL,                   -- cLieferscheinNr - varchar(255)
+			@dMhd,                  -- dMHD - datetime
+			@cCharge,               -- cCharge - varchar(255)
+			@cKommentar,            -- cKommentar - varchar(255)
+			@kWarenlagerEingangNeu, -- kWarenLagerEingang - int
+			0                       -- kSessionId - int
+		);
+
+		EXEC FulfillmentNetwork.spStockUpdate @Daten = @stockUpdate-- TYPE_spStockUpdate
+	END
+
+
+	SET CONTEXT_INFO 0x000;
+	RETURN;
+END</code></pre>
+</body>
+</html>

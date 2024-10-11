@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.SplitFulfillmentPositionen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.SplitFulfillmentPositionen</h1>
+    <p><strong>Description:</strong> Die Procedure verteilt den Bestand von mehreren SKUs auf einen Artikel.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[SplitFulfillmentPositionen]
+	@kFulfillmentAuftrag INT,
+	@kLieferschein INT,
+	@nFulfillmentDienstleister INT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	-- Nur fuer @nFulfillmentDienstleister == 1 ausfuehren. Alles andere ist kein FBA! (vgl. WAWI-31999)
+	IF (@nFulfillmentDienstleister != 1)
+	BEGIN	
+		RETURN;
+	END
+	
+	IF(OBJECT_ID(&#39;tempdb..#Verteilung&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Verteilung;
+	END
+
+	CREATE TABLE #Verteilung
+	(
+		kArtikel INT,
+		cSKU NVARCHAR(255),
+		fAnzahl INT,
+		nMenge INT,
+		nMengeVerteilt INT,
+		nVorhandeneGesamtmenge INT
+	);
+
+	--
+	-- 1. Anzahl aus den Positionen gruppiert nach kArtikel prozentual auf die Menge in den SKUs aufteilen
+	--
+	INSERT INTO #Verteilung (kArtikel, cSKU, fAnzahl, nMenge, nMengeVerteilt, nVorhandeneGesamtmenge)
+		SELECT
+			Verteilung.kArtikel,
+			Verteilung.cSellerSKU,
+			Verteilung.fAnzahl,
+			Verteilung.nQuantity,
+			FLOOR((CAST(Verteilung.nQuantity AS DECIMAL(25,13)) / CAST(Verteilung.Gesamtmenge AS DECIMAL(25,13))) * Verteilung.fAnzahl) AS MengeVerteilt,
+			Verteilung.Gesamtmenge
+		FROM
+		(
+			SELECT
+				FulfillmentAuftragGrouping.kArtikel, 
+				pf_amazon_angebot_mapping.cSellerSKU, 
+				AngebotFBA.nQuantity,
+				FulfillmentAuftragGrouping.fAnzahl,
+				SUM(AngebotFBA.nQuantity) OVER (PARTITION BY FulfillmentAuftragGrouping.kArtikel) AS Gesamtmenge
+			FROM
+			(
+				SELECT 
+					tFulfillmentAuftragPos.kArtikel,
+					tFulfillmentAuftragPos.kFulfillmentAuftrag,
+					SUM(tFulfillmentAuftragPos.fAnzahl) AS fAnzahl
+				FROM dbo.tFulfillmentAuftragPos
+				WHERE tFulfillmentAuftragPos.kFulfillmentAuftrag = @kFulfillmentAuftrag
+				GROUP BY tFulfillmentAuftragPos.kArtikel, tFulfillmentAuftragPos.kFulfillmentAuftrag
+			) AS FulfillmentAuftragGrouping
+			JOIN dbo.tFulfillmentAuftrag ON tFulfillmentAuftrag.kFulfillmentAuftrag = FulfillmentAuftragGrouping.kFulfillmentAuftrag
+			JOIN dbo.pf_amazon_angebot_mapping ON FulfillmentAuftragGrouping.kArtikel = pf_amazon_angebot_mapping.kArtikel
+				AND pf_amazon_angebot_mapping.kUser = tFulfillmentAuftrag.kUser
+			JOIN Amazon.WarenlagerMarktplatzMapping ON tFulfillmentAuftrag.kWarenlager = WarenlagerMarktplatzMapping.kWarenlager
+			CROSS APPLY
+			(
+				SELECT
+					pf_amazon_angebot_fba.nQuantity,
+					pf_amazon_angebot_fba.cWarehouseConditionType,
+					ROW_NUMBER() OVER (PARTITION BY pf_amazon_angebot_fba.cSellerSKU ORDER BY pf_amazon_angebot_fba.cSellerSKU) AS RowNum
+				FROM dbo.pf_amazon_angebot_fba
+				WHERE pf_amazon_angebot_fba.kUser = tFulfillmentAuftrag.kUser
+					AND pf_amazon_angebot_fba.cRegion = WarenlagerMarktplatzMapping.cRegion
+					AND pf_amazon_angebot_fba.cSellerSKU = pf_amazon_angebot_mapping.cSellerSKU
+			) AS AngebotFBA
+			WHERE FulfillmentAuftragGrouping.kFulfillmentAuftrag = @kFulfillmentAuftrag
+				AND AngebotFBA.nQuantity &gt; 0
+				AND AngebotFBA.cWarehouseConditionType = &#39;SELLABLE&#39;
+				AND AngebotFBA.RowNum = 1
+		) AS Verteilung;
+
+	--
+	-- Raiserror Bedingung 1 =&gt; nVorhandeneGesamtmenge &lt; Anzahl. Es kann nicht alles Verteilt werden was in den Positionen steht
+	--		=&gt; offene Restmenge bleibt &#252;brig
+	--
+	IF EXISTS
+	(
+		SELECT
+			Mengenpruefung.fAnzahl,
+			Mengenpruefung.nVorhandeneGesamtmenge
+		FROM
+		(
+			SELECT 
+				#Verteilung.kArtikel,
+				MAX(#Verteilung.fAnzahl) AS fAnzahl,
+				MAX(#Verteilung.nVorhandeneGesamtmenge) AS nVorhandeneGesamtmenge
+			FROM #Verteilung
+			GROUP BY #Verteilung.kArtikel
+		) AS Mengenpruefung
+		WHERE Mengenpruefung.nVorhandeneGesamtmenge &lt; MengenPruefung.fAnzahl
+	)
+	BEGIN
+		RAISERROR(&#39;Die Menge im Fulfillmentauftrag ist gr&#246;&#223;er als der Lagerbestand. Bitte wenden Sie sich an den Support.&#39;, 18,10);
+		RETURN;
+	END
+
+	--
+	-- 2. Rest aus Schritt 1 auf die restlichen Mengen in den SKUs verteilen nach Menge absteigend sortiert
+	--
+	DECLARE @kArtikel INT;
+	DECLARE @cSKU VARCHAR(255);
+	DECLARE @fAnzahl INT;
+	DECLARE @nMenge INT;
+	DECLARE @nMengeVerteilt INT;
+
+	DECLARE curs CURSOR LOCAL FAST_FORWARD FOR
+		SELECT 
+			#Verteilung.kArtikel,
+			#Verteilung.cSKU,
+			#Verteilung.fAnzahl,
+			#Verteilung.nMenge,
+			#Verteilung.nMengeVerteilt
+		FROM #Verteilung
+		ORDER BY #Verteilung.kArtikel ASC, #Verteilung.nMenge DESC;
+
+	OPEN curs;
+	FETCH NEXT FROM curs INTO @kArtikel, @cSKU, @fAnzahl, @nMenge, @nMengeVerteilt;
+
+	DECLARE @zuVerteilen INT;
+	DECLARE @gesamtMenge INT;
+	SELECT
+		@zuVerteilen = MAX(#Verteilung.fAnzahl) - SUM(#Verteilung.nMengeVerteilt),
+		@gesamtMenge = SUM(#Verteilung.nMenge)
+	FROM #Verteilung
+	WHERE #Verteilung.kArtikel = @kArtikel
+	GROUP BY #Verteilung.kArtikel;
+
+	DECLARE @zuVerteilenOld INT = 0;
+
+	WHILE(@@FETCH_STATUS = 0)
+	BEGIN
+		SELECT
+			@zuVerteilen = MAX(#Verteilung.fAnzahl) - SUM(#Verteilung.nMengeVerteilt)
+		FROM #Verteilung
+		WHERE #Verteilung.kArtikel = @kArtikel
+		GROUP BY #Verteilung.kArtikel;
+
+		UPDATE #Verteilung
+			SET #Verteilung.nMengeVerteilt = #Verteilung.nMengeVerteilt +
+				CASE 
+					WHEN (@nMenge - @nMengeVerteilt) - @zuVerteilen &gt;= 0
+						THEN @zuVerteilen
+					WHEN (@nMenge - @nMengeVerteilt) - @zuVerteilen &lt; 0
+						THEN (@nMenge - @nMengeVerteilt)
+					ELSE 0
+				END
+		WHERE #Verteilung.kArtikel = @kArtikel
+			AND #Verteilung.cSKU = @cSKU;
+
+		IF(@zuVerteilen = 0 OR @zuVerteilen = @zuVerteilenOld)
+		BEGIN
+			FETCH NEXT FROM curs INTO @kArtikel, @cSKU, @fAnzahl, @nMenge, @nMengeVerteilt;
+			CONTINUE;
+		END
+
+		SET @zuVerteilenOld = @zuVerteilen;
+		FETCH NEXT FROM curs INTO @kArtikel, @cSKU, @fAnzahl, @nMenge, @nMengeVerteilt;
+	END
+
+	CLOSE curs;
+	DEALLOCATE curs;
+
+	--
+	-- Raiserror Bedingung 2 =&gt; mehr verteilt als Gesamtmenge in den SKUs vorhandensteht
+	--		=&gt; &#220;berbuchung
+	--
+	IF EXISTS
+	(
+		SELECT
+			Test.kArtikel,
+			Test.VerteilteMenge,
+			Test.VorhandenGesamtmenge
+		FROM
+		(
+			SELECT 
+				#Verteilung.kArtikel, 
+				SUM(#Verteilung.nMengeVerteilt) AS VerteilteMenge,
+				MIN(#Verteilung.nVorhandeneGesamtmenge) AS VorhandenGesamtmenge
+			FROM #Verteilung
+			GROUP BY #Verteilung.kArtikel
+		) AS Test
+		WHERE Test.VerteilteMenge &gt; Test.VorhandenGesamtmenge
+	)
+	BEGIN
+		RAISERROR(&#39;Es wurde versucht eine gr&#246;&#223;ere Menge auf den Bestand pro SKU zu verteilen als vorhanden ist. Bitte wenden Sie sich an den Support.&#39;, 18,10);
+		RETURN;
+	END
+
+	--
+	-- Raiserror Bedingung 3 =&gt; mehr verteilt als im Fulfillmentauftrag vorhanden ist
+	--		=&gt; Inkonsistente Summen
+	--
+	IF EXISTS
+	(
+		SELECT
+			Test.kArtikel,
+			Test.VerteilteMenge,
+			Test.Anzahl
+		FROM
+		(
+			SELECT 
+				#Verteilung.kArtikel, 
+				SUM(#Verteilung.nMengeVerteilt) AS VerteilteMenge,
+				MIN(#Verteilung.fAnzahl) AS Anzahl
+			FROM #Verteilung
+			GROUP BY #Verteilung.kArtikel
+		) AS Test
+		WHERE Test.VerteilteMenge &gt; Test.Anzahl
+	)
+	BEGIN
+		RAISERROR(&#39;Es wurde versucht eine gr&#246;&#223;ere Menge auf den Bestand pro SKU zu verteilen als im Fulfillmentauftrag vorhanden ist. Bitte wenden Sie sich an den Support.&#39;, 18,10);
+		RETURN;
+	END
+	
+	DELETE dbo.tFulfillmentAuftragPos
+	FROM dbo.tFulfillmentAuftragPos
+	JOIN 
+	(
+		SELECT #Verteilung.kArtikel 
+		FROM #Verteilung
+		WHERE #Verteilung.nMengeVerteilt &gt; 0
+		GROUP BY #Verteilung.kArtikel
+	) AS VerteilteArtikel ON VerteilteArtikel.kArtikel = tFulfillmentAuftragPos.kArtikel
+	WHERE tFulfillmentAuftragPos.kFulfillmentAuftrag = @kFulfillmentAuftrag;
+
+	INSERT INTO dbo.tFulfillmentAuftragPos
+	(
+		kFulfillmentAuftrag,
+		kLieferscheinPos,
+		kArtikel,
+		cArtNr,
+		cName,
+		fAnzahl,
+		cArtikelHinweis
+	)
+		SELECT
+		@kFulfillmentAuftrag,
+		LieferscheinPos.kLieferscheinPos,
+		LieferscheinPos.kArtikel,
+		#Verteilung.cSKU,
+		LieferscheinPos.cString,
+		#Verteilung.nMengeVerteilt,
+		LieferscheinPos.cHinweis
+	FROM #Verteilung
+	OUTER APPLY
+	(
+		SELECT 
+			TOP(1)
+			vLieferscheinPos.kLieferscheinPos,
+			vLieferscheinPos.kArtikel,
+			vLieferscheinPos.cString,
+			vLieferscheinPos.cHinweis
+		FROM Auslieferung.vLieferscheinPos
+		WHERE Auslieferung.vLieferscheinPos.kArtikel = #Verteilung.kArtikel
+		AND Auslieferung.vLieferscheinPos.kLieferschein = @kLieferschein 
+	) AS LieferscheinPos
+	WHERE
+		LieferscheinPos.kLieferscheinPos IS NOT NULL
+		AND (@nFulfillmentDienstleister = 0 OR LieferscheinPos.kArtikel &gt; 0)
+		AND #Verteilung.nMengeVerteilt &gt; 0;
+	
+	IF(OBJECT_ID(&#39;tempdb..#Verteilung&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Verteilung;
+	END
+END;</code></pre>
+</body>
+</html>

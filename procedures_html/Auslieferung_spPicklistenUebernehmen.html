@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenUebernehmen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenUebernehmen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenUebernehmen]
+
+-- M&#246;gliche Fehler:
+-- Im Fehlerfall enth&#228;lt der Messagetext XML-Informationen zum Fehler
+-- Code = 50000, Severity = 18, State = 1: Die &#252;bergebene Pickliste w&#252;rde eine Teillieferung erzeugen, 
+--      obwohl Teillieferungen verboten sind. 
+-- Code = 50000, Severity = 18, State = 2: Es wurden Pickpositionen &#252;bergeben die bereits ausgeliefert wurden
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+-- &lt;Bestellung&gt;
+--   &lt;kBestellung&gt;7&lt;/kBestellung&gt;
+-- &lt;/Bestellung&gt;
+@Bestellungen XML,
+
+-- Enth&#228;lt den Benutzer zur eindeutigen Zuordnung
+@kBenutzer INT,
+
+-- Gibt an ob die Auftr&#228;ge gesplittet werden sollen (0 = nein, 1 = teillieferung ohne Split, 2 = teillieferung mit split)
+@nTeillieferung BIT,
+
+@kSessionId INT,
+
+@xResult XML OUTPUT
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spPicklistenUebernehmen
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY
+    DECLARE @xErrorInfo XML;
+	DECLARE @cError NVARCHAR(MAX);
+    DECLARE @dNow AS DATETIME;
+    SET @dNow = (SELECT GETDATE());
+	SET @xResult = &#39;&#39;;
+
+	IF(object_id(&#39;tempdb..#XMLBESTELLUNGEN&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #XMLBESTELLUNGEN;
+	END
+    CREATE TABLE #XMLBESTELLUNGEN(
+		kBestellung INT
+		)
+	INSERT INTO #XMLBESTELLUNGEN
+	(
+	    #XMLBESTELLUNGEN.kBestellung
+	)
+	SELECT
+		ParamValues.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) AS kBestellung
+	FROM @Bestellungen.nodes(&#39;/Bestellung&#39;) AS ParamValues(ID)
+
+
+    IF (@nTeillieferung = 0)
+    BEGIN		
+		SET @xErrorInfo = (SELECT
+				vAuftrag.kAuftrag AS kBestellung,
+				vAuftrag.cAuftragsNr AS cBestellNr,
+				COUNT(CASE WHEN vAuftragPositionEckdaten.fAnzahlOffen &gt; 0 THEN 1 END) AS fAnzahlOffenePositionen,
+				SUM(vAuftragPositionEckdaten.fAnzahlOffen) AS fAnzahlOffen,
+				SUM(ISNULL(PP.fAnzahl, 0)) AS fAnzahlAufPicklisten
+				FROM Verkauf.vAuftrag
+				JOIN Verkauf.vAuftragPosition ON vAuftrag.kAuftrag = vAuftragPosition.kAuftrag
+				JOIN #XMLBESTELLUNGEN ON #XMLBESTELLUNGEN.kBestellung = vAuftrag.kAuftrag
+				JOIN Verkauf.vAuftragPositionEckdaten ON vAuftragPositionEckdaten.kAuftragPosition = vAuftragPosition.kAuftragPosition
+				LEFT JOIN (
+					SELECT
+						dbo.tPicklistePos.kBestellPos,
+						SUM(dbo.tPicklistePos.fAnzahl) AS fAnzahl
+					FROM 
+						dbo.tPicklistePos
+					GROUP BY
+						dbo.tPicklistePos.kBestellPos
+					) AS PP ON PP.kBestellPos = vAuftragPosition.kAuftragPosition
+				GROUP BY vAuftrag.kAuftrag, vAuftrag.cAuftragsNr
+				HAVING SUM(vAuftragPositionEckdaten.fAnzahlOffen) - SUM(ISNULL(PP.fAnzahl, 0)) &gt; 0 AND SUM(ISNULL(PP.fAnzahl, 0)) &gt; 0
+			FOR XML PATH(&#39;BrokenOrders&#39;), TYPE)
+		IF (@xErrorInfo IS NOT NULL)
+		BEGIN			
+			SET @cError = CAST(@xErrorInfo AS NVARCHAR(MAX))
+			RAISERROR(@cError, 18, 1);
+		END
+    END
+		
+	-- &#220;berfl&#252;ssige St&#252;cklistenv&#228;ter l&#246;schen
+	DELETE dbo.tPicklistePos
+	WHERE dbo.tPicklistePos.kPicklistePos IN
+	(
+		SELECT dbo.tPicklistePos.kPicklistePos
+		FROM dbo.tPicklistePos
+		JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+		JOIN Verkauf.vAuftragPosition AS vaterArtikel ON dbo.tPicklistePos.kBestellPos = vaterartikel.kAuftragPosition
+			AND vaterArtikel.kAuftragPosition = vaterArtikel.kAuftragStueckliste
+		JOIN Verkauf.vAuftragPosition AS kindArtikel ON vaterArtikel.kAuftragStueckliste = kindArtikel.kAuftragStueckliste
+			AND kindArtikel.kAuftragPosition &lt;&gt; kindArtikel.kAuftragStueckliste
+		LEFT JOIN dbo.tPicklistePos AS gepickteKindArtikel ON kindArtikel.kAuftragPosition = gepickteKindArtikel.kBestellPos
+			AND dbo.tPicklistePos.kPickliste = gepickteKindArtikel.kPickliste
+		GROUP BY dbo.tPicklistePos.kPicklistePos
+		HAVING MAX(ISNULL(gepickteKindArtikel.kPicklistePos, 0)) = 0
+	)
+
+    -- leere Picklisten l&#246;schen
+    DELETE dbo.tPickliste
+    FROM dbo.tPickliste
+    LEFT JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kPickliste = dbo.tPickliste.kPickliste
+    WHERE dbo.tPicklistePos.kPickliste IS NULL AND dbo.tPickliste.kSessionId = @kSessionId
+
+    -- Status der Positionen hochsetzen
+    INSERT INTO dbo.tPicklistePosStatus
+    (
+        dbo.tPicklistePosStatus.kPicklistePos,
+        dbo.tPicklistePosStatus.kbenutzer,
+        dbo.tPicklistePosStatus.dZeitstempel,
+        dbo.tPicklistePosStatus.nStatus
+    )
+    SELECT 
+        dbo.tPicklistePos.kPicklistePos,
+        @kBenutzer,
+        @dNow,
+        10
+    FROM dbo.tPicklistePos 
+    JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+	WHERE dbo.tPicklistePos.nStatus &lt; 10
+
+	DECLARE @OldContextInfo VARBINARY(128);
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	
+	SET CONTEXT_INFO 0x5022;
+
+	CREATE TABLE #tempPicklistenPosKeys(kPicklistePos INT);
+
+	INSERT INTO #tempPicklistenPosKeys(kPicklistePos)
+	SELECT 
+		tPicklistePos.kPicklistePos
+	FROM dbo.tPicklistePos 
+	JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.kSessionId = @kSessionId
+	JOIN dbo.tbestellpos ON tbestellpos.kBestellPos = tPicklistePos.kBestellPos
+	WHERE tPicklistePos.nStatus &lt;= 10 AND tbestellpos.nType IN(18, 20)
+
+	INSERT INTO dbo.tPicklistePosStatus
+	(
+		tPicklistePosStatus.kPicklistePos,
+		tPicklistePosStatus.kbenutzer,
+		tPicklistePosStatus.dZeitstempel,
+		tPicklistePosStatus.nStatus
+	)
+	SELECT 
+		#tempPicklistenPosKeys.kPicklistePos,
+		@kBenutzer,
+		@dNow,
+		20
+	FROM #tempPicklistenPosKeys; 
+
+	UPDATE dbo.tPicklistePos
+	SET nStatus = 20
+	FROM dbo.tPicklistePos
+	JOIN #tempPicklistenPosKeys ON #tempPicklistenPosKeys.kPicklistePos = tPicklistePos.kPicklistePos
+	
+	DROP TABLE #tempPicklistenPosKeys;
+
+	SET CONTEXT_INFO @OldContextInfo;
+
+	SET @xResult = (
+				SELECT
+					(SELECT						
+							kPickliste
+						FROM
+							dbo.tPickliste
+						WHERE dbo.tPickliste.kSessionId = @kSessionId
+						FOR XML PATH(&#39;Pickliste&#39;), ROOT(&#39;NewPicklisten&#39;), ELEMENTS, TYPE
+					)
+				FOR XML PATH(&#39;Result&#39;)
+			)
+
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+		ROLLBACK TRANSACTION;
+	ELSE
+		IF XACT_STATE() &lt;&gt; -1
+			ROLLBACK TRANSACTION spPicklistenUebernehmen;
+
+	DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

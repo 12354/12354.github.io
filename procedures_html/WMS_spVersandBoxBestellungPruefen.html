@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spVersandBoxBestellungPruefen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spVersandBoxBestellungPruefen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spVersandBoxBestellungPruefen] 
+	@kWarenlager INT,
+	@kBestellung INT,
+	@nAusDemWe   INT = 0 
+AS   
+BEGIN	   
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+	DECLARE @KLHMStatus INT, @kLHM INT, @kWarenlagerPlatz INT, @nAnzahlFehlerBeiStueckliste INT, @nTeillieferungErlaubt INT, @nOffeneKonfiPositionen INT, @nGesperrt INT, @kGefundeneBestellung INT
+	DECLARE @fReserviert DECIMAL(28,14), @fOffeneMenge DECIMAL(28,14), @fReserviertAufDemWeg DECIMAL(28,14), @nNewBestellung INT
+	DECLARE @AuftragNichtKomplett INT, @AktivLHMStatus INT, @Rueckhaltegrund INT = 0, @FifoAktiv TINYINT, @FifoOffeneMengeReserviert TINYINT = 0
+
+
+	SELECT dbo.tlhmstatus.* INTO #LHMStatus 
+		FROM dbo.tlhm WITH(NOLOCK)  
+		JOIN dbo.tlhmstatus WITH(NOLOCK) ON dbo.tlhmstatus.klhmstatus = dbo.tlhm.klhmstatus 
+		WHERE dbo.tlhmstatus.kBestellung = @kBestellung  
+			AND dbo.tlhmstatus.nstatus IN (20,30) 
+			AND dbo.tlhm.kwarenlager = @kWarenlager 
+			AND ISNULL(dbo.tLhm.nSperre,0) = 0;
+
+
+	SELECT @FifoAktiv= CAST(cValue AS TINYINT)
+    FROM tOptions
+    WHERE cKey = &#39;FIFOAktiv&#39;;
+ 
+    IF(@FifoAktiv = 1)
+	BEGIN
+
+	    SELECT @FifoOffeneMengeReserviert = CASE WHEN COUNT(tAuftrag.kAuftrag) &gt; 0 THEN 1 ELSE 0 END
+	    FROM Versand.vBestellPosLieferInfoProLager
+	    JOIN Verkauf.tAuftrag ON Verkauf.tAuftrag.kAuftrag = Versand.vBestellPosLieferInfoProLager.kBestellung
+	    WHERE Versand.vBestellPosLieferInfoProLager.kWarenlager = @kWarenlager
+	    AND Verkauf.tAuftrag.nKomplettAusgeliefert = 0
+	    AND tAuftrag.kAuftrag = @kBestellung
+	    AND fAnzahlReserviertEigen &gt; 0;
+
+	END;
+
+
+	SELECT @kLHM = #LHMStatus.kLHM, @AktivLHMStatus = #LHMStatus.nStatus FROM #LHMStatus;
+
+   
+	IF (@kLHM &gt; 0) 
+	BEGIN 
+		SELECT TOP(1) @kGefundeneBestellung = Verkauf.tAuftrag.kAuftrag, @fOffeneMenge = SUM(Versand.vBestellPosLieferInfo.fAnzahlOffen), @fReserviert = SUM(PickPosAnzahl.fReserviert), 
+				@fReserviertAufDemWeg = SUM(isnull(PickposAufDemWeg.fMenge,0)), @nTeillieferungErlaubt = MAX(tBEstellungWMSFreigabe.nTeillieferungErlaubt), 
+				@nGesperrt = MAX(ISNULL(tBestellungWMSFreigabe.nSperre,0))   , @Rueckhaltegrund = MAX(ISNULL(Verkauf.tAuftrag.kRueckhalteGrund,0)) 
+			FROM Verkauf.tAuftrag 
+			JOIN Verkauf.tAuftragEckdaten ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag
+			JOIN Verkauf.tAuftragPosition ON (Verkauf.tAuftragPosition.kAuftrag = Verkauf.tAuftrag.kAuftrag and (Verkauf.tAuftragPosition.nType IN (1,11,17,18,19,20)))  
+			JOIN Versand.vBestellPosLieferInfo ON Versand.vBestellPosLieferInfo.kBestellpos = Verkauf.tAuftragPosition.kAuftragPosition
+			JOIN vWMSArtikel  ON vWMSArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel
+			LEFT JOIN dbo.tZahlungsart ON dbo.tZahlungsart.kZahlungsart = Verkauf.tAuftrag.kZahlungsart
+			LEFT JOIN dbo.tBEstellungWMSFreigabe on dbo.tBEstellungWMSFreigabe.kBestellung =  Verkauf.tAuftrag.kAuftrag and dbo.tBEstellungWMSFreigabe.nAktiv = 1
+			--Die Menge welche insgesamt Reserviert ist (Ab sTatus 40 gibts auch ne Lieferscheinpos) 
+			LEFT JOIN (
+				SELECT dbo.tPicklistePos.kBestellpos, dbo.tPicklistePos.kArtikel, SUM(fAnzahl) AS fReserviert 
+				FROM dbo.tPicklistePos WITH(NOLOCK)  
+				JOIN dbo.tPickliste WITH(NOLOCK)  ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.nType != 3
+				WHERE dbo.tPicklistePos.nStatus &lt; 40  
+					GROUP BY dbo.tPicklistePos.kBestellpos, dbo.tPicklistePos.kArtikel) AS PickPosAnzahl ON (PickPosAnzahl.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition and PickPosAnzahl.kArtikel = vWMSArtikel.kArtikel
+					)  
+			--Die Menge die in diesem Lager noch nicht in den Boxen ist -&gt; Kein Druck erlaubt 
+			LEFT JOIN (SELECT dbo.tPicklistePos.kBestellpos, dbo.tPicklistePos.kArtikel, SUM(fAnzahl) AS fMenge 
+			            FROM dbo.tPicklistePos WITH(NOLOCK)   
+						JOIN dbo.tPickliste WITH(NOLOCK)  ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.nType != 3
+						WHERE dbo.tPicklistePos.nStatus &lt; 30  
+						AND dbo.tPicklistepos.kWarenlager = @kWarenlager --DAs Warenlager ist nur hierbei wichtig, weil Pickpositionen die in anderen L&#228;gern noch auf dem Weg sind sind f&#252;r dieses LAger uninteressant 
+						GROUP BY dbo.tPicklistePos.kBestellpos, dbo.tPicklistePos.kArtikel) AS PickposAufDemWeg ON (PickposAufDemWeg.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition and PickposAufDemWeg.kArtikel = vWMSArtikel.kArtikel)  
+			WHERE  Verkauf.tAuftrag.nKomplettAusgeliefert = 0	 
+				AND ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste,0) != Verkauf.tAuftragPosition.kAuftragPosition
+				AND (Verkauf.tAuftragEckdaten.dBezahlt IS NOT NULL
+				OR ISNULL(dbo.tZahlungsart.nAusliefernVorZahlung,0) = 1)
+				AND Verkauf.tAuftrag.kAuftrag = @kBestellung 
+			GROUP BY Verkauf.tAuftrag.kAuftrag;
+
+
+ 
+		--Es d&#252;rfen nur Boxen gedruckt werden, wenn folgendes gilt: 
+		--1. Es darf keine offene Menge mehr in dem Auftrag exisitieren, d.h. alles muss schon geliefert oder reserviert sein 
+		--2. Die Reservierten Mengen m&#252;ssen im aktuellen Lager schon in den Boxen sein, sie d&#252;rfen nicht mehr auf dem Weg sein. Andere L&#228;ger interessieren hier nicht, da  
+		--3. Oder Teillieferungen erlaubt sind (im tBestellungWMSFreigabe, kann in der Wawi eingestellt werden) und keine Reservierungen mehr auf dem Weg sind
+		-- pro Lager einen eigenen Verpackungsprozess gibt 
+		IF (@AktivLHMStatus = 20 AND @kGefundeneBestellung &gt; 0 AND ( @nGesperrt = 0 AND @Rueckhaltegrund = 0 AND (((@fOffeneMenge - @fReserviert ) = 0) AND @fReserviertAufDemWeg = 0) 
+		   OR (@nTeillieferungErlaubt = 1 AND @fReserviertAufDemWeg = 0)))
+		BEGIN 
+			--Hier wird nun &#252;berpr&#252;ft ob f&#252;r St&#252;cklistenartikel folgendes gilt
+			--Die Menge eines Kindartikels muss immer genau X-Vater Artikel ergeben -&gt; Es darf kein Rest bei Anzahl / tbestellstueckliste.fAnzahl bleiben
+			--Jedes Kind muss gleich viele V&#228;ter erzeugen, es darf also nicht sein dass gen&#252;gend Reifen f&#252;r 3 Autos, aber nur Fenster f&#252;r 2 Autos in der Box sind
+			--Liefert einen Wert zur&#252;ck wenn eine Bedingung nicht stimmt
+		    SELECT @nAnzahlFehlerBeiStueckliste = COUNT(*)
+				FROM
+				(
+				-- Gruppiert nach St&#252;cklisten
+				SELECT InnereAbfrage.kAuftragStueckliste,
+					CASE SUM(InnereAbfrage.fMengeInBox) WHEN 0 THEN 0 ELSE SUM(InnereAbfrage.fRestWert) END as fRestWert,
+					MAX(fMengeDerKomplettenTeile) as fMAXMengeDerKomplettenTeile, MIN(fMengeDerKomplettenTeile) as fMINMengeDerKomplettenTeile
+					FROM
+					(
+						 -- Gruppiert nach allen Bestellpositionen
+						SELECT Verkauf.tAuftragPosition.kAuftragStueckliste, 
+							 Verkauf.tAuftragPosition.kArtikel,
+							 ISNULL(BestellPosMenge.MEnge,0) fMengeInBox, 
+							 (ISNULL(Verkauf.tAuftragPosition.fAnzahl,0) / t2.fAnzahl) fStuecklistenMengeMax,
+							 ISNULL(BestellPosMenge.Menge / (ISNULL(Verkauf.tAuftragPosition.fAnzahl,0) / t2.fAnzahl),0) fMengeDerKomplettenTeile,
+							 CASE (ISNULL(SUM(ISNULL(BestellPosMenge.MEnge,0)),0)) WHEN 0 THEN 0 ELSE SUM(ISNULL(BestellPosMenge.MEnge,0)) % (SUM(ISNULL(Verkauf.tAuftragPosition.fAnzahl,0)) / MAX (t2.fAnzahl)) END fRestWert
+							FROM Verkauf.tAuftragPosition
+							-- Die Mengen die in der Box Liegen von den BestellPos
+							LEFT JOIN (SELECT dbo.tpicklistepos.kbestellpos, dbo.tpicklistepos.kArtikel, sum(dbo.tpicklistepos.fAnzahl) AS MEnge 
+										FROM dbo.tpicklistepos
+										JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.nType != 3
+										JOIN Verkauf.tAuftragPosition on Verkauf.tAuftragPosition.kAuftragPosition = dbo.tpicklistepos.kbestellpos
+										JOIN dbo.twarenlagereingang on dbo.twarenlagereingang.kwarenlagereingang = dbo.tpicklistepos.kwarenlagereingang
+										WHERE dbo.twarenlagereingang.klhm = @kLHM
+										AND dbo.twarenlagereingang.fAnzahlAktuell &gt; 0
+										AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+										GROUP BY dbo.tpicklistepos.kbestellpos, dbo.tpicklistepos.kArtikel) AS BestellPosMenge ON (BestellPosMenge.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition AND BestellPosMenge.kArtikel = Verkauf.tAuftragPosition.kArtikel)
+							JOIN (SELECT Verkauf.tAuftragPosition.kAuftragPosition ,Verkauf.tAuftragPosition.fAnzahl 
+							      FROM Verkauf.tAuftragPosition
+								  WHERE Verkauf.tAuftragPosition.fAnzahl &gt; 0 ) AS t2 ON t2.kAuftragPosition = Verkauf.tAuftragPosition.kAuftragStueckliste
+							JOIN vWMSArtikel ON vWMSArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel
+							WHERE Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+							AND Verkauf.tAuftragPosition.kAuftragStueckliste &gt; 0
+							AND Verkauf.tAuftragPosition.kAuftragPosition != Verkauf.tAuftragPosition.kAuftragStueckliste
+							GROUP BY Verkauf.tAuftragPosition.kAuftragStueckliste,Verkauf.tAuftragPosition.kArtikel, t2.fAnzahl, Verkauf.tAuftragPosition.fAnzahl, Verkauf.tAuftragPosition.kAuftragPosition, BestellPosMenge.MEnge
+						) AS InnereAbfrage
+					GROUP BY InnereAbfrage.kAuftragStueckliste
+					) AS AussereAbfrage
+				WHERE (fRestWert &gt; 0 or fMAXMengeDerKomplettenTeile &lt;&gt; fMINMengeDerKomplettenTeile); --Es d&#252;rfen keine Artikel nicht vollst&#228;ndig (bezogen auf St&#252;ckliste) in der Box sein und nur gleich viele St&#252;cklistenKinder pro St&#252;ckliste
+
+
+			--An dieser Stelle muss noch ein Hinweis gesetzt werden, der auf PRobleme hindeutet
+			IF (@nAnzahlFehlerBeiStueckliste &gt; 0)
+				RETURN;
+
+			SELECT @nOffeneKonfiPositionen = Versand.vBestellPosLieferInfo.fAnzahlOffen - ISNULL(PickPosAnzahl.fReserviert, 0) 
+				FROM Verkauf.tAuftragPosition 
+				JOIN Versand.vBestellPosLieferInfo ON Versand.vBestellPosLieferInfo.kBestellpos = Verkauf.tAuftragPosition.kAuftragPosition
+				JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel AND ISNULL(dbo.tArtikel.kStueckliste, 0) = 0
+				LEFT JOIN (SELECT dbo.tPicklistePos.kBestellpos, dbo.tPicklistePos.kArtikel, SUM(fAnzahl) AS fReserviert
+							FROM dbo.tPicklistePos 
+							JOIN dbo.tPickliste WITH(NOLOCK)  ON tPickliste.kPickliste = tPicklistePos.kPickliste AND tPickliste.nType != 3
+							GROUP BY dbo.tPicklistePos.kBestellpos, dbo.tPicklistePos.kArtikel) AS PickPosAnzahl
+				ON (PickPosAnzahl.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition AND PickPosAnzahl.kArtikel = dbo.tArtikel.kArtikel)
+				WHERE Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+					AND Verkauf.tAuftragPosition.kKonfigVater IS NOT NULL 
+					AND Verkauf.tAuftragPosition.kKonfigVater &gt; 0
+					AND Versand.vBestellPosLieferInfo.fAnzahlOffen - ISNULL(PickPosAnzahl.fReserviert, 0) &gt; 0  
+					AND dbo.tArtikel.cLagerAktiv = &#39;Y&#39;
+					AND dbo.tArtikel.cLagerVariation &lt;&gt; &#39;Y&#39; 
+					AND (dbo.tArtikel.nIstVater = 0) 
+					AND (NOT EXISTS (SELECT *
+										FROM dbo.teigenschaft WITH(NOLOCK) 
+										WHERE cAktiv = &#39;Y&#39; AND kArtikel = dbo.tartikel.kArtikel));
+
+			IF (@nOffeneKonfiPositionen &gt; 0)
+				RETURN;
+
+		     DECLARE @CreatedTransaction BIT
+			IF (@@TRANCOUNT = 0)
+			BEGIN
+				SET @CreatedTransaction = 1;
+				BEGIN TRAN;
+			END;
+		     ELSE
+			BEGIN
+				SET @CreatedTransaction = 0;
+				SAVE TRAN Savepoint1;
+		     END;
+
+
+
+				BEGIN TRY 	
+
+				    SET @nNewBestellung = @kBestellung;
+
+				     --Falls Teillieferung
+					IF ((@fOffeneMenge - @fReserviert) &gt; 0 AND @nTeillieferungErlaubt = 1 AND @fReserviertAufDemWeg = 0)
+					BEGIN
+
+					   IF(@nAusDemWe = 1 OR @FifoOffeneMengeReserviert = 1) -- Wenn Boxen von Teillieferbaren Auftr&#228;gen aus dem WE gef&#252;llt werden, soll die Box nicht auch gedruckt gehen. Wenn noch offene Bestellpos mit Fifo da sind, auch nicht abschlie&#223;en.
+					   BEGIN
+					        SET @AuftragNichtKomplett = 1;
+					   END;
+					   ELSE
+					   BEGIN
+						    SET @AuftragNichtKomplett = 0;
+					   END;
+
+				     END;
+				     ELSE
+					BEGIN
+					   SET @AuftragNichtKomplett = 0;
+					END;
+					
+	
+
+					-- Pr&#252;fen ob die selbe bestellung noch in anderen boxen drin ist die noch nicht gedruckt sind (Versandboxen mit Roko)
+					DECLARE @BestellungInMehrBoxen INT = 0;
+					SELECT @BestellungInMehrBoxen = CASE WHEN COUNT(*) &gt; 1 THEN 1 ELSE 0 END
+					FROM dbo.tLHMStatus
+					JOIN dbo.tLHM ON dbo.tLHM.kLHMStatus = dbo.tLHMStatus.kLHMStatus
+					WHERE dbo.tLHMStatus.kBestellung = @nNewBestellung
+					AND dbo.tLHMStatus.nStatus &lt; 30
+					AND dbo.tLHM.kWarenlager = @kWarenlager;
+
+
+				    IF(@nNewBestellung &gt; 0 AND @AuftragNichtKomplett = 0  AND @BestellungInMehrBoxen = 0)
+					BEGIN
+
+					    SELECT @kWarenlagerPlatz = kwarenlagerplatz 
+						    FROM tlhm WITH(NOLOCK) 
+						    WHERE klhm = @kLHM; 
+					    --L&#246;scht alle h&#228;ngenden Auftr&#228;ge f&#252;r die LHM von vorher 
+					    -- Alle anderen sind abgearbeitet (Status &gt; 10) oder sind Altlasten und existieren nicht mehr in der Box 
+					    DELETE FROM dbo.tDruckQueue WITH(ROWLOCK) 
+						    WHERE kLHM = @kLHM 
+							    AND nStatus &lt; 100;  
+			   
+					    INSERT INTO dbo.tDruckQueue WITH(ROWLOCK)(dZeitStempel, nStatus, kLHM, kWarenlagerPlatz) 
+						    VALUES (GetDate(),10,@kLHM,@kWarenlagerPlatz);
+			 
+					    UPDATE #LHMStatus 
+						    SET nStatus = 30, DZeitstempel = GETDATE(),kBestellung = @nNewBestellung;
+					    -- PK der Virtuellen Tabelle dropen, damit er in der reallen erstellt werden kann 
+					    ALTER TABLE #LHMStatus 
+						    DROP COLUMN kLHMStatus;  
+
+					    INSERT INTO dbo.tLHMStatus (kLHM,nStatus,dZeitstempel,kBestellung)
+						SELECT kLHM,nStatus,dZeitstempel,kBestellung
+					    FROM #LHMStatus; 
+ 
+					    SET @KLHMStatus = SCOPE_IDENTITY()
+					    UPDATE dbo.tLHM WITH(ROWLOCK) 
+						    SET KLHMStatus = @KLHMStatus 
+						    WHERE kLHM = @kLHM;		
+						
+					END;
+
+				IF (@CreatedTransaction = 1)
+				BEGIN
+				    COMMIT TRAN;
+				END;
+			END TRY 
+			BEGIN CATCH 
+				IF (@CreatedTransaction = 1)
+				BEGIN
+				    ROLLBACK TRAN;
+				END;
+				ELSE
+				BEGIN
+				    ROLLBACK TRAN Savepoint1;
+				END;
+			END CATCH 
+		END; 
+
+
+
+		-- Wenn Artikel noch nicht auf Pickliste sinf, aber die Box schon zum Verpacken bereit, dann mu&#223; der Status zur&#252;ckgesetzt werden.
+		ELSE IF( @AktivLHMStatus = 30 AND (EXISTS ( SELECT 1 FROM Versand.vBestellPosLieferInfo WHERE vBestellPosLieferInfo.kBestellung = @kBestellung AND fAnzahlZuPicken &gt; 0 ) OR @Rueckhaltegrund &gt; 0) )
+		BEGIN
+		        
+		BEGIN TRAN;
+
+			UPDATE #LHMStatus  SET nStatus = 20, DZeitstempel = GETDATE(),kBestellung = @kBestellung;
+			-- PK der Virtuellen Tabelle dropen, damit er in der reallen erstellt werden kann 
+			ALTER TABLE #LHMStatus  DROP COLUMN kLHMStatus;  
+
+			INSERT INTO dbo.tLHMStatus (kLHM,nStatus,dZeitstempel,kBestellung)
+			SELECT kLHM,nStatus,dZeitstempel,kBestellung
+			FROM #LHMStatus; 
+ 
+			SET @KLHMStatus = SCOPE_IDENTITY()
+			UPDATE dbo.tLHM 
+				SET KLHMStatus = @KLHMStatus 
+				WHERE kLHM = @kLHM;		
+
+		COMMIT;
+
+		END;
+	END;
+END;</code></pre>
+</body>
+</html>

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGetNextNummer</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGetNextNummer</h1>
+    <p><strong>Description:</strong> Die Stored Procedure gibt die nächste Nummer aus tLaufendeNummern zurück und setzt dort den Zähler hoch.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGetNextNummer]
+	@cName NVARCHAR(100),
+	@kFirma BIGINT,
+	@nNoUpdate TINYINT,
+	@cNeueNummer NVARCHAR(30) = NULL OUTPUT,
+    @nNoSelect TINYINT = 0
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT = 5;
+WHILE @retry &gt; 0
+BEGIN      
+    BEGIN TRY  
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END
+	   DECLARE @err INT
+	   DECLARE @iNeueNummer BIGINT
+	   DECLARE @Heute smalldatetime
+	   DECLARE @PRE NVARCHAR(MAX)
+	   DECLARE @POST NVARCHAR(MAX)
+	   DECLARE @res INT
+	   DECLARE @cSQL AS NVARCHAR(1000)
+	   DECLARE @cSQLREPLACED AS NVARCHAR(1000)
+	   DECLARE @CountTable AS TABLE(nCounter INT)
+	   DECLARE @cTable AS NVARCHAR(100)
+	   DECLARE @cColumn AS NVARCHAR(100)
+	   DECLARE @cTypeColumn AS NVARCHAR(7)
+	   DECLARE @cTypeValue AS NVARCHAR(4)
+	
+	   SET @err = 0
+	   SET @Heute = GetDate()
+	   SET @cNeueNummer = &#39;1&#39;
+
+	   SELECT TOP(1)
+		  @cTable = ISNULL(cTable, &#39;&#39;),
+		  @cColumn = ISNULL(cColumn, &#39;&#39;),
+		  @cTypeColumn = cTypeColumn,
+		  @cTypeValue = cTypeValue
+	   FROM
+		  dbo.tLaufendeNummern WITH(NOLOCK) 
+	   WHERE cName = @cName
+
+	   SET @cSQL = &#39;SELECT COUNT(*) FROM &#39; + @cTable + &#39; WITH(NOLOCK) WHERE &#39; + @cColumn + &#39; = &#39;&#39;#LAUFENDENUMMER#&#39;&#39;&#39;
+		  + (CASE WHEN LEN(@cTypeColumn) &gt; 0 THEN &#39; AND &#39; + @cTypeColumn + &#39;=@TypeValue&#39; ELSE &#39;&#39; END)
+
+	   EXEC @res = sp_getapplock @Resource = &#39;tLaufendeNummern&#39;, @LockMode =&#39;Exclusive&#39;, @LockOwner =&#39;Session&#39;, @LockTimeout = 500, @DbPrincipal = &#39;public&#39; 	
+
+	   IF @res NOT IN (0, 1)
+	   BEGIN
+		  SET @cNeueNummer = &#39;&#39;
+		  SET @err = 1
+	   END
+	   ELSE
+	   BEGIN
+		  WHILE ((SELECT ISNULL(MAX(ISNULL(nCounter, 0)), 0) FROM @CountTable) &gt; 0 OR @cNeueNummer = &#39;1&#39;)
+		  BEGIN
+				IF EXISTS(SELECT nNummer FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = @kFirma)
+				BEGIN
+				    SET @iNeueNummer = (SELECT nNummer FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = @kFirma)
+				    IF(@nNoUpdate = 0)
+				    BEGIN
+					   UPDATE tLaufendeNummern WITH(ROWLOCK) SET nNummer = nNummer + 1 WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = @kFirma
+				    END
+		
+				    SET @PRE = ISNULL((SELECT tLaufendeNummern.cPrefix FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = @kFirma), &#39;&#39;);
+				    SET @POST = ISNULL((SELECT tLaufendeNummern.cSuffix FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = @kFirma), &#39;&#39;);
+				    SET @cNeueNummer = (SELECT CONVERT(NVARCHAR(30), @iNeueNummer))
+				    SET @cNeueNummer = (SELECT (@PRE + @cNeueNummer + @POST));
+				    SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;K&gt;&#39;, REPLACE(STR(DATEPART(ISOWK, @Heute), 2), &#39; &#39;, 0)));
+				    SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;J&gt;&#39;, DATEPART(YEAR, @Heute)));
+				    SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;M&gt;&#39;, REPLACE(STR(DATEPART(MONTH, @Heute), 2), &#39; &#39;, 0)));
+				    SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;T&gt;&#39;, REPLACE(STR(DATEPART(DAY, @Heute), 2), &#39; &#39;, 0)));
+				END
+				ELSE
+				BEGIN
+				    IF EXISTS(SELECT nNummer FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = 0)
+				    BEGIN
+					   SET @iNeueNummer = (SELECT nNummer FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = 0)
+					   IF(@nNoUpdate = 0)
+					   BEGIN
+						  UPDATE tLaufendeNummern WITH(ROWLOCK) SET nNummer = nNummer + 1 WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = 0
+					   END
+			
+					   SET @PRE = ISNULL((SELECT tLaufendeNummern.cPrefix FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = 0), &#39;&#39;);
+					   SET @POST = ISNULL((SELECT tLaufendeNummern.cSuffix FROM tLaufendeNummern WITH(NOLOCK) WHERE tLaufendeNummern.cName = @cName AND tLaufendeNummern.kFirma = 0), &#39;&#39;);
+					   SET @cNeueNummer = (SELECT CONVERT(NVARCHAR(30), @iNeueNummer))
+					   SET @cNeueNummer = (SELECT (@PRE + @cNeueNummer + @POST));
+					   SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;K&gt;&#39;, REPLACE(STR(DATEPART(ISOWK, @Heute), 2), &#39; &#39;, 0)));
+					   SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;J&gt;&#39;, DATEPART(YEAR, @Heute)));
+					   SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;M&gt;&#39;, REPLACE(STR(DATEPART(MONTH, @Heute), 2), &#39; &#39;, 0)));
+					   SET @cNeueNummer = (SELECT REPLACE(@cNeueNummer, &#39;&lt;T&gt;&#39;, REPLACE(STR(DATEPART(DAY, @Heute), 2), &#39; &#39;, 0)));
+				    END
+				END
+
+				IF(@nNoUpdate = 1)
+				BEGIN
+				    SELECT @cNeueNummer
+				    BREAK
+				END
+				ELSE
+				BEGIN
+				    DELETE @CountTable
+				    SET @cSQLREPLACED = REPLACE(@cSQL, &#39;#LAUFENDENUMMER#&#39;, @cNeueNummer)
+				    INSERT INTO @CountTable(nCounter) EXEC sp_executesql @cSQLREPLACED, @params=N&#39;@TypeValue VARCHAR(1)&#39;, @TypeValue = @cTypeValue
+				END
+
+		  END
+	   END
+	
+	   EXEC sp_releaseapplock @Resource = &#39;tLaufendeNummern&#39;, @DbPrincipal =&#39;public&#39;, @LockOwner = &#39;Session&#39;
+
+	   IF(ISNULL(@nNoSelect,0) != 1)
+	   BEGIN
+		  SELECT @cNeueNummer;
+	   END;
+
+	   SET @retry = 0;
+        IF(@TranCount = 0)
+        BEGIN           
+            COMMIT TRANSACTION      
+        END
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END</code></pre>
+</body>
+</html>

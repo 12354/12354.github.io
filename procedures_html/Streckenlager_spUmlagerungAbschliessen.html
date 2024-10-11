@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Streckenlager.spUmlagerungAbschliessen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Streckenlager.spUmlagerungAbschliessen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Streckenlager].[spUmlagerungAbschliessen]
+@kUmlagerung INT, -- Die Umlagerung, die abgeschlo&#223;en werden soll
+@kBenutzer INT ,
+@cKommentar NVARCHAR(255)
+
+-- Funktion: Alle Warenlagereing&#228;nge ein Umlagerung die nicht eingelagert wurden, werden ausgebucht
+	
+AS
+
+DECLARE @kLieferantenBestellung INT
+DECLARE @kBestellung INT
+
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+
+
+BEGIN TRY
+
+	   SELECT @kLieferantenBestellung = kLieferantenBestellung, @kBestellung =  dbo.tUmlagerung.kBestellung
+	   FROM dbo.tUmlagerung
+	   WHERE kUmlagerung = @kUmlagerung;
+
+	   IF(@kLieferantenBestellung &gt; 0)
+	   BEGIN
+
+		   DECLARE @xWarenlagerAusgaenge XML;
+		   SET @xWarenlagerAusgaenge = (
+					SELECT dbo.tWarenLagerEingang.kWarenLagerEingang,
+					0 AS kLieferscheinPos,
+					dbo.tWarenLagerEingang.fAnzahlAktuell AS fAnzahl,
+					@cKommentar AS cKommentar,
+					@kBenutzer AS kBenutzer,
+					30 AS kBuchungsart
+					FROM dbo.tUmlagerung
+					JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAuftrag = dbo.tUmlagerung.kBestellung
+					JOIN dbo.tWarenLagerEingang ON dbo.tWarenLagerEingang.kBestellPosUmlagerung = vAuftragPosition.kAuftragPosition
+					WHERE dbo.tUmlagerung.kUmlagerung = @kUmlagerung
+					AND  dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0
+
+					FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+				);
+
+			IF(@xWarenlagerAusgaenge IS NOT NULL)
+			BEGIN
+
+				EXEC dbo.spWarenlagerAusgangSchreiben
+				@xWarenlagerAusgaenge = @xWarenlagerAusgaenge;
+
+			END;
+
+			EXEC [Lieferantenbestellung].[spLieferantenBestellungStatusAendern] 
+			@kLieferantenBestellung =  @kLieferantenBestellung,
+			@nStatus = 500;
+
+		END;
+
+		UPDATE dbo.tUmlagerung
+		SET nStatus = 3
+		WHERE kUmlagerung = @kUmlagerung;
+
+		UPDATE Verkauf.tAuftrag SET tAuftrag.nKomplettAusgeliefert = 2
+		WHERE kAuftrag = @kBestellung;
+
+        DELETE FROM dbo.tPicklistePos WHERE nStatus &lt;= 20 AND kBestellung = @kBestellung;
+
+		DECLARE @Auftrag AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+		INSERT INTO @Auftrag ( kAuftrag )
+		VALUES ( @kBestellung);
+
+		EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftrag;
+
+END TRY
+BEGIN CATCH
+
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SET @ErrorMessage =  ERROR_MESSAGE();
+    SET @ErrorSeverity =  ERROR_SEVERITY();
+    SET @ErrorState =  ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, 
+		  @ErrorSeverity,
+		  @ErrorState);
+END CATCH</code></pre>
+</body>
+</html>

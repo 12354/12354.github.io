@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGetNextKundenNr</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGetNextKundenNr</h1>
+    <p><strong>Description:</strong> Die Stored Procedure gibt die nächste verfügbare Kundennummer zurück und setzt den Zähler in tLfdnrKunde hoch.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROC [dbo].[spGetNextKundenNr] 
+AS 
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN TRANSACTION 	
+    DECLARE @err INT 	
+    DECLARE @iKundenNr INT
+    DECLARE @cKundenNr NVARCHAR(30) 	
+    DECLARE @Heute smalldatetime 	
+    SET @Heute = GetDate()     	
+    DECLARE @PRE NVARCHAR(10)     	
+    DECLARE @POST NVARCHAR(10) 	
+    SET @err = 0 	
+    DECLARE @res INT 	
+    EXEC @res = sp_getapplock @Resource = &#39;tLfdnrKunde&#39;,@LockMode =&#39;Exclusive&#39;, @LockOwner =&#39;Transaction&#39;, @LockTimeout = 500, @DbPrincipal = &#39;public&#39; 	
+	   if @res NOT IN (0, 1) 	
+	   BEGIN 		
+		  SET @iKundenNr = &#39;&#39;         
+		  SET @err = 1 	
+	   END  	
+	   ELSE 	
+	   BEGIN 		
+		  SET @iKundenNr = (SELECT nNummer FROM tLfdnrKunde WITH(NOLOCK)) 		
+		  UPDATE tLfdnrKunde WITH(ROWLOCK) SET nNummer=nNummer+1 		
+		  EXEC sp_releaseapplock @Resource = &#39;tLfdnrKunde&#39;,@DbPrincipal =&#39;public&#39;, @LockOwner = &#39;Transaction&#39; 
+	   END     IF (@err = 0)     
+	   BEGIN       
+		  SET @PRE = ISNULL((SELECT sKPre FROM tAnfangsnr WITH(NOLOCK)),&#39;&#39;);       
+		  SET @POST = ISNULL((SELECT sKPost FROM tAnfangsnr WITH(NOLOCK)),&#39;&#39;);       
+		  SET @cKundenNr = (SELECT CONVERT(NVARCHAR(30),@iKundenNr) )       
+		  SET @cKundenNr = (SELECT (@PRE + @cKundenNr + @POST));       
+		  SET @cKundenNr = (SELECT REPLACE(@cKundenNr,&#39;&lt;K&gt;&#39;,Datepart(Week, @Heute)));       
+		  SET @cKundenNr = (SELECT REPLACE(@cKundenNr,&#39;&lt;J&gt;&#39;,Datepart(Year, @Heute)));       
+		  SET @cKundenNr = (SELECT REPLACE(@cKundenNr,&#39;&lt;M&gt;&#39;,REPLACE(STR( Datepart(Month, @Heute),2),&#39; &#39;,0) ));       
+		  SET @cKundenNr = (SELECT REPLACE(@cKundenNr,&#39;&lt;T&gt;&#39;,REPLACE(STR( Datepart(Day, @Heute),2),&#39; &#39;,0) ));     
+		  END   
+	   SELECT @cKundenNr 
+COMMIT</code></pre>
+</body>
+</html>

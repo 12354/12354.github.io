@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>subset.spWarenlagerEingangSplit</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>subset.spWarenlagerEingangSplit</h1>
+    <p><strong>Description:</strong> Mit dieser Stored Procedure wird eine Teilmengen Dimension gesplittet</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [subset].[spWarenlagerEingangSplit]
+	@kWarenLagerEingang INT OUTPUT,
+	@kDimension INT,
+	@fValue DECIMAL(25,13),
+	@kMassEinheit INT,
+	@kBenutzer INT ,
+	@fQuantity INT,
+	@fSubsetFactor DECIMAL(25,13),
+	@cSubsetNumber NVARCHAR(100),
+	@fSubsetFactorRest DECIMAL(25,13),
+	@cSubsetNumberRest NVARCHAR(100),
+	@kWarenLagerPlatz INT,
+	@cKommentar NVARCHAR(255) = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @hash VARBINARY(128);
+	DECLARE @fAnzahl DECIMAL(25,13);
+	DECLARE @fAnzahlRest DECIMAL(25,13);
+	DECLARE @kWarenLagerEingangSubset INT;
+	DECLARE @kWarenLagerEingangSubsetNeu INT;
+	DECLARE @kWarenlagerEingangNeu INT;
+	DECLARE @kWarenlagerEingangNeuTemp INT;
+	DECLARE @kArtikel INT;
+	DECLARE @cnt INT = 0;
+
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;subset.spWarenlagerEingangSplit&#39;);
+
+	IF(OBJECT_ID(&#39;tempdb..#WarenlagerEingaenge&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #WarenlagerEingaenge;
+	END
+	
+	CREATE TABLE #WarenlagerEingaenge (
+		kWarenlagerEingang INT NOT NULL
+	);
+	
+	IF(OBJECT_ID(&#39;tempdb..#Dimensionen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Dimensionen;
+	END
+	
+	CREATE TABLE #Dimensionen (
+		kWarenlagerEingangSubset INT NOT NULL,
+		kDimension INT NOT NULL,
+		fValue DECIMAL(25,13) NOT NULL,
+		fGroundValue DECIMAL(25,13) NOT NULL,
+		kMassEinheit INT NULL
+	);
+
+	 -- Daten f&#252;r spWarenlagereingang berechnen
+	SET @fAnzahl = CONVERT(DECIMAL(25,13),@fQuantity) * @fSubsetFactor;
+
+	SELECT @fAnzahlRest = fAnzahlAktuell-fAnzahlReserviertPickpos-@fAnzahl, @kArtikel = kArtikel  FROM dbo.tWarenLagerEingang WHERE tWarenLagerEingang.kWarenLagerEingang = @kWarenLagerEingang
+
+	-- 1. Pr&#252;fen ob es einen Teilmengen Warenbestand gibt, der auch Bestand hat
+	IF(NOT EXISTS(SELECT * FROM dbo.tWarenLagerEingangSubsets WHERE tWarenLagerEingangSubsets.kWarenLagerEingang = @kWarenLagerEingang AND tWarenLagerEingangSubsets.fQuantity &gt; 0))
+	BEGIN
+		RAISERROR(N&#39;Kein Verf&#252;gbarer Bestand verf&#252;gbar&#39;, 15,1);
+	END
+
+	IF(@fAnzahlRest &lt; 0)
+	BEGIN
+		RAISERROR(N&#39;Es ist nicht genug Bestand auf dem Lagerplatz&#39;,15,1);
+	END
+
+	--2. Die Dimensionen abrufen, damit diese Dubliziert werden k&#246;nnen
+	INSERT INTO #Dimensionen 
+	SELECT 
+		tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset,
+		tWarenLagerEingangSubsetDetails.kDimension,
+		tWarenLagerEingangSubsetDetails.fValue,
+		tWarenLagerEingangSubsetDetails.fGroundValue,
+		tWarenLagerEingangSubsetDetails.kMassEinheit 
+	FROM dbo.tWarenLagerEingangSubsetDetails 
+	JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = tWarenLagerEingangSubsets.kWarenLagerEingangSubset
+	WHERE tWarenLagerEingangSubsets.kWarenLagerEingang = @kWarenLagerEingang
+			
+	-- 3. Pr&#252;fen ob die Dimension vorhanden ist
+	IF(NOT EXISTS(SELECT * FROM #Dimensionen WHERE kDimension = @kDimension))
+	BEGIN
+		RAISERROR(N&#39;Die abzu splittende Dimension ist nicht vorhanden&#39;, 15,1);
+	END
+
+
+	DECLARE @retry INT = 5;
+	WHILE @retry &gt; 0
+	BEGIN      
+		BEGIN TRY  
+			DECLARE @TranCount INT = @@TRANCOUNT;
+			IF(@TranCount = 0)
+			BEGIN
+				BEGIN TRANSACTION  
+			END
+          
+		  	-- Pr&#252;fen, ob es nur noch ein Einzelst&#252;ck ist, falls nicht, erst mal den zu splittenden zu einem Einzelst&#252;ck machen
+			IF(EXISTS(SELECT kWarenLagerEingangSubset FROM dbo.tWarenLagerEingangSubsets WHERE kWarenLagerEingang = @kWarenLagerEingang AND fQuantity &gt; 1))
+			BEGIN
+				DECLARE @preSplitAnzahl DECIMAL(25,13);
+				SELECT @preSplitAnzahl = fFactor FROM dbo.tWarenLagerEingangSubsets WHERE kWarenLagerEingang = @kWarenLagerEingang 
+				EXECUTE [dbo].[spPlatzUmbuchenAusfuehren] @kWarenLagerEingang
+				,										  @preSplitAnzahl
+				,										  @kWarenLagerPlatz -- Warenlagerplatz
+				,										  NULL --LHM
+				,										  200 -- Buchungsart
+				,										  0 --IstPickliste?
+				,										  @kBenutzer
+				,										  @cKommentar
+				,										  @kWarenlagerEingangNeuTemp OUTPUT;
+
+				SET @kWarenLagerEingang = @kWarenlagerEingangNeuTemp
+			END
+
+			-- BuchungsArt = 200 f&#252;r Teilmengen Umbuchung
+			--4. Neuen Wareneingang erzeugen
+			WHILE @cnt &lt; @fQuantity
+			BEGIN
+				EXECUTE [dbo].[spPlatzUmbuchenAusfuehren] @kWarenLagerEingang
+				,										  @fSubsetFactor
+				,										  @kWarenLagerPlatz
+				,										  NULL --LHM
+				,										  200 -- Buchungsart
+				,										  0 --IstPickliste?
+				,										  @kBenutzer
+				,										  @cKommentar
+				,										  @kWarenlagerEingangNeu OUTPUT;
+
+				SELECT @kWarenLagerEingangSubset = tWarenlagereingangSubsets.kWarenLagerEingangSubset
+				FROM dbo.tWarenlagereingangSubsets
+				WHERE tWarenlagereingangSubsets.kWarenlagereingang = @kWarenlagerEingang;
+
+				SELECT @kWarenLagerEingangSubsetNeu = tWarenlagereingangSubsets.kWarenLagerEingangSubset
+				FROM dbo.tWarenlagereingangSubsets
+				WHERE tWarenlagereingangSubsets.kWarenlagereingang = @kWarenlagerEingangNeu;
+
+				---- Subset Informationen setzen
+				SET CONTEXT_INFO @hash;
+				-- 5. Subset Informationen setzen
+				UPDATE dbo.tWarenLagerEingangSubsets 
+				SET tWarenLagerEingangSubsets.fQuantity = 1,
+					tWarenLagerEingangSubsets.fFactor = @fSubsetFactor,
+					tWarenLagerEingangSubsets.cSubsetNumber = LTRIM(RTRIM(@cSubsetNumber))
+				WHERE tWarenLagerEingangSubsets.kWarenLagerEingang = @kWarenLagerEingangNeu
+
+				UPDATE [dbo].[tWarenLagerEingangSubsetDetails]
+				SET tWarenLagerEingangSubsetDetails.fValue = @fValue, 
+					tWarenLagerEingangSubsetDetails.kMassEinheit = @kMassEinheit
+				WHERE
+					tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = @kWarenLagerEingangSubsetNeu
+					AND tWarenLagerEingangSubsetDetails.kDimension = @kDimension
+
+			   SET @cnt = @cnt + 1;
+			   INSERT INTO #WarenlagerEingaenge VALUES (@kWarenlagerEingangNeu);
+			END;
+
+			--6. Bestehnde Subset Informationen um einen Verringern. Und neue Informationen hinterlegen
+			
+			UPDATE dbo.tWarenLagerEingangSubsets 
+			SET tWarenLagerEingangSubsets.fQuantity = 1,
+				tWarenLagerEingangSubsets.fFactor = @fSubsetFactorRest,
+				tWarenLagerEingangSubsets.cSubsetNumber = LTRIM(RTRIM(@cSubsetNumberRest)) 
+			WHERE tWarenLagerEingangSubsets.kWarenLagerEingang = @kWarenLagerEingang
+
+			-- 7 Original Subset Dimension auf neuen Wert setzen
+			UPDATE [dbo].[tWarenLagerEingangSubsetDetails]
+			SET tWarenLagerEingangSubsetDetails.fValue = tWarenLagerEingangSubsetDetails.fValue - (@fValue * @fQuantity)
+			FROM [dbo].[tWarenLagerEingangSubsetDetails]
+			WHERE
+				tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = @kWarenLagerEingangSubset 
+				AND tWarenLagerEingangSubsetDetails.kDimension = @kDimension
+
+			SET CONTEXT_INFO 0x0;
+
+			--8 IM tArtikelSpeicher die Fehlenden Teilmengen Nummer Speichern
+			INSERT INTO [dbo].[tArtikelSpeicher] (cNummer, kArtikel,nID,nAktiv) 
+			SELECT tWarenLagerEingangSubsets.cSubsetNumber AS Nummer, tWarenLagerEingang.kArtikel, 12 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			FROM dbo.tWarenLagerEingangSubsets
+			JOIN dbo.tWarenLagerEingang ON tWarenLagerEingangSubsets.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+			LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft SubsetNumber&#39;
+			LEFT JOIN 
+				dbo.tArtikelSpeicher 
+				ON tArtikelSpeicher.cNummer = LTRIM(RTRIM(tWarenLagerEingangSubsets.cSubsetNumber)) 
+				AND tArtikelSpeicher.kArtikel = tWarenLagerEingang.kArtikel
+				AND tArtikelSpeicher.nID = 12
+			WHERE tArtikelSpeicher.kArtikel IS NULL
+			GROUP BY tWarenLagerEingangSubsets.cSubsetNumber, tWarenLagerEingang.kArtikel, dbo.tOptions.cValue
+
+
+			-- Historie schreiben
+			INSERT INTO dbo.tArtikelHistory
+			(
+				kWarenLagerPlatz, kArtikel, fAnzahl, dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+				fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert, fLagerBestandInLager, cSubsetNumber, cDimensionen
+			)
+			SELECT tWarenlagereingang.kWarenLagerPlatz,
+		  		   tWarenlagereingang.kArtikel,
+				   tWarenlagereingang.fAnzahl/tWarenlagereingangSubsets.fFactor, -- Factor darf nie 0 sein
+				   GETDATE(),
+				   @kBenutzer,
+				   0 AS kWarenLagerEingang,
+				   0 AS  kBestellPos,
+				   ISNULL(tWarenlagereingang.kGutschriftPos,0),
+				   ISNULL(tWarenlagereingang.fEKEinzel,
+				   ISNULL(tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+				   tWarenlagereingang.cKommentar,
+				   200, -- TeilmengenSplit
+				   0 AS kLieferscheinPos,
+				   tlagerbestand.fLagerbestandEigen AS fLagerBestandGesamt, 
+	   			   LagerBestand.fBestandPlatz AS fLagerBestand, -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+				   tWarenlagereingang.kLieferantenBestellungPos,
+				   tWarenlagereingang.cLieferscheinNr,
+				   tWarenlagereingang.cChargenNr,
+				   tWarenlagereingang.dMHD,
+				   ISNULL(tlagerbestand.fVerfuegbar,0),
+				   ISNULL(tlagerbestand.fInAuftraegen,0),
+				   LagerBestand.BestandInWarenlager AS BestandInWarenlager,
+				   tWarenlagereingangSubsets.cSubsetNumber,
+				   Dimensionen.cDimensionen
+			FROM dbo.tWarenlagereingang
+			JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenlagereingang.kArtikel
+			JOIN dbo.tWarenlagereingangSubsets ON tWarenlagereingangSubsets.kWarenlagereingang = tWarenlagereingang.kWarenlagereingang
+			JOIN dbo.tlagerbestand ON tlagerbestand.kArtikel = tWarenlagereingang.kArtikel
+			OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fBestandPlatz, MAX(tlagerbestandProLagerLagerartikel.fBestand) AS BestandInWarenlager
+						 FROM dbo.tWarenLagerEingang
+						 JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tWarenLagerEingang.kWarenLagerPlatz
+						 LEFT JOIN dbo.tlagerbestandProLagerLagerartikel ON tlagerbestandProLagerLagerartikel.kArtikel = tWarenLagerEingang.kArtikel AND tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLagerPlatz.kWarenLager
+						 WHERE tWarenLagerEingang.kArtikel = tWarenlagereingang.kArtikel
+						 AND tWarenLagerEingang.kWarenLagerPlatz = tWarenlagereingang.kWarenlagerPlatz) AS LagerBestand
+			OUTER APPLY (
+			 SELECT STUFF((
+					SELECT &#39;, &#39; + LEFT(tDimensionSprache.cName, 1) + &#39;: &#39; + CAST(CAST(CAST(tWarenLagerEingangSubsetDetails.fValue as decimal(12,4)) AS FLOAT) AS VARCHAR) + &#39; &#39; + tMassEinheit.cDisplayCode
+					FROM dbo.tWarenLagerEingangSubsetDetails 
+					JOIN dbo.tMassEinheit ON tMassEinheit.kMassEinheit = tWarenLagerEingangSubsetDetails.kMassEinheit 
+					JOIN dbo.tSpracheUsed ON nStandard = 1
+					JOIN subset.tDimensionSprache ON tDimensionSprache.kDimension = tWarenLagerEingangSubsetDetails.kDimension AND tDimensionSprache.kSprache = tSpracheUsed.kSprache
+					WHERE tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = tWarenLagerEingangSubsets.kWarenLagerEingangSubset
+						FOR XML PATH(&#39;&#39;)
+						), 1, 1, &#39;&#39;) AS cDimensionen
+		 
+			 ) AS Dimensionen 
+			WHERE tWarenlagereingang.kWarenlagereingang = @kWarenlagerEingangNeu;
+
+			SELECT * FROM #WarenlagerEingaenge;
+
+			SET @retry = 0;
+			IF(@TranCount = 0)
+			BEGIN           
+				COMMIT TRANSACTION      
+			END
+		END TRY       
+		BEGIN CATCH           
+			IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+			BEGIN              
+				SET @retry = @retry - 1;               
+				ROLLBACK       
+			END          
+			ELSE          
+			BEGIN              
+				SET @retry = 0;               
+				THROW;           
+			END      
+		END CATCH
+	END
+
+
+	SET CONTEXT_INFO 0x000;
+	RETURN
+END;</code></pre>
+</body>
+</html>

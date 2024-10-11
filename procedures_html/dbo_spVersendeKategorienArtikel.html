@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spVersendeKategorienArtikel</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spVersendeKategorienArtikel</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure kann eine Kategorie (ggf. mit Unterkategorien) und ihre Artikel markiert werden für ein erneutes Senden in den Shop.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spVersendeKategorienArtikel]
+
+-- versendet eine &#252;bergebene Kategorie und auf Wunsch auch ihre Unterkategorien/ihre Artikel/ihre Artikel und die Artikel der Unterkategorien
+	@kRoot INT,						-- PK Wurzelkategorie
+	@nKategorienRekursiv TINYINT,	-- 0/1, ob Unterkategorien mit versendet werden sollen
+	@nArtikelWurzel TINYINT,		-- 0/1, ob Artikel der Wurzelkategorie (und keine weiteren Artikel) mit versendet werden sollen
+	@nArtikelRekursiv TINYINT		-- 0/1, ob Artikel der Wurzelkategorie und Artikel der Unterkategorien mit versendet werden sollen
+-- Achtung: Verhalten bei @nArtikelWurzel = @nArtikelRekursiv = 1 undefiniert!
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+
+	DECLARE @tKategorienRekursiv AS TABLE (kKategorie INT); -- inkl. Wurzel
+	DECLARE @tKategorienRelevant AS TABLE (kKategorie INT);
+	DECLARE @tArtikelRelevant AS TABLE (kArtikel INT); 			
+
+	-- Berechnung relevanter Kategorien und Artikel
+	-- Berechnung relevanter Kategorien 	
+	IF (@nKategorienRekursiv = 1 OR @nArtikelRekursiv = 1)
+	BEGIN		
+		INSERT INTO @tKategorienRekursiv VALUES (@kRoot);
+		INSERT INTO @tKategorienRekursiv EXEC spGetSubCategories @kRoot;		
+	END;
+	IF (@nKategorienRekursiv = 0)
+		INSERT INTO @tKategorienRelevant VALUES (@kRoot);
+	ELSE
+		INSERT INTO @tKategorienRelevant SELECT * FROM @tKategorienRekursiv;
+	-- Berechnung relevanter Artikel
+	IF (@nArtikelWurzel = 1)
+	BEGIN		
+		INSERT INTO @tArtikelRelevant
+		SELECT tkategorieartikel.kArtikel
+		FROM tkategorieartikel WITH(NOLOCK)
+		WHERE tkategorieartikel.kKategorie = @kRoot;		
+	END;	
+	IF (@nArtikelRekursiv = 1)
+	BEGIN		
+		INSERT INTO @tArtikelRelevant
+		SELECT tkategorieartikel.kArtikel
+		FROM tkategorieartikel WITH(NOLOCK) JOIN @tKategorienRekursiv AS tKategorienRekursiv
+			ON tkategorieartikel.kKategorie = tKategorienRekursiv.kKategorie;
+	END;
+	
+	-- versende relevante Kategorien
+	UPDATE tKategorieShop
+	SET tKategorieShop.cInet = &#39;Y&#39;
+	FROM tKategorieShop WITH(NOLOCK) JOIN @tKategorienRelevant AS tKategorienRelevant
+		ON tKategorieShop.kKategorie = tKategorienRelevant.kKategorie
+	WHERE tKategorieShop.cInet = &#39;N&#39;;
+	
+	-- versende relevante Artikel
+	UPDATE tArtikelShop
+	SET tArtikelShop.cInet = &#39;Y&#39;
+	FROM tArtikelShop WITH(NOLOCK) JOIN @tArtikelRelevant AS tArtikelRelevant
+		ON tArtikelShop.kArtikel = tArtikelRelevant.kArtikel
+	WHERE tArtikelShop.cInet = &#39;N&#39;;
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spWMSVerpackeEazyshipping</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spWMSVerpackeEazyshipping</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spWMSVerpackeEazyshipping]
+@kPickliste INT,         -- Die Pickliste &#252;ber die der Prozess l&#228;uft
+@kBenutzer INT,         -- Der Benutzer der den Vorgang ausf&#252;hrt
+@kBestellung INT,         -- Bestellung die gepickt wird
+@dTimestamp DATETIME,     -- Die Zeit wann gebucht wurde
+@kWarenlager INT,		 -- Warenlager auf dem wir arbeiten
+@cLieferscheinNr NVARCHAR(255),
+@nVerpackModus INT,	      -- 0 = Standard,  1 = Packtisch , 2 = BoxenStandard , 3 = TeillieferungBoxen
+@cKommentar NVARCHAR(MAX),
+@TeilmengenWEPlatz INT = NULL,
+@nRet INT OUT
+
+-- Funktion: Mit dieser Procedur werden alle Artikel aus den zuvor gef&#252;llten tWMSPacktitem Tabelle gepickt.
+	
+AS
+
+
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+	DECLARE @kArtikel INT;
+	DECLARE @kWMSPackItem INT;
+	DECLARE @fMenge DECIMAL(25,13);
+	DECLARE @cChargenNr NVARCHAR(255);
+	DECLARE @cMHD NVARCHAR(255);
+	DECLARE @cSerNo NVARCHAR(255);
+	DECLARE @fDataMenge	DECIMAL(25,13);
+	DECLARE @kLieferschein INT;
+	DECLARE @kPicklistePos INT;
+	DECLARE @kLieferscheinPos INT;
+	DECLARE @fAnzahlAktuell DECIMAL(28,14);
+	DECLARE @kWarenLagerEingang INT;
+	DECLARE @kLagerArtikel INT;
+	DECLARE @kLieferscheinPosSerNo INT;
+	DECLARE @kBestellPosSerNo INT;
+	DECLARE @kLagerArtikelkLieferscheinPos INT;
+	DECLARE @temp_SerNoBestellpos TABLE(kBestellPos INT,kArtikel INT, nMengeMax INT, nMengeIS INT);
+	DECLARE @kWarenLagerPlatzWLE INT;
+	DECLARE @kIsPicklistePos INT;
+	DECLARE @kIsLieferscheinPos INT;
+	DECLARE @IsNowDate DATETIME;
+	DECLARE @InBoxCount INT;
+	DECLARE @kBestellungNewOrder INT;
+	DECLARE @PickPosErrorCount INT;
+	DECLARE @nBuchungsArt INT;
+	DECLARE @kWarenlagerPlatzKartons INT;
+	DECLARE @AuftragEckdatenBerechnen [Verkauf].[TYPE_spAuftragEckdatenBerechnen];
+	DECLARE @ErrorLoggingAktiv TINYINT = 0;
+	DECLARE @ReturnErrorMessage NVARCHAR(MAX);
+
+    DECLARE cur_GetWMSPackItems CURSOR LOCAL FAST_FORWARD FOR
+	SELECT dbo.tWMSPackItem.kWMSPackItem,dbo.tWMSPackItem.kArtikel,ROUND(dbo.tWMSPackItem.fMenge , 4) AS fMenge
+	FROM dbo.tWMSPackItem 
+	WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+	AND  dbo.tWMSPackItem.kPickliste = @kPickliste
+	AND  dbo.tWMSPackItem.kArtikel &gt; 0
+	AND  dbo.tWMSPackItem.kBestellpos = 0;
+
+
+			
+
+	BEGIN TRY
+
+		SELECT @ErrorLoggingAktiv = 1
+		FROM WMS.tWMSErrorLogController
+		WHERE tWMSErrorLogController.nProzess = 1
+		AND GETDATE() BETWEEN tWMSErrorLogController.dStartZeit AND tWMSErrorLogController.dEndZeit
+		AND tWMSErrorLogController.nAktiv = 1
+		AND (tWMSErrorLogController.kBenutzer = @kBenutzer OR ISNULL(tWMSErrorLogController.kBenutzer,0) = 0)
+		AND (tWMSErrorLogController.cQuelle = N&#39;WMS_spWMSVerpackeEazyshipping&#39; OR ISNULL(tWMSErrorLogController.cQuelle,&#39;&#39;) = &#39;&#39;)
+		AND tWMSErrorLogController.kWarenlager = @kWarenlager;
+
+		IF(@ErrorLoggingAktiv = 1)
+		BEGIN
+
+		  DECLARE @xPackItem XML;
+	      SET @xPackItem = (
+		    SELECT dbo.tWMSPackItem.kWMSPackItem,dbo.tWMSPackItem.kArtikel,ROUND(dbo.tWMSPackItem.fMenge , 4) AS fMenge
+			FROM dbo.tWMSPackItem 
+			WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+			AND  dbo.tWMSPackItem.kPickliste = @kPickliste
+			AND  dbo.tWMSPackItem.kArtikel &gt; 0
+			AND  dbo.tWMSPackItem.kBestellpos = 0
+			    FOR XML PATH(&#39;PackItem&#39;), TYPE
+		    );
+
+
+			INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			VALUES(N&#39;spWMSVerpackeEazyshipping_Start&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, N&#39;Verpackmodus:&#39;+ CAST(@nVerpackModus AS VARCHAR), N&#39;&#39;, @xPackItem,@kBestellung,@kPickliste);
+
+		END;
+
+
+		SET @IsNowDate = GETDATE();
+		SET @nRet = 0;
+
+		-- Erstmal raus, ab der 1.7. sieht es so aus als wenn die Performance ohne besser ist
+		--WHILE EXISTS (SELECT * FROM dbo.tEazyShippingVerpackQueue WHERE  DATEADD(SECOND,10,dTimeStamp)  &gt; @IsNowDate)
+		--BEGIN
+
+		--	DECLARE @Delay VARCHAR(20);
+		--    SET @Delay = &#39;00:00:01:&#39; + CAST(CAST(1000*RAND() AS INT) AS NVARCHAR);
+		--    WAITFOR DELAY @Delay;
+		        
+		--   SET @IsNowDate = GETDATE();
+
+		--END;
+
+		-- Bestellung wird verpackt. Der Eintrag in der Queue blockiert andere Auftr&#228;ge gleichzeitig verpackt zu werden
+		--INSERT INTO dbo.tEazyShippingVerpackQueue (kBestellung, dTimeStamp) VALUES (@kBestellung,GETDATE());
+
+
+
+		-- 130 WMS Warenausgang, 20 = Warenausgang
+		SELECT @nBuchungsArt = CASE WHEN tWarenlager.nLagerplatzVerwaltung &gt; 0 THEN 130 ELSE 20 END
+		FROM dbo.tWarenlager 
+		WHERE tWarenlager.kWarenLager = @kWarenlager;
+			
+
+		SELECT @kWarenlagerPlatzKartons = tWMSPackItem.kKartonLagerPlatz
+		FROM dbo.tWMSPackItem
+		WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+		AND  dbo.tWMSPackItem.kPickliste = @kPickliste
+		AND  dbo.tWMSPackItem.kArtikel &gt; 0
+		AND  dbo.tWMSPackItem.nTyp = 1
+		GROUP BY tWMSPackItem.kKartonLagerPlatz;
+	
+
+	    BEGIN TRAN T0;
+
+
+
+	   ---
+	   --- Karton BestellPos anlegen
+	   ---
+	   -- (Refactoring, besser w&#228;re es das alles au&#223;erhalb der transaction zu machen, dann m&#252;&#223;en wir die KartonagenPos nur l&#246;schen.)
+	   IF EXISTS (SELECT * 
+			      FROM dbo.tWMSPackItem 
+				  WHERE tWMSPackItem.kBestellung = @kBestellung 
+				  AND tWMSPackItem.kPickliste = @kPickliste
+				  AND tWMSPackItem.nTyp = 1 )
+	   BEGIN
+
+
+		   DECLARE @MaxBestellPos INT;
+		   SELECT @MaxBestellPos = MAX(tAuftragPosition.kAuftragPosition)
+		   FROM Verkauf.tAuftragPosition
+		   WHERE tAuftragPosition.kAuftrag = @kBestellung;
+
+		   -- Alle KartonPos als AuftragsPos anlegen
+		   INSERT INTO [Verkauf].[tAuftragPosition]
+				  ([kArtikel],[kAuftrag]  ,[cArtNr]  ,[nReserviert] ,[cName] ,[cHinweis]  ,[fAnzahl] ,[fEkNetto] ,[fVkNetto] ,[fRabatt]  ,[fMwSt],
+				  [nSort] ,[cNameStandard]  ,[kSteuerklasse] ,[nType],[cEinheit]  ,[nHatUpload],[kKonfigVater],[kKonfigItem],[kAmazonBestellungPos] ,[kAuftragStueckliste]
+				  ,[kEbayTransaction],[fFaktor], [kSteuerschluessel])
+		   SELECT tWMSPackItem.kArtikel,tWMSPackItem.kBestellung, tArtikel.cArtNr, 1, tArtikelBeschreibung.cName,&#39;&#39;,tWMSPackItem.fMenge,tArtikel.fEKNetto,0,0,0,
+		          Auftrag.MaxSort + ROW_NUMBER() OVER(ORDER BY tWMSPackItem.kWMSPackItem ASC),
+	   		      tArtikelBeschreibung.cName,NULL,15,NULL,0,NULL,NULL,NULL,NULL,NULL,1, null
+		   FROM dbo.tWMSPackItem
+		   JOIN dbo.tArtikel ON tArtikel.kArtikel = tWMSPackItem.kArtikel
+		   JOIN dbo.tSpracheUsed ON tSpracheUsed.nStandard = 1
+		   JOIN dbo.tArtikelBeschreibung ON tArtikelBeschreibung.kArtikel = tArtikel.kArtikel AND tArtikelBeschreibung.kSprache = tSpracheUsed.kSprache AND kPlattform = 1
+		   OUTER APPLY ( SELECT ISNULL(MAX(nSort),0)  AS MaxSort
+						 FROM Verkauf.tAuftragPosition
+						 WHERE tAuftragPosition.kAuftrag = @kBestellung ) AS Auftrag
+		   WHERE tWMSPackItem.kBestellung = @kBestellung
+		   AND tWMSPackItem.kPickliste = @kPickliste
+		   AND tWMSPackItem.kArtikel &gt; 0
+		   AND tWMSPackItem.nTyp = 1;
+
+
+            -- Wird ganz am ende aufgerufen, sollte reichen. Erstmal raus
+            -- INSERT INTO @AuftragEckdatenBerechnen VALUES (@kBestellung);
+            -- EXECUTE  [Verkauf].[spAuftragEckdatenBerechnen]   @AuftragEckdatenBerechnen
+
+
+
+           DECLARE @ReserviereAuftragPosVomPlatz [WMS].[TYPE_spReserviereAuftragPosVomPlatz];
+
+		   INSERT INTO @ReserviereAuftragPosVomPlatz
+		   SELECT tAuftragPosition.kAuftragPosition
+		   FROM Verkauf.tAuftragPosition
+		   WHERE tAuftragPosition.kAuftragPosition &gt; @MaxBestellPos
+		   AND tAuftragPosition.kAuftrag  = @kBestellung;
+
+
+		   -- Auftragspos von Kartons auf Pickliste packen
+		   EXEC  [WMS].[spReserviereAuftragPosVomPlatz]
+						@AuftragPos = @ReserviereAuftragPosVomPlatz, 
+						@kWarenlagerPlatz = @kWarenlagerPlatzKartons, 
+						@kPickliste =  @kPickliste,
+						@kWarenlager = @kWarenlager,
+						@kBenutzer = @kBenutzer;
+
+
+		END;
+
+
+		-- 
+		-- LieferscheinPositionen anlegen anhand der PackItems
+		--
+		EXEC dbo.spCreateLieferscheinFromPackArtikel
+			@kBestellung     = @kBestellung,
+			@kBenutzer          = @kBenutzer,
+			@kPickliste = @kPickliste,
+			@cLieferscheinNr = @cLieferscheinNr,
+			@kRetLieferschein  = @kLieferschein OUTPUT,
+			@nRetError       = @nRet OUTPUT;		
+
+
+        --
+		-- Teilmengen buchen
+		--
+		IF(EXISTS (SELECT * FROM WMS.tVerpackenSubset WHERE tVerpackenSubset.kAuftrag = @kBestellung AND tVerpackenSubset.kPickliste = @kPickliste))
+		BEGIN
+
+			EXEC [WMS].[spTeilmengenVerpacken]
+			@kBenutzer = @kBenutzer,
+			@kWarenlager = @kWarenlager,
+			@kBestellung = @kBestellung,
+			@kPickliste = @kPickliste,
+			@dTimestamp = @dTimestamp,
+			@TeilmengenWEPlatz = @TeilmengenWEPlatz;
+
+		END;
+
+			
+
+		IF(@nVerpackModus IN  (0,1))
+		BEGIN
+
+		    --
+		    -- PicklistenPositionen buchen, evtl. splitten oder Warenlagereing&#228;nge tauschen. 
+		    --
+		    OPEN cur_GetWMSPackItems    
+		    FETCH NEXT FROM cur_GetWMSPackItems INTO  @kWMSPackItem,@kArtikel,@fMenge
+
+		    WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+		    BEGIN  
+			    DECLARE cur_GetWMSPackItemData CURSOR LOCAL FAST_FORWARD FOR  
+			    SELECT dbo.tWMSPackItemData.cChargenNr,(CONVERT(NVARCHAR,dbo.tWMSPackItemData.dMHD, 104)) cMHD,dbo.tWMSPackItemData.cSerNo, dbo.tWMSPackItemData.fMenge 
+				    FROM dbo.tWMSPackItemData WITH(NOLOCK) 
+				    WHERE dbo.tWMSPackItemData.kWMSPackItem = @kWMSPackItem
+				    AND (LEN(dbo.tWMSPackItemData.cChargenNr) &gt; 0 
+					   OR LEN(dbo.tWMSPackItemData.dMHD) &gt; 0);
+
+			    OPEN cur_GetWMSPackItemData    
+			    FETCH NEXT FROM cur_GetWMSPackItemData INTO  @cChargenNr,@cMHD,@cSerNo,@fDataMenge
+			    WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+			    BEGIN  
+				    IF(LEN(@cChargenNr) &gt; 0  OR LEN(@cMHD) &gt; 0)
+				    BEGIN
+		  
+				    EXEC WMS.spPicklisteInBox
+						 @kPickliste    = @kPickliste,
+						 @kArtikel      = @kArtikel,
+						 @cMhd          = @cMHD,
+						 @cCharge       = @cChargenNr,
+						 @cSubsetNumber = null,
+						 @nMenge        = @fDataMenge,
+						 @kBestellung   = @kBestellung,
+						 @kBenutzer     = @kBenutzer,
+						 @kLhm          = 0,
+						 @kWarenlagerPlatz = 0,
+						 @nPickPosStatus  = 30,
+						 @kLieferschein = @kLieferschein,
+						 @nRet       = @nRet OUTPUT;
+				    END
+				    SET @fMenge = @fMenge - @fDataMenge
+				    FETCH NEXT FROM cur_GetWMSPackItemData INTO  @cChargenNr,@cMHD,@cSerNo,@fDataMenge
+			    END
+			    CLOSE cur_GetWMSPackItemData 
+			    DEALLOCATE cur_GetWMSPackItemData	   
+			    IF(@fMenge &gt; 0)
+			    BEGIN
+				    EXEC  WMS.spPicklisteInBox
+						 @kPickliste    = @kPickliste,
+						 @kArtikel      = @kArtikel,
+						 @cMhd          = null,
+						 @cCharge       = null,
+						 @cSubsetNumber = null,
+						 @nMenge        = @fMenge,
+						 @kBestellung   = @kBestellung,
+						 @kBenutzer     = @kBenutzer,
+						 @kLhm          = 0,
+						 @kWarenlagerPlatz = 0,
+						 @nPickPosStatus  = 30,
+						 @kLieferschein = @kLieferschein,
+						 @nRet       = @nRet OUTPUT;
+			    END
+			    FETCH NEXT FROM cur_GetWMSPackItems INTO  @kWMSPackItem,@kArtikel,@fMenge
+		    END
+		    CLOSE cur_GetWMSPackItems;
+		    DEALLOCATE cur_GetWMSPackItems ;
+
+
+
+		END;
+		ELSE IF(@nVerpackModus IN  (2,3)) -- Bei Boxen, nur Kartons picken
+		BEGIN
+			
+			DECLARE cur_GetKartonPackItemData CURSOR LOCAL FAST_FORWARD FOR  
+	        SELECT dbo.tWMSPackItem.kArtikel, dbo.tWMSPackItem.fMenge
+	        FROM dbo.tWMSPackItem 
+	        WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+	        AND  dbo.tWMSPackItem.kPickliste = @kPickliste
+	        AND  dbo.tWMSPackItem.kArtikel &gt; 0
+	        AND  dbo.tWMSPackItem.nTyp = 1;
+			
+
+			OPEN cur_GetKartonPackItemData    
+		    FETCH NEXT FROM cur_GetKartonPackItemData INTO  @kArtikel,@fMenge
+
+		    WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+		    BEGIN  
+
+				    EXEC WMS.spPicklisteInBox
+						 @kPickliste    = @kPickliste,
+						 @kArtikel      = @kArtikel,
+						 @cMhd          = null,
+						 @cCharge       = null,
+						 @cSubsetNumber = null,
+						 @nMenge        = @fMenge,
+						 @kBestellung   = @kBestellung,
+						 @kBenutzer     = @kBenutzer,
+						 @kLhm          = 0,
+						 @kWarenlagerPlatz = 0,
+						 @nPickPosStatus  = 30,
+						 @kLieferschein = @kLieferschein,
+						 @nRet       = @nRet OUTPUT;
+				   
+			
+			FETCH NEXT FROM cur_GetKartonPackItemData INTO  @kArtikel,@fMenge
+		    END;
+		    CLOSE cur_GetKartonPackItemData;
+		    DEALLOCATE cur_GetKartonPackItemData ;
+
+		END;
+
+
+		IF(@nRet &gt;= 0)
+		BEGIN
+
+		    IF(@kLieferschein = 0)
+		      RAISERROR(N&#39;Es wurde kein Lieferschein erstellt. Verpacken abgebrochen.&#39;, 15,1);
+
+			--
+			-- SerNos ausbuchen
+			--
+			INSERT INTO @temp_SerNoBestellpos (kBestellPos ,kArtikel , nMengeMax , nMengeIS)
+			   SELECT Verkauf.tAuftragPosition.kAuftragPosition,Verkauf.tAuftragPosition.kArtikel,Verkauf.tAuftragPosition.fAnzahl,0
+			   FROM Verkauf.tAuftragPosition 
+			   JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel
+			   WHERE Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+			   AND dbo.tArtikel.cLagerArtikel = &#39;Y&#39;;
+		  
+			DECLARE cur_GetWMSPackItemDataSerNo CURSOR LOCAL FAST_FORWARD FOR  
+			SELECT dbo.tWMSPackItem.kArtikel, dbo.tWMSPackItemData.cSerNo, dbo.tWMSPackItemData.fMenge 
+				FROM dbo.tWMSPackItem 
+				JOIN dbo.tWMSPackItemData ON dbo.tWMSPackItemData.kWMSPackItem = dbo.tWMSPackItem.kWMSPackItem
+				WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+				AND dbo.tWMSPackItem.kPickliste = @kPickliste
+				AND LEN(dbo.tWMSPackItemData.cSerNo) &gt; 0;
+	   
+			OPEN cur_GetWMSPackItemDataSerNo    
+			FETCH NEXT FROM cur_GetWMSPackItemDataSerNo INTO  @kArtikel,@cSerNo,@fDataMenge
+			WHILE (@@FETCH_STATUS = 0  and @nRet &gt;= 0)
+			BEGIN  
+				-- Ersten g&#252;ltigen Lagerartikel holen
+				SELECT TOP(1) @kLagerArtikel = dbo.tLagerArtikel.kLagerArtikel , @kLagerArtikelkLieferscheinPos = dbo.tLagerArtikel.kLieferscheinPos
+					FROM dbo.tLagerArtikel WITH(NOLOCK) 
+					WHERE kArtikel = @kArtikel
+					AND kWarenlager = @kWarenlager
+					AND ISNULL(kLieferscheinPos,0) IN (0,999999999)
+					ORDER BY CASE WHEN cSeriennr = @cSerNo 
+								THEN 0 
+								ELSE 1 
+							END,
+							CASE WHEN cSeriennr = &#39;#$KEINE$#&#39; 
+								THEN 0 
+								ELSE 1 
+							END, 
+							kLieferscheinPos;
+
+				-- Bestellpos zum Artikel holen
+				SELECT TOP(1) @kBestellPosSerNo = Verkauf.tAuftragPosition.kAuftragPosition, @kLieferscheinPosSerNo = tLieferscheinPos.kLieferscheinPos
+					FROM Verkauf.tAuftragPosition
+					JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+					WHERE Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+					AND Verkauf.tAuftragPosition.kArtikel = @kArtikel
+					AND Verkauf.tAuftragPosition.kAuftragPosition IN (
+                                                              SELECT snb.kBestellPos 
+															  FROM @temp_SerNoBestellpos snb   --Keine schon erfassten bestellpos
+														      WHERE snb.nMengeIS &lt; snb.nMengeMax
+                                                            )
+					ORDER BY tLieferscheinPos.kLieferscheinPos DESC;
+	
+				-- SerNo Ausbuchen
+				UPDATE dbo.tLagerArtikel WITH(ROWLOCK) 
+				SET dbo.tLagerArtikel.kLieferscheinPos = @kLieferscheinPosSerNo,dbo.tLagerArtikel.cSeriennr = @cSerNo,dbo.tLagerArtikel.kBestellPos = @kBestellPosSerNo
+				WHERE dbo.tLagerArtikel.kLagerArtikel = @kLagerArtikel;	    
+				
+				-- Alte SerNo reservierungen l&#246;schen
+				UPDATE dbo.tLagerArtikel WITH(ROWLOCK)
+				SET dbo.tLagerArtikel.kBestellPos = 0
+				WHERE dbo.tLagerArtikel.kLagerArtikel != @kLagerArtikel AND dbo.tLagerArtikel.kBestellPos = @kBestellPosSerNo AND dbo.tLagerArtikel.kLieferscheinPos = 0;
+
+
+                    -- Bestellpos die eben gebucht wurde merken
+				UPDATE @temp_SerNoBestellpos 
+				SET nMengeIS = nMengeIS + 1
+				WHERE kBestellPos = @kBestellPosSerNo;
+	   
+				FETCH NEXT FROM cur_GetWMSPackItemDataSerNo 
+                    INTO  @kArtikel,@cSerNo,@fDataMenge;
+			END	   
+			CLOSE cur_GetWMSPackItemDataSerNo;
+			DEALLOCATE cur_GetWMSPackItemDataSerNo; 
+
+
+
+
+		    --
+		    -- Boxen Serienummern aus neuer Tabelle holen und ausbuchen
+		    --
+		    IF(EXISTS(SELECT * FROM dbo.tWMSBoxenPackVerpackteSerNos WHERE kBestellung = @kBestellung))
+		    BEGIN
+    	  
+		  		 DECLARE @kArtikelSerNoBox INT;
+		  		 DECLARE @cSerNoBox VARCHAR(255);
+		  		 DECLARE @fDataMengeBox DECIMAL(28,14);
+		  		 DECLARE @kBestellPosBox INT;
+		  		 DECLARE @kLieferscheinPosSerNoBox INT;
+		  		 DECLARE @kLagerArtikelBox INT;
+		  
+		  
+  		  		 DECLARE cur_GetWMSPackItemDataSerNo CURSOR LOCAL FAST_FORWARD FOR  
+  		  		 SELECT dbo.tWMSBoxenPackVerpackteSerNos.kArtikel, dbo.tWMSBoxenPackVerpackteSerNos.cSerNo, COUNT(*) AS fMenge, dbo.tWMSBoxenPackVerpackteSerNos.kBestellPos, dbo.tLieferscheinPos.kLieferscheinPos  
+  		  		 FROM dbo.tWMSBoxenPackVerpackteSerNos
+  		  		 JOIN dbo.tLieferscheinPos ON  dbo.tLieferscheinPos.kBestellPos = dbo.tWMSBoxenPackVerpackteSerNos.kBestellPos AND tLieferscheinPos.kLieferschein = @kLieferschein
+  		  		 WHERE dbo.tWMSBoxenPackVerpackteSerNos.kBestellung = @kBestellung
+  		  		 GROUP BY dbo.tWMSBoxenPackVerpackteSerNos.kArtikel, dbo.tWMSBoxenPackVerpackteSerNos.cSerNo,  dbo.tWMSBoxenPackVerpackteSerNos.kBestellPos,dbo.tLieferscheinPos.kLieferscheinPos  
+		  
+  		  		 OPEN cur_GetWMSPackItemDataSerNo    
+  		  		 FETCH NEXT FROM cur_GetWMSPackItemDataSerNo INTO  @kArtikelSerNoBox,@cSerNoBox,@fDataMengeBox,@kBestellPosBox,@kLieferscheinPosSerNoBox
+  		  		 WHILE (@@FETCH_STATUS = 0 )
+  		  		 BEGIN  
+    	  
+  	 	  			-- Ersten g&#252;ltigen Lagerartikel holen
+  	 	  			 SELECT TOP(1) @kLagerArtikelBox = dbo.tLagerArtikel.kLagerArtikel , @kLagerArtikelkLieferscheinPos = dbo.tLagerArtikel.kLieferscheinPos
+  	 	  			 FROM dbo.tLagerArtikel WITH(NOLOCK) 
+  	 	  			 WHERE kArtikel = @kArtikelSerNoBox
+  	 	  			 AND kWarenlager = @kWarenlager
+  	 	  			 AND ISNULL(kLieferscheinPos,0) IN (0,999999999)
+  	 	  			 ORDER BY CASE WHEN cSeriennr = @cSerNoBox 
+  	 	  						   THEN 0 
+  	 	  						   ELSE 1 
+  	 	  						END,
+  	 	  						CASE WHEN cSeriennr = &#39;#$KEINE$#&#39; 
+  	 	  							 THEN 0 
+  	 	  							 ELSE 1 
+  	 	  						END, 
+  	 	  						kLieferscheinPos;
+    	  
+  	 	  			-- SerNo Ausbuchen
+  	 	  			 UPDATE dbo.tLagerArtikel WITH(ROWLOCK) 
+  	 	  			 SET dbo.tLagerArtikel.kLieferscheinPos = @kLieferscheinPosSerNoBox,dbo.tLagerArtikel.cSeriennr = @cSerNoBox,dbo.tLagerArtikel.kBestellPos = @kBestellPosBox
+  	 	  			 WHERE dbo.tLagerArtikel.kLagerArtikel = @kLagerArtikelBox;	    
+  	 	  			 
+  	 	  			 -- Alte SerNo reservierungen l&#246;schen
+  	 	  			 UPDATE dbo.tLagerArtikel WITH(ROWLOCK)
+  	 	  			 SET dbo.tLagerArtikel.kBestellPos = 0
+  	 	  			 WHERE dbo.tLagerArtikel.kLagerArtikel != @kLagerArtikelBox AND dbo.tLagerArtikel.kBestellPos = @kBestellPosBox AND dbo.tLagerArtikel.kLieferscheinPos = 0;
+    	  			 
+  	 	  			 FETCH NEXT FROM cur_GetWMSPackItemDataSerNo 
+		  			 INTO  @kArtikelSerNoBox,@cSerNoBox,@fDataMengeBox,@kBestellPosBox,@kLieferscheinPosSerNoBox;
+    	  
+  		  		 END	   
+  		  		 CLOSE cur_GetWMSPackItemDataSerNo;
+  		  		 DEALLOCATE cur_GetWMSPackItemDataSerNo;
+    	  
+  		  		 DELETE FROM tWMSBoxenPackVerpackteSerNos
+  		  		 WHERE kBestellung = @kBestellung; 
+    	  
+		    END;
+			
+
+
+			-----------------
+		    -- Buche Best&#228;nde
+			-----------------
+			IF(@ErrorLoggingAktiv = 1)
+				INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+                VALUES(N&#39;spWMSVerpackeEazyshipping_BestandBuchen_Start&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, N&#39;&#39;, N&#39;&#39;, NULL,@kBestellung,@kPickliste);
+
+
+		    EXEC WMS.spWMSBestandUndPicklisteBuchen
+				@kBestellung = @kBestellung,
+				@kPickliste = @kPickliste,
+				@kPlattform = 1,
+				@kBenutzer = @kBenutzer,
+				@cKommentar = @cKommentar,   
+				@kLieferschein = @kLieferschein,
+				@kBuchungsart = @nBuchungsArt,
+				@nVerpackModus = @nVerpackModus;
+
+			IF(@ErrorLoggingAktiv = 1)
+				INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			    VALUES(N&#39;spWMSVerpackeEazyshipping_BestandBuchen_Ende&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, N&#39;&#39;, N&#39;&#39;, NULL,@kBestellung,@kPickliste);
+
+
+
+			---------------------------
+			-- Picklistenstatus &#228;ndern
+			---------------------------
+
+		DECLARE @kBestellstuecklistePacktisch INT;
+			DECLARE @kBestellPosPacktisch INT
+			DECLARE @fPackItemMenge DECIMAL(25,13);
+			DECLARE @fPicklistePosMenge DECIMAL(25,13);
+			DECLARE cur_GetPackFensterPos CURSOR LOCAL FAST_FORWARD FOR  
+			SELECT dbo.tPicklistepos.kPicklistePos,dbo.tLieferscheinPos.kLieferscheinPos,ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste,0), Verkauf.tAuftragPosition.kAuftragPosition, WMSPackItem.fMenge AS packItemMenge, tPicklistepos.fAnzahl
+		    FROM dbo.tPicklistepos
+			JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+		    JOIN dbo.tLieferscheinPos  ON dbo.tLieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition AND tLieferscheinPos.kLieferschein = @kLieferschein
+			OUTER APPLY (
+				SELECT SUM (tWMSPackItem.fMenge) AS fMenge
+				FROM dbo.tWMSPackItem 
+				WHERE tWMSPackItem.kBestellpos = tPicklistepos.kBestellPos
+				AND tWMSPackItem.kPickliste = @kPickliste
+				GROUP BY tWMSPackItem.kBestellpos 
+				
+			) AS WMSPackItem
+
+		    WHERE dbo.tPicklistepos.kBestellung = @kBestellung 
+			AND  (dbo.tPicklistepos.kWarenLagerEingang = 0 OR EXISTS (SELECT teigenschaft.kArtikel FROM teigenschaft WHERE Verkauf.tAuftragPosition.kArtikel = teigenschaft.kArtikel AND teigenschaft.cAktiv = &#39;Y&#39;))
+			AND dbo.tPicklistepos.kPickliste = @kPickliste
+			AND tPicklistepos.nStatus &lt;= 20
+		    GROUP BY dbo.tPicklistepos.kPicklistePos,dbo.tLieferscheinPos.kLieferscheinPos,Verkauf.tAuftragPosition.kAuftragStueckliste, Verkauf.tAuftragPosition.kAuftragPosition, WMSPackItem.fMenge, tPicklistepos.fAnzahl
+			ORDER BY CASE WHEN Verkauf.tAuftragPosition.kAuftragStueckliste = Verkauf.tAuftragPosition.kAuftragPosition AND Verkauf.tAuftragPosition.kAuftragStueckliste &gt; 0 THEN 1 ELSE 0 END;
+                  
+
+                  
+			OPEN cur_GetPackFensterPos    
+			FETCH NEXT FROM cur_GetPackFensterPos INTO  @kIsPicklistePos,@kIsLieferscheinPos,@kBestellstuecklistePacktisch,@kBestellPosPacktisch,@fPackItemMenge,@fPicklistePosMenge
+			WHILE (@@FETCH_STATUS = 0)
+			BEGIN  	 
+                 
+				DECLARE @OffeneStuecklistenKinder INT = 0;
+			    IF(@kBestellstuecklistePacktisch = @kBestellPosPacktisch AND @kBestellstuecklistePacktisch &gt; 0)
+				BEGIN
+
+					SELECT @OffeneStuecklistenKinder = count(*) 
+					FROM dbo.tPicklistePos
+					JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+					WHERE Verkauf.tAuftragPosition.kAuftragStueckliste = @kBestellstuecklistePacktisch
+					AND Verkauf.tAuftragPosition.kAuftragPosition != Verkauf.tAuftragPosition.kAuftragStueckliste
+					AND dbo.tPicklistePos.nStatus &lt; 40;
+
+				END;
+
+				IF(@OffeneStuecklistenKinder = 0)
+				BEGIN
+
+				    -- Wenn Freipos teilgeliefert wird im Packtisch, Pickpos splitten
+					IF(@nVerpackModus = 1 AND @fPackItemMenge IS NOT NULL AND @fPackItemMenge &lt; @fPicklistePosMenge)
+					BEGIN
+
+					    DECLARE @kNewPickPos INT;
+					    DECLARE @nRetPPSplit INT;
+						DECLARE @fSplitMenge DECIMAL(25,13) = (@fPicklistePosMenge - @fPackItemMenge)
+
+					    EXEC WMS.spPicklistePosSplitten
+								@kPicklistePos = @kIsPicklistePos,
+								@nMenge = @fSplitMenge,
+								@kNewPicklistePos = @kNewPickPos OUTPUT,
+								@nRet = @nRetPPSplit OUTPUT;
+
+					END;
+					
+					UPDATE dbo.tPicklistePos
+					SET kLieferscheinPos = @kIsLieferscheinPos
+					WHERE dbo.tPicklistePos.kPicklistePos = @kIsPicklistePos;
+	
+	   
+	   				EXEC WMS.spPicklisteposStatusAendern @kPicklistePos = @kIsPicklistePos, @nNewStatus = 40, @kBenutzer = @kBenutzer,@dTimestamp = @IsNowDate
+				END;
+
+			    FETCH NEXT FROM cur_GetPackFensterPos INTO  @kIsPicklistePos,@kIsLieferscheinPos,@kBestellstuecklistePacktisch,@kBestellPosPacktisch,@fPackItemMenge,@fPicklistePosMenge;
+			END;	   
+			CLOSE cur_GetPackFensterPos;
+			DEALLOCATE cur_GetPackFensterPos;	   
+
+
+		END;
+    
+
+
+	    --Teilmengen eintr&#228;ge l&#246;schen
+
+
+		DELETE tVerpackenSubsetDetails
+		FROM WMS.tVerpackenSubsetDetails
+		JOIN WMS.tVerpackenSubset ON tVerpackenSubset.kVerpackenSubset = tVerpackenSubsetDetails.kVerpackenSubset
+		LEFT JOIN tWMSPackItem ON tWMSPackItem.kBestellpos = tVerpackenSubset.kAuftragsPos
+		WHERE tVerpackenSubset.kAuftrag = @kBestellung
+		AND tVerpackenSubset.kPickliste = @kPickliste
+		AND ((tWMSPackItem.kBestellpos IS NOT NULL AND tVerpackenSubset.nTyp IN (1,2)) OR tVerpackenSubset.nTyp = 0);
+
+
+		DELETE tVerpackenSubset 
+		FROM WMS.tVerpackenSubset
+		LEFT JOIN tWMSPackItem ON tWMSPackItem.kBestellpos = tVerpackenSubset.kAuftragsPos
+		WHERE tVerpackenSubset.kAuftrag = @kBestellung
+		AND tVerpackenSubset.kPickliste = @kPickliste
+		AND ((tWMSPackItem.kBestellpos IS NOT NULL AND tVerpackenSubset.nTyp IN (1,2)) OR tVerpackenSubset.nTyp = 0);
+		 
+
+	    -- Verpackte WMSPackItem l&#246;schen
+		DELETE FROM dbo.tWMSPackItemData  WITH(ROWLOCK) 
+		WHERE dbo.tWMSPackItemData.kWMSPackItem IN (
+                                                     SELECT kWMSPackItem 
+												     FROM dbo.tWMSPackItem WITH(NOLOCK)
+									   	             WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+										             AND dbo.tWMSPackItem.kPickliste = @kPickliste
+                                                     );
+    
+		DELETE FROM dbo.tWMSPackItem WITH(ROWLOCK) 
+		WHERE dbo.tWMSPackItem.kBestellung = @kBestellung
+		AND dbo.tWMSPackItem.kPickliste = @kPickliste;
+
+
+
+		--
+		-- Plausibilit&#228;ts Pr&#252;fungen. Im Fehlerfall alles reverten.
+		--
+
+		IF( @nVerpackModus = 3)
+		BEGIN
+
+		    -- Bei Teillieferung in Boxen, ist es normal das teile der Bestellung noch in Box liegen. Hier m&#252;&#223;en wir zus&#228;tzlich auf LieferscheinPos gehen.
+		    SELECT @InBoxCount = COUNT(*) 
+		    FROM dbo.tPicklistePos
+		    JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition  = dbo.tPicklistePos.kBestellPos     
+		    JOIN dbo.tLieferscheinPos ON tLieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+		    WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+		    AND dbo.tPicklistePos.nStatus = 30
+		    AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+		    AND tLieferscheinPos.kLieferschein = @kLieferschein
+		    AND tPicklistePos.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+
+
+		END;
+		ELSE
+		BEGIN
+
+		    SELECT @InBoxCount = COUNT(*) 
+		    FROM dbo.tPicklistePos
+		    JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+		    WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+		    AND dbo.tPicklistePos.nStatus = 30
+		    AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung;
+
+
+		END;
+
+
+		IF(@InBoxCount &gt; 0)
+        BEGIN 
+        
+            SET @ReturnErrorMessage = N&#39;Es konnten nicht alle (&#39; + CAST(@InBoxCount AS NVARCHAR) +   &#39;) Pickpositionen verpackt werden. Verpacken abgebrochen.&#39;;
+        
+            DECLARE @ReturnErrorMessage2 NVARCHAR(MAX);
+        
+            IF( @nVerpackModus = 3)
+            BEGIN
+            
+            SELECT @ReturnErrorMessage2 = &#39; Problem-PickPos: &#39; + STUFF((
+                SELECT &#39;,&#39; + CAST(tPicklistePos.kPicklistePos AS VARCHAR)
+                FROM dbo.tPicklistePos
+                         JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition  = dbo.tPicklistePos.kBestellPos
+                         JOIN dbo.tLieferscheinPos ON tLieferscheinPos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+                WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+                  AND dbo.tPicklistePos.nStatus = 30
+                  AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+                  AND tLieferscheinPos.kLieferschein = @kLieferschein
+                  AND tPicklistePos.kLieferscheinPos = tLieferscheinPos.kLieferscheinPos
+                FOR XML PATH(&#39;&#39;)), 1, 1, &#39;&#39;)
+            
+            
+            END;
+            ELSE
+            BEGIN
+            
+                SELECT @ReturnErrorMessage2 = &#39; Problem-PickPos: &#39; + STUFF((
+                SELECT &#39;,&#39; + CAST(tPicklistePos.kPicklistePos AS VARCHAR)
+                FROM dbo.tPicklistePos
+                JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+                WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+                  AND dbo.tPicklistePos.nStatus = 30
+                  AND Verkauf.tAuftragPosition.kAuftrag = @kBestellung
+                FOR XML PATH(&#39;&#39;)), 1, 1, &#39;&#39;)
+            
+            END;
+        
+            SET @ReturnErrorMessage = @ReturnErrorMessage + ISNULL(@ReturnErrorMessage2,&#39;&#39;);         
+            RAISERROR(@ReturnErrorMessage, 15,1);
+                
+        END;
+
+		SELECT @PickPosErrorCount = COUNT(*) 
+		FROM dbo.tLieferscheinPos
+		JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = dbo.tLieferscheinPos.kBestellPos  
+		CROSS JOIN ( SELECT COUNT(*) AS PicklistenAnzahl
+				    FROM tPicklistePos
+				    WHERE tPicklistePos.kBestellung = @kBestellung
+				    AND tPicklistePos.nStatus &lt; 40
+					AND tPicklistePos.kPickliste != @kPickliste) AS PicklistenCheck
+		WHERE dbo.tLieferscheinPos.kLieferschein = @kLieferschein
+		AND dbo.tPicklistePos.nStatus &lt;= 30
+		AND @nVerpackModus = 0
+		AND PicklistenCheck.PicklistenAnzahl = 0;
+		
+		IF(@PickPosErrorCount &gt; 0)
+		BEGIN
+
+
+		   INSERT INTO dbo.tLog (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+		   SELECT getdate(), @kBenutzer, &#39;Pickpos:&#39; + CAST(tPicklistePos.kPicklistePos AS NVARCHAR) +  &#39;  Bestellpos:&#39; + CAST( Verkauf.tAuftragPosition.kAuftragPosition AS NVARCHAR),  14,  9 
+		   FROM dbo.tLieferscheinPos
+		   JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = tLieferscheinPos.kBestellPos   
+		   JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition 
+		   WHERE dbo.tLieferscheinPos.kLieferscheinPos = @kLieferschein
+		   AND dbo.tPicklistePos.nStatus &lt;= 30;   
+
+
+		   DECLARE @ErrorText AS NVARCHAR(520);
+		   SET @ErrorText = N&#39;Es konnten nicht alle (&#39; + CAST(@PickPosErrorCount AS NVARCHAR) +   &#39;) Pickpositionen verpackt werden. Verpacken abgebrochen.&#39;;
+
+		   
+		   IF(@ErrorLoggingAktiv = 1)
+		   BEGIN
+
+		      DECLARE @xErrorLieferschein XML;
+
+			  SET @xErrorLieferschein = (
+				SELECT tLieferscheinPos.kLieferscheinPos,tLieferscheinPos.fAnzahl AS AnzahlLieferscheinPos, tPicklistePos.kPicklistePos,tPicklistePos.kArtikel,dbo.tPicklistePos.fAnzahl
+				FROM dbo.tLieferscheinPos
+				JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = dbo.tLieferscheinPos.kBestellPos  
+				CROSS JOIN ( SELECT COUNT(*) AS PicklistenAnzahl
+						    FROM tPicklistePos
+						    WHERE tPicklistePos.kBestellung = @kBestellung
+						    AND tPicklistePos.nStatus &lt; 40
+							AND tPicklistePos.kPickliste != @kPickliste) AS PicklistenCheck
+				WHERE dbo.tLieferscheinPos.kLieferschein = @kLieferschein
+				AND dbo.tPicklistePos.nStatus &lt;= 30
+				AND @nVerpackModus = 0
+				AND PicklistenCheck.PicklistenAnzahl = 0
+				FOR XML PATH(&#39;FehlerhafteLieferscheinpos&#39;), TYPE
+				    );
+
+
+
+			 INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			 VALUES(N&#39;spWMSVerpackeEazyshipping_ValidierungsError&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, @ErrorText, N&#39;&#39;, @xErrorLieferschein,@kBestellung,@kPickliste);
+
+		   END;
+
+		   SET @ReturnErrorMessage = @ErrorText;
+		   RAISERROR(@ErrorText, 15,1);
+
+		END;
+
+
+
+		--
+		-- BoxenStatus wieder auf frei setzten, wenn ganze Box verpackt
+		--
+		IF(@nVerpackModus = 2)
+		BEGIN
+
+			DECLARE @kLHM INT;
+			DECLARE @kLhmStatus INT;
+
+			SELECT TOP 1 @kLHM = kLHM
+			FROM dbo.tLHMStatus
+			WHERE kBestellung = @kBestellung
+			AND tLHMStatus.nStatus = 30
+			ORDER BY tLHMStatus.kLHMStatus DESC;
+
+			INSERT INTO dbo.tLHMStatus ( kLHM, nStatus, dZeitstempel,  kBestellung)
+			VALUES(  @kLHM, 10,  @IsNowDate,  0 );
+
+			SET @kLhmStatus = scope_identity();
+
+			UPDATE tLHM SET kLHMStatus = @kLhmStatus,kBenutzer = null, dBearbeitet = null
+			WHERE kLHM = @kLHM;
+
+		END;
+
+
+
+		IF(@nRet &lt; 0)  -- Bei einen Fehler im prozess, gesammter rollback
+		BEGIN 
+			ROLLBACK TRAN T0;
+			SELECT @nRet;
+		END
+		ELSE
+		BEGIN
+		   
+		    COMMIT TRAN T0; -- Alles gut
+
+
+		    --
+		    -- Wir aktualisieren den Bestand den wir gebucht haben. Testhalber raus, wir machen das in c# ganz am Ende des Verpackens
+		    --
+		    --DECLARE @Positionen AS XML
+		    --SET @Positionen = (
+			--	SELECT Verkauf.tAuftragPosition.kAuftragPosition AS kKey, 1 AS nPlattform
+			--	    FROM Verkauf.tAuftragPosition
+			--	    JOIN dbo.tpicklistepos ON dbo.tpicklistepos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+			--	    WHERE Verkauf.tAuftragPosition.kAuftrag = @kBestellung    
+			--	    AND dbo.tpicklistepos.kPickliste = @kPickliste    
+			-- FOR XML PATH(&#39;Keys&#39;), TYPE
+			-- );
+
+
+		  DELETE FROM @AuftragEckdatenBerechnen;
+		  INSERT INTO @AuftragEckdatenBerechnen VALUES (@kBestellung);
+		  EXECUTE  [Verkauf].[spAuftragEckdatenBerechnen]   @AuftragEckdatenBerechnen
+
+		  
+
+		END;
+
+
+		--DELETE FROM dbo.tEazyShippingVerpackQueue;
+
+		IF(@ErrorLoggingAktiv = 1)
+			INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+		    VALUES(N&#39;spWMSVerpackeEazyshipping_Ende&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, N&#39;Verpackmodus:&#39;+ CAST(@nVerpackModus AS VARCHAR), N&#39;&#39;, NULL,@kBestellung,@kPickliste);
+
+
+	END TRY
+	BEGIN CATCH
+
+	    DECLARE @ErrorMessage VARCHAR(4000)
+	    SET @ErrorMessage = N&#39;DB-Error: (&#39; + CAST(ERROR_NUMBER() AS NVARCHAR) + &#39; - &#39; +  CAST(ERROR_SEVERITY() AS NVARCHAR) + &#39; - &#39; + CAST(ERROR_STATE() AS NVARCHAR) + &#39; ) &#39; + &#39; Zeile:&#39; + CAST(ERROR_LINE() AS NVARCHAR) + &#39; - SP: &#39; +  ISNULL(ERROR_PROCEDURE(), &#39;none&#39;) + &#39; - Text: &#39; + ERROR_MESSAGE();
+
+ 	    SET @nRet = -203009999;
+	    SELECT -203009999; -- unbekannter Fehler
+
+	    BEGIN TRY
+	      ROLLBACK TRAN T0;
+	          
+	      IF(LEN(@ReturnErrorMessage) &gt; 0)
+	        SET @ErrorMessage = @ReturnErrorMessage;
+
+          INSERT INTO dbo.tLog
+          (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+          VALUES
+              (GETDATE(),  @kBenutzer,   @ErrorMessage,   14,  9);
+
+		  IF(@ErrorLoggingAktiv = 1)
+			INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			VALUES(N&#39;spWMSVerpackeEazyshipping_UnknownDBError&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, @ErrorMessage, N&#39;&#39;, NULL,@kBestellung,@kPickliste);
+
+
+	    END TRY
+	    BEGIN Catch
+
+	      SET @nRet = -203009999;
+	      SELECT -203009999; -- unbekannter Fehler
+
+		  IF(@ErrorLoggingAktiv = 1)
+			 INSERT INTO WMS.tWMSErrorLog(cName,nProzess,cQuelle,nTyp,nLevel,dTimeStamp,kBenutzer,cValue,cValueBig,cValueXML,kKey1,kKey2)
+			 VALUES(N&#39;spWMSVerpackeEazyshipping_UnknownDB_2&#39;, 1,N&#39;WMS_spWMSVerpackeEazyshipping&#39;,1, 0, GETDATE(), @kBenutzer, @ErrorMessage, N&#39;&#39;, NULL,@kBestellung,@kPickliste);
+
+
+	      INSERT INTO dbo.tLog
+	      (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+	      VALUES
+		  (GETDATE(),  @kBenutzer,   @ErrorMessage,   14,  9);
+
+	    END CATCH;
+	
+	    --DELETE FROM dbo.tEazyShippingVerpackQueue;
+
+	    INSERT INTO dbo.tLog
+	    (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+	    VALUES
+	    (GETDATE(),  @kBenutzer,   @ErrorMessage,   14,  9);
+	END CATCH</code></pre>
+</body>
+</html>

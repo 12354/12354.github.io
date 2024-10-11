@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEPRECATED.spShopAuftragLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>DEPRECATED.spShopAuftragLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [DEPRECATED].[spShopAuftragLoeschen]
+	@kInetBestellung INT,
+	@kShop INT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	
+	BEGIN TRY
+		BEGIN TRANSACTION
+		
+			--Einzweckgutschein Einl&#246;sungen
+			CREATE TABLE #VoucherDaten(kAuftrag INT NOT NULL, voucherId NVARCHAR(4000), voucherAmount DECIMAL(25,13), voucherUsage NVARCHAR(4000), kAuftragPosition INT NULL) 
+			
+			INSERT INTO #VoucherDaten(kAuftrag, voucherId, voucherAmount, voucherUsage)
+			SELECT 	
+				tAuftragAttribut.kAuftrag,
+				MAX(
+					CASE
+						WHEN tAttributSprache.cName LIKE &#39;jtl_vouchers_id_%&#39;
+							THEN tAuftragAttributSprache.cWertVarchar
+						ELSE NULL
+					END) AS jtl_vouchers_id,
+				MAX(
+					CASE
+						WHEN tAttributSprache.cName LIKE &#39;jtl_vouchers_charge_amount_%&#39;
+							THEN CONVERT(DECIMAL(25,13), tAuftragAttributSprache.cWertVarchar)
+						ELSE NULL
+					END) AS jtl_vouchers_usage_amount,	
+				MAX(
+					CASE
+						WHEN tAttributSprache.cName LIKE &#39;jtl_vouchers_charge_%&#39; AND tAttributSprache.cName NOT LIKE &#39;jtl_vouchers_charge_amount_%&#39;
+							THEN tAuftragAttributSprache.cWertVarchar
+						ELSE NULL
+					END) AS jtl_vouchers_usage
+			FROM Verkauf.tAuftragAttribut
+			JOIN Verkauf.tAuftragAttributSprache ON tAuftragAttributSprache.kAuftragAttribut = tAuftragAttribut.kAuftragAttribut 
+				AND tAuftragAttributSprache.kSprache = 0
+			JOIN dbo.tAttribut ON tAttribut.kAttribut = tAuftragAttribut.kAttribut
+			JOIN dbo.tAttributSprache ON tAttributSprache.kAttribut = tAttribut.kAttribut
+				    AND tAttributSprache.kSprache = 0
+			JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragAttribut.kAuftrag
+			WHERE tAttributSprache.cName LIKE &#39;jtl_vouchers_%&#39; AND tAuftrag.kShopauftrag = @kInetBestellung
+			GROUP BY 
+				tAuftragAttribut.kAuftrag,
+				CASE 
+					WHEN tAttributSprache.cName LIKE &#39;jtl_vouchers_charge_amount_%&#39;
+						THEN REPLACE(tAttributSprache.cName, &#39;jtl_vouchers_charge_amount_&#39;, &#39;&#39;)
+					WHEN tAttributSprache.cName LIKE &#39;jtl_vouchers_id_%&#39;
+						THEN REPLACE(tAttributSprache.cName, &#39;jtl_vouchers_id_&#39;, &#39;&#39;)
+					WHEN tAttributSprache.cName LIKE &#39;jtl_vouchers_charge_%&#39;
+						THEN REPLACE(tAttributSprache.cName, &#39;jtl_vouchers_charge_&#39;, &#39;&#39;)
+					ELSE &#39;&#39;
+				END
+			
+			UPDATE #VoucherDaten
+			SET kAuftragPosition = Gutscheine.kAuftragPosition
+			FROM #VoucherDaten
+			JOIN (SELECT 
+					Position.kAuftragPosition,
+					Vouchers.voucherId,
+					Vouchers.voucherUsage
+				FROM (SELECT 
+						#VoucherDaten.kAuftrag,
+						#VoucherDaten.voucherAmount,
+						#VoucherDaten.voucherId,
+						#VoucherDaten.voucherUsage,
+						ROW_NUMBER() OVER(PARTITION BY #VoucherDaten.voucherAmount, #VoucherDaten.kAuftrag ORDER BY #VoucherDaten.voucherAmount) AS RowId
+					FROM #VoucherDaten) AS Vouchers
+				JOIN (SELECT 
+						tAuftragPosition.kAuftragPosition,
+						tAuftragPosition.kAuftrag,
+						ROUND(tAuftragPositionEckdaten.fWertBrutto, 2) AS fWert,
+						ROW_NUMBER() OVER(PARTITION BY ROUND(tAuftragPositionEckdaten.fWertBrutto, 2), tAuftragPosition.kAuftrag ORDER BY ROUND(tAuftragPositionEckdaten.fWertBrutto, 2)) AS RowId
+					FROM Verkauf.tAuftragPosition
+					JOIN Verkauf.tAuftragPositionEckdaten ON tAuftragPositionEckdaten.kAuftragPosition = tAuftragPosition.kAuftragPosition
+					WHERE tAuftragPosition.nType = 4) Position ON Position.kAuftrag = Vouchers.kAuftrag
+						AND ROUND(Vouchers.voucherAmount * -1, 2) = Position.fWert
+						AND Vouchers.RowId = Position.RowId) AS Gutscheine ON Gutscheine.voucherId = #VoucherDaten.voucherId 
+																AND Gutscheine.voucherUsage = #VoucherDaten.voucherUsage
+
+			DELETE #VoucherDaten 
+			WHERE #VoucherDaten.kAuftragPosition IS NULL OR #VoucherDaten.kAuftragPosition = 0
+			
+			UPDATE Verkauf.tAuftragPosition
+			SET nType = 21
+			FROM Verkauf.tAuftragPosition
+			JOIN #VoucherDaten ON #VoucherDaten.kAuftragPosition = tAuftragPosition.kAuftragPosition
+			
+			-- tVoucherEinloesung Einzweckgutschein
+			INSERT INTO dbo.tVoucherEinloesungen (kAuftrag, kAuftragPosition, cVoucherId, cUsageId, fAmount, kZahlungsart)
+			SELECT #VoucherDaten.kAuftrag,
+				   #VoucherDaten.kAuftragPosition,
+				   #VoucherDaten.voucherId,
+				   #VoucherDaten.voucherUsage,
+				   #VoucherDaten.voucherAmount,
+				   ISNULL(Zahlungsart.kZahlungsart, 0)
+			FROM #VoucherDaten
+			CROSS APPLY (SELECT TOP 1 Zahlungsarten.kZahlungsart 
+						FROM (SELECT kZahlungsart, 1 AS nPrio 
+							FROM dbo.tVouchers 
+							UNION 
+							SELECT kZahlungsart, 
+								CASE
+									WHEN tZahlungsart.nIstStandard = 1
+										THEN 2
+									ELSE 3
+								END AS nPrio
+							FROM dbo.tZahlungsart) Zahlungsarten
+						ORDER by Zahlungsarten.nPrio, Zahlungsarten.kZahlungsart) AS Zahlungsart
+			
+			IF(OBJECT_ID(&#39;tempdb..#VoucherDaten&#39;)IS NOT NULL)
+			BEGIN
+				DROP TABLE #VoucherDaten
+			END
+		
+			--
+			-- tinetbestellposeigenschaft l&#246;schen
+			--
+			DELETE dbo.tinetbestellposeigenschaft
+			FROM dbo.tinetbestellposeigenschaft
+			JOIN dbo.tinetbestellpos ON dbo.tinetbestellposeigenschaft.kInetBestellPos = dbo.tinetbestellpos.kInetBestellPos
+			WHERE dbo.tinetbestellpos.kInetBestellung = @kInetBestellung
+				AND dbo.tinetbestellpos.kShop = @kShop;
+
+			--
+			-- tinetbestellpos l&#246;schen
+			--
+			DELETE dbo.tinetbestellpos WHERE kInetBestellung = @kInetBestellung AND dbo.tinetbestellpos.kShop = @kShop;
+
+			--
+			--Adressen l&#246;schen
+			--
+			DELETE FROM DbeS.tLieferadresse
+			WHERE tLieferadresse.kInetBestellung = @kInetBestellung
+				AND tLieferadresse.kShop = @kShop;
+
+			DELETE FROM DbeS.tRechnungadresse
+			WHERE tRechnungadresse.kInetBestellung = @kInetBestellung
+				AND tRechnungadresse.kShop = @kShop;
+
+			--
+			-- tInetShopZahlung l&#246;schen
+			--
+			DELETE dbo.tInetShopZahlung WHERE kInetBestellung = @kInetBestellung AND kShop = @kShop;
+
+			IF (SELECT
+					COUNT(*) 
+				FROM 
+					dbo.tinetkunde 
+				JOIN
+					dbo.tinetbestellung ON tinetbestellung.kKunde = tinetkunde.kInetKunde
+						AND tinetkunde.kShop = tinetbestellung.kShop
+				WHERE tinetbestellung.kInetBestellung = @kInetBestellung 
+						AND tinetbestellung.kShop = @kShop) = 1
+			BEGIN
+				--
+				-- tInetKundenAttribute l&#246;schen
+				--
+				DELETE dbo.tInetKundenAttribute
+				FROM dbo.tInetKundenAttribute
+				JOIN dbo.tinetkunde ON dbo.tInetKundenAttribute.kInetKunde = dbo.tinetkunde.kInetKunde
+				JOIN dbo.tinetbestellung ON dbo.tinetbestellung.kKunde = dbo.tinetkunde.kInetKunde
+				WHERE dbo.tinetbestellung.kInetBestellung = @kInetBestellung
+					AND dbo.tinetbestellung.kShop = @kShop;
+
+				--
+				-- tinetkunde &#246;schen
+				--
+				DELETE dbo.tinetkunde
+				FROM dbo.tinetkunde
+				JOIN dbo.tinetbestellung ON dbo.tinetbestellung.kKunde = dbo.tinetkunde.kInetKunde
+				WHERE dbo.tinetbestellung.kInetBestellung = @kInetBestellung
+					AND dbo.tinetbestellung.kShop = @kShop;
+			END
+
+			IF (SELECT
+					COUNT(*) 
+				FROM 
+					dbo.tinetadress
+				JOIN
+					dbo.tinetbestellung ON dbo.tinetbestellung.kLieferAdresse = dbo.tinetadress.kInetAdress
+				WHERE 
+				(
+					SELECT 
+						tinetbestellung.kLieferAdresse 
+					FROM 
+						dbo.tinetbestellung 
+					WHERE 
+						dbo.tinetbestellung.kInetBestellung = @kInetBestellung AND 
+						dbo.tinetbestellung.kShop = @kShop
+				) = dbo.tinetadress.kInetAdress) = 1
+			BEGIN
+				--
+				-- tinetadress
+				--
+				DELETE dbo.tinetadress
+				FROM dbo.tinetadress
+				JOIN dbo.tinetbestellung ON dbo.tinetbestellung.kLieferAdresse = dbo.tinetadress.kInetAdress
+				WHERE dbo.tinetbestellung.kInetBestellung = @kInetBestellung
+					AND dbo.tinetbestellung.kShop = @kShop;
+			END
+			--
+			-- tinetbestellung l&#246;schen
+			--
+			DELETE dbo.tinetbestellung WHERE kInetBestellung = @kInetBestellung AND dbo.tinetbestellung.kShop = @kShop;		
+
+			--
+			-- tInetBestellungAttribute l&#246;schen
+			--
+			DELETE dbo.tInetBestellungAttribute WHERE kInetBestellung = @kInetBestellung AND kShop = @kShop;		
+
+			SET @retry = -1;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+		IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry -1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);					
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);				
+				RETURN;
+			END
+	END CATCH	
+END</code></pre>
+</body>
+</html>

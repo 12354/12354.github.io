@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spInsertBlockedStockChangedStockReference</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spInsertBlockedStockChangedStockReference</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>--
+-- spInsertBlockedStockChangedStockReference
+-- 
+CREATE PROCEDURE [FulfillmentNetwork].[spInsertBlockedStockChangedStockReference] 
+			@kWarenLagerPlatz INT,           
+			@nBlocked INT,
+			@kBenutzer INT,
+			@Kommentar VARCHAR(255)       
+AS
+BEGIN
+
+	WITH Latest
+AS
+(
+	SELECT kArtikel, MAX(kWarenLagerEingang) AS kWarenLagerEingang, SUM(fAnzahlAKtuell) AS fAnzahlAKtuell, dMhd, cChargenNr FROM tWarenLagerEingang 
+	WHERE (kWarenLagerPlatz = @kWarenLagerPlatz) AND (fAnzahlAKtuell &gt; 0)
+	GROUP BY kArtikel, dMhd, cChargenNr
+)
+INSERT INTO FulfillmentNetwork.tStockRef
+	(
+		kArtikel, 
+		kBenutzer, 
+		kBuchungsart, 
+		kWarenLagerPlatz, 
+		kLieferantenBestellungPos, 
+		fAnzahl,
+		dCreatedAt, 
+		dUpdatedAt, 
+		cLieferscheinNr, 
+		cOwnerId, 
+		dMHD, 
+		cCharge, 
+		cKommentar, 
+		kWarenLagerEingang, 
+		kSessionId, 
+		cFulfillerStockChangeId,
+		nChangeState,
+		nType,
+		nBlocked) 
+SELECT  Latest.kArtikel, 
+		@kBenutzer, 
+		30, -- Korrekturbuchung 
+		@kWarenLagerPlatz, 
+		0, 
+		CASE WHEN @nBlocked=1 THEN Latest.fAnzahlAktuell ELSE (Latest.fAnzahlAktuell*-1) END, 
+		GETUTCDATE() dCreatedAt, 
+		GETUTCDATE() dUpdatedAt, 
+		&#39;&#39;, 
+		tProductRef.cOwnerId,
+		Latest.dMHD, 
+		Latest.cChargenNr, 
+		@Kommentar, 
+		0, 
+		&#39;&#39;, 
+		NEWID() cFulfillerStockChangeId, 
+		0 AS nChangeState, 
+		2 AS nType, 
+		2 AS nBlocked 
+FROM Latest
+JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = Latest.kArtikel AND nType = 2
+
+END</code></pre>
+</body>
+</html>

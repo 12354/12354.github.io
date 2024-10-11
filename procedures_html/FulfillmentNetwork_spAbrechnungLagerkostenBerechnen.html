@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spAbrechnungLagerkostenBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spAbrechnungLagerkostenBerechnen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spAbrechnungLagerkostenBerechnen]
+    @kAbrechnung AS INT ,
+    @kBenutzer AS INT
+AS
+    DECLARE @kArtikel AS INT;
+    DECLARE @cBezeichnung AS VARCHAR(256);
+    DECLARE @fVkNetto AS DECIMAL(28, 14);
+    DECLARE @fVKPreis AS DECIMAL(28, 14);
+    DECLARE @fEKNetto AS DECIMAL(28, 14);
+    DECLARE @fAnzahl AS DECIMAL(28, 14);
+    DECLARE @fRabatt AS DECIMAL(28, 14);
+    DECLARE @fMwSt AS DECIMAL(28, 14);
+    DECLARE @cArtNr AS VARCHAR(100);
+    DECLARE @cEinheit AS VARCHAR(255);
+    DECLARE @cHinweis AS NVARCHAR(4000);
+    DECLARE @kObjektPk AS INT;
+    DECLARE @nObjekt AS INT;
+    
+    DECLARE @dErstellt AS DATETIME;
+    DECLARE @ABRECHNUNGPOS_TYPE_LAGERKOSTEN TINYINT = 2;
+
+
+    DELETE  FROM FulfillmentNetwork.tAbrechnungEinzelnachweis
+    WHERE   kAbrechnungPos IN ( SELECT  kAbrechnungPos
+                                FROM    FulfillmentNetwork.tAbrechnungPos
+                                WHERE   kAbrechnung = @kAbrechnung
+                                        AND nType = 2 );
+    DELETE  FROM FulfillmentNetwork.tAbrechnungPos
+    WHERE   kAbrechnung = @kAbrechnung
+            AND nType = @ABRECHNUNGPOS_TYPE_LAGERKOSTEN;
+
+    DECLARE abrechnungsPositionenCursor CURSOR FAST_FORWARD READ_ONLY
+    FOR
+        SELECT  AbrechnungsPosition.kArtikel ,
+                Abrechnung.kAbrechnung ,
+                Beschreibung.cName AS cBezeichnung ,
+                (NetPrice.dNettoPreis / AbrechnungsPosition.nAnzahlErfassungenProZeitraum) AS fVkNetto ,
+                0 fVKPreis ,		--Wird in spAbrechnungPositionAnlegen berechnet		
+                Artikel.fEKNetto ,
+                AbrechnungsPosition.fAnzahl ,
+                NetPrice.dRabatt AS fRabatt ,
+                0 AS fMwSt ,
+                Artikel.cArtNr ,
+                Einheit.cName AS cEinheit ,
+                AbrechnungsPosition.cHinweis ,
+                AbrechnungsPosition.kObjektPk ,
+                AbrechnungsPosition.nObjekt ,
+                AbrechnungsPosition.dErstellt
+        FROM    FulfillmentNetwork.tAbrechnung AS Abrechnung
+                JOIN FulfillmentNetwork.tFulfillerEinstellungen AS FulfillerEinstellungen ON FulfillerEinstellungen.kKunde = Abrechnung.kKunde
+                                                              AND FulfillerEinstellungen.kLieferant = Abrechnung.kFulfillmentLieferant
+                JOIN FulfillmentNetwork.tLieferantWarenlager AS LieferantWarenlager ON LieferantWarenlager.kLieferant = FulfillerEinstellungen.kLieferant
+                JOIN dbo.tkunde AS Kunde ON Kunde.kKunde = FulfillerEinstellungen.kKunde
+                CROSS APPLY FulfillmentNetwork.ifAbrechnungLagerkosten(Abrechnung.kFulfillmentLieferant,
+                                                              LieferantWarenlager.kWarenlager,
+                                                              Abrechnung.dAbrechnungVon,
+                                                              Abrechnung.dAbrechnungBis,
+                                                              FulfillerEinstellungen.nBestandserfassungModus)
+                AS AbrechnungsPosition
+                JOIN dbo.tArtikel AS Artikel ON Artikel.kArtikel = AbrechnungsPosition.kArtikel
+                CROSS APPLY dbo.ifGetNetPrice(Artikel.kArtikel, Kunde.kKunde,
+                                              Kunde.kKundenGruppe, 0,
+                                              AbrechnungsPosition.fAnzahl) AS NetPrice               
+                JOIN dbo.tSpracheUsed AS StandardSprache ON StandardSprache.nStandard = 1
+                JOIN dbo.tArtikelBeschreibung AS Beschreibung ON Beschreibung.kArtikel = Artikel.kArtikel
+                                                              AND StandardSprache.kSprache = Beschreibung.kSprache
+                                                              AND Beschreibung.kPlattform = 1
+                LEFT JOIN dbo.tEinheitSprache AS Einheit ON Einheit.kEinheit = Artikel.kVerkaufsEinheit
+                                                       AND Einheit.kSprache = StandardSprache.kSprache
+        WHERE   Abrechnung.kAbrechnung = @kAbrechnung; 
+
+    OPEN abrechnungsPositionenCursor;
+	
+    FETCH NEXT FROM abrechnungsPositionenCursor INTO @kArtikel, @kAbrechnung,
+        @cBezeichnung, @fVkNetto, @fVKPreis, @fEKNetto, @fAnzahl, @fRabatt,
+        @fMwSt, @cArtNr, @cEinheit, @cHinweis, @kObjektPk, @nObjekt,
+        @dErstellt;
+
+
+    WHILE @@FETCH_STATUS = 0
+        BEGIN     
+
+            EXEC FulfillmentNetwork.spAbrechnungPositionAnlegen @kArtikel = @kArtikel, -- int
+                @kAbrechnung = @kAbrechnung, -- int
+                @cBezeichnung = @cBezeichnung, -- varchar(256)
+                @fVkNetto = @fVkNetto, -- decimal(28, 14)
+                @fVKPreis = @fVKPreis, -- decimal(28, 14)
+                @fEKNetto = @fEKNetto, -- decimal(28, 14)
+                @fAnzahl = @fAnzahl, -- decimal(28, 14)
+                @fRabatt = @fRabatt, -- decimal(28, 14)
+                @fMwSt = @fMwSt, -- decimal(28, 14)
+                @cArtNr = @cArtNr, -- varchar(100)
+                @cEinheit = @cEinheit, -- varchar(255)
+                @cHinweis = @cHinweis, -- nvarchar(4000)
+                @nType = @ABRECHNUNGPOS_TYPE_LAGERKOSTEN, -- tinyint
+                @kObjektPk = @kObjektPk, -- int
+                @nObjekt = @nObjekt, -- int
+                @dErstellt = @dErstellt;
+	
+
+            FETCH NEXT FROM abrechnungsPositionenCursor INTO @kArtikel,
+                @kAbrechnung, @cBezeichnung, @fVkNetto, @fVKPreis, @fEKNetto,
+                @fAnzahl, @fRabatt, @fMwSt, @cArtNr, @cEinheit, @cHinweis,
+                @kObjektPk, @nObjekt, @dErstellt;
+        END;
+
+    CLOSE abrechnungsPositionenCursor;
+    DEALLOCATE abrechnungsPositionenCursor;</code></pre>
+</body>
+</html>

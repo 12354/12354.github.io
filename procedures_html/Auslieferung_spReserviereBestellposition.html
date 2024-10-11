@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spReserviereBestellposition</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spReserviereBestellposition</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spReserviereBestellposition]
+
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+
+-- Enth&#228;lt den Verweis auf die zu reservierende Bestellposition
+@kBestellPos BIGINT,
+
+-- Enth&#228;lt die zu reservierende Anzahl
+@fAnzahl DECIMAL(25,13),
+
+-- Optionen f&#252;r die Auslieferung (Bitmaske)
+-- 0x0001 = Pro Bestellung eine Pickliste anlegen
+@nOptions INT,
+
+-- Format:
+-- &lt;Lager&gt;
+--   &lt;kWarenlager&gt;1&lt;/kWarenlager&gt;
+--   &lt;nPrio&gt;0&lt;/nPrio&gt;
+--   &lt;kLieferant&gt;0&lt;/kLieferant&gt;
+--   &lt;kAnsprechpartner&gt;0&lt;/kAnsprechpartner&gt;
+-- &lt;/Lager&gt;
+-- &lt;Lager&gt;
+--   &lt;kWarenlager&gt;0&lt;/kWarenlager&gt;
+--   &lt;nPrio&gt;1&lt;/nPrio&gt;
+--   &lt;kLieferant&gt;2&lt;/kLieferant&gt;
+--   &lt;kAnsprechpartner&gt;2&lt;/kAnsprechpartner&gt;
+-- &lt;/Lager&gt;
+-- Es gibt einige Lieferanten mit besonderer Bedeutung
+-- (!!!ACHTUNG MAGIC VALUES!!!)
+-- (!!!ACHTUNG NICHT G&#220;LTIG F&#220;R FREIPOSITIONEN ODER ARTIKEL OHNE LIEFERANT!!!)
+-- kLieferant == -1 =&gt; g&#252;nstigster Lieferant
+-- kLieferant == -2 =&gt; schnellster Lieferant
+-- kLieferant == -3 =&gt; Standardlieferant
+
+@Laeger XML,
+
+-- &lt;Warenlagereingang&gt;
+--   &lt;kWarenlagereingang&gt;17&lt;/kWarenlagereingang&gt;
+--   &lt;kWarenlager&gt;0&lt;/kWarenlager&gt;
+--   &lt;nPrio&gt;1&lt;/nPrio&gt;
+--   &lt;kLieferant&gt;2&lt;/kLieferant&gt;
+--   &lt;kAnsprechpartner&gt;2&lt;/kAnsprechpartner&gt;
+--   &lt;fAnzahl&gt;2.0&lt;/fAnzahl&gt;
+--   &lt;nPrio&gt;0&lt;/nPrio&gt;
+-- &lt;/Warenlagereingang&gt;
+-- &lt;Warenlagereingang&gt;
+--   &lt;kWarenlagereingang&gt;18&lt;/kWarenlagereingang&gt;
+--   &lt;kWarenlager&gt;0&lt;/kWarenlager&gt;
+--   &lt;nPrio&gt;1&lt;/nPrio&gt;
+--   &lt;kLieferant&gt;2&lt;/kLieferant&gt;
+--   &lt;kAnsprechpartner&gt;2&lt;/kAnsprechpartner&gt;
+--   &lt;fAnzahl&gt;2.0&lt;/fAnzahl&gt;
+--   &lt;nPrio&gt;1&lt;/nPrio&gt;
+-- &lt;/Warenlagereingang&gt;
+@Warenlagereingaenge XML,
+
+-- Enth&#228;lt den Benutzer zur eindeutigen Zuordnung
+@kBenutzer INT,
+
+-- Sitzungsid
+@kSessionId INT
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spReserviereBestellposition
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY
+	DECLARE @kArtikel AS INT;
+	DECLARE @kBestellung AS INT;
+	DECLARE @kWarenLager INT;
+	DECLARE @kAnsprechpartner INT;
+	DECLARE @kPickliste AS INT;
+	DECLARE @kWarenlagereingang AS INT;
+	DECLARE @fAnzahlOffen AS DECIMAL(25,13);
+	DECLARE @fAnzahlReserviert AS DECIMAL(25,13);
+	DECLARE @fAnzahlAuszubuchen AS DECIMAL(25,13);
+	DECLARE @fAnzahlReserviertEigen AS DECIMAL(25,13);
+	DECLARE @fAnzahlReserviertOffen AS DECIMAL(25,13);
+	DECLARE @kPicklistePos AS INT;
+	DECLARE @kWarenlagerplatz AS INT;
+	DECLARE @fAnzahlSeriennummern AS INT;
+	DECLARE @fAnzahlSeriennummernVorgegeben AS INT;
+	DECLARE @fAnzahlSeriennummernAutomatisch AS INT;
+	DECLARE @IstSeriennummernArtikel AS INT;
+	DECLARE @IstLagerartikel AS INT;
+	DECLARE @IstTeilbar AS INT;
+	DECLARE @kLieferant AS INT;
+	DECLARE @IstNachnahme AS TINYINT;
+	DECLARE @kStuecklistenVater AS INT;
+	DECLARE @cISO AS NVARCHAR(5);
+	DECLARE @nTyp AS TINYINT;
+	DECLARE @nIstUmlagerung BIT;
+
+	--
+	-- XML-Geraffel umkopieren
+	--
+	IF(object_id(&#39;tempdb..#XMLWLE&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #XMLWLE;
+	END
+	CREATE TABLE #XMLWLE(
+		kWarenlagereingang INT,
+		kWarenlager INT,
+		kLieferant INT,
+		kAnsprechpartner INT,
+		fAnzahl DECIMAL(25,13),
+		nPrio INT)
+	INSERT INTO #XMLWLE
+	(
+	    #XMLWLE.kWarenlagereingang,
+	    #XMLWLE.kWarenlager,
+	    #XMLWLE.kLieferant,
+	    #XMLWLE.kAnsprechpartner,
+	    #XMLWLE.fAnzahl,
+	    #XMLWLE.nPrio
+	)
+	SELECT
+		ParamValues.ID.value(&#39;kWarenlagereingang[1]&#39;, &#39;INT&#39;) AS kWarenlagereingang,
+		ParamValues.ID.value(&#39;kWarenlager[1]&#39;, &#39;INT&#39;) AS kWarenlager,
+		ParamValues.ID.value(&#39;kLieferant[1]&#39;, &#39;INT&#39;) AS kLieferant,
+		ParamValues.ID.value(&#39;kAnsprechpartner[1]&#39;, &#39;INT&#39;) AS kAnsprechpartner,
+		ParamValues.ID.value(&#39;fAnzahl[1]&#39;, &#39;DECIMAL(25,13)&#39;) AS fAnzahl,
+		ParamValues.ID.value(&#39;nPrio[1]&#39;, &#39;INT&#39;) AS nPrio
+	FROM @Warenlagereingaenge.nodes(&#39;/Warenlagereingang&#39;) AS ParamValues(ID)
+
+	IF(object_id(&#39;tempdb..#XMLLAGER&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #XMLLAGER;
+	END
+	CREATE TABLE #XMLLAGER(
+		kWarenlager INT,
+		kLieferant INT,
+		kAnsprechpartner INT,
+		nPrio INT)
+	INSERT INTO #XMLLAGER
+	(
+	    #XMLLAGER.kWarenlager,
+	    #XMLLAGER.kLieferant,
+	    #XMLLAGER.kAnsprechpartner,
+	    #XMLLAGER.nPrio
+	)
+	SELECT
+		ParamValues.ID.value(&#39;kWarenlager[1]&#39;, &#39;INT&#39;) AS kWarenlager,
+		ParamValues.ID.value(&#39;kLieferant[1]&#39;, &#39;INT&#39;) AS kLieferant,
+		ParamValues.ID.value(&#39;kAnsprechpartner[1]&#39;, &#39;INT&#39;) AS kAnsprechpartner,
+		ParamValues.ID.value(&#39;nPrio[1]&#39;, &#39;INT&#39;) AS nPrio
+	FROM @Laeger.nodes(&#39;/Lager&#39;) AS ParamValues(ID)
+
+	--
+	-- Hilfsvariablen laden
+	--
+	SELECT
+		@kArtikel = Auslieferung.vBestellPos.kArtikel,
+		@kBestellung = Auslieferung.vBestellPos.kBestellung,
+		@kStuecklistenVater = Auslieferung.vBestellPos.kBestellStueckliste,
+		@fAnzahl = CASE
+			WHEN Auslieferung.vBestellPos.nSperrungStatus = 0 THEN @fAnzahl
+			WHEN Auslieferung.vBestellPos.nSperrungStatus = 204 THEN @fAnzahl -- picken von Auftr&#228;gen ohne Versandart erlauben
+		ELSE 0 END,
+		@nIstUmlagerung = vBestellPos.nIstUmlagerung
+		FROM Auslieferung.vBestellPos
+		WHERE Auslieferung.vBestellPos.kBestellPos = @kBestellPos;
+	IF (@kStuecklistenVater = @kBestellPos)
+	BEGIN
+		RAISERROR (&#39;St&#252;cklistenv&#228;ter werden nicht unterst&#252;tzt&#39;, 10, 1)
+	END
+
+	SELECT
+		@fAnzahlReserviertEigen = Versand.vBestellPosLieferInfo.fAnzahlReserviertEigen,
+		@fAnzahlReserviert = Versand.vBestellPosLieferInfo.fAnzahlReserviert,
+		@fAnzahlReserviertOffen = Versand.vBestellPosLieferInfo.fAnzahlZuPicken
+		FROM Versand.vBestellPosLieferInfo
+		WHERE Versand.vBestellPosLieferInfo.kBestellPos = @kBestellPos;
+
+	--
+	-- Versand.vBestellPosLieferInfo enth&#228;lt keine Eintr&#228;ge f&#252;r vollst&#228;ndig gelieferte Positionen.
+	-- In diesem Fall werden die Variablen nicht initialisiert und bleiben NULL
+	--
+	SELECT
+		@fAnzahlReserviertEigen = ISNULL(@fAnzahlReserviertEigen, 0),
+		@fAnzahlReserviert = ISNULL(@fAnzahlReserviert, 0),
+		@fAnzahlReserviertOffen = ISNULL(@fAnzahlReserviertOffen, 0);
+
+	SELECT
+		@IstSeriennummernArtikel = CASE WHEN dbo.tArtikel.cLagerArtikel = &#39;Y&#39; THEN 1 ELSE 0 END,
+		@IstTeilbar = CASE WHEN dbo.tArtikel.cTeilbar = &#39;Y&#39; THEN 1 ELSE 0 END,
+		@IstLagerartikel = CASE WHEN dbo.tArtikel.cLagerVariation = &#39;N&#39; AND dbo.tArtikel.cLagerAktiv = &#39;Y&#39; THEN 1 ELSE 0 END
+	FROM dbo.tArtikel
+	WHERE dbo.tArtikel.kArtikel = @kArtikel;
+
+	IF (@IstTeilbar=0)
+	BEGIN
+		SET @fAnzahl = FLOOR(@fAnzahl);
+	END
+
+	IF (@fAnzahl &gt; @fAnzahlReserviertOffen)
+	BEGIN
+		SET @fAnzahl = @fAnzahlReserviertOffen
+	END
+
+	IF (@fAnzahl &lt; 0)
+	BEGIN
+		SET @fAnzahl = 0
+	END
+
+	SELECT @cISO = Lieferadresse.cISO
+	FROM Verkauf.vAuftrag
+	JOIN Verkauf.vAuftragLieferadresse AS Lieferadresse ON Lieferadresse.kAuftrag = vAuftrag.kAuftrag
+	WHERE vAuftrag.kAuftrag = @kBestellung
+
+	SELECT @IstNachnahme = vAuftragEckdaten.nIstNachnahme
+	FROM Verkauf.vAuftragEckdaten
+	WHERE vAuftragEckdaten.kAuftrag = @kBestellung;
+
+	--
+	-- Warenlagereing&#228;nge ermitteln
+	--
+	IF(object_id(&#39;tempdb..#WARENLAGEREINGANG&#39;) IS NOT NULL)
+	BEGIN
+	   DROP TABLE #WARENLAGEREINGANG;
+	END
+	CREATE TABLE #WARENLAGEREINGANG(
+		kWarenlagereingang INT NOT NULL,
+		kWarenlager INT NOT NULL,
+		kWarenlagerplatz INT NOT NULL,
+		kLieferant INT NOT NULL,
+		kAnsprechpartner INT NOT NULL,
+		nPrio INT NOT NULL,
+		dMHD DATETIME NULL,
+		cCharge NVARCHAR(255) NULL,
+		fAnzahlOffen DECIMAL(25,13) NOT NULL,
+		nTyp TINYINT NOT NULL
+		-- nTyp = 0 =&gt; Freiposition/Artikel ohne Lagerbestand aus lokalem Lager
+		-- nTyp = 1 =&gt; Artikel mit Bestand aus lokalem Lager
+		-- nTyp = 2 =&gt; Artikel ohne Lagerbestand/Lieferantenbestand nicht ber&#252;cksichtigen vom Lieferanten
+		-- nTyp = 3 =&gt; Artikel mit Bestand aus Lieferantenlager mit Bestand
+		)
+	IF ((@Laeger IS NOT NULL) OR (DATALENGTH(@Laeger) &gt; 0))
+	BEGIN
+	    -- Wenn L&#228;ger angegeben wurden, Warenlagereing&#228;nge ermitteln
+		IF (@kArtikel = 0 OR @IstLagerartikel = 0)
+		BEGIN
+			-- Freiposition oder Artikel ohne Lagerbestand (Warenl&#228;ger)
+			INSERT INTO #WARENLAGEREINGANG (kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, nPrio, dMHD, cCharge, fAnzahlOffen, nTyp)
+				SELECT
+					0 AS kWarenlagereingang,
+					dbo.tWarenLager.kWarenLager AS kWarenlager,
+					0 AS kWarenlagerplatz,
+					0 AS kLieferant,
+					0 AS kAnsprechpartner,
+					#XMLLAger.nPrio AS nPrio,
+					NULL AS dMHD,
+					NULL AS cCharge,
+					@fAnzahl AS fAnzahlOffen,
+					0 AS nTyp
+				FROM #XMLLAGER
+				JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = #XMLLAGER.kWarenlager
+				WHERE ISNULL(dbo.tWarenLager.kUser, 0) = 0 AND ISNULL(dbo.tWarenLager.nLagerplatzverwaltung, 0) = 0
+				AND dbo.tWarenLager.nFulfillment NOT IN (3, 4); -- 4 = FBA pending
+		END
+		ELSE
+		BEGIN
+			-- Artikel mit Lagerbestand (Warenl&#228;ger)
+			INSERT INTO #WARENLAGEREINGANG (kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, nPrio, dMHD, cCharge, fAnzahlOffen, nTyp)
+				SELECT
+					dbo.tWarenLagerEingang.kWarenLagerEingang AS kWarenlagereingang,
+					dbo.tWarenLagerPlatz.kWarenLager AS kWarenlager,
+					dbo.tWarenLagerPlatz.kWarenLagerPlatz AS kWarenlagerplatz,
+					0 AS kLieferant,
+					0 AS kAnsprechpartner,
+					#XMLLAGER.nPrio AS nPrio,
+					dbo.tWarenLagerEingang.dMHD AS dMHD,
+					dbo.tWarenLagerEingang.cChargenNr AS cCharge,
+					(ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell, 0.0) - ISNULL(dbo.tWarenLagerEingang.fAnzahlReserviertPickpos, 0.0)) AS fAnzahlOffen,
+					1 AS nTyp
+				FROM dbo.tWarenLagerEingang
+				JOIN dbo.tWarenLagerPlatz ON dbo.tWarenLagerPlatz.kWarenLagerPlatz = dbo.tWarenLagerEingang.kWarenLagerPlatz
+				JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tWarenLagerPlatz.kWarenLager
+				JOIN #XMLLAGER ON #XMLLAGER.kWarenlager = dbo.tWarenLagerPlatz.kWarenLager
+				WHERE
+					dbo.tWarenLagerEingang.kArtikel = @kArtikel AND
+					ISNULL(dbo.tWarenLager.nLagerplatzverwaltung, 0) = 0 AND
+					((ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell, 0.0) - ISNULL(dbo.tWarenLagerEingang.fAnzahlReserviertPickpos, 0.0)) &gt; 0.0) AND
+					((dbo.tWarenLagerEingang.dMHD IS NULL) OR (dbo.tWarenLagerEingang.dMHD &gt; GETDATE()))
+					AND (tWarenLagerPlatz.nAuslieferungGesperrt = 0
+						OR @nIstUmlagerung = 1
+					);
+		END
+		IF (@kArtikel &lt;&gt; 0) -- Freipositionen nicht &#252;ber Lieferanten lieferbar
+		BEGIN
+			-- Nicht Freipositionen (Lieferanten)
+			INSERT INTO #WARENLAGEREINGANG (kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, nPrio, dMHD, cCharge, fAnzahlOffen, nTyp)
+				SELECT
+					0 AS kWarenlagereingang,
+					0 AS kWarenlager,
+					0 AS kWarenlagerplatz,
+					Lieferanten.kLieferant AS kLieferant,
+					ISNULL(dbo.tansprechpartner.kAnsprechpartner, 0) AS kAnsprechpartner,
+					#XMLLAGER.nPrio AS nPrio,
+					NULL AS dMHD,
+					NULL AS cCharge,
+					CASE
+						WHEN Lieferanten.nLagerBeachten &gt; 0 THEN Lieferanten.fLagerbestand - ISNULL(LiefbestandAufPicklisten.fAnzahl, 0.0)
+						ELSE @fAnzahl
+					END AS fAnzahlOffen,
+					CASE
+						WHEN Lieferanten.nLagerBeachten &gt; 0 THEN 3
+						ELSE 2
+					END AS nTyp
+				FROM #XMLLAGER
+				JOIN (
+					SELECT
+						dbo.tliefartikel.tLieferant_kLieferant AS kLieferant,
+						dbo.tliefartikel.tLieferant_kLieferant AS kDummyLieferant,
+						dbo.tliefartikel.nLagerBeachten AS nLagerBeachten,
+						dbo.tliefartikel.fLagerbestand AS fLagerbestand,
+						1 AS nFlag
+					FROM
+						dbo.tliefartikel
+					JOIN dbo.tlieferant ON dbo.tlieferant.kLieferant = dbo.tliefartikel.tlieferant_kLieferant
+					JOIN dbo.tLieferantErlaubteLieferlaender ON dbo.tLieferantErlaubteLieferlaender.kLieferant = dbo.tLieferant.kLieferant AND dbo.tLieferantErlaubteLieferlaender.cISO = @cISO
+					WHERE dbo.tliefartikel.tArtikel_kArtikel = @kArtikel AND dbo.tliefartikel.nDropshipping &gt; 0 AND ((@IstNachnahme = 0) OR (dbo.tlieferant.nDropshippingBeiNachnahme &gt; 0))
+					UNION ALL (
+						SELECT
+							dbo.tliefartikel.tLieferant_kLieferant AS kLieferant,
+							-1 AS kDummyLieferant,
+							dbo.tliefartikel.nLagerBeachten AS nLagerBeachten,
+							dbo.tliefartikel.fLagerbestand AS fLagerbestand,
+							ROW_NUMBER() OVER (PARTITION BY dbo.tliefartikel.tArtikel_kArtikel ORDER BY dbo.tliefartikel.fEKNetto) AS nFlag
+						FROM
+							dbo.tliefartikel
+						JOIN dbo.tlieferant ON dbo.tlieferant.kLieferant = dbo.tliefartikel.tlieferant_kLieferant
+						JOIN dbo.tLieferantErlaubteLieferlaender ON dbo.tLieferantErlaubteLieferlaender.kLieferant = dbo.tLieferant.kLieferant AND dbo.tLieferantErlaubteLieferlaender.cISO = @cISO
+						WHERE dbo.tliefartikel.tArtikel_kArtikel = @kArtikel AND dbo.tliefartikel.nDropshipping &gt; 0 AND ((@IstNachnahme = 0) OR (dbo.tlieferant.nDropshippingBeiNachnahme &gt; 0))
+					)
+					UNION ALL(
+						SELECT
+							dbo.tliefartikel.tLieferant_kLieferant AS kLieferant,
+							-2 AS kDummyLieferant,
+							dbo.tliefartikel.nLagerBeachten AS nLagerBeachten,
+							dbo.tliefartikel.fLagerbestand AS fLagerbestand,
+							ROW_NUMBER() OVER (PARTITION BY dbo.tliefartikel.tArtikel_kArtikel ORDER BY dbo.tliefartikel.nLieferzeit) AS nFlag
+						FROM
+							dbo.tliefartikel
+						JOIN dbo.tlieferant ON dbo.tlieferant.kLieferant = dbo.tliefartikel.tlieferant_kLieferant
+						JOIN dbo.tLieferantErlaubteLieferlaender ON dbo.tLieferantErlaubteLieferlaender.kLieferant = dbo.tLieferant.kLieferant AND dbo.tLieferantErlaubteLieferlaender.cISO = @cISO
+						WHERE dbo.tliefartikel.tArtikel_kArtikel = @kArtikel AND dbo.tliefartikel.nDropshipping &gt; 0 AND ((@IstNachnahme = 0) OR (dbo.tlieferant.nDropshippingBeiNachnahme &gt; 0))
+					)
+					UNION ALL(
+						SELECT TOP(1)
+							dbo.tliefartikel.tLieferant_kLieferant AS kLieferant,
+							-3 AS kDummyLieferant,
+							dbo.tliefartikel.nLagerBeachten AS nLagerBeachten,
+							dbo.tliefartikel.fLagerbestand AS fLagerbestand,
+							1 AS nFlag
+						FROM
+							dbo.tliefartikel
+						JOIN dbo.tlieferant ON dbo.tlieferant.kLieferant = dbo.tliefartikel.tlieferant_kLieferant
+						JOIN dbo.tLieferantErlaubteLieferlaender ON dbo.tLieferantErlaubteLieferlaender.kLieferant = dbo.tLieferant.kLieferant AND dbo.tLieferantErlaubteLieferlaender.cISO = @cISO
+						WHERE dbo.tliefartikel.tArtikel_kArtikel = @kArtikel AND dbo.tliefartikel.nDropshipping &gt; 0 AND dbo.tliefartikel.nDropshippingStandard &gt; 0
+							AND ((@IstNachnahme = 0) OR (dbo.tlieferant.nDropshippingBeiNachnahme &gt; 0))
+					)
+				) AS Lieferanten ON Lieferanten.kDummyLieferant = #XMLLager.kLieferant AND Lieferanten.nFlag = 1
+				LEFT JOIN dbo.tansprechpartner ON dbo.tansprechpartner.kAnsprechpartner = #XMLLager.kAnsprechpartner
+				LEFT JOIN (SELECT
+					dbo.tPickliste.kLieferant AS kLieferant,
+					SUM(tPicklistePos.fAnzahl) AS fAnzahl
+					FROM dbo.tPicklistePos
+					JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste
+					WHERE dbo.tPickliste.kLieferant &gt; 0 AND dbo.tPicklistePos.nStatus &lt; 40 AND dbo.tPicklistePos.kArtikel = @kArtikel
+					GROUP BY dbo.tPickliste.kLieferant
+				) AS LiefbestandAufPicklisten ON LiefbestandAufPicklisten.kLieferant = Lieferanten.kLieferant
+				WHERE #XMLLager.kAnsprechpartner = 0 OR dbo.tansprechpartner.kAnsprechpartner &gt; 0
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #WARENLAGEREINGANG (kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, nPrio, dMHD, cCharge, fAnzahlOffen, nTyp)
+				SELECT
+					0 AS kWarenlagereingang,
+					0 AS kWarenlager,
+					0 AS kWarenlagerplatz,
+					#XMLWLE.kLieferant AS kLieferant,
+					ISNULL(dbo.tansprechpartner.kAnsprechpartner, 0) AS kAnsprechpartner,
+					#XMLWLE.nPrio AS nPrio,
+					NULL AS dMHD,
+					NULL AS cCharge,
+					@fAnzahl AS fAnzahlOffen,
+					2 AS nTyp
+				FROM #XMLWLE
+				JOIN dbo.tlieferant ON #XMLWLE.kLieferant = dbo.tlieferant.kLieferant
+					AND dbo.tlieferant.nDropshippingFreipositionen = 1
+				LEFT JOIN dbo.tansprechpartner ON dbo.tansprechpartner.kAnsprechpartner = #XMLWLE.kAnsprechpartner
+				WHERE #XMLWLE.kLieferant &gt; 0
+		END
+	END
+	IF ((@Warenlagereingaenge IS NOT NULL) OR (DATALENGTH(@Warenlagereingaenge) &gt; 0))
+	BEGIN
+		-- Warenlagereing&#228;nge &#252;bernehmen (echte Warenl&#228;ger)
+		INSERT INTO #WARENLAGEREINGANG (kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, nPrio, dMHD, cCharge, fAnzahlOffen, nTyp)
+			SELECT
+				ISNULL(dbo.tWarenLagerEingang.kWarenLagerEingang, 0) AS kWarenlagereingang,
+				ISNULL(dbo.tWarenLagerPlatz.kWarenLager, #XMLWLE.kWarenlager) AS kWarenlager,
+				ISNULL(dbo.tWarenLagerPlatz.kWarenLagerPlatz, 0) AS kWarenlagerplatz,
+				0 AS kLieferant,
+				0 AS kAnsprechpartner,
+				#XMLWLE.nPrio AS nPrio,
+				dbo.tWarenLagerEingang.dMHD AS dMHD,
+				dbo.tWarenLagerEingang.cChargenNr AS cCharge,
+				CASE
+					WHEN @IstTeilbar = 0 THEN
+						CASE
+							WHEN FLOOR(#XMLWLE.fAnzahl) &gt; FLOOR(ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell - dbo.tWarenLagerEingang.fAnzahlReserviertPickpos, @fAnzahl)) THEN FLOOR(ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell - dbo.tWarenLagerEingang.fAnzahlReserviertPickpos, @fAnzahl))
+							ELSE FLOOR(#XMLWLE.fAnzahl)
+						END
+					ELSE
+						CASE
+							WHEN #XMLWLE.fAnzahl &gt; ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell - dbo.tWarenLagerEingang.fAnzahlReserviertPickpos, @fAnzahl) THEN ISNULL(dbo.tWarenLagerEingang.fAnzahlAktuell - dbo.tWarenLagerEingang.fAnzahlReserviertPickpos, @fAnzahl)
+							ELSE #XMLWLE.fAnzahl
+						END
+				END AS fAnzahlOffen,
+				1 AS nTyp
+			FROM #XMLWLE
+			LEFT JOIN dbo.tWarenLagerEingang ON dbo.tWarenLagerEingang.kWarenLagerEingang = #XMLWLE.kWarenlagereingang
+			LEFT JOIN dbo.tWarenLagerPlatz ON dbo.tWarenLagerPlatz.kWarenLagerPlatz = dbo.tWarenLagerEingang.kWarenLagerPlatz
+			WHERE #XMLWLE.kLieferant = 0
+
+		-- Warenlagereing&#228;nge &#252;bernehmen (Lieferanten)
+		INSERT INTO #WARENLAGEREINGANG (kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, nPrio, dMHD, cCharge, fAnzahlOffen, nTyp)
+			SELECT
+				0 AS kWarenlagereingang,
+				0 AS kWarenlager,
+				0 AS kWarenlagerplatz,
+				#XMLWLE.kLieferant AS kLieferant,
+				#XMLWLE.kAnsprechpartner AS kAnsprechpartner,
+				#XMLWLE.nPrio AS nPrio,
+				NULL AS dMHD,
+				NULL AS cCharge,
+				CASE
+					WHEN @IstTeilbar = 0 THEN
+						CASE
+							WHEN FLOOR(#XMLWLE.fAnzahl) &gt; CASE
+															WHEN dbo.tliefartikel.nLagerBeachten &gt; 0 THEN FLOOR(dbo.tliefartikel.fLagerbestand - ISNULL(LiefbestandAufPicklisten.fAnzahl, 0.0))
+															ELSE FLOOR(@fAnzahl)
+														END THEN
+														CASE
+															WHEN dbo.tliefartikel.nLagerBeachten &gt; 0 THEN FLOOR(dbo.tliefartikel.fLagerbestand - ISNULL(LiefbestandAufPicklisten.fAnzahl, 0.0))
+															ELSE FLOOR(@fAnzahl)
+														END
+							ELSE FLOOR(#XMLWLE.fAnzahl)
+						END
+					ELSE
+						CASE
+							WHEN #XMLWLE.fAnzahl &gt; CASE
+														WHEN dbo.tliefartikel.nLagerBeachten &gt; 0 THEN dbo.tliefartikel.fLagerbestand - ISNULL(LiefbestandAufPicklisten.fAnzahl, 0.0)
+														ELSE @fAnzahl
+												   END THEN	CASE
+														WHEN dbo.tliefartikel.nLagerBeachten &gt; 0 THEN dbo.tliefartikel.fLagerbestand - ISNULL(LiefbestandAufPicklisten.fAnzahl, 0.0)
+														ELSE @fAnzahl
+												   END
+							ELSE #XMLWLE.fAnzahl
+						END
+				END AS fAnzahlOffen,
+				CASE
+					WHEN dbo.tliefartikel.nLagerBeachten &gt; 0 THEN 3
+					ELSE 2
+				END AS nTyp
+			FROM #XMLWLE
+			JOIN dbo.tLieferant ON dbo.tLieferant.kLieferant = #XMLWLE.kLieferant
+			JOIN dbo.tliefartikel ON dbo.tliefartikel.tLieferant_kLieferant = dbo.tlieferant.kLieferant AND dbo.tliefartikel.tArtikel_kArtikel = @kArtikel
+			LEFT JOIN dbo.tansprechpartner ON dbo.tansprechpartner.kAnsprechpartner = #XMLWLE.kAnsprechpartner
+			LEFT JOIN (SELECT
+					dbo.tPickliste.kLieferant AS kLieferant,
+					SUM(tPicklistePos.fAnzahl) AS fAnzahl
+					FROM dbo.tPicklistePos
+					JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste
+					WHERE dbo.tPickliste.kLieferant &gt; 0 AND dbo.tPicklistePos.nStatus &lt; 40 AND dbo.tPicklistePos.kArtikel = @kArtikel
+					GROUP BY dbo.tPickliste.kLieferant
+			) AS LiefbestandAufPicklisten ON LiefbestandAufPicklisten.kLieferant = dbo.tlieferant.kLieferant
+			WHERE #XMLWLE.kAnsprechpartner = 0 OR dbo.tansprechpartner.kAnsprechpartner &gt; 0
+					AND (dbo.tliefartikel.nDropShipping &gt; 0)
+					AND ((@IstNachnahme = 0) OR (dbo.tlieferant.nDropshippingBeiNachnahme &gt; 0))
+	END
+
+	DECLARE cWarenlagereingang CURSOR LOCAL FAST_FORWARD FOR
+		SELECT kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, fAnzahlOffen, nTyp
+		FROM #WARENLAGEREINGANG
+		GROUP BY kWarenlagereingang, kWarenlager, kWarenlagerplatz, kLieferant, kAnsprechpartner, fAnzahlOffen, dMHD, cCharge, nPrio, nTyp
+		ORDER BY nPrio ASC, #WARENLAGEREINGANG.dMHD ASC, #WARENLAGEREINGANG.cCharge ASC, #WARENLAGEREINGANG.kWarenlagereingang ASC
+	OPEN cWarenlagereingang;
+	FETCH NEXT FROM cWarenlagereingang INTO @kWarenlagereingang, @kWarenlager, @kWarenlagerplatz, @kLieferant, @kAnsprechpartner, @fAnzahlOffen, @nTyp;
+	WHILE (@fAnzahl &gt; 0.0 AND @@FETCH_STATUS = 0)
+	BEGIN
+		SET @fAnzahlAuszubuchen = @fAnzahlOffen;
+		IF (@fAnzahlAuszubuchen &gt; @fAnzahl)
+		BEGIN
+			SET @fAnzahlAuszubuchen = @fAnzahl;
+		END
+
+		IF (@nTyp &lt; 2)
+		BEGIN
+			IF (@fAnzahlAuszubuchen &gt; @fAnzahlReserviertEigen)
+			BEGIN
+				SET @fAnzahlAuszubuchen = @fAnzahlReserviertEigen;
+			END
+		END ELSE IF (@nTyp = 3)
+		BEGIN
+			IF (@fAnzahlAuszubuchen &gt; @fAnzahlReserviert)
+			BEGIN
+				SET @fAnzahlAuszubuchen = @fAnzahlReserviert;
+			END
+		END
+		-- @nTyp = 2 =&gt; Pr&#252;fung bereits oben erledigt
+
+		IF (@fAnzahlAuszubuchen &gt; 0)
+		BEGIN
+			SET @kPickliste = NULL
+
+			IF (@nOptions &amp; 1 = 0)
+			BEGIN
+				SELECT
+					@kPickliste = dbo.tPickliste.kPickliste
+	            FROM dbo.tPickliste
+				WHERE dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.kWarenLager = @kWarenlager AND dbo.tPickliste.kLieferant = @kLieferant AND dbo.tPickliste.kAnsprechpartner = @kAnsprechpartner
+			END ELSE BEGIN
+				SELECT TOP(1)
+					@kPickliste = dbo.tPickliste.kPickliste
+				FROM dbo.tPickliste
+				JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kPickliste = dbo.tPickliste.kPickliste
+				WHERE dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.kWarenLager = @kWarenlager AND dbo.tPickliste.kLieferant = @kLieferant AND dbo.tPickliste.kAnsprechpartner = @kAnsprechpartner AND dbo.tPicklistePos.kBestellung = @kBestellung
+			END
+			IF ((@kPickliste = 0) OR (@kPickliste IS NULL))
+			BEGIN
+
+				DECLARE @cNeueNummer VARCHAR(255);
+			    EXEC dbo.spGetNextNummer @cName = &#39;Pickliste&#39;,
+									  @kFirma = 0,
+									  @nNoUpdate = 0,
+									  @nNoSelect = 1,
+									  @cNeueNummer = @cNeueNummer OUTPUT -- varchar(30)
+
+				INSERT INTO dbo.tPickliste
+				(
+					dbo.tPickliste.kWarenLager,
+					dbo.tPickliste.kPicklistenVorlage,
+					dbo.tPickliste.nStatus,
+					dbo.tPickliste.kPicklisteStatus,
+					dbo.tPickliste.kPicklisteStatusAngelegt,
+					dbo.tPickliste.dGedruckt,
+					dbo.tPickliste.kSessionId,
+					dbo.tPickliste.kLieferant,
+					dbo.tPickliste.kAnsprechpartner,
+					dbo.tPickliste.cPicklisteNr
+				)
+				VALUES
+				(
+					ISNULL(@kWarenLager, 0),
+					0,
+					0,
+					NULL,
+					NULL,
+					NULL,
+					@kSessionId,
+					@kLieferant,
+					@kAnsprechpartner,
+					@cNeueNummer
+				);
+				SELECT @kPickliste = SCOPE_IDENTITY();
+			END
+			INSERT INTO dbo.tPicklistePos (kPickliste, kWarenLager, kWarenLagerEingang, fAnzahl, kBestellPos, kPicklistePosStatus, kArtikel, kWarenlagerPlatz, kPicklistePos_Ursprung, kLieferscheinPos, kBestellung)
+				VALUES(@kPickliste, @kWarenlager, @kWarenlagereingang, @fAnzahlAuszubuchen, @kBestellPos, 0, @kArtikel, @kWarenlagerplatz, 0, 0, @kBestellung);
+
+			SET @fAnzahl = @fAnzahl - @fAnzahlAuszubuchen;
+			IF (@nTyp = 3)
+			BEGIN
+				SET @fAnzahlReserviertEigen = @fAnzahlReserviertEigen - @fAnzahlAuszubuchen;
+			END
+			SET @fAnzahlReserviert = @fAnzahlReserviert - @fAnzahlAuszubuchen;
+		END
+		FETCH NEXT FROM cWarenlagereingang INTO @kWarenlagereingang, @kWarenlager, @kWarenlagerplatz, @kLieferant, @kAnsprechpartner, @fAnzahlOffen, @nTyp;
+	END
+	CLOSE cWarenlagereingang;
+	DEALLOCATE cWarenlagereingang;
+
+	-- leere Positionen l&#246;schen
+	DELETE dbo.tPicklistePos FROM dbo.tPicklistePos
+	JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste
+	WHERE dbo.tPicklistePos.kBestellPos = @kBestellPos AND dbo.tPicklistePos.fAnzahl = 0.0 AND dbo.tPickliste.kSessionId = @kSessionId
+
+	-- Korrektur der St&#252;cklistenv&#228;ter in eigener SP
+
+	INSERT INTO dbo.tPicklistePosStatus (kPicklistePos, kbenutzer, dZeitstempel, nStatus)
+	SELECT
+	dbo.tPicklistePos.kPicklistePos,
+	@kBenutzer,
+	GETDATE(),
+	5
+	FROM
+	dbo.tPicklistePos
+	JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste
+	WHERE dbo.tPicklistePos.kPicklistePosStatus = 0 AND dbo.tPickliste.kSessionId = @kSessionId
+
+	DROP TABLE #XMLWLE;
+	DROP TABLE #XMLLAGER;
+
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+		ROLLBACK TRANSACTION;
+	ELSE
+		IF XACT_STATE() &lt;&gt; -1
+			ROLLBACK TRANSACTION spReserviereBestellposition;
+
+	DECLARE @ErrorMessage NVARCHAR(4000);
+	DECLARE @ErrorSeverity INT;
+	DECLARE @ErrorState INT;
+
+	SELECT @ErrorMessage = ERROR_MESSAGE();
+	SELECT @ErrorSeverity = ERROR_SEVERITY();
+	SELECT @ErrorState = ERROR_STATE();
+
+	RAISERROR (@ErrorMessage, -- Message text.
+			   @ErrorSeverity, -- Severity.
+			   @ErrorState -- State.
+			  );
+END CATCH</code></pre>
+</body>
+</html>

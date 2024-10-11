@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spBildLoeschenWennNichtVerwendet</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spBildLoeschenWennNichtVerwendet</h1>
+    <p><strong>Description:</strong> Die Procedure löscht Bilder die nicht mehr verwendet werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROC [dbo].[spBildLoeschenWennNichtVerwendet]
+@Bilder TYPE_spBildLoeschenWennNichtVerwendet READONLY
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+    IF(object_id(&#39;tempdb..#spBildLoeschenWennNichtVerwendet&#39;) IS NOT NULL)
+    BEGIN
+	   DROP TABLE #spBildLoeschenWennNichtVerwendet;
+    END;
+
+    CREATE TABLE #spBildLoeschenWennNichtVerwendet (kBild INT)
+    INSERT INTO #spBildLoeschenWennNichtVerwendet(kBild)
+	SELECT kBild FROM @Bilder
+
+    IF((SELECT COUNT(1) FROM #spBildLoeschenWennNichtVerwendet) = 0)
+    BEGIN
+	   RETURN;
+    END;
+
+	DELETE #spBildLoeschenWennNichtVerwendet
+	FROM #spBildLoeschenWennNichtVerwendet
+	JOIN dbo.tArtikelbildPlattform ON #spBildLoeschenWennNichtVerwendet.kBild = tArtikelbildPlattform.kBild;
+
+	DELETE #spBildLoeschenWennNichtVerwendet
+	FROM #spBildLoeschenWennNichtVerwendet
+	JOIN dbo.tEigenschaftWertPict ON #spBildLoeschenWennNichtVerwendet.kBild = tEigenschaftWertPict.kBild;
+
+	DELETE #spBildLoeschenWennNichtVerwendet
+	FROM #spBildLoeschenWennNichtVerwendet
+	JOIN dbo.tMerkmalBildPlattform ON #spBildLoeschenWennNichtVerwendet.kBild = tMerkmalBildPlattform.kBild;
+
+	DELETE #spBildLoeschenWennNichtVerwendet
+	FROM #spBildLoeschenWennNichtVerwendet
+	JOIN dbo.tMerkmalwertBildPlattform ON #spBildLoeschenWennNichtVerwendet.kBild = tMerkmalwertBildPlattform.kBild;
+
+	DELETE #spBildLoeschenWennNichtVerwendet
+	FROM #spBildLoeschenWennNichtVerwendet
+	JOIN dbo.tKategoriebildPlattform ON #spBildLoeschenWennNichtVerwendet.kBild = tKategoriebildPlattform.kBild;
+
+	DELETE #spBildLoeschenWennNichtVerwendet
+	FROM #spBildLoeschenWennNichtVerwendet
+	JOIN dbo.tHerstellerBildPlattform ON #spBildLoeschenWennNichtVerwendet.kBild = tHerstellerBildPlattform.kBild;	
+
+    DELETE dbo.tBild
+	FROM dbo.tbild
+	JOIN #spBildLoeschenWennNichtVerwendet ON tBild.kBild = #spBildLoeschenWennNichtVerwendet.kBild;
+
+END</code></pre>
+</body>
+</html>

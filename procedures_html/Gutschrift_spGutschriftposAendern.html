@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gutschrift.spGutschriftposAendern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Gutschrift.spGutschriftposAendern</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tgutschriftpos geändert werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Gutschrift].[spGutschriftposAendern]
+ @xGutschriftPos XML = NULL,
+ @kGutschriftpos INT = NULL,
+ @kArtikel INT = NULL,
+ @kGutschrift INT = NULL,
+ @fVKPreis DECIMAL(25,13) = NULL,
+ @fMwSt DECIMAL(25,13) = NULL,
+ @nAnzahl DECIMAL(25,13) = NULL,
+ @fRabatt DECIMAL(25,13) = NULL,
+ @cString NVARCHAR(255) = NULL,
+ @fVkNetto DECIMAL(25,13) = NULL,
+ @cArtNr NVARCHAR(100) = NULL,
+ @nLager TINYINT = NULL,
+ @kGutschriftStueckliste INT = NULL,
+ @kBestellpos INT = NULL,
+ @kRechnungPosition INT = NULL,
+ @nAuftragsmengeReduzieren INT = NULL,
+ @nLiefermengeReduzieren INT = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+ SET CONTEXT_INFO 0x5117;
+ BEGIN TRY
+  BEGIN TRANSACTION
+   IF(OBJECT_ID(&#39;tempdb..#Gutschriftpos&#39;) IS NOT NULL)
+   BEGIN
+    DROP TABLE #Gutschriftpos;
+   END
+   CREATE TABLE #Gutschriftpos(
+    kGutschriftpos INT,
+    kArtikel INT,
+    kGutschrift INT,
+    fVKPreis DECIMAL(25,13),
+    fMwSt DECIMAL(25,13),
+    nAnzahl DECIMAL(25,13),
+    fRabatt DECIMAL(25,13),
+    cString NVARCHAR(255),
+    fVKNetto DECIMAL(25,13),
+    cArtNr NVARCHAR(100),
+    nLager TINYINT,
+    kBestellpos INT,
+	kRechnungPosition INT,
+	nAuftragsmengeReduzieren TINYINT,
+	nLiefermengeReduzieren TINYINT,
+    kGutschriftStueckliste INT,
+    nAnzahlOld DECIMAL(25,13),
+	fVKPreisOld DECIMAL(25,13)
+   );
+   IF(@xGutschriftPos IS NOT NULL)
+   BEGIN
+    INSERT INTO #Gutschriftpos(kGutschriftpos, kArtikel, kGutschrift, fVKPreis, fMwSt, nAnzahl,
+           fRabatt, cString, fVKNetto, cArtNr, nLager, kBestellpos, kGutschriftStueckliste, kRechnungPosition, nAuftragsmengeReduzieren, nLiefermengeReduzieren, nAnzahlOld, fVKPreisOld)
+     SELECT Gutschriftpos.ID.value(&#39;kGutschriftpos[1]&#39;, &#39;INT&#39;),
+       Gutschriftpos.ID.value(&#39;kArtikel[1]&#39;, &#39;INT&#39;),
+       Gutschriftpos.ID.value(&#39;kGutschrift[1]&#39;, &#39;INT&#39;),
+       Gutschriftpos.ID.value(&#39;fVKPreis[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+       Gutschriftpos.ID.value(&#39;fMwSt[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+       Gutschriftpos.ID.value(&#39;nAnzahl[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+       Gutschriftpos.ID.value(&#39;fRabatt[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+       Gutschriftpos.ID.value(&#39;cString[1]&#39;, &#39;VARCHAR(255)&#39;),
+       Gutschriftpos.ID.value(&#39;fVKNetto[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+       Gutschriftpos.ID.value(&#39;cArtNr[1]&#39;, &#39;NVARCHAR(100)&#39;),
+       Gutschriftpos.ID.value(&#39;nLager[1]&#39;, &#39;TINYINT&#39;),
+       Gutschriftpos.ID.value(&#39;kBestellpos[1]&#39;, &#39;INT&#39;),
+	   Gutschriftpos.ID.value(&#39;kGutschriftStueckliste[1]&#39;, &#39;INT&#39;),
+	   Gutschriftpos.ID.value(&#39;kRechnungPosition[1]&#39;, &#39;INT&#39;),
+	   Gutschriftpos.ID.value(&#39;nAuftragsmengeReduzieren[1]&#39;, &#39;INT&#39;),
+	   Gutschriftpos.ID.value(&#39;nLiefermengeReduzieren[1]&#39;, &#39;INT&#39;),
+       dbo.tgutschriftpos.nAnzahl,
+	   dbo.tgutschriftPos.fVKPreis
+      FROM @xGutschriftpos.nodes(&#39;Gutschriftpos&#39;) AS Gutschriftpos(ID)
+      JOIN dbo.tgutschriftpos ON dbo.tgutschriftpos.kGutschriftPos = Gutschriftpos.ID.value(&#39;kGutschriftpos[1]&#39;, &#39;INT&#39;);
+   END
+   ELSE
+   BEGIN
+    DECLARE @nAnzahlOld DECIMAL(25,13);
+	DECLARE @fVKPreisOld DECIMAL(25,13);
+    SELECT @nAnzahlOld = tGutschriftPos.nAnzahl,
+		   @fVKPreisOld = tGutschriftPos.fVKPreis
+     FROM dbo.tgutschriftpos WHERE tgutschriftpos.kGutschriftPos = @kGutschriftpos;
+    INSERT INTO #Gutschriftpos(kGutschriftpos, kArtikel, kGutschrift, fVKPreis, fMwSt, nAnzahl, fRabatt,
+           cString, fVKNetto, cArtNr, nLager, kBestellpos, kRechnungPosition, kGutschriftStueckliste, nAuftragsmengeReduzieren, nLiefermengeReduzieren, nAnzahlOld, fVKPreisOld)
+     VALUES(@kGutschriftpos, @kArtikel, @kGutschrift, @fVKPreis, @fMwSt, @nAnzahl, @fRabatt, 
+       @cString, @fVKNetto, @cArtNr, @nLager, @kBestellpos, @kRechnungPosition, @kGutschriftStueckliste, @nAuftragsmengeReduzieren, @nLiefermengeReduzieren, @nAnzahlOld, @fVKPreisOld);
+   END   
+   UPDATE dbo.tgutschriftpos
+    SET tArtikel_kArtikel = #Gutschriftpos.kArtikel,
+        tGutschrift_kGutschrift = #Gutschriftpos.kGutschrift,
+        fVKPreis = #Gutschriftpos.fVKPreis,
+        fMwSt = #Gutschriftpos.fMwSt,
+        nAnzahl = #Gutschriftpos.nAnzahl,
+        fRabatt = #Gutschriftpos.fRabatt,
+        cString = #Gutschriftpos.cString,
+        fVKNetto = #Gutschriftpos.fVKNetto,
+        cArtNr = #Gutschriftpos.cArtNr,
+        nLager = #Gutschriftpos.nLager,
+        kBestellPos = #Gutschriftpos.kBestellpos,
+		kRechnungPosition = #Gutschriftpos.kRechnungPosition,
+		kGutschriftStueckliste = #Gutschriftpos.kGutschriftStueckliste,
+		nAuftragsmengeReduzieren = #Gutschriftpos.nAuftragsmengeReduzieren,
+		nLiefermengeReduzieren = #Gutschriftpos.nLiefermengeReduzieren
+    FROM dbo.tgutschriftpos 
+    JOIN #Gutschriftpos ON #Gutschriftpos.kGutschriftpos = dbo.tgutschriftpos.kGutschriftPos;
+   IF(EXISTS(SELECT * FROM #Gutschriftpos WHERE #Gutschriftpos.nAnzahl &lt;&gt; #Gutschriftpos.nAnzahlOld 
+             AND #Gutschriftpos.kBestellpos IS NOT NULL))
+   BEGIN
+		DECLARE @Rechnungen AS Rechnung.TYPE_spRechnungEckdatenBerechnen
+
+		INSERT INTO @Rechnungen (kRechnung)
+		SELECT DISTINCT tGutschrift.kRechnung
+		FROM dbo.tGutschrift 
+		JOIN #Gutschriftpos ON #Gutschriftpos.kGutschrift = tGutschrift.kGutschrift
+		where tGutschrift.kRechnung &gt; 0
+
+		EXEC Rechnung.spRechnungEckdatenBerechnen @Rechnungen = @Rechnungen
+   END
+   SET @retry = -1;
+  SET CONTEXT_INFO 0x0;
+  COMMIT
+ END TRY
+ BEGIN CATCH
+ IF(ERROR_NUMBER() = 1205)
+   BEGIN
+    SET @retry = @retry - 1;
+    ROLLBACK;
+    IF(@retry = 0)
+    BEGIN
+     SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+     RAISERROR ( @ErrorMessage, 
+        @ErrorSeverity,
+        @ErrorState
+     );
+     SET CONTEXT_INFO 0x0;
+     RETURN;
+    END
+    WAITFOR DELAY &#39;00:00:00:5&#39;;
+   END
+   ELSE 
+   BEGIN
+    SET @retry = -1;
+    SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+    ROLLBACK;
+    RAISERROR ( @ErrorMessage, 
+       @ErrorSeverity,
+       @ErrorState
+    );
+    SET CONTEXT_INFO 0x0;
+    RETURN;
+   END
+ END CATCH
+ SET CONTEXT_INFO 0x0; 
+END</code></pre>
+</body>
+</html>

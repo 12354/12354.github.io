@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spHealthCheck_CompareSchema</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spHealthCheck_CompareSchema</h1>
+    <p><strong>Description:</strong> Vergleicht die aktuelle DB mit der Referenz-Tabelle, um Unterschiede in der Struktur herauszufinden</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>-- DROP TABLE [##HCResults]
+CREATE PROCEDURE [Maintenance].[spHealthCheck_CompareSchema]
+	@cReferenzObjekt NVARCHAR(255) = &#39;Maintenance.tReferenceSchema&#39;, -- Name der Referenztabelle (oder ~View), gegen die verglichen wird
+	@nHealthCheckCheckID INT = 0 -- wird ein Wert &lt;&gt; 0 &#252;bergeben, so werden Ergebnisse in Tabelle Maintenance.tHealthCheck geschrieben, bei 0 werden diese am Ende per SELECT * ... angezeigt
+AS
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+/*************************************************************************************************************
+Beschreibung:	Vergleicht die aktuelle DB mit der Referenz-Tabelle, um Unterschiede in der Struktur herauszufinden
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+EXEC Maintenance.spHealthCheck_Compare
+*************************************************************************************************************/
+	DECLARE
+		@cMe NVARCHAR(255),
+		@cMsg NVARCHAR(2048),
+		@cSQL NVARCHAR(MAX),
+		@cTable NVARCHAR(255),
+		@cCR NCHAR(2),
+		@nAnz INT;
+
+	-- Error-Handling
+	DECLARE
+		@cErrMsg NVARCHAR(2048), -- RAISERROR-Messages max. 2048 characters
+		@DeadlockRetries TINYINT = 1, -- nur 1x
+		@cErrStelle VARCHAR(255),
+		@nErrSeverity TINYINT,
+		@nErrState TINYINT,
+		@cErrProc NVARCHAR(128);
+
+	-- Definition der Severities / Fehler-Status siehe: https://confluence.jtl-software.de/pages/viewpage.action?pageId=93816975
+	DECLARE
+		@SEVERITY_CRITICAL VARCHAR(10) = &#39;1-CRITICAL&#39;,
+		@SEVERITY_HIGH VARCHAR(10) = &#39;2-HIGH&#39;,
+		@SEVERITY_MEDIUM VARCHAR(10) = &#39;3-MEDIUM&#39;,
+		@SEVERITY_INFO VARCHAR(10) = &#39;4-INFO&#39;
+
+	BEGIN TRY
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; (START)&#39;;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Variablen Initialisierung
+		SET @cMe = OBJECT_SCHEMA_NAME(@@PROCID) + &#39;.&#39; + OBJECT_NAME(@@PROCID);
+		SET @cCR = NCHAR(13) + NCHAR(10);
+		SET @nHealthCheckCheckID = ISNULL(@nHealthCheckCheckID, 0);
+
+		-- Temp-Tables aufr&#228;umen
+		IF OBJECT_ID(&#39;tempdb..#HCThisDb&#39;, &#39;U&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE #HCThisDb;
+		END
+		IF OBJECT_ID(&#39;tempdb..##HCRefDb&#39;, &#39;U&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE ##HCRefDb;
+		END
+		IF OBJECT_ID(&#39;tempdb..##HCResults&#39;, &#39;U&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE ##HCResults;
+		END
+
+		--------------------------------------------------------------------------------------------------------------------
+		-- HealthCheck (aktuelle DB) in Temptabelle &#252;bertragen
+		--------------------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;HealthCheck (aktuelle DB) in Temptabelle &#252;bertragen&#39;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Bei der Berechnung des Hashwerts werden ein paar spezielle ASCII-Codes ersetzt, da es sein kann, dass die Version in der lokalen DB und
+		-- der Referenz-DB identisch sind, sich jedoch um ein paar Special-Chars am Anfang oder Ende der SP unterscheiden
+		SELECT	V.*, dbo.fnHashBytes(&#39;SHA2_256&#39;, LOWER(REPLACE(REPLACE(REPLACE(REPLACE(V.cCreateScript, CHAR(10), &#39;&#39;), CHAR(13), &#39;&#39;), CHAR(9), &#39;&#39;), &#39; &#39;, &#39;&#39;))) AS bObjectHash
+		INTO	[#HCThisDb]
+		FROM	Maintenance.vHealthCheck_Schema AS V;
+
+		--------------------------------------------------------------------------------------------------------------------
+		-- Referenztabelle in Temptabelle &#252;bertragen
+		--------------------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;HealthCheck (Referenztabelle) in Temptabelle &#252;bertragen&#39;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		SET @cTable = REPLACE(QUOTENAME(CASE WHEN CHARINDEX(&#39;.&#39;, @cReferenzObjekt) &gt; 0 THEN @cReferenzObjekt ELSE &#39;dbo.&#39; + @cReferenzObjekt END), &#39;.&#39;, &#39;].[&#39;)
+		SET @cTable = REPLACE(REPLACE(@cTable, &#39;[[[&#39;, &#39;[&#39;), &#39;[[&#39;, &#39;[&#39;) -- Falls @cReferenzObjekt bereits eckige Klammern enth&#228;lt, werden diese durch QUOTENAME dupliziert
+		SET @cTable = REPLACE(REPLACE(@cTable, &#39;]]]&#39;, &#39;]&#39;), &#39;]]&#39;, &#39;]&#39;)
+
+		-- Ist @cReferenzObjekt vorhanden?
+		IF OBJECT_ID(@cTable, &#39;U&#39;) IS NULL AND OBJECT_ID(@cTable, &#39;V&#39;) IS NULL
+		BEGIN
+			SET @cMsg = &#39;Das &#252;bergebene @cReferenzObjekt &#39;&#39;&#39; + @cTable + &#39;&#39;&#39; ist nicht vorhanden oder keine Tabelle / View!&#39;;
+			RAISERROR (@cMsg, 15, 1);
+		END
+
+		-- Ist @cReferenzObjekt eine HealthCheck-Tabelle/View?
+		IF COLUMNPROPERTY(OBJECT_ID(@cTable), &#39;cObjectID&#39;, &#39;ColumnId&#39;) IS NULL OR COLUMNPROPERTY(OBJECT_ID(@cTable), &#39;cCreateScript&#39;, &#39;ColumnId&#39;) IS NULL
+		BEGIN
+			SET @cMsg = &#39;Das &#252;bergebene @cReferenzObjekt &#39;&#39;&#39; + @cTable + &#39;&#39;&#39; enth&#228;lt keine HealthCheck-Daten!&#39;;
+			RAISERROR (@cMsg, 15, 1);
+		END
+
+		-- Temptabelle ##HCRefDb erstellen
+		SET @cErrStelle = &#39;Temptabelle ##HCRefDb erstellen&#39;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Mittels dynamischem SQL erzeugte Temptables haben das Problem, da&#223; die Tabelle auf einem &quot;tieferen&quot; Level als der umgebende Block erzeugt wurde.
+		-- Das kann zu Fehler &quot;Invalid object name ##HCRefDb&quot; f&#252;hren =&gt; Deshalb wird eine globale Temptable (##) verwendet.
+		SET @cSQL = N&#39;SELECT T.*,&#39; + @cCR
+					+ N&#39;     dbo.fnHashBytes(&#39;&#39;SHA2_256&#39;&#39;, LOWER(REPLACE(REPLACE(REPLACE(REPLACE(T.cCreateScript, CHAR(10), &#39;&#39;&#39;&#39;), CHAR(13), &#39;&#39;&#39;&#39;), CHAR(9), &#39;&#39;&#39;&#39;), &#39;&#39; &#39;&#39;, &#39;&#39;&#39;&#39;))) AS bObjectHash&#39; + @cCR
+					+ N&#39;INTO [##HCRefDb]&#39; + @cCR
+					+ N&#39;FROM &#39; + @cTable + &#39; AS T;&#39;
+		EXECUTE (@cSQL);
+
+		--------------------------------------------------------------------------------------------------------------------
+		-- Vergleich der beiden DBs
+		--------------------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;Vergleich der beiden DBs&#39;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		SELECT
+						ISNULL(DB1.cObjectID, DB2.cObjectID) AS cObjectID,
+						CASE WHEN ISNULL(DB1.cParentObjectName, DB2.cParentObjectName) IS NULL THEN ISNULL(DB1.cSchemaName, DB2.cSchemaName) + N&#39;.&#39; ELSE N&#39;&#39; END + ISNULL(DB1.cObjectName, DB2.cObjectName) AS cObjectName,
+						ISNULL(DB1.cObjectType, DB2.cObjectType) AS cObjectType,
+						ISNULL(DB1.cParentObjectName, DB2.cParentObjectName) AS cParentObjectName,
+						NN.nHatReferenz AS nHatReferenz,
+
+						CASE
+							WHEN DB2.cObjectID IS NULL THEN CASE WHEN DB1.cObjectType = &#39;T&#39; THEN @SEVERITY_CRITICAL ELSE @SEVERITY_HIGH END -- Gel&#246;scht in aktueller DB
+							WHEN DB1.bObjectHash &lt;&gt; DB2.bObjectHash THEN @SEVERITY_HIGH -- Ge&#228;ndert in aktueller DB
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 1 THEN @SEVERITY_MEDIUM -- neues Objekt mit Bezug zu JTL-Objekten
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 0 THEN @SEVERITY_INFO -- neues Objekt ohne Bezug zu JTL-Objekten
+							ELSE NULL
+						END AS cSchwereGrad,
+						CASE
+							WHEN DB2.cObjectID IS NULL THEN N&#39;MISSING_OBJECT&#39;
+							WHEN DB1.bObjectHash &lt;&gt; DB2.bObjectHash THEN N&#39;MODIFIED_OBJECT&#39;
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 1 THEN N&#39;FOREIGN_OBJECT_MEDIUM&#39;
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 0 THEN N&#39;FOREIGN_OBJECT_LOW&#39;
+							ELSE NULL
+						END AS cFehlerCode,
+						CASE
+							WHEN DB2.cObjectID IS NULL THEN &#39;Objekt fehlt in aktueller DB&#39;
+							WHEN DB1.bObjectHash &lt;&gt; DB2.bObjectHash THEN &#39;Objekt ge&#228;ndert in aktueller DB&#39;
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 1 THEN &#39;Neues Objekt mit Bezug zu JTL-Objekt&#39;
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 0 THEN &#39;Neues Objekt ohne Bezug zu JTL-Objekt&#39;
+							ELSE &#39;Identisch&#39;
+						END AS cMeldung,
+
+						DB1.cParentObjectName AS cRefDbParentObjectName,
+						DB2.cParentObjectName AS cThisDbParentObjectName,
+						DB1.cCreateScript AS cRefDbCreateScript,
+						DB2.cCreateScript AS cThisDbCreateScript,
+						DB1.cDropScript AS cRefDbDropScript,
+						DB2.cDropScript AS cThisDbDropScript,
+						DB1.bObjectHash AS bRefDbHash,
+						DB2.bObjectHash AS bThisDbHash,
+
+						CASE
+							WHEN DB2.cObjectID IS NULL THEN DB1.cCreateScript
+							WHEN DB1.bObjectHash &lt;&gt; DB2.bObjectHash THEN
+								CASE
+									WHEN DB1.cObjectType IN (&#39;V&#39;, &#39;FNC&#39;, &#39;TGR&#39;, &#39;PK&#39;, &#39;IX&#39;, &#39;UX&#39;, &#39;CX&#39;, &#39;UCX&#39;, &#39;UQ&#39;, &#39;CK&#39;, &#39;DF&#39;, &#39;FK&#39;, &#39;SP&#39;)
+										THEN DB2.cDropScript + @cCR + N&#39;GO&#39; + @cCR + DB1.cCreateScript + @cCR + N&#39;GO&#39;
+									WHEN DB1.cObjectType IN (&#39;TYPE&#39;)
+										THEN N&#39;# Manuelle &#196;nderung erforderlich: #&#39; + @cCR + DB2.cDropScript + @cCR + N&#39;GO&#39; + @cCR + DB1.cCreateScript + @cCR + N&#39;GO&#39;
+									ELSE N&#39;# Manuelle &#196;nderung erforderlich #&#39;
+								END 
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 1 -- Neues Objekt mit JTL-Referenz
+								THEN CASE WHEN DB2.cObjectType = &#39;COL&#39; THEN N&#39;# Backup durchf&#252;hren (!Datenverlust droht!): nur mit Zustimmung des Kunden l&#246;schen! #&#39; + @cCR ELSE N&#39;&#39; END + DB2.cDropScript
+							WHEN DB1.cObjectID IS NULL AND NN.nHatReferenz = 0 -- Neues Objekt ohne JTL-Referenz
+								THEN N&#39;# Backup durchf&#252;hren&#39; + CASE WHEN DB2.cObjectType = &#39;T&#39; THEN N&#39; (!Datenverlust droht!): nur mit Zustimmung des Kunden l&#246;schen!! #&#39; + @cCR ELSE N&#39; / Nur mit Zustimmung des Kunden l&#246;schen: #&#39; END + @cCR + N&#39;-- &#39; + DB2.cDropScript
+							ELSE NULL
+						END AS cObjectReparatur
+
+		INTO			[##HCResults]
+		FROM            [##HCRefDb] AS DB1
+		FULL OUTER JOIN	[#HCThisDb] AS DB2 ON DB1.cObjectID = DB2.cObjectID AND DB1.cObjectType = DB2.cObjectType
+		CROSS APPLY		(SELECT
+							CASE WHEN EXISTS(
+								SELECT 1 FROM [##HCRefDb] AS RefDB
+								WHERE RefDB.cParentObjectName = ISNULL(ISNULL(DB1.cParentObjectName, DB2.cParentObjectName), ISNULL(DB1.cSchemaName, DB2.cSchemaName) + N&#39;.&#39; + ISNULL(DB1.cObjectName, DB2.cObjectName))
+							) THEN 1 ELSE 0 END AS nHatReferenz
+						) AS NN -- Nice names f&#252;r Werte, wenn diese mehrfach verwendet werden
+ 		WHERE			DB1.cObjectID IS NULL
+						OR DB2.cObjectID IS NULL
+						OR ISNULL(DB1.bObjectHash, 0) &lt;&gt; ISNULL(DB2.bObjectHash, 0);
+
+		--------------------------------------------------------------------------------------------------------------------
+		-- Nachbearbeitung der Ergebnisse in der Temptabelle
+		--------------------------------------------------------------------------------------------------------------------
+		SET @cErrStelle = &#39;Nachbearbeitung der Ergebnisse in der Temptabelle&#39;
+
+		-- Alle abh&#228;ngigen Warnungen (COL / CK / DF etc.) f&#252;r neue Tabellen / Views und Table-Types entfernen:
+		-- Es reicht aus, dass das Hauptobjekt als &#39;neu&#39; angezeigt wird, ohne dass die View mit allen Details zu dem Objekt &quot;zugem&#252;llt&quot; wird
+		DELETE		T
+		FROM		[##HCResults] AS T
+		WHERE		T.cObjectType NOT IN (&#39;T&#39;, &#39;V&#39;, &#39;TT&#39;) -- neue Tabellen / Views und Table-Types sollen reported werden
+					AND T.cThisDbParentObjectName IS NOT NULL -- Objekt muss ein Parent-Object haben, also z.B. CK / IX / PK einer Tabelle
+					AND T.nHatReferenz = 0; -- Ohne Referenz zu JTL-Objekt
+		
+		SET @nAnz = @@ROWCOUNT;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle + &#39; (neue Tabellen): &#39; + CAST(@nAnz AS VARCHAR(20)) + &#39; abh&#228;ngige DS entfernt&#39;;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Abh&#228;ngige Warnungen (COL / CK / DF etc.) f&#252;r fehlende Tabellen und ~Table-Types entfernen:
+		-- Es reicht aus, dass das Hauptobjekt als &#39;nicht vorhanden&#39; angezeigt wird; bei fehlenden Tabellen muss sowieso im Detail geschaut werden, was da los ist
+		DELETE		T
+		FROM		[##HCResults] AS T
+		JOIN		[##HCResults] AS RefDbTables ON T.cParentObjectName = RefDbTables.cObjectName AND RefDbTables.cObjectType IN (&#39;T&#39;, &#39;TT&#39;) AND RefDbTables.nHatReferenz = 1
+		WHERE		T.cObjectType NOT IN (&#39;T&#39;, &#39;TT&#39;) -- fehlende Tabellen und Table-Types
+					AND T.cRefDbParentObjectName IS NOT NULL -- Objekt ist auf der Referenz-DB vorhanden
+					AND T.nHatReferenz = 1; -- Mit Referenz zu JTL-Objekt
+
+		SET @nAnz = @@ROWCOUNT;
+		SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle + &#39; (fehlende Tabellen): &#39; + CAST(@nAnz AS VARCHAR(20)) + &#39; abh&#228;ngige DS entfernt&#39;;
+		RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+		-- Lokale neue Tabellen =&gt; ObjektCreateScript l&#246;schen
+		UPDATE T
+		SET			T.cThisDbCreateScript = NULL
+		FROM		[##HCResults] AS T
+		WHERE		T.cObjectType = &#39;T&#39; AND T.nHatReferenz = 0; -- Ohne Referenz zu JTL-Objekt
+
+		--------------------------------------------------------------------------------------------------------------------
+		-- Ausgabe der Ergebnisse
+		--------------------------------------------------------------------------------------------------------------------
+		IF @nHealthCheckCheckID = 0
+		BEGIN
+			SET @cErrStelle = &#39;Ergebnisse anzeigen&#39;
+			SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle;
+			RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+			SELECT * FROM ##HCResults ORDER BY cObjectID;
+		END
+		ELSE
+		BEGIN
+			SET @cErrStelle = &#39;Ergebnisse in Maintenance.tHealthCheck schreiben&#39;
+			SET @cMsg = FORMAT(GETDATE(), &#39;dd.MM.yyyy HH:mm:ss:fff &#39;) + @cMe + &#39; &#39; + @cErrStelle;
+			RAISERROR (@cMsg, 0, 1) WITH NOWAIT;
+
+			INSERT INTO Maintenance.tHealthCheck
+						(cSchweregrad, cFehlercode, cHerkunft, nCheckID, cMeldung, cObjekt, cBezugsObjekt,
+						cObjektTyp, cObjektDetailIst, cObjektDetailSoll, cObjektReparatur, cLink)
+			SELECT		T.cSchwereGrad,
+						T.cFehlerCode,
+						@cMe AS cHerkunft,
+						@nHealthCheckCheckID AS nCheckID,
+						T.cMeldung,
+						T.cObjectName AS cObjekt,
+						T.cParentObjectName AS cBezugsObjekt,
+						T.cObjectType,
+						T.cThisDbCreateScript AS cObjektDetailIst,
+						T.cRefDbCreateScript AS cObjektDetailSoll,
+						T.cObjectReparatur AS cObjektReparatur,
+						NULL AS cLink
+			FROM		[##HCResults] AS T
+
+		END
+
+	END TRY
+	BEGIN CATCH
+		SELECT @cErrMsg = ERROR_MESSAGE(), @nErrSeverity = ERROR_SEVERITY(), @nErrState = ERROR_STATE(), @cErrProc = ERROR_PROCEDURE();
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION;
+
+		EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			
+		-- Temp-Tabelle l&#246;schen, da diese SP sonst Kompilierungsfehler liefert, solange die Tabellenstruktur ung&#252;ltig ist
+		IF OBJECT_ID(&#39;tempdb..##HCRefDb&#39;, &#39;U&#39;) IS NOT NULL
+		BEGIN
+			DROP TABLE ##HCRefDb;
+		END
+
+		SELECT @cErrMsg = QUOTENAME(ISNULL(@cErrProc, &#39;&#39;))
+			+ CASE WHEN ISNULL(@cErrStelle, &#39;&#39;) = &#39;&#39; THEN &#39;&#39; ELSE &#39; [@&#39;+ @cErrStelle +&#39;]&#39; END
+			+ &#39;, Line &#39; + LTRIM(STR(ERROR_LINE())) + &#39;. ErrNo &#39;
+			+ LTRIM(STR(ERROR_NUMBER())) + &#39;: &#39; + ISNULL(@cErrMsg, &#39;&#39;);
+
+		RAISERROR(&#39;%s&#39;, @nErrSeverity, @nErrState, @cErrMsg)
+		RETURN -ERROR_NUMBER();
+	END CATCH
+END</code></pre>
+</body>
+</html>

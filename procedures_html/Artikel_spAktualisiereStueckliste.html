@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Artikel.spAktualisiereStueckliste</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Artikel.spAktualisiereStueckliste</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Artikel].[spAktualisiereStueckliste]
+@kArtikel_Stueckliste Artikel.TYPE_spAktualisiereStueckliste READONLY
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+    DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+    --IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+    SET CONTEXT_INFO @MyContextInfo;
+DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+        -- Start vom Code
+        
+		--
+		-- Optionen aus tOptions auslesen
+		--
+		DECLARE @RefreshGLD BIT = ISNULL((SELECT cValue FROM dbo.tOptions WHERE tOptions.cKey = &#39;StuecklistenGLDAutomatik&#39;), 0);
+		DECLARE @RefreshWeight BIT = ISNULL((SELECT cValue FROM dbo.tOptions WHERE tOptions.cKey = &#39;StuecklistenGewichtsautomatik&#39;), 0);
+		
+		-- Es werden alle V&#228;ter ermittelt deren Daten sich &#228;ndern werden (feknetto, Gewichte, LagerAktiv, &#220;berverk&#228;ufe, Teilbarkeit, Bearbeitungszeit, LiefertageWennAusverkauft)
+		DECLARE @Result TABLE
+		(kArtikel INT NOT NULL,
+		fEkNetto DECIMAL(28,15) NOT NULL,
+		fArtGewicht DECIMAL(28,15) NOT NULL,
+		fGewicht DECIMAL(28,15) NOT NULL,
+		cLagerAktiv CHAR(1) NOT NULL,
+		cLagerKleinerNull CHAR(1) NOT NULL,
+		cTeilbar CHAR(1) NOT NULL,
+		nBearbeitungszeit INT NOT NULL,
+		nLiefertageWennAusverkauft INT NOT NULL,
+		nUpdateLagerbestand BIT NOT NULL,
+		cTeilbarNeu CHAR(1) NOT NULL);
+		
+		INSERT INTO @Result (kArtikel, fEkNetto, fArtGewicht, fGewicht, cLagerAktiv, cLagerKleinerNull, cTeilbar, nBearbeitungszeit, nLiefertageWennAusverkauft, nUpdateLagerbestand, cTeilbarNeu)
+		SELECT
+			kArtikel,
+			fEKNetto,
+			fArtGewicht,
+			fGewicht,
+			cLagerAktiv,
+			cLagerKleinerNull,
+			cTeilbar,
+			nBearbeitungszeit,
+			nLiefertageWennAusverkauft,
+			CASE WHEN EXISTS(SELECT VaterLagerAktiv, VaterLagerKleinerNull, Vaterteilbar EXCEPT SELECT cLagerAktiv, cLagerKleinerNull, cTeilbar) THEN 1 ELSE 0 END AS nUpdateLagerbestand,
+			CASE WHEN EXISTS(
+				SELECT 1
+				FROM dbo.tArtikel tArtikelTeilbarSubquery
+				JOIN dbo.tStueckliste ON tStueckliste.kVaterArtikel = TmpResult.kArtikel_Stueckliste AND tStueckliste.kArtikel = tArtikelTeilbarSubquery.kArtikel
+				WHERE tArtikelTeilbarSubquery.cTeilbar = &#39;N&#39;
+				AND tArtikelTeilbarSubquery.nIstTeilmengenArtikel = 0) THEN &#39;N&#39; ELSE TmpResult.VaterTeilbar END as cTeilbarNeu
+		FROM (
+			SELECT 
+				[@kArtikel_Stueckliste].kArtikel_Stueckliste,
+				Vater.kArtikel,
+				Vater.fEKNetto AS VaterEKNetto,
+				Vater.fArtGewicht AS VaterArtGewicht,
+				Vater.fGewicht AS VaterGewicht,
+				Vater.cLagerAktiv AS VaterLagerAktiv,
+				Vater.cLagerKleinerNull AS VaterLagerKleinerNull,
+				Vater.cTeilbar AS VaterTeilbar,
+				Vater.nBearbeitungszeit AS VaterBearbeitungszeit,
+				Vater.nLiefertageWennAusverkauft AS VaterLiefertageWennAusverkauft,
+				Vater.nAutomatischeLiefertageberechnung AS VaterAutomatischeLiefertageberechnung,
+				CASE WHEN @RefreshGLD &gt; 0 THEN SUM(Kind.fEKNetto * tStueckliste.fAnzahl) ELSE Vater.fEKNetto END AS fEKNetto,
+				CASE WHEN @RefreshWeight &gt; 0 THEN SUM(Kind.fArtGewicht * tStueckliste.fAnzahl) ELSE Vater.fArtGewicht END AS fArtGewicht,
+				CASE WHEN @RefreshWeight &gt; 0 THEN SUM(Kind.fGewicht * tStueckliste.fAnzahl) ELSE Vater.fGewicht END AS fGewicht,
+				MAX(Kind.cLagerAktiv) AS cLagerAktiv,
+				MIN(CASE Kind.cLagerAktiv WHEN &#39;N&#39; THEN &#39;Y&#39; ELSE Kind.cLagerKleinerNull END) AS cLagerKleinerNull,
+				MIN(ISNULL(Kind.cTeilbar, &#39;N&#39;)) AS cTeilbar,
+				MAX(ISNULL(Kind.nBearbeitungszeit, 0)) AS nBearbeitungszeit,
+				CASE WHEN Vater.nAutomatischeLiefertageberechnung = 1 THEN MAX(CASE WHEN Kind.cLagerAktiv = &#39;Y&#39; THEN ISNULL(Kind.nLiefertageWennAusverkauft, 0) ELSE 0 END) ELSE Vater.nLiefertageWennAusverkauft END AS nLiefertageWennAusverkauft
+			FROM @kArtikel_Stueckliste
+			JOIN dbo.tArtikel AS Vater ON Vater.kArtikel = [@kArtikel_Stueckliste].kArtikel_Stueckliste
+			JOIN dbo.tStueckliste ON tStueckliste.kStueckliste = Vater.kStueckliste
+			JOIN dbo.tArtikel AS Kind ON Kind.kArtikel = tStueckliste.kArtikel
+			GROUP BY Vater.kArtikel, Vater.kStueckliste, Vater.fEKNetto, Vater.fArtGewicht, Vater.fGewicht, Vater.cLagerAktiv, Vater.cLagerKleinerNull, Vater.cTeilbar, Vater.nBearbeitungszeit, Vater.nLiefertageWennAusverkauft, Vater.nAutomatischeLiefertageberechnung, [@kArtikel_Stueckliste].kArtikel_Stueckliste
+		) AS TmpResult
+		WHERE EXISTS(SELECT VaterEKNetto, VaterArtGewicht, VaterGewicht, VaterLagerAktiv, VaterLagerKleinerNull, VaterTeilbar, VaterBearbeitungszeit, VaterLiefertageWennAusverkauft EXCEPT SELECT fEKNetto, fArtGewicht, fGewicht, cLagerAktiv, cLagerKleinerNull, cTeilbar, nBearbeitungszeit, nLiefertageWennAusverkauft);
+		
+		UPDATE 
+			dbo.tArtikel
+		SET
+			fEKNetto = [@Result].fEKNetto,
+			fArtGewicht = [@Result].fArtGewicht,
+			fGewicht = [@Result].fGewicht,
+			cLagerAktiv = [@Result].cLagerAktiv,
+			nBearbeitungszeit = [@Result].nBearbeitungszeit,
+			nLiefertageWennAusverkauft = [@Result].nLiefertageWennAusverkauft,
+			cTeilbar = [@Result].cTeilbarNeu
+		FROM
+			dbo.tArtikel
+		JOIN @Result ON [@Result].kArtikel = tArtikel.kArtikel;
+		
+		DECLARE @Lagerbestand AS TYPE_spUpdateLagerbestand
+		
+		INSERT INTO @Lagerbestand
+		SELECT DISTINCT changedAndForcedStuecklisten.kArtikel
+		FROM (SELECT [@Result].kArtikel AS kArtikel
+			  FROM @Result	
+			  WHERE [@Result].nUpdateLagerbestand &lt;&gt; 0
+			  UNION ALL
+			  SELECT [@kArtikel_Stueckliste].kArtikel_Stueckliste AS kArtikel
+			  FROM @kArtikel_Stueckliste
+			  WHERE ISNULL([@kArtikel_Stueckliste].nEnforceUpdateLagerbestand, 0) = 1) changedAndForcedStuecklisten
+		
+		IF (@@ROWCOUNT &gt; 0)
+		BEGIN
+			EXEC dbo.spUpdateLagerbestand @Artikel = @Lagerbestand
+		END
+
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH
+ 
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH</code></pre>
+</body>
+</html>

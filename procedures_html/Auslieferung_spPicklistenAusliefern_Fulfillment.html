@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenAusliefern_Fulfillment</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenAusliefern_Fulfillment</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenAusliefern_Fulfillment]
+
+-- M&#246;gliche Fehler:
+-- Diese SP ist fehlerfrei
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+@kBenutzer AS INT,
+@kSessionId AS INT
+
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+    SAVE TRANSACTION spPA_Fulfillment
+ELSE
+    BEGIN TRANSACTION;
+
+BEGIN TRY
+    DECLARE @OldContextInfo VARBINARY(128)
+    SET @OldContextInfo = ISNULL(CONTEXT_INFO(), 0x0000);
+    SET CONTEXT_INFO 0x0000;
+
+    DECLARE @kLieferschein INT;
+    DECLARE @kWarenlager INT;
+    DECLARE @nFulfillmentDienstleister INT;
+    DECLARE @cLieferscheinNr NVARCHAR(255);
+    DECLARE @kPickliste INT;
+    DECLARE @kBestellung INT;
+    DECLARE @kFulfillmentAuftrag INT;
+    DECLARE @xXml XML;
+
+    DECLARE cLieferschein CURSOR LOCAL FAST_FORWARD FOR
+	   SELECT 
+		  tAuftrag.kAuftrag AS kBestellung,
+		  tAuftrag.cAuftragsNr + &#39;-&#39; + STUFF(&#39;000&#39;, 4-LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1) AS cLieferscheinNr,
+		  dbo.tPickliste.kPickliste AS kPickliste,  -- Tempor&#228;r hier PicklistenId eintragen um die sp&#228;ter zuzuordnen
+		  dbo.tWarenlager.kWarenlager AS kWarenlager,
+		  CASE 
+			 WHEN dbo.tWarenLager.nFulfillment = 3 THEN 2 -- JTL-Fulfillment Network
+			 WHEN dbo.tWarenLager.nFulfillment = 2 THEN 1 -- Amazon FBA
+			 WHEN dbo.tWarenLager.nFulfillment = 1 THEN 0 -- Sonstiges
+			 ELSE 0
+		  END AS nFulfillmentDienstleister
+	   FROM Verkauf.tAuftrag
+	   JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+	   JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition
+	   JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+	   JOIN dbo.tWarenLager ON dbo.tWarenLager.kWarenLager = dbo.tPickliste.kWarenLager
+	   LEFT JOIN (
+		  SELECT 
+			 dbo.tLieferschein.kBestellung,
+			 CAST(REVERSE(LEFT(REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr)), CHARINDEX(&#39;-&#39;, REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr))) - 1)) AS INT) + 1 AS nNummer
+		  FROM dbo.tLieferschein
+		  GROUP BY dbo.tLieferschein.kBestellung
+	   ) AS LieferNummer ON LieferNummer.kBestellung = tAuftrag.kAuftrag
+	   WHERE (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20)) 
+			AND tPickliste.kWarenLager &gt; 0 
+			AND tWarenLager.nFulfillment &lt;&gt; 0
+	   GROUP BY tAuftrag.kAuftrag, tAuftrag.cAuftragsNr, dbo.tPickliste.kPickliste, LieferNummer.nNummer, dbo.tWarenlager.kWarenlager, dbo.tWarenLager.nFulfillment
+
+    OPEN cLieferschein;
+    FETCH NEXT FROM cLieferschein INTO @kBestellung, @cLieferscheinNr, @kPickliste, @kWarenlager, @nFulfillmentDienstleister;
+    WHILE (@@FETCH_STATUS = 0)
+    BEGIN
+
+	   DECLARE @nFulfillment AS INT = 1;
+	   IF (@nFulfillmentDienstleister = 2)
+	   BEGIN
+		  SET @nFulfillment = 2
+	   END
+
+	   EXEC Versand.spLieferscheinErstellen
+		  @xLieferschein = NULL,
+		  @kBestellung = @kBestellung,
+		  @kBenutzer = @kBenutzer,
+		  @cLieferscheinNr = @cLieferscheinNr,
+		  @cHinweis = &#39;&#39;,
+		  @dMailVersand = NULL,
+		  @dGedruckt = NULL,
+		  @nFulfillment =@nFulfillment,
+		  @kLieferantenBestellung = 0,
+		  @kSessionId = @kSessionId,
+		  @kLieferschein = @kLieferschein OUTPUT;
+ 
+	   -- Lieferscheinpositionen anlegen
+	   SET @xXml = 
+	   (
+		  SELECT 
+			 @kLieferschein AS kLieferschein,
+			 dbo.tPicklistePos.kBestellPos AS kBestellPos,
+			 SUM(dbo.tPicklistePos.fAnzahl) AS fAnzahl
+		  FROM Verkauf.tAuftrag
+		  JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+		  JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+		  WHERE dbo.tPicklistePos.kPickliste = @kPickliste 
+			AND tAuftrag.kAuftrag = @kBestellung 
+			AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+		  GROUP BY dbo.tPicklistePos.kBestellPos
+		  FOR XML PATH(&#39;LieferscheinPos&#39;), TYPE
+	   );
+	   
+	   IF (@xXml IS NOT NULL)
+	   BEGIN
+		  EXEC Versand.spLieferscheinPosErstellen
+			 @xLieferscheinPos = @xXml,
+			 @kLieferschein = NULL,
+			 @kBestellPos = NULL,
+			 @fAnzahl = NULL,
+			 @cHinweis = NULL,
+			 @kLieferscheinPos = NULL;
+		  
+		   -- Picklistenpositionen auf ausgeliefert setzen
+		  UPDATE dbo.tPicklistePos
+			 SET
+			    dbo.tPicklistePos.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+		  FROM dbo.tPicklistePos 
+		  JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos		  
+		  JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition
+		  WHERE dbo.tPicklistePos.kPickliste = @kPickliste 
+			AND tAuftragPosition.kAuftrag = @kBestellung 
+			AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			AND dbo.tLieferscheinPos.kLieferschein = @kLieferschein
+	   END;
+
+	   INSERT INTO dbo.tFulfillmentAuftrag
+	   (
+	       kLieferschein,
+	       kKunde,
+	       kLieferadresse,
+	       kWarenlager,
+	       kUser,
+	       kBenutzer,
+	       kSprache,
+	       nFulfillmentDienstleister,
+	       nStatus,
+	       cBestellnummer,
+	       cLieferscheinnummer,
+	       cKommentar,
+	       cLieferAdresseKundennummer,
+	       cLieferAdresseFirma,
+	       cLieferAdresseAnrede,
+	       cLieferAdresseTitel,
+	       cLieferAdresseVorname,
+	       cLieferAdresseName,
+	       cLieferAdresseStrasse,
+	       cLieferAdressePLZ,
+	       cLieferAdresseOrt,
+	       cLieferAdresseLand,
+	       cLieferAdresseTel,
+	       cLieferAdresseFax,
+	       cLieferAdresseEmail,
+	       dErstellt,
+	       --dGedruckt,
+	       --dGemailt,
+	       --dGefaxt,
+	       --dApiVersendet,
+	       --dInBearbeitung,
+	       --cLieferPrioritaet,
+	       --dBestelldatum,
+	       cLieferAdressZusatz,
+	       cLieferZusatz,
+	       --cFehlermeldung,
+	       cLieferadresseBundesland
+	   )
+	   SELECT
+		  @kLieferschein,
+		  Auslieferung.vLieferschein.kKunde,
+		  Auslieferung.vLieferschein.kLieferadresse,
+		  @kWarenlager,
+		  dbo.tWarenLager.kUser,
+		  @kBenutzer,
+		  Auslieferung.vLieferschein.kSprache,
+		  @nFulfillmentDienstleister,
+		  1 AS nStatus, -- Status 1: offen
+		  Auslieferung.vLieferschein.cBestellNr,
+		  Auslieferung.vLieferschein.cLieferscheinNr,
+		  &#39;Vielen Dank f&#252;r Ihre Bestellung&#39;,
+		  Auslieferung.vLieferschein.cLieferadresseKundenNr,
+		  Auslieferung.vLieferschein.cLieferadresseFirma,
+		  Auslieferung.vLieferschein.cLieferadresseAnrede,
+		  Auslieferung.vLieferschein.cLieferadresseTitel,
+		  Auslieferung.vLieferschein.cLieferadresseVorname,
+		  Auslieferung.vLieferschein.cLieferadresseNachname,
+		  Auslieferung.vLieferschein.cLieferadresseStrasse,
+		  Auslieferung.vLieferschein.cLieferadressePlz,
+		  Auslieferung.vLieferschein.cLieferadresseOrt,
+		  Auslieferung.vLieferschein.cLieferadresseLand,
+		  Auslieferung.vLieferschein.cLieferadresseTelefon,
+		  Auslieferung.vLieferschein.cLieferadresseFax,
+		  Auslieferung.vLieferschein.cLieferadresseMail,
+		  GETDATE(),
+		  Auslieferung.vLieferschein.cLieferadresseAdressZusatz,
+		  Auslieferung.vLieferschein.cLieferadresseZusatz,
+		  Auslieferung.vLieferschein.cLieferadresseBundesland
+	   FROM 
+		  Auslieferung.vLieferschein
+	   CROSS JOIN dbo.tWarenlager
+	   WHERE 
+		  Auslieferung.vLieferschein.kLieferschein = @kLieferschein AND dbo.tWarenLager.kWarenLager = @kWarenLager
+	   SET @kFulfillmentAuftrag = (SELECT SCOPE_IDENTITY());
+
+	   INSERT INTO
+		  dbo.tFulfillmentAuftragPos
+	   (
+	       kFulfillmentAuftrag,
+	       kLieferscheinPos,
+	       kArtikel,
+	       cArtNr,
+	       -- cCarrier,
+	       cName,
+	       fAnzahl,
+	       --nStatus,
+	       --cArtikelGeschenkText,
+	       cArtikelHinweis
+	       --nErrorCode,
+	       --cErrorType,
+	       --cErrorMessage,
+	       --cAbhilfe
+	   )
+	   SELECT
+		  @kFulfillmentAuftrag,
+		  Auslieferung.vLieferscheinPos.kLieferscheinPos,
+		  Auslieferung.vLieferscheinPos.kArtikel,
+		  Auslieferung.vLieferscheinPos.cArtNr,
+		  Auslieferung.vLieferscheinPos.cString,
+		  Auslieferung.vLieferscheinPos.fAnzahl,
+		  Auslieferung.vLieferscheinPos.cHinweis
+	   FROM
+		  Auslieferung.vLieferscheinPos 
+	   WHERE
+		  Auslieferung.vLieferscheinPos.kLieferschein = @kLieferschein 
+		  AND (@nFulfillmentDienstleister = 0 OR Auslieferung.vLieferscheinPos.kArtikel &gt; 0) -- bei FBA nur &quot;echte&quot; Artikel
+
+		EXEC Amazon.SplitFulfillmentPositionen @kFulfillmentAuftrag, @kLieferschein, @nFulfillmentDienstleister;
+
+	   FETCH NEXT FROM cLieferschein INTO @kBestellung, @cLieferscheinNr, @kPickliste, @kWarenlager, @nFulfillmentDienstleister;
+    END
+
+    IF @TranCounter = 0 
+	   COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @TranCounter = 0
+	BEGIN
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION;
+	END
+	ELSE
+	BEGIN
+		IF XACT_STATE() &lt;&gt; -1
+		BEGIN
+			IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION spPA_Fulfillment;
+		END
+	END
+
+    SET CONTEXT_INFO @OldContextInfo;
+
+    DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

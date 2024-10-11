@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCX.spLoescheKaputteExterneRechnung</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>SCX.spLoescheKaputteExterneRechnung</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE SCX.spLoescheKaputteExterneRechnung 
+	@kRechnung INT,
+	@kBenutzer INT,
+	@LogMessage NVARCHAR(4000)
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+	
+	IF ISNULL(@kRechnung, 0) = 0 OR ISNULL(@kBenutzer, 0) = 0
+	BEGIN
+		RETURN;
+	END
+	
+	IF NOT EXISTS (SELECT
+					tRechnung.kRechnung
+				FROM Rechnung.tRechnung
+				JOIN dbo.tShop ON tShop.kShop = tRechnung.kShop
+				LEFT JOIN dbo.tgutschrift ON tgutschrift.kRechnung = tRechnung.kRechnung
+				WHERE tRechnung.kRechnung = @kRechnung
+					AND tgutschrift.kGutschrift IS NULL
+					AND tShop.nTyp = 6
+					AND tRechnung.nIstExterneRechnung &gt; 0)
+	BEGIN
+		RETURN;
+	END
+
+	DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+
+		IF EXISTS(SELECT 1 FROM dbo.tZahlung WHERE tZahlung.kRechnung = @kRechnung)
+		BEGIN
+			DELETE FROM dbo.tZahlung
+			WHERE tZahlung.kRechnung = @kRechnung;
+		END
+
+		UPDATE Rechnung.tRechnung
+		SET tRechnung.nIstEntwurf = 1
+		WHERE tRechnung.kRechnung = @kRechnung;
+	
+		EXEC Rechnung.spRechnungLoeschen @RechnungKey = @kRechnung,
+										 @BenutzerKey = 1,
+										 @LogMessage = @LogMessage,
+										 @OnlyValidate = 0;
+
+		-- Ende vom Code
+        IF (@DeadlockRetries &gt; 0)
+           AND (@@TRANCOUNT &gt; 0)
+           AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH;
+END TRY
+BEGIN CATCH
+    THROW;
+END CATCH;</code></pre>
+</body>
+</html>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklisteBearbeiten</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklisteBearbeiten</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklisteBearbeiten]
+
+-- &#196;ndert den Status einer Pickliste f&#252;r die Bearbeitung in einer Sitzung
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+
+@kPickliste INT,
+
+-- Enth&#228;lt den Benutzer zur eindeutigen Zuordnung
+@kBenutzer INT,
+
+@kSessionId INT
+
+-- M&#246;gliche Fehler:
+-- Im Fehlerfall enth&#228;lt der Messagetext XML-Informationen zum Fehler
+-- Code = 50000, Severity = 18, State = 4: Die Pickliste wird bereits bearbeitet
+-- Code = 50000, Severity = 18, State = 5: Die Pickliste ist bereits ausgeliefert
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+	SAVE TRANSACTION spPicklisteBearbeiten
+ELSE
+	BEGIN TRANSACTION;
+
+BEGIN TRY
+	DECLARE @xErrorInfo XML;
+	DECLARE @cError NVARCHAR(MAX);
+
+	-- Status pr&#252;fen
+	SET @xErrorInfo = (SELECT
+			dbo.tPickliste.kPickliste,
+			dbo.tPickliste.nStatus,
+			dbo.tSessionId.kBenutzer,
+			dbo.tSessionId.cRechnername,
+			dbo.tSessionId.dLastAction
+		FROM dbo.tPickliste
+		LEFT JOIN dbo.tSessionId ON dbo.tPickliste.kSessionId = dbo.tSessionId.kSessionId
+
+		WHERE dbo.tPickliste.nStatus &lt; 10 AND dbo.tPickliste.kPickliste = @kPickliste AND dbo.tPickliste.kSessionId &lt;&gt; @kSessionId
+		FOR XML PATH(&#39;PicklisteInBearbeitung&#39;), TYPE)
+	IF (@xErrorInfo IS NOT NULL)
+	BEGIN			
+		SET @cError = CAST(@xErrorInfo AS NVARCHAR(MAX))
+
+		-- 09.07.2018	MAD
+		-- Richtiges Rollback f&#252;r die Transaktion durchf&#252;hren und nicht f&#252;r die gesamte Transaktion
+		IF @TranCounter = 0
+			ROLLBACK TRANSACTION;
+		ELSE
+			IF XACT_STATE() &lt;&gt; -1
+				ROLLBACK TRANSACTION spPicklisteBearbeiten;
+
+		RAISERROR(@cError, 18, 4);
+		RETURN;
+	END
+
+	SET @xErrorInfo = (SELECT			
+			dbo.tPickliste.kPickliste,
+			dbo.tPickliste.nStatus,
+			dbo.tWMSVersandLock.kBenutzer,
+			&#39;Unbekannter Rechner (Packtisch/WMS)&#39; AS cRechnername,
+			dbo.tWMSVersandLock.dDatum AS dLastAction
+		FROM dbo.tWMSVersandLock
+		JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = tWMSVersandLock.kPickliste
+		WHERE dbo.tWMSVersandLock.kPickliste = @kPickliste
+		FOR XML PATH(&#39;PicklisteInBearbeitung&#39;), TYPE)
+	IF (@xErrorInfo IS NOT NULL)
+	BEGIN			
+		SET @cError = CAST(@xErrorInfo AS NVARCHAR(MAX))
+
+		-- 09.07.2018	MAD
+		-- Richtiges Rollback f&#252;r die Transaktion durchf&#252;hren und nicht f&#252;r die gesamte Transaktion
+		IF @TranCounter = 0
+			ROLLBACK TRANSACTION;
+		ELSE
+			IF XACT_STATE() &lt;&gt; -1
+				ROLLBACK TRANSACTION spPicklisteBearbeiten;
+
+		RAISERROR(@cError, 18, 4);
+		RETURN;
+	END
+
+	-- Status pr&#252;fen
+	SET @xErrorInfo = (SELECT
+			dbo.tPickliste.kPickliste,
+			dbo.tPickliste.nStatus,
+			dbo.tSessionId.kBenutzer,
+			dbo.tSessionId.cRechnername,
+			dbo.tSessionId.dLastAction
+		FROM dbo.tPickliste
+		LEFT JOIN dbo.tSessionId ON dbo.tPickliste.kSessionId = dbo.tSessionId.kSessionId
+		WHERE dbo.tPickliste.nStatus &gt; 11 AND dbo.tPickliste.kPickliste = @kPickliste
+		FOR XML PATH(&#39;PicklisteAusgeliefert&#39;), TYPE)
+	IF (@xErrorInfo IS NOT NULL)
+	BEGIN			
+		SET @cError = CAST(@xErrorInfo AS NVARCHAR(MAX))
+	
+		-- 09.07.2018	MAD
+		-- Richtiges Rollback f&#252;r die Transaktion durchf&#252;hren und nicht f&#252;r die gesamte Transaktion
+		IF @TranCounter = 0
+			ROLLBACK TRANSACTION;
+		ELSE
+			IF XACT_STATE() &lt;&gt; -1
+				ROLLBACK TRANSACTION spPicklisteBearbeiten;
+	
+		RAISERROR(@cError, 18, 5);
+		RETURN;
+	END
+
+	-- Session in Pickliste setzen, sofern die Pickliste noch nicht bearbeitet wird
+	UPDATE dbo.tPickliste
+	SET
+	    dbo.tPickliste.kSessionId = @kSessionId
+	WHERE
+		dbo.tPickliste.kPickliste = @kPickliste
+
+	-- Status der Pickliste &#228;ndern
+	INSERT INTO dbo.tPicklistePosStatus
+	(
+	    dbo.tPicklistePosStatus.kPicklistePos,
+	    dbo.tPicklistePosStatus.kbenutzer,
+	    dbo.tPicklistePosStatus.dZeitstempel,
+	    dbo.tPicklistePosStatus.nStatus
+	)
+	SELECT 
+		dbo.tPicklistePos.kPicklistePos,
+		@kBenutzer,
+		GETDATE(),
+		5
+	FROM dbo.tPicklistePos 
+	JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste
+	LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tPicklistePos.kBestellPos
+	WHERE dbo.tPickliste.kPickliste = @kPickliste 
+		AND dbo.tPickliste.kSessionId = @kSessionId 
+		AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+    
+	IF @TranCounter = 0
+		COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+	IF @TranCounter = 0
+		ROLLBACK TRANSACTION;
+	ELSE
+		IF XACT_STATE() &lt;&gt; -1
+			ROLLBACK TRANSACTION spPicklisteBearbeiten;
+
+	DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

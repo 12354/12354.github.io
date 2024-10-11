@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spStuecklistenAktualisieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spStuecklistenAktualisieren</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Vererbungen innerhalb von Stücklisten neu berechnet werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Maintenance.spStuecklistenAktualisieren
+	@kArtikel INT = NULL,
+	@cArtNr NVARCHAR(100) = NULL
+AS
+BEGIN
+	DECLARE @Stuecklisten AS Artikel.TYPE_spAktualisiereStueckliste;
+	IF(@kArtikel IS NOT NULL)
+	BEGIN
+		INSERT INTO @Stuecklisten(kArtikel_Stueckliste)
+			VALUES (@kArtikel);
+	END
+	ELSE IF(@cArtNr IS NOT NULL)
+	BEGIN
+		INSERT INTO @Stuecklisten(kArtikel_Stueckliste)
+			SELECT kArtikel
+				FROM dbo.tArtikel
+				WHERE cArtNr = @cArtNr;
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @Stuecklisten(kArtikel_Stueckliste)
+			SELECT kArtikel
+				FROM Maintenance.vStuecklisten;
+	END
+	IF(EXISTS(SELECT * FROM @Stuecklisten))
+	BEGIN
+		EXEC Artikel.spAktualisiereStueckliste @Artikel = @Stuecklisten;		
+	END
+END</code></pre>
+</body>
+</html>

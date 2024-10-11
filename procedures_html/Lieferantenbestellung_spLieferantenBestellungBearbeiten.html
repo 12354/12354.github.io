@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lieferantenbestellung.spLieferantenBestellungBearbeiten</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Lieferantenbestellung.spLieferantenBestellungBearbeiten</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in dbo.tLieferantenbestellung bearbeitet werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Lieferantenbestellung].[spLieferantenBestellungBearbeiten]
+			@kLieferantenBestellung INT,
+			@kLieferant INT,
+			@kSprache INT,
+			@kLieferantenBestellungRA INT,
+			@kLieferantenBestellungLA INT,
+			@cWaehrungISO NVARCHAR(5),
+			@cInternerKommentar NVARCHAR(MAX),
+			@cDruckAnmerkung NVARCHAR(MAX),
+			@dGedruckt DATETIME,
+			@dGemailt DATETIME,
+			@dGefaxt DATETIME,
+			@nStatus INT,
+			@dErstellt DATETIME,
+			@kFirma INT,
+			@kLager INT,
+			@kKunde INT,
+			@dLieferdatum DATETIME,
+			@cEigeneBestellnummer NVARCHAR(255),
+			@cBezugsAuftragsNummer NVARCHAR(255),
+			@nDropShipping INT,
+			@kLieferantenBestellungLieferant INT,
+			@kBenutzer INT,
+			@fFaktor DECIMAL(25,13),
+			@dAngemahnt DATETIME,
+			@dInBearbeitung DATETIME,
+			@nDeleted INT,
+			@nManuellAbgeschlossen TINYINT,
+			@cFremdbelegnummer NVARCHAR(255),
+			@kLieferschein INT, 
+			@nBestaetigt TINYINT,
+			@dExportiert DATETIME
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5120;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			UPDATE dbo.tLieferantenBestellung
+				SET kLieferant = @kLieferant,
+					kSprache = @kSprache,
+					kLieferantenBestellungRA = @kLieferantenBestellungRA,
+					kLieferantenBestellungLA = @kLieferantenBestellungLA,
+					cWaehrungISO = @cWaehrungISO,
+					cInternerKommentar = @cInternerKommentar,
+					cDruckAnmerkung = @cDruckAnmerkung,
+					dGedruckt = @dGedruckt,
+					dGemailt = @dGemailt,
+					dGefaxt = @dGefaxt,
+					nStatus = @nStatus,
+					dErstellt = @dErstellt,
+					kFirma = @kFirma,
+					kLager = @kLager,
+					kKunde = @kKunde,
+					dLieferdatum = @dLieferdatum,
+					cEigeneBestellnummer = @cEigeneBestellnummer,
+					cBezugsAuftragsNummer = @cBezugsAuftragsNummer,
+					nDropShipping = @nDropShipping,
+					kLieferantenBestellungLieferant =  @kLieferantenBestellungLieferant,
+					kBenutzer = @kBenutzer,
+					fFaktor = @fFaktor,
+					dAngemahnt = @dAngemahnt,
+					dInBearbeitung = CASE 
+										WHEN @dInBearbeitung IS NULL AND nStatus != @nStatus AND @nStatus IN(20, 650)
+											THEN GETDATE()
+										ELSE @dInBearbeitung
+									END,
+					nDeleted = @nDeleted,
+					nManuellAbgeschlossen = @nManuellAbgeschlossen,
+					cFremdbelegnummer = @cFremdbelegnummer,
+					kLieferschein = @kLieferschein,
+					nBestaetigt = @nBestaetigt,
+					dExportiert = @dExportiert
+				WHERE kLieferantenBestellung = @kLieferantenBestellung;
+			IF(@nStatus &gt; 5 AND @nStatus &lt;= 500)
+			BEGIN
+				UPDATE dbo.tArtikelShop
+					SET cInet = &#39;Y&#39;
+					FROM dbo.tArtikelShop 
+					JOIN dbo.tLieferantenBestellungPos ON dbo.tLieferantenBestellungPos.kArtikel = dbo.tArtikelShop.kArtikel
+					WHERE dbo.tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung;	
+				
+				DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+
+				INSERT INTO @typeArtikel (kArtikel)
+				SELECT DISTINCT dbo.tLieferantenBestellungPos.kArtikel 
+				FROM dbo.tLieferantenBestellungPos 
+				WHERE dbo.tLieferantenBestellungPos.kLieferantenBestellung = @kLieferantenBestellung;
+	
+				EXEC dbo.spUpdateLagerBestand @typeArtikel;
+
+
+				--
+				-- jtlFulfillment Auftrag
+				--
+				DECLARE @nFulfillmentLager INT;
+				DECLARE @nQueue INT;			
+
+				SELECT @nFulfillmentLager = COUNT(kWarenlager)
+				FROM tWarenlager
+				WHERE kWarenLager = @kLager AND nFulfillment = 3 AND nAktiv = 1
+
+				SELECT @nQueue = COUNT(*)
+				FROM tQueue
+				WHERE kShop = 0 AND kPlattform = 6 AND cName = &#39;tLieferantenBestellung&#39; AND kWert = @kLieferantenBestellung
+
+				IF (@nFulfillmentLager = 1 AND @nQueue = 0 )
+				BEGIN
+					INSERT INTO tQueue 	( 	kShop, 	kPlattform, cName, 						kWert, 						nAction, 	kOption1, 	kOption2, 	nInBearbeitung 	)
+					VALUES 				( 	0, 		6, 			&#39;tLieferantenBestellung&#39;, 	@kLieferantenBestellung, 	1, 			0, 			0, 			0 				)
+				END	
+
+			END;
+
+
+		
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;
+END</code></pre>
+</body>
+</html>

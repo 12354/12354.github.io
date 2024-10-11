@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spTeilmengenVerpacken</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spTeilmengenVerpacken</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spTeilmengenVerpacken]
+@kBenutzer INT,         -- Der Benutzer der den Vorgang ausf&#252;hrt
+@kWarenlager INT,		 -- Warenlager auf dem wir arbeiten
+@kBestellung INT,	     --Die Bestellung die verpackt wird
+@kPickliste INT,	     -- Die Pickliste die verpackt wird
+@dTimestamp DATETIME,
+@TeilmengenWEPlatz INT = NULL
+
+
+-- Funktion: Die Procedur bucht Teilmengenartikel vom verpackprezess im WMS/Packtisch ein. 
+	
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @SubsetDetails subset.TYPE_spSubsetDetails;
+DECLARE @kAuftragsPosSub INT, @kWarenLagerEingangSub INT, @kArtikelSub INT,  @kWarenLagerPlatzSub INT, @fMengeSub DECIMAL(25,13), @fEKEinzelSub  DECIMAL(25,13), @cChargenNrSub NVARCHAR(255), 
+		@dMHDSub DATETIME, @dGeliefertAMSub DATETIME, @kWMSPackItemSub INT, @fSubsetFactorSub DECIMAL(25,13),  @cSubsetNumberSub NVARCHAR(100), @kVerpackenSubset INT, @kWarenLagerEingangSubNew INT,
+		@kPicklistePosRest INT, @VerpackenSubsetTyp INT, @LHMSub INT, @nReservierungsModus INT;
+
+
+BEGIN TRY
+	    BEGIN TRAN T0;
+
+
+		-- Context Info
+		IF(CONTEXT_INFO() IS NOT NULL)
+		BEGIN
+			SET @OldContextInfo = CONTEXT_INFO();
+		END
+		ELSE
+		BEGIN
+			SET @OldContextInfo = 0x0;
+		END
+
+	
+		-- Pickpos mit passenden Warenlagereing&#228;ngen Status anpassen
+		INSERT INTO tPicklistePosStatus  WITH(ROWLOCK) (kPicklistePos, kbenutzer, dZeitstempel, nStatus)
+		SELECT tPicklistePos.kPicklistePos,@kBenutzer,@dTimestamp,30
+		FROM WMS.tVerpackenSubset
+		JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingangSubset = tVerpackenSubset.kWarenLagerEingangSubset
+		JOIN dbo.tPicklistePos ON tPicklistePos.kWarenLagerEingang = tWarenLagerEingangSubsets.kWarenLagerEingang AND tPicklistePos.kPickliste = tVerpackenSubset.kPickliste
+		WHERE tVerpackenSubset.kAuftrag = @kBestellung
+		AND tVerpackenSubset.kPickliste = @kPickliste 
+		AND tVerpackenSubset.nTyp = 2;
+
+
+
+		IF(OBJECT_ID(&#39;tempdb..#WarenLagerEingaengeZumAusbuchenEz&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #WarenLagerEingaengeZumAusbuchenEz;
+		END
+		CREATE TABLE #WarenLagerEingaengeZumAusbuchenEz (
+			kWarenLagerEingang INT NOT NULL,
+			fAnzahl DECIMAL(25,13) NOT NULL
+		);
+
+		
+		-- &#220;ber alle zugeschnittenen Warenlagereing&#228;nge die verpackt werden sollen																		
+		DECLARE cur_GetSubsetItems CURSOR LOCAL FAST_FORWARD FOR
+		SELECT DISTINCT kVerpackenSubset, kAuftragsPos, fMenge, tWarenLagerEingang.kWarenLagerEingang,tWarenLagerEingang.kArtikel,tWarenLagerEingang.kWarenLagerPlatz,tWarenLagerEingang.fEKEinzel,
+			   tWarenLagerEingang.cChargenNr,tWarenLagerEingang.dMHD,tWarenLagerEingang.dGeliefertAM, tVerpackenSubset.fFactor , tVerpackenSubset.cSubsetNumber, tPicklistePos.kPicklistePos,
+			   tVerpackenSubset.nTyp, tWarenLagerEingang.kLHM , tArtikelTeilmengen.nReservierungsModus
+		FROM WMS.tVerpackenSubset
+		JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingangSubset = tVerpackenSubset.kWarenLagerEingangSubset
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = tWarenLagerEingangSubsets.kWarenLagerEingang
+		JOIN dbo.tPicklistePos ON tPicklistePos.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang AND tPicklistePos.kBestellPos =  tVerpackenSubset.kAuftragsPos
+		JOIN dbo.tWMSPackItem ON tWMSPackItem.kBestellpos = tVerpackenSubset.kAuftragsPos
+		JOIN Artikel.tArtikelTeilmengen ON tArtikelTeilmengen.kArtikel = tPicklistePos.kArtikel
+		WHERE tWMSPackItem.kBestellung = @kBestellung
+		AND tWMSPackItem.kPickliste = @kPickliste 
+		AND tWMSPackItem.kArtikel &gt; 0
+		AND tVerpackenSubset.nTyp = 1
+		AND tVerpackenSubset.kPickliste = tWMSPackItem.kPickliste
+
+		UNION ALL
+
+		--Restmengen die beim Zuschnitt definiert worden sind
+		SELECT kVerpackenSubset, kAuftragsPos, 1 AS fMenge, tWarenLagerEingang.kWarenLagerEingang,tWarenLagerEingang.kArtikel,tWarenLagerEingang.kWarenLagerPlatz,tWarenLagerEingang.fEKEinzel,
+			   tWarenLagerEingang.cChargenNr,tWarenLagerEingang.dMHD,tWarenLagerEingang.dGeliefertAM, tVerpackenSubset.fFactor , tVerpackenSubset.cSubsetNumber, 0 AS kPicklistePos, tVerpackenSubset.nTyp,
+			   tWarenLagerEingang.kLHM  , tArtikelTeilmengen.nReservierungsModus
+		FROM WMS.tVerpackenSubset
+		JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingangSubset = tVerpackenSubset.kWarenLagerEingangSubset
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = tWarenLagerEingangSubsets.kWarenLagerEingang
+		JOIN Artikel.tArtikelTeilmengen ON tArtikelTeilmengen.kArtikel = tWarenLagerEingang.kArtikel
+		WHERE tVerpackenSubset.kAuftrag = @kBestellung
+		AND tVerpackenSubset.kPickliste = @kPickliste 
+		AND tVerpackenSubset.nTyp = 0
+
+		ORDER BY tVerpackenSubset.nTyp DESC;
+
+
+
+
+
+		OPEN cur_GetSubsetItems  
+	    FETCH NEXT FROM cur_GetSubsetItems INTO @kVerpackenSubset, @kAuftragsPosSub, @fMengeSub  , @kWarenLagerEingangSub ,@kArtikelSub, @kWarenLagerPlatzSub,  @fEKEinzelSub,
+		                                        @cChargenNrSub,@dMHDSub,@dGeliefertAMSub,@fSubsetFactorSub,@cSubsetNumberSub,@kPicklistePosRest,@VerpackenSubsetTyp,@LHMSub, @nReservierungsModus
+
+		WHILE (@@FETCH_STATUS = 0) -- &#220;ber alle Packitems
+		BEGIN  
+
+
+		    DELETE FROM @SubsetDetails;
+		
+		    INSERT INTO @SubsetDetails(kDimension,fValue,fGroundValue,kMassEinheit)
+		    SELECT kDimension,fValue,fGroundValue, kMassEinheit
+		    FROM  WMS.tVerpackenSubsetDetails
+		    WHERE  kVerpackenSubset = @kVerpackenSubset
+	      
+
+		    -- Erstellt einen neuen Warenlagereingang f&#252;r das St&#252;ck das aus dem Quellst&#252;ck rausgeschnitten wurde
+			EXEC subset.spWarenlagerEingangSchreiben
+			@kArtikel = @kArtikelSub,
+			@kWarenLagerPlatz = @kWarenLagerPlatzSub,
+			@kLieferantenBestellungPos = 0,
+			@kBenutzer = @kBenutzer,
+			@fEKNetto = @fEKEinzelSub,
+			@cLieferscheinNr = null,
+			@fQuantity = 1,
+			@fSubsetFactor = @fSubsetFactorSub,
+			@cSubsetNumber = @cSubsetNumberSub,
+			@cChargenNr = @cChargenNrSub,
+			@dMHD = @dMHDSub,
+			@dGeliefertAm = @dGeliefertAMSub,
+			@cKommentar = &#39;Zugeschnitten beim Verpacken&#39;,
+			@kGutschriftPos = 0,
+			@kLHM = @LHMSub,
+			@kSessionId = 0,
+			@kBuchungsart = 200,
+			@kBestellPosUmlagerung = 0,
+			@kRMRetourePos  = 0,
+			@nHistorieNichtSchreiben = 0,
+			@Subsets = @SubsetDetails,
+			@kWarenLagerEingang = @kWarenLagerEingangSubNew OUT;
+
+
+			DECLARE @hash VARBINARY(128);
+		    SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;WMS.spTeilmengenVerpacken&#39;);
+		    SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+
+			-- Warenlagereingang Ursprung setzten
+			UPDATE dbo.tWarenLagerEingang
+			SET tWarenLagerEingang.kWarenLagerEingang_Ursprung = @kWarenLagerEingangSub
+			WHERE tWarenLagerEingang.kWarenLagerEingang = @kWarenLagerEingangSubNew;
+
+			-- Wenn reservierter Bestand
+			IF(@VerpackenSubsetTyp = 1)
+			BEGIN
+
+				IF(EXISTS( SELECT * FROM  dbo.tPicklistePos WHERE tPicklistePos.kPicklistePos = @kPicklistePosRest AND fAnzahl - @fSubsetFactorSub &lt; 0))
+				BEGIN
+					 RAISERROR(N&#39;Fehler beim Buchen von Teilmengen. Menge der Pickpos der Restmenge zu klein.&#39;, 15,1);
+				END;
+
+				-- Alte Pickpos Menge reduzieren
+				UPDATE dbo.tPicklistePos SET fAnzahl = fAnzahl - @fSubsetFactorSub
+				WHERE tPicklistePos.kPicklistePos = @kPicklistePosRest;
+
+
+				-- Neue Pickpos anlegen
+				INSERT INTO [dbo].[tPicklistePos]  ([kPickliste]   ,[kWarenLager] ,[kWarenLagerEingang]  ,[fAnzahl]  ,[kBestellPos]  ,[kPicklistePosStatus] ,[kArtikel]  ,[kWarenlagerPlatz],
+													[kPicklistePos_Ursprung] ,[kLieferscheinPos] ,[kBestellung] ,[nPickPrio]  ,[nStatus] ,[kAnsprechpartner])
+				SELECT kPickliste,kWarenLager,@kWarenLagerEingangSubNew,@fSubsetFactorSub,@kAuftragsPosSub,null,tPicklistePos.kArtikel,@kWarenLagerPlatzSub,tPicklistePos.kPicklistePos,0,@kBestellung,tPicklistePos.nPickPrio,
+					   tPicklistePos.nStatus, tPicklistePos.kAnsprechpartner
+				FROM dbo.tPicklistePos
+				WHERE tPicklistePos.kPicklistePos = @kPicklistePosRest;
+
+				DECLARE @kNewPicklistePos INT;
+				SET @kNewPicklistePos = scope_identity();
+
+				-- Pickpos auf 30 setzten, bereit zum verpacken
+				EXEC WMS.spPicklisteposStatusAendern @kPicklistePos = @kNewPicklistePos , @nNewStatus = 30, @kBenutzer = @kBenutzer, @dTimestamp = @dTimestamp;
+
+
+				IF(@nReservierungsModus = 0)
+				BEGIN
+				   DELETE FROM  dbo.tPicklistePos WHERE tPicklistePos.kPicklistePos = @kPicklistePosRest;
+				END
+				ELSE
+				BEGIN
+					-- Falls alte Pickpos keine Menge mehr hat l&#246;schen
+		   			IF(EXISTS( SELECT * FROM  dbo.tPicklistePos WHERE tPicklistePos.kPicklistePos = @kPicklistePosRest AND fAnzahl = 0))
+					BEGIN
+						DELETE FROM  dbo.tPicklistePos WHERE tPicklistePos.kPicklistePos = @kPicklistePosRest;
+					END;
+
+				END;
+
+			END;
+			ELSE -- Wenn Restmenge
+			BEGIN
+
+			    -- Gibt es noch andere offene Pickpos die auf den Warenlagereingang zeigen. In diesem Fall darf es nur ein Rest-Stueck geben.
+				IF( EXISTS( SELECT * FROM dbo.tPicklistepos 
+				            WHERE tPicklistepos.kWarenLagerEingang = @kWarenLagerEingangSub 
+					        AND tPicklistepos.nStatus &lt; 30 ))
+				BEGIN
+
+				    IF(@nReservierungsModus = 1)
+					BEGIN
+					
+				          -- Pickpos auf den neuen Warenlagereingang umlenken
+				        UPDATE dbo.tPicklistepos 
+				        SET kWarenLagerEingang = @kWarenLagerEingangSubNew
+				        WHERE kWarenLagerEingang = @kWarenLagerEingangSub
+				        AND tPicklistepos.nStatus &lt; 30;
+
+					END;
+					ELSE
+					BEGIN
+
+					    -- Im res Modus 0 die Pickpos l&#246;schen, das ist der rest zu zuviel reserviert wurde
+						DELETE tPicklistepos
+						FROM tPicklistepos
+						WHERE kWarenLagerEingang = @kWarenLagerEingangSub
+				        AND tPicklistepos.nStatus &lt; 30;
+
+					    DECLARE @kWarenlagerplatzNeu0 INT, @kWarenlagerEingangRestNeu0 INT;
+				       
+					    SELECT TOP 1 @kWarenlagerplatzNeu0 = kWarenlagerplatz
+					    FROM dbo.tWarenLagerPlatz
+					    WHERE tWarenLagerPlatz.kWarenLagerPlatzTyp = 3
+					    AND tWarenLagerPlatz.nStatus = 0
+					    AND tWarenLagerPlatz.kWarenLager = @kWarenlager
+					    ORDER BY CASE WHEN ISNULL(@TeilmengenWEPlatz,0) = tWarenLagerPlatz.kWarenLagerPlatz THEN 0 ELSE 1 END
+				       
+				        EXEC dbo.spPlatzUmbuchenAusfuehren @kWarenLagerEingangSubNew, @fSubsetFactorSub, @kWarenlagerplatzNeu0, 0, 200, 0, @kBenutzer, &#39;Teilmengen auf WE-Platz buchen&#39; , @kWarenlagerEingangRestNeu0 OUTPUT;
+				     
+
+					END;
+
+				END;
+				ELSE
+				BEGIN --Warenlagereingang auf WE bzw. eingestellten platz buchen
+
+					 DECLARE @kWarenlagerplatzNeu INT, @kWarenlagerEingangRestNeu INT;
+
+					 SELECT TOP 1 @kWarenlagerplatzNeu = kWarenlagerplatz
+					 FROM dbo.tWarenLagerPlatz
+					 WHERE tWarenLagerPlatz.kWarenLagerPlatzTyp = 3
+					 AND tWarenLagerPlatz.nStatus = 0
+					 AND tWarenLagerPlatz.kWarenLager = @kWarenlager
+					 ORDER BY CASE WHEN ISNULL(@TeilmengenWEPlatz,0) = tWarenLagerPlatz.kWarenLagerPlatz THEN 0 ELSE 1 END
+
+				     EXEC dbo.spPlatzUmbuchenAusfuehren @kWarenLagerEingangSubNew, @fSubsetFactorSub, @kWarenlagerplatzNeu, 0, 200, 0, @kBenutzer, &#39;Teilmengen auf WE-Platz buchen&#39; , @kWarenlagerEingangRestNeu OUTPUT;
+
+
+				END;
+
+			END;
+
+			-- Ursprungs Warenlagereingang und Anzahl zum sp&#228;teren ausbuchen speichern
+			INSERT INTO #WarenLagerEingaengeZumAusbuchenEz (kWarenLagerEingang,fAnzahl)
+			VALUES (@kWarenLagerEingangSub,@fSubsetFactorSub);
+
+
+	    FETCH NEXT FROM cur_GetSubsetItems INTO @kVerpackenSubset, @kAuftragsPosSub, @fMengeSub  , @kWarenLagerEingangSub ,@kArtikelSub, @kWarenLagerPlatzSub,  @fEKEinzelSub,
+		                                        @cChargenNrSub, @dMHDSub, @dGeliefertAMSub, @fSubsetFactorSub, @cSubsetNumberSub, @kPicklistePosRest, @VerpackenSubsetTyp, @LHMSub, @nReservierungsModus
+	    END;
+
+
+
+
+
+		--
+		-- Ursprungs Warenlagereing&#228;nge werden gel&#246;scht
+		--
+		DECLARE @xWarenlagerEingaengeZumAusbuchenTeilmengen XML = NULL;
+		SET @xWarenlagerEingaengeZumAusbuchenTeilmengen = (
+
+		SELECT Ausbuchen.kWarenLagerEingang,Ausbuchen.kLieferscheinPos, CASE WHEN tWarenlagereingang.fAnzahlAktuell &lt; SUM(Ausbuchen.fAnzahl) THEN tWarenlagereingang.fAnzahlAktuell ELSE SUM(Ausbuchen.fAnzahl) END AS fAnzahl,Ausbuchen.cKommentar,@kBenutzer AS kBenutzer, 200 AS kBuchungsart
+		FROM
+		(
+			SELECT WLE.kWarenLagerEingang AS kWarenLagerEingang,NULL  AS kLieferscheinPos,WLE.fAnzahl AS fAnzahl,&#39;Ausbuchen Zuschnitt&#39; AS cKommentar
+			FROM #WarenLagerEingaengeZumAusbuchenEz AS WLE
+			UNION ALL -- Verschnitt ergibt sich aus dem ganzen Ursprungsst&#252;ck minus allen St&#252;cken die verschickt werden und der Restmenge die definiert wurde
+			SELECT Verschnitt.kWarenLagerEingang AS kWarenLagerEingang,NULL  AS kLieferscheinPos, Verschnitt.fAnzahl AS fAnzahl,&#39;Ausbuchen Verschnitt&#39; AS cKommentar
+			FROM
+				(SELECT tWarenLagerEingang.kWarenLagerEingang , MAX(tWarenLagerEingang.fAnzahlAktuell) - MAX(RestStuecke.fAnzahl) AS fAnzahl
+				FROM #WarenLagerEingaengeZumAusbuchenEz AS WLE
+				JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = WLE.kWarenLagerEingang
+				OUTER APPLY (
+							 SELECT SUM(#WarenLagerEingaengeZumAusbuchenEz.fAnzahl) AS fAnzahl 
+							 FROM #WarenLagerEingaengeZumAusbuchenEz
+							 WHERE #WarenLagerEingaengeZumAusbuchenEz.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+				) AS RestStuecke
+				GROUP BY tWarenLagerEingang.kWarenLagerEingang) AS Verschnitt
+			) AS Ausbuchen
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = Ausbuchen.kWarenLagerEingang
+		WHERE Ausbuchen.fAnzahl &gt; 0
+		GROUP BY Ausbuchen.kWarenLagerEingang,Ausbuchen.kLieferscheinPos,Ausbuchen.cKommentar,tWarenlagereingang.fAnzahlAktuell
+		FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+		);
+
+		IF(@xWarenlagerEingaengeZumAusbuchenTeilmengen IS NOT NULL)
+	    BEGIN
+			EXEC subset.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = @xWarenlagerEingaengeZumAusbuchenTeilmengen, @nKeepFactor = 1;
+		END;
+
+		SET CONTEXT_INFO @OldContextInfo;
+
+		COMMIT;
+
+END TRY
+BEGIN CATCH
+
+	SET CONTEXT_INFO @OldContextInfo;
+
+    ROLLBACK TRAN T0;
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    SET @ErrorMessage =  ERROR_MESSAGE();
+
+	
+    INSERT INTO dbo.tLog
+    (dDatum, kBenutzer, cLog,  nTyp,  nVorgang )
+    VALUES
+    (GETDATE(),  @kBenutzer,   @ErrorMessage,   14,  9);
+
+    RAISERROR (@ErrorMessage, 
+		  16,
+		  1);
+END CATCH;</code></pre>
+</body>
+</html>

@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spNachschubVorschlaegeBerechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spNachschubVorschlaegeBerechnen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden Vorschläge für Mindestmengen von Artikeln berechnet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spNachschubVorschlaegeBerechnen] 
+	@kWarenlager INT,				    -- Warenlager der Best&#228;nde   
+	@cArtikel NVARCHAR(500),			    -- Der Filter aus der Maske, hier kann eine Artilnummer stehen
+	@nNurKommPlatz INT,				    -- 1 = Nur artikel auf Kommplatz berechnen , 0 = Alle Artikel
+	@nVerkaufsArtikel INT,			    -- 1 = Nur Artikel die verkauft wurden in den letzten X Tagen
+	@nVerkaufsTage INT,				    -- Die letzen X Tage
+	@cWarengruppenAsList NVARCHAR(MAX),     -- der Filter f&#252;r Warengruppen der Artikel
+	@nTageFuerVorschlagBerechnung INT,     -- Zuk&#252;nftige Tage f&#252;r die Berechnung
+	@nPufferFuerVorschlagBerechnung INT,   -- Prozentualler Puffer der zum endwert addiert wird
+	@nLetzeTageFuerVorschlagBerechnung INT, -- Es wird soweit zur&#252;ckgeschaut f&#252;r die durschnittlischen verkaufsmengen
+	@nNurArtikelMitLagerbestandBetrachten INT -- Es wird nur f&#252;r Artikel mit Lagerbestand berechnet
+
+-- Funktion: Mit dieser Prozedur werden Vorschl&#228;ge f&#252;r Mindestmengen von Artikeln berechnet.
+--		   Die Prozedur ist eng mit ihrer c# Maske verbunden und dient zur Steigerung der performance bei der Berechnung.
+	
+AS
+	DECLARE @cSQLSelect NVARCHAR(500);
+	DECLARE @cSQLFrom NVARCHAR(MAX);
+	DECLARE @cSQLWhere NVARCHAR(MAX);
+	DECLARE @tempVorschlagArtikel  TABLE (kArtikel  INT,fMinMenge DECIMAL(25,13));
+	DECLARE @cSQL NVARCHAR(MAX);
+	DECLARE @cSQLGROUP NVARCHAR(200);
+	DECLARE @kArtikel INT;
+	DECLARE @fMinMenge DECIMAL(25,13);
+	DECLARE @fVerkaufsmengeFuerTage DECIMAL(25,13);
+	DECLARE @cLagerbestandBetrachtenSQLPart NVARCHAR(64);
+
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET ANSI_NULL_DFLT_ON ON;
+	SET ANSI_PADDING ON;
+	SET CONCAT_NULL_YIELDS_NULL ON;
+	SET XACT_ABORT OFF;
+	
+	--
+	-- Anhand der &#252;bergebenen Parameter wird ein dynamisches SQL erstellt, zur Berechnung aller ben&#246;tigten Artikel.
+	--
+
+
+	-- Mit Lagerbestand, Joinen wir auch warenlagereingaenge mit bestand im Lager
+	IF(@nNurArtikelMitLagerbestandBetrachten = 1)
+	BEGIN
+		SET @cLagerbestandBetrachtenSQLPart = &#39; JOIN &#39;;
+		
+	END;
+	ELSE
+	BEGIN
+		SET @cLagerbestandBetrachtenSQLPart = &#39; LEFT JOIN &#39;;
+	END;
+
+	SET @cSQLFrom  =  N&#39; FROM vWMSArtikel AS tartikel WITH(NOLOCK)
+						 &#39;+@cLagerbestandBetrachtenSQLPart+&#39; dbo.tWarenLagerEingang  WITH(NOLOCK) ON dbo.tWarenLagerEingang.kArtikel = tartikel.kArtikel AND dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0
+						 &#39;+@cLagerbestandBetrachtenSQLPart+&#39;  dbo.tWarenLagerPlatz  WITH(NOLOCK) ON dbo.tWarenLagerPlatz.kWarenLagerPlatz = dbo.tWarenLagerEingang.kWarenLagerPlatz AND dbo.tWarenlagerPlatz.kWarenlager = &#39;+ CAST(@kWarenlager AS NVARCHAR) + &#39;
+						 LEFT JOIN dbo.tWarenlagerArtikelOptionen  WITH(NOLOCK) ON dbo.tWarenlagerArtikelOptionen.kArtikel = tartikel.kArtikel AND dbo.tWarenlagerArtikelOptionen.kWarenlager = &#39;+ CAST(@kWarenlager AS NVARCHAR) + &#39; 
+						 LEFT JOIN dbo.tWMSLagerBereichPlatz  WITH(NOLOCK) ON dbo.tWMSLagerBereichPlatz.kWarenLagerPlatz = dbo.tWarenLagerPlatz.kWarenLagerPlatz
+						 LEFT JOIN dbo.tWMSLagerBereich  WITH(NOLOCK) ON dbo.tWMSLagerBereich.kWMSLagerBereich = dbo.tWMSLagerBereichPlatz.kWMSLagerBereich &#39;;	
+     
+	SET @cSQLSelect = N&#39; SELECT tartikel.kArtikel,dbo.tWarenlagerArtikelOptionen.fMindestMenge &#39; ; 
+     
+    
+	IF(@nVerkaufsArtikel &gt; 0)
+	BEGIN
+	SET @cSQLFrom = @cSQLFrom + N&#39;  LEFT JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kArtikel = tartikel.kArtikel 
+								LEFT JOIN dbo.tLieferscheinpos  WITH(NOLOCK) ON dbo.tLieferscheinpos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition
+							    LEFT JOIN dbo.tLieferschein WITH(NOLOCK) ON dbo.tLieferschein.kLieferschein = dbo.tLieferscheinpos.kLieferschein &#39;;
+    END;
+
+    SET @cSQLWhere = N&#39; WHERE tartikel.nIstTeilmengenArtikel = 0 &#39;;
+     
+    IF (LEN(@cArtikel) &gt; 0)
+    BEGIN
+		SET @cSQLWhere = @cSQLWhere + N&#39; AND tartikel.cArtNr LIKE &#39;&#39;&#39; + @cArtikel + &#39;%&#39;&#39;&#39;; 
+    END
+     
+    IF(@nNurKommPlatz = 1)
+    BEGIN
+		SET @cSQLWhere = @cSQLWhere + N&#39; AND dbo.tWMSLagerBereich.nTyp = 1 &#39; ;
+    END
+     
+    IF(@nVerkaufsArtikel = 1)
+    BEGIN
+		SET @cSQLWhere = @cSQLWhere + N&#39; AND datediff(d, 0, dbo.tLieferschein.dErstellt) &gt;= datediff(d, 0, getdate() - &#39;+CAST(@nVerkaufsTage AS NVARCHAR)+ &#39;) &#39; ;
+    END
+     
+    IF(LEN(@cWarengruppenAsList)&gt;0)
+    BEGIN
+		SET @cSQLWhere = @cSQLWhere + N&#39; AND tartikel.kWarengruppe IN (&#39;+ @cWarengruppenAsList +&#39;) &#39; ;
+    END
+     
+    SET @cSQLGROUP = &#39; GROUP BY tartikel.kArtikel,tartikel.cArtNr,dbo.tWarenlagerArtikelOptionen.fMindestMenge,dbo.tWarenlagerArtikelOptionen.fVorschlag&#39; ;
+
+    SET @cSQL = @cSQLSelect + @cSQLFROM + @cSQLWHERE + @cSQLGROUP; 
+    INSERT INTO @tempVorschlagArtikel EXECUTE (@cSQL);
+    
+
+    --
+    -- Cursor &#252;ber alle Artikel f&#252;r die wir die MindestMenge berechnen wollen
+    --
+    DECLARE CUR_ArtikelToCheck CURSOR LOCAL FAST_FORWARD FOR
+    SELECT kArtikel,fMinMenge
+	FROM @tempVorschlagArtikel;
+     
+
+     ---
+     --- Vorschl&#228;ge f&#252;r Mindestmenge brechnen und eintragen
+     ---
+     OPEN CUR_ArtikelToCheck    
+     FETCH NEXT FROM CUR_ArtikelToCheck INTO  @kArtikel,@fMinMenge
+
+     WHILE (@@FETCH_STATUS = 0)
+     BEGIN
+
+		--
+		-- Berechnen wieviel Menge des Artikels verkauft wurde in den letzten Tagen
+		--
+		SELECT @fVerkaufsmengeFuerTage = ISNULL(SUM(ISNULL(dbo.tLieferscheinpos.fAnzahl,0)),0)
+			FROM dbo.tartikel 
+			JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kArtikel = dbo.tartikel.kArtikel 
+			JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = Verkauf.tAuftragPosition.kAuftrag
+			JOIN dbo.tLieferscheinpos  ON dbo.tLieferscheinpos.kBestellPos = Verkauf.tAuftragPosition.kAuftragPosition 
+			JOIN dbo.tLieferschein ON dbo.tLieferschein.kLieferschein = dbo.tLieferscheinpos.kLieferschein
+			WHERE dbo.tartikel.kArtikel = @kArtikel
+			AND tAuftrag.nType != 2
+		    AND DATEDIFF(d, 0, dbo.tLieferschein.dErstellt) &gt;= DATEDIFF(d, 0, GETDATE() - @nLetzeTageFuerVorschlagBerechnung);
+    
+    
+		--
+		-- Vorschlags Mindestmenge f&#252;r die n&#228;chsten &quot;@nTageFuerVorschlagBerechnung&quot; Tage Berechnen, anhand von verkaufsdaten der letzten &quot;@nLetzeTageFuerVorschlagBerechnung&quot; Tage
+		-- Dazu noch den m&#246;glichen Puffer aufaddieren
+		-- Errechneter Wert des Vorschlags wird aufgerundet
+		--
+      
+
+			SET @fVerkaufsmengeFuerTage = (@fVerkaufsmengeFuerTage * @nTageFuerVorschlagBerechnung) / (@nLetzeTageFuerVorschlagBerechnung + 1); -- Da ein Wert von 0 &quot;Heute&quot; bedeutet, mu&#223; der Tag f&#252;r die berechnung addiert werden
+			SET @fVerkaufsmengeFuerTage = @fVerkaufsmengeFuerTage + (@fVerkaufsmengeFuerTage/100) * @nPufferFuerVorschlagBerechnung;
+			SET @fVerkaufsmengeFuerTage = CEILING(@fVerkaufsmengeFuerTage);
+
+		--
+		-- Vorschl&#228;ge eintragen, falls schon vorhanden nur updaten
+		--
+		IF(@fMinMenge IS NULL)
+		BEGIN
+      
+               IF(@fVerkaufsmengeFuerTage &gt; 0) 
+               BEGIN
+               
+			    INSERT INTO dbo.tWarenlagerArtikelOptionen WITH(ROWLOCK)
+			    (
+				    kArtikel,
+				    kWarenlager,
+				    kWarenLagerPlatz,
+				    kWMSLagerBereich,
+				    fMindestMenge,
+				    fVorschlag
+			    )
+			    VALUES
+			    (
+				    @kArtikel,
+				    @kWarenlager, 
+				    NULL, 
+				    NULL, 
+				    0, 
+				    @fVerkaufsmengeFuerTage
+			    );
+			END;
+      
+		END;
+		ELSE
+		BEGIN
+      
+               IF(@fVerkaufsmengeFuerTage = 0 AND @fMinMenge = 0)
+               BEGIN
+               
+                DELETE FROM dbo.tWarenlagerArtikelOptionen WITH(ROWLOCK)
+                WHERE kArtikel = @kArtikel
+			    AND kWarenlager = @kWarenlager;
+			  
+               END;
+               ELSE
+               BEGIN
+                 UPDATE dbo.tWarenlagerArtikelOptionen WITH(ROWLOCK)
+			  	 SET fVorschlag = @fVerkaufsmengeFuerTage 
+				 WHERE kArtikel = @kArtikel
+			     AND kWarenlager = @kWarenlager;
+               END;
+			
+      
+		END;
+    
+		FETCH NEXT FROM CUR_ArtikelToCheck INTO  @kArtikel,@fMinMenge;
+	END;
+
+	CLOSE CUR_ArtikelToCheck;
+	DEALLOCATE CUR_ArtikelToCheck;
+      
+END;</code></pre>
+</body>
+</html>

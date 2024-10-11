@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spProductUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spProductUpdate</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spProductUpdate] 
+	@Daten AS FulfillmentNetwork.TYPE_spProductUpdate READONLY,
+	@kBenutzer AS INT
+AS 
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @ReturnValue INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	-- Context Info
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	SET CONTEXT_INFO 0x696969 -- ContextInfo festlegen
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+		   SET @CreatedTransaction = 1;
+		   BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION Savepoint0;
+		END;
+			IF(OBJECT_ID(&#39;tempdb..#Daten_spProductUpdate&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Daten_spProductUpdate;
+		END
+		CREATE TABLE #Daten_spProductUpdate(kArtikel INT, cJfsku Nvarchar(11));
+		INSERT INTO #Daten_spProductUpdate(kArtikel, cJfsku)
+			SELECT Daten.kArtikel, 
+				CASE WHEN Daten.Jfsku IS NOT NULL OR Daten.xFlag_Jfsku = 1
+					THEN Daten.Jfsku
+					ELSE tArtikel.cJfsku
+				END
+			
+			FROM @Daten AS Daten
+				JOIN dbo.tArtikel ON Daten.kArtikel = tArtikel.kArtikel
+	--
+	-- Hier kommt der Code rein vor dem INSERT/UPDATE/DELETE
+	--
+	IF(OBJECT_ID(&#39;tempdb..#Temp_spProductUpdate&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Temp_spProductUpdate;
+	END
+	CREATE TABLE #Temp_spProductUpdate(InternalId INT IDENTITY(1,1), kKunde INT);
+		-- Update schreiben
+		UPDATE dbo.tArtikel			
+			SET cJfsku = Daten.cJfsku
+			OUTPUT INSERTED.kArtikel INTO #Temp_spProductUpdate 
+			FROM dbo.tArtikel
+			JOIN #Daten_spProductUpdate AS Daten ON Daten.kArtikel = tArtikel.kArtikel;
+
+
+	--
+	-- tArtikelSpeicher aktualisieren
+	--
+
+	DECLARE @AktualisiereArtikelspeicher Artikel.TYPE_spAktualisiereArtikelspeicher;
+	INSERT INTO @AktualisiereArtikelspeicher
+	SELECT DISTINCT #Daten_spProductUpdate.kArtikel FROM #Daten_spProductUpdate 
+	EXEC Artikel.spAktualisiereArtikelspeicher @Artikel = @AktualisiereArtikelspeicher -- TYPE_spAktualisiereArtikelspeicher
+	
+
+	--
+	-- Hier kommt der Code nach dem INSERT/UPDATE/DELETE rein
+	--
+	
+
+	-- R&#252;ckgabe Anzahl der Datens&#228;tze
+	SELECT @ReturnValue = COUNT(1)
+		FROM #Temp_spProductUpdate;
+		IF(@CreatedTransaction = 1)
+		BEGIN
+			COMMIT-- Nur wenn kein Savepoint gesetzt
+		END
+		RETURN @ReturnValue;
+	END TRY
+	BEGIN CATCH
+	-- Dedlock Catch
+		IF(ERROR_NUMBER() = 1205)
+		BEGIN
+			SET @retry = @retry - 1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			IF(@retry = 0)
+			BEGIN
+				SET CONTEXT_INFO 0x0;
+				THROW;
+				RETURN 0;
+			END
+			EXEC dbo.spWaitRandom;
+		END
+		ELSE
+		BEGIN
+			SET @retry = -1;
+			IF(@CreatedTransaction = 1)
+			BEGIN
+			    ROLLBACK TRANSACTION;
+			END
+			ELSE
+			BEGIN
+			    ROLLBACK TRANSACTION Savepoint0;
+			END
+			SET CONTEXT_INFO @OldContextInfo;
+			THROW;
+			RETURN 0;
+		END
+	END CATCH
+END</code></pre>
+</body>
+</html>

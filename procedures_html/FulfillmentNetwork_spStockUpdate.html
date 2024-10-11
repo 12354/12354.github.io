@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spStockUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spStockUpdate</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>--
+-- spStockUpdate
+--
+CREATE PROCEDURE [FulfillmentNetwork].[spStockUpdate] @Daten AS FulfillmentNetwork.TYPE_spStockUpdate READONLY
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET ANSI_NULLS ON;
+    SET XACT_ABORT OFF;
+
+    DECLARE @retry INT;
+    DECLARE @ReturnValue INT;
+    SET @retry = 5;
+    WHILE @retry &gt; 0
+    BEGIN
+        BEGIN TRY
+            BEGIN TRANSACTION;
+
+            DECLARE @stockUpdates TABLE
+            (
+                [kArtikel] [INT] NOT NULL,
+                [kBenutzer] [INT] NOT NULL,                
+				[kBuchungsart] [INT] NOT NULL,
+				[kWarenLagerPlatz] [INT] NOT NULL,
+				[kLieferantenBestellungPos] [INT] NULL,
+                [fAnzahl] DECIMAL(25, 13) NOT NULL,
+                [dCreatedAt] [DATETIMEOFFSET](7) NOT NULL,
+				[cLieferscheinNr] [NVARCHAR](255) NULL,
+                [cOwnerId] [NVARCHAR](10) NULL,
+                [dMHD] DATETIME NULL,
+                [cCharge] [NVARCHAR](255) NULL,
+                [cKommentar] [NVARCHAR](255) NULL,
+				[kWarenLagerEingang] INT NULL,
+				[kSessionId] INT NULL,
+				[nBlocked] TINYINT NOT NULL
+            );
+
+            INSERT INTO @stockUpdates
+            (
+                kArtikel,
+                kBenutzer,
+				kBuchungsart,	
+				kWarenLagerPlatz,
+				kLieferantenBestellungPos,
+                fAnzahl,
+                dCreatedAt, 
+				cLieferscheinNr,
+                cOwnerId,
+                dMHD,
+                cCharge,
+                cKommentar,
+				kWarenLagerEingang,
+				kSessionId,
+				nBlocked
+            )
+            SELECT StockUpdate.kArtikel,
+                   StockUpdate.kBenutzer,
+				   StockUpdate.kBuchungsart,
+				   StockUpdate.kWarenLagerPlatz,
+				   StockUpdate.kLieferantenBestellungPos,
+                   StockUpdate.fAnzahl,
+                   GETUTCDATE() AS dCreatedAt,
+				   StockUpdate.cLieferscheinNr,
+                   Product.cOwnerId,
+                   StockUpdate.dMHD,
+                   StockUpdate.cCharge,
+                   StockUpdate.cKommentar,
+				   StockUpdate.kWarenLagerEingang,
+				   StockUpdate.kSessionId,
+				   CASE WHEN tWarenLagerPlatz.nGesperrt = 1 THEN 1 ELSE 0 END
+            FROM @Daten AS StockUpdate
+                JOIN FulfillmentNetwork.tProductRef AS Product
+                    ON Product.kArtikel = StockUpdate.kArtikel
+				JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = StockUpdate.kWarenLagerPlatz
+			WHERE Product.nType = 2 AND StockUpdate.kBuchungsart NOT IN (130,20); -- 130 = Versandprozess WMS
+
+
+			--
+			-- Wurde von einem gesperrten Platz gepickt (Buchungsart 130 oder 20), muss der geblockte Bestand im FFN vorher 
+			-- auf den verf&#252;gbaren Bestand umgebucht werden
+			--
+			
+			INSERT INTO @stockUpdates
+            (
+                kArtikel,
+                kBenutzer,
+				kBuchungsart,	
+				kWarenLagerPlatz,
+				kLieferantenBestellungPos,
+                fAnzahl,
+                dCreatedAt, 
+				cLieferscheinNr,
+                cOwnerId,
+                dMHD,
+                cCharge,
+                cKommentar,
+				kWarenLagerEingang,
+				kSessionId,
+				nBlocked
+            )
+            SELECT StockUpdate.kArtikel,
+                   StockUpdate.kBenutzer,
+				   30,
+				   StockUpdate.kWarenLagerPlatz,
+				   StockUpdate.kLieferantenBestellungPos,
+                   StockUpdate.fAnzahl,
+                   GETUTCDATE() AS dCreatedAt,
+				   StockUpdate.cLieferscheinNr,
+                   Product.cOwnerId,
+                   StockUpdate.dMHD,
+                   StockUpdate.cCharge,
+                   StockUpdate.cKommentar,
+				   StockUpdate.kWarenLagerEingang,
+				   StockUpdate.kSessionId,
+				   2 AS nBlocked
+            FROM @Daten AS StockUpdate
+                JOIN FulfillmentNetwork.tProductRef AS Product
+                    ON Product.kArtikel = StockUpdate.kArtikel
+				JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = StockUpdate.kWarenLagerPlatz
+                JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = tWarenLagerPlatz.kWarenLager
+            WHERE Product.nType = 2
+              AND StockUpdate.kBuchungsart IN ( 130, 20 )
+              AND dbo.tWarenLager.kQuellLager = 0 --Bei Umlagerungen aus dem Streckenlager wird der geblockte Bestand bereits korrekt umgebucht
+              AND dbo.tWarenLagerPlatz.nGesperrt = 1;
+			--
+			-- Zustandsartikel ohne ProductRef
+			--
+			INSERT INTO @stockUpdates
+            (
+                kArtikel,
+                kBenutzer,
+				kBuchungsart,	
+				kWarenLagerPlatz,
+				kLieferantenBestellungPos,
+                fAnzahl,
+                dCreatedAt, 
+				cLieferscheinNr,
+                cOwnerId,
+                dMHD,
+                cCharge,
+                cKommentar,
+				kWarenLagerEingang,
+				kSessionId,
+				nBlocked
+            )
+            SELECT DISTINCT StockUpdate.kArtikel,
+                   StockUpdate.kBenutzer,
+				   StockUpdate.kBuchungsart,
+				   StockUpdate.kWarenLagerPlatz,
+				   StockUpdate.kLieferantenBestellungPos,
+                   StockUpdate.fAnzahl,
+                   GETUTCDATE() AS dCreatedAt,
+				   StockUpdate.cLieferscheinNr,
+                   MainProduct.cOwnerId,
+                   StockUpdate.dMHD,
+                   StockUpdate.cCharge,
+                   StockUpdate.cKommentar,
+				   StockUpdate.kWarenLagerEingang,
+				   StockUpdate.kSessionId,
+				   CASE WHEN tWarenLagerPlatz.nGesperrt = 1 THEN 1 ELSE 0 END
+            FROM @Daten AS StockUpdate
+				JOIN tArtikel Product ON Product.kArtikel = StockUpdate.kArtikel                
+				JOIN tArtikelZustand ON tArtikelZustand.kZustandArtikel = Product.kArtikel
+				JOIN FulfillmentNetwork.tProductRef AS MainProduct ON MainProduct.kArtikel = tArtikelZustand.kHauptartikel
+			    JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = StockUpdate.kWarenLagerPlatz
+				LEFT JOIN FulfillmentNetwork.tProductRef emptyRef ON emptyRef.kArtikel = StockUpdate.kArtikel
+			WHERE emptyRef.kArtikel IS NULL AND MainProduct.nType = 2 AND StockUpdate.kBuchungsart NOT IN (130,20); -- 130 = Versandprozess WMS
+
+			--
+			-- Hauptartikel ohne ProductRef
+			--
+			INSERT INTO @stockUpdates
+            (
+                kArtikel,
+                kBenutzer,
+				kBuchungsart,	
+				kWarenLagerPlatz,
+				kLieferantenBestellungPos,
+                fAnzahl,
+                dCreatedAt, 
+				cLieferscheinNr,
+                cOwnerId,
+                dMHD,
+                cCharge,
+                cKommentar,
+				kWarenLagerEingang,
+				kSessionId,
+				nBlocked
+            )
+            SELECT DISTINCT StockUpdate.kArtikel,
+                   StockUpdate.kBenutzer,
+				   StockUpdate.kBuchungsart,
+				   StockUpdate.kWarenLagerPlatz,
+				   StockUpdate.kLieferantenBestellungPos,
+                   StockUpdate.fAnzahl,
+                   GETUTCDATE() AS dCreatedAt,
+				   StockUpdate.cLieferscheinNr,
+                   MainProduct.cOwnerId,
+                   StockUpdate.dMHD,
+                   StockUpdate.cCharge,
+                   StockUpdate.cKommentar,
+				   StockUpdate.kWarenLagerEingang,
+				   StockUpdate.kSessionId,
+				   CASE WHEN tWarenLagerPlatz.nGesperrt = 1 THEN 1 ELSE 0 END
+            FROM @Daten AS StockUpdate
+				JOIN tArtikel Product ON Product.kArtikel = StockUpdate.kArtikel                
+				JOIN tArtikelZustand ON tArtikelZustand.kHauptartikel = Product.kArtikel
+				JOIN FulfillmentNetwork.tProductRef AS MainProduct ON MainProduct.kArtikel = tArtikelZustand.kZustandArtikel
+			    JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = StockUpdate.kWarenLagerPlatz
+				LEFT JOIN FulfillmentNetwork.tProductRef emptyRef ON emptyRef.kArtikel = StockUpdate.kArtikel
+			WHERE emptyRef.kArtikel IS NULL AND MainProduct.nType = 2 AND StockUpdate.kBuchungsart NOT IN (130,20); -- 130 = Versandprozess WMS
+
+            -- R&#252;ckgabe Anzahl der Datens&#228;tze
+            SELECT @ReturnValue = COUNT(1)
+            FROM @stockUpdates;
+            
+            IF @ReturnValue &gt; 0
+            BEGIN
+            
+            INSERT INTO FulfillmentNetwork.tStockRef
+            (
+                kArtikel,
+                kBenutzer,
+                kBuchungsart,
+                kWarenLagerPlatz,
+                kLieferantenBestellungPos,
+                fAnzahl,
+                dCreatedAt,
+                nChangeState,
+                cLieferscheinNr,
+                cOwnerId,
+                dMHD,
+                cCharge,
+                cKommentar,
+                kWarenLagerEingang,
+                kSessionId,
+                cFulfillerStockChangeId,
+                nType,
+                nBlocked
+            )
+            SELECT kArtikel,
+                   kBenutzer,
+                   kBuchungsart,
+                   kWarenLagerPlatz,
+                   kLieferantenBestellungPos,
+                   fAnzahl,
+                   dCreatedAt,
+                   0 AS nChangeState,
+                   cLieferscheinNr,
+                   cOwnerId,
+                   dMHD,
+                   cCharge,
+                   cKommentar,
+                   kWarenLagerEingang,
+                   kSessionId,
+                   NEWID() AS cFulfillerStockChangeId,
+                   2 as nType,
+                   nBlocked
+            FROM @stockUpdates;
+            END
+
+			
+           
+			COMMIT
+            RETURN @ReturnValue;
+			
+        END TRY
+        BEGIN CATCH
+            -- Deadlock Catch
+            IF (ERROR_NUMBER() = 1205)
+            BEGIN
+                SET @retry = @retry - 1;
+                ROLLBACK TRANSACTION;
+                IF (@retry = 0)
+                BEGIN
+                    SET CONTEXT_INFO 0x0;
+                    THROW;
+                    RETURN 0;
+                END;
+                EXEC dbo.spWaitRandom;
+            END;
+            ELSE
+            BEGIN
+                SET @retry = -1;
+                ROLLBACK TRANSACTION;
+                THROW;
+                RETURN 0;
+            END;
+        END CATCH;
+    END;
+END;</code></pre>
+</body>
+</html>

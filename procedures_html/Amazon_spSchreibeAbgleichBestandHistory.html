@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spSchreibeAbgleichBestandHistory</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spSchreibeAbgleichBestandHistory</h1>
+    <p><strong>Description:</strong> Im Amazon Abgleich werden über diese Procedure die gesendeten Bestände in eine History-Tabelle geschrieben.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Amazon.spSchreibeAbgleichBestandHistory
+	@nLimit INT,
+	@kUser INT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	MERGE Amazon.tAbgleichBestandHistory
+	USING(SELECT
+			vAbgleichBestandLogging.cSellerSKU,
+			vAbgleichBestandLogging.kUser,
+			vAbgleichBestandLogging.kArtikel,
+			vAbgleichBestandLogging.fVerfuegbar,
+			vAbgleichBestandLogging.fVerfuegbarExtern,
+			vAbgleichBestandLogging.nMaxBestand,
+			vAbgleichBestandLogging.nBestandExtern,
+			vAbgleichBestandLogging.nQuantity,
+			vAbgleichBestandLogging.nPlattform,
+			vAbgleichBestandLogging.nBearbeitungszeitExtern,
+			AbgleichBestandData.nMaxBestand,
+			AbgleichBestandData.cFulfillmentChannel,
+			AbgleichBestandData.dRestockDate,
+			AbgleichBestandData.nBearbeitungsZeitAutomatischErmittelt,
+			GETUTCDATE()
+		FROM Amazon.vAbgleichBestandLogging
+		JOIN
+		(
+			SELECT TOP (@nLimit)
+				vAbgleichBestand.* 
+			FROM Amazon.vAbgleichBestand
+			WHERE vAbgleichBestand.kUser = @kUser
+			ORDER BY vAbgleichBestand.dRestockDate DESC, 
+				vAbgleichBestand.nMaxBestand, 
+				vAbgleichBestand.cSellerSKU
+		) AS AbgleichBestandData ON AbgleichBestandData.cSellerSKU = vAbgleichBestandLogging.cSellerSKU
+			AND AbgleichBestandData.kUser = vAbgleichBestandLogging.kUser
+			AND AbgleichBestandData.nPlattform = vAbgleichBestandLogging.nPlattform) AS SourceData (cSellerSku, kUser, kArtikel, fVerfuegbar, fVerfuegbarExtern, nMaxBestand, nBestandExtern, nQuantity, kPlattform, nBearbeitungszeitExtern, nMaxBestandAbgleich, cFulfillmentChannel, dRestockDate, nBearbeitungsZeitAutomatischErmittelt, dErstellt)
+	ON SourceData.cSellerSku = tAbgleichBestandHistory.cSellerSku
+		AND SourceData.kUser = tAbgleichBestandHistory.kUser
+		AND SourceData.kPlattform = tAbgleichBestandHistory.kPlattform
+	WHEN MATCHED THEN
+		UPDATE SET 
+			tAbgleichBestandHistory.cSellerSku = SourceData.cSellerSku,
+			tAbgleichBestandHistory.kUser = SourceData.kUser,
+			tAbgleichBestandHistory.kArtikel = SourceData.kArtikel,
+			tAbgleichBestandHistory.fVerfuegbar = SourceData.fVerfuegbar,
+			tAbgleichBestandHistory.fVerfuegbarExtern = SourceData.fVerfuegbarExtern,
+			tAbgleichBestandHistory.nMaxBestand = SourceData.nMaxBestand,
+			tAbgleichBestandHistory.nBestandExtern = SourceData.nBestandExtern,
+			tAbgleichBestandHistory.nQuantity = SourceData.nQuantity,
+			tAbgleichBestandHistory.kPlattform = SourceData.kPlattform,
+			tAbgleichBestandHistory.nBearbeitungszeitExtern = SourceData.nBearbeitungszeitExtern,
+			tAbgleichBestandHistory.nMaxBestandAbgleich = SourceData.nMaxBestandAbgleich,
+			tAbgleichBestandHistory.cFulfillmentChannel = SourceData.cFulfillmentChannel,
+			tAbgleichBestandHistory.dRestockDate = SourceData.dRestockDate,
+			tAbgleichBestandHistory.nBearbeitungsZeitAutomatischErmittelt = SourceData.nBearbeitungsZeitAutomatischErmittelt,
+			tAbgleichBestandHistory.dErstellt = SourceData.dErstellt
+	WHEN NOT MATCHED BY TARGET THEN
+		INSERT (cSellerSku, kUser, kArtikel, fVerfuegbar, fVerfuegbarExtern, nMaxBestand, nBestandExtern, nQuantity, kPlattform, nBearbeitungszeitExtern,
+				nMaxBestandAbgleich, cFulfillmentChannel, dRestockDate, nBearbeitungsZeitAutomatischErmittelt, dErstellt)
+			VALUES (SourceData.cSellerSku, SourceData.kUser, SourceData.kArtikel, SourceData.fVerfuegbar, SourceData.fVerfuegbarExtern, SourceData.nMaxBestand, 
+				SourceData.nBestandExtern, SourceData.nQuantity, SourceData.kPlattform, SourceData.nBearbeitungszeitExtern, SourceData.nMaxBestandAbgleich, 
+				SourceData.cFulfillmentChannel, SourceData.dRestockDate, SourceData.nBearbeitungsZeitAutomatischErmittelt, SourceData.dErstellt);
+END;</code></pre>
+</body>
+</html>

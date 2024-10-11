@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kunde.spUpdateKundeSuche</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Kunde.spUpdateKundeSuche</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>--- 
+--- spUpdateKundeSuche
+---
+
+CREATE PROCEDURE [Kunde].[spUpdateKundeSuche]
+@Kunden AS TYPE_spUpdateKundeSuche READONLY
+
+-- Funktion: Mit dieser Prozdur werden die Datensa&#228;tze in tKunde_Suche f&#252;r einen Kunden aktualisiert
+	
+AS
+
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+   
+BEGIN TRY
+
+	IF(OBJECT_ID(&#39;tempdb..#UpdateKundeSuche&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #UpdateKundeSuche;
+	END
+	CREATE TABLE #UpdateKundeSuche(kKunde INT, PRIMARY KEY (kKunde));
+
+	INSERT INTO #UpdateKundeSuche(kKunde)
+	SELECT kKunde FROM @Kunden;
+	
+	DELETE tKunde_suche 
+	FROM tKunde_suche 
+	JOIN #UpdateKundeSuche AS Daten ON Daten.kKunde = tKunde_suche.kKunde;
+	
+	SELECT * INTO #INSERTED FROM
+	 (
+		SELECT tkunde.cKundenNr,tkunde.cEbayName,tadresse.* 
+		FROM tKunde 
+		JOIN tadresse ON tkunde.kKunde = tadresse.kKunde AND tadresse.nTyp = 1 AND tadresse.nstandard = 1
+		JOIN #UpdateKundeSuche AS Daten ON Daten.kKunde = tKunde.kKunde
+	 ) AS kunde
+	 	 	
+ 
+	DECLARE @nID AS TINYINT;
+	DECLARE @cValue AS NVARCHAR( MAX );
+	DECLARE @kKunde AS INT;
+
+  	DECLARE value_cursor CURSOR LOCAL FORWARD_ONLY
+   
+  	    FOR SELECT kKunde , 
+                 RTRIM( LTRIM(  cValue ))AS cValue, nID       
+  		FROM(              			 
+  			 SELECT kKunde , 
+                      isnull(cVorname + &#39; &#39;,&#39;&#39;) +  isnull(cName + &#39; &#39;,&#39;&#39;)  AS cValue,
+  					1 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      cFirma AS cValue,
+  					2 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      cZusatz AS cValue,
+  					3 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      cMail AS cValue,
+  					4 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      cEbayName AS cValue,
+  					5 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      cTel AS cValue,
+  					6 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      REPLACE( REPLACE( REPLACE( REPLACE( cTel , &#39; &#39; , &#39;&#39; ) , &#39;\&#39; , &#39;&#39; ) , &#39;-&#39; , &#39;&#39; ) , &#39;/&#39; , &#39;&#39; )AS cValue,
+  					6 as nID
+               FROM #INSERTED
+               UNION ALL
+               SELECT kKunde , 
+                      cUSTID AS cValue,
+  					7 as nID
+               FROM #INSERTED
+  		   UNION ALL
+               SELECT kKunde , 
+                      cStrasse AS cValue,
+  					8 as nID
+               FROM #INSERTED
+  		   UNION ALL
+               SELECT kKunde , 
+                      cOrt AS cValue,
+  					9 as nID
+               FROM #INSERTED
+  		   UNION ALL
+               SELECT kKunde , 
+                      cPLZ AS cValue,
+  					10 as nID
+               FROM #INSERTED
+			UNION ALL
+			-- 11 = KundenNr kommt weiter unten
+               SELECT kKunde , 
+                      cMobil AS cValue,
+  					12 as nID
+               FROM #INSERTED
+               )AS KundenValues
+          WHERE NOT(cValue IS NULL
+                 OR cValue = &#39;&#39;)
+           -- AND KundenValues.kKunde = @kKundeToDelete;
+  
+  
+  
+  	   CREATE TABLE [#tmptKunde_suche](
+  		   [kKunde] [int] NOT NULL,
+  		   [cValue] [nvarchar](255) NULL,
+  		   [nID] [tinyint] NOT NULL
+  	   ) ON [PRIMARY]
+  
+  	   OPEN value_cursor;
+  	   FETCH value_cursor INTO @kKunde , @cValue, @nID;
+  	   WHILE @@FETCH_STATUS = 0
+  		  BEGIN       
+  			 WITH SplitTable
+  				AS ( SELECT *
+  					FROM SplitString( REPLACE( @cValue , &#39; &#39; , &#39;|&#39; ) , &#39;|&#39; )
+  					    UNION
+  					    SELECT *
+  					FROM SplitString( REPLACE( REPLACE( @cValue , &#39;-&#39; , &#39; &#39; ) , &#39; &#39; , &#39;|&#39; ) , &#39;|&#39; ))
+  				INSERT INTO [#tmptKunde_suche]
+  				SELECT @kKunde AS kKunde, isnull(st.part + &#39; &#39;,&#39;&#39;) + isnull(st2.part + &#39; &#39;, &#39;&#39;) + isnull(st3.part,&#39;&#39;) AS cValue, @nID
+  				FROM
+  					SplitTable AS st
+  					LEFT JOIN SplitTable AS st2 ON NOT st.part = st2.part
+  					LEFT JOIN SplitTable AS st3 ON NOT st3.part = st2.part
+  									  AND NOT st3.part = st.part
+  				    LEFT JOIN SplitTable st4    ON  NOT st4.part = st4.part AND NOT st4.part = st2.part AND NOT st4.part = st.part
+  				    LEFT JOIN SplitTable st5    ON  NOT st5.part = st4.part AND NOT st5.part = st3.part AND NOT st5.part = st2.part AND NOT st5.part = st.part;
+  			
+  			 FETCH value_cursor INTO @kKunde , @cValue, @nID;
+  		  END;
+  	   CLOSE value_cursor;
+  	   DEALLOCATE value_cursor;
+  
+      INSERT INTO dbo.tKunde_suche (kKunde,cValue,nID)
+      SELECT DISTINCT kKunde, LTRIM(RTRIM(cValue)) AS cValue, nID FROM [#tmptKunde_suche] WHERE NOT LTRIM(RTRIM(cValue)) = &#39;&#39;
+      UNION 
+	  -- hier dann 11 = KundenNr
+  	SELECT #INSERTED.kKunde, #INSERTED.cKundenNr, 11 FROM #INSERTED
+  
+  	DROP TABLE [#tmptKunde_suche]
+	DROP TABLE #INSERTED
+
+END TRY
+BEGIN CATCH
+
+    ROLLBACK TRAN T0;
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SET @ErrorMessage =  ERROR_MESSAGE();
+    SET @ErrorSeverity =  ERROR_SEVERITY();
+    SET @ErrorState =  ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, 
+		  @ErrorSeverity,
+		  @ErrorState);
+END CATCH</code></pre>
+</body>
+</html>

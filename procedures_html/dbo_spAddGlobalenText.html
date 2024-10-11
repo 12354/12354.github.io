@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spAddGlobalenText</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spAddGlobalenText</h1>
+    <p><strong>Description:</strong> Die Procedure fügt ein Attribut in einer spezifischen Sprache in das als Standard definiert wird.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spAddGlobalenText]( @cWertVarChar AS NVARCHAR( MAX ) , 
+                                  @cName AS VARCHAR( MAX ) , 
+                                  @cGruppeName AS NVARCHAR( MAX ) , 
+						    @cBeschreibung AS NVARCHAR( MAX ) , 
+                                  @cSprache AS VARCHAR( 255 ))
+AS
+BEGIN
+    DECLARE @kSprache AS INT;
+    --
+    -- Key f&#252;r die &#252;bergebene Sprache suchen und falls nicht in der Wawi verwendet, abbrechen
+    --
+    SELECT @kSprache = tsu.kSprache
+    FROM dbo.tSpracheUsed AS tsu
+    WHERE tsu.cNameDeu = @cSprache;
+    IF @kSprache IS NULL
+        BEGIN
+            RETURN SELECT @kSprache
+        END;
+
+    --
+    -- Ist Attribut @cName in der Gruppe @cGruppeName f&#252;r Bezugstyp GlobaleTexte (2) noch nicht vorhanden neu einf&#252;gen
+    --
+    DECLARE @kAttribut AS int
+    SELECT @kAttribut = Attribut.kAttribut
+    FROM
+         dbo.tAttribut AS Attribut
+         JOIN dbo.tAttributSprache AS AttributSprache ON AttributSprache.kAttribut = Attribut.kAttribut 
+	    AND Attribut.cGruppeName = @cGruppeName 
+	    AND AttributSprache.cName = @cName
+	    AND Attribut.nBezugstyp = 2
+	    AND Attribut.kFeldTyp = 3
+	    AND AttributSprache.kSprache = 0
+
+    IF(@kAttribut IS NULL) 
+    BEGIN
+	   DECLARE @nSortierung AS int
+	   SET @nSortierung = 1
+	   SELECT  @nSortierung = MAX(Attribut.nSortierung) FROM  dbo.tAttribut AS Attribut WHERE Attribut.cGruppeName = @cGruppeName
+
+	   IF(NOT @nSortierung IS NULL)
+	   BEGIN
+		  SET  @nSortierung = @nSortierung + 1;
+	   END
+	   ELSE
+	   BEGIN
+		  SET  @nSortierung = 1;
+	   END
+
+	   INSERT INTO dbo.tAttribut
+	   (
+	       --kAttribut - this column value is auto-generated
+	       dbo.tAttribut.nIstMehrsprachig,
+	       dbo.tAttribut.nIstFreifeld,
+	       dbo.tAttribut.nSortierung,
+	       dbo.tAttribut.cBeschreibung,
+	       dbo.tAttribut.nBezugstyp,
+	       dbo.tAttribut.nAusgabeweg,
+	       dbo.tAttribut.nIstStandard,
+	       dbo.tAttribut.kFeldTyp,
+	       dbo.tAttribut.cRegEx,
+	       dbo.tAttribut.cGruppeName
+	   )
+	   VALUES
+	   (
+	       -- kAttribut - int
+	       1, -- nIstMehrsprachig - tinyint
+	       0, -- nIstFreifeld - tinyint
+	       @nSortierung, -- nSortierung - int
+	       @cBeschreibung, -- cBeschreibung - varchar
+	       2, -- nBezugstyp - tinyint
+	       0, -- nAusgabeweg - tinyint
+	       0, -- nIstStandard - tinyint
+	       3, -- kFeldTyp - int
+	       N&#39;&#39;, -- cRegEx - nvarchar
+	      @cGruppeName -- cGruppeName - nvarchar
+	   )
+	   SET @kAttribut = @@IDENTITY;
+	   IF((SELECT COUNT(*) FROM [tAttributSprache] AttributSprache WHERE AttributSprache.kAttribut = @kAttribut AND AttributSprache.kSprache = 0) = 0)
+	   BEGIN
+		  INSERT INTO dbo.tAttributSprache(
+			 dbo.tAttributSprache.kAttribut,
+			 dbo.tAttributSprache.kSprache,
+			 dbo.tAttributSprache.cName			 
+		  ) VALUES 
+		  (
+			 @kAttribut,
+			 0,
+			 @cName
+		  )
+	   END 
+
+	   IF((SELECT COUNT(*) FROM tWawiAttribut WHERE kAttribut = @kAttribut) = 0 )
+	   BEGIN
+		  INSERT INTO tWawiAttribut 
+		  (  kAttribut )
+		  VALUES
+		  ( @kAttribut )
+
+		  DECLARE @kWawiAttribut AS INT;
+		  SET @kWawiAttribut = @@IDENTITY;
+		  INSERT INTO dbo.tWawiAttributSprache
+(
+    dbo.tWawiAttributSprache.kWawiAttribut,
+    dbo.tWawiAttributSprache.kSprache,
+    dbo.tWawiAttributSprache.cWertVarchar,
+    dbo.tWawiAttributSprache.nWertInt,
+    dbo.tWawiAttributSprache.fWertDecimal,
+    dbo.tWawiAttributSprache.dWertDateTime
+)
+VALUES
+(
+    @kWawiAttribut, -- kWawiAttribut - int
+    @kSprache, -- kSprache - int
+    @cWertVarchar, -- cWertVarchar - nvarchar
+    0, -- nWertInt - int
+    0, -- fWertDecimal - decimal
+    NULL -- dWertDateTime - datetime
+)
+	   END
+    END      
+END</code></pre>
+</body>
+</html>

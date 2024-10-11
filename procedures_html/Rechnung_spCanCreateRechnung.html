@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnung.spCanCreateRechnung</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Rechnung.spCanCreateRechnung</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Rechnung].[spCanCreateRechnung]
+	@kAuftragPositionen Rechnung.TYPE_spCanCreateRechnung READONLY,
+	@nNurGelieferteMenge BIT
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET XACT_ABORT OFF;
+
+	IF(OBJECT_ID(&#39;tempdb..#CanCreateRechnungResult&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #CanCreateRechnungResult;
+	END
+
+	CREATE TABLE #CanCreateRechnungResult
+	(
+		kAuftragPosition INT NULL,
+		nError INT NOT NULL,
+		cSonstiges VARCHAR(255) NULL
+	);
+
+	IF(OBJECT_ID(&#39;tempdb..#AuftragPositionen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #AuftragPositionen;
+	END
+
+	CREATE TABLE #AuftragPositionen
+	(
+		kAuftragPosition INT PRIMARY KEY NOT NULL,
+		fAnzahl	DECIMAL(25, 13)	NULL
+	);
+
+	INSERT INTO #AuftragPositionen(kAuftragPosition, fAnzahl)
+	SELECT [@kAuftragPositionen].kAuftragPosition,
+		   [@kAuftragPositionen].fAnzahl
+	FROM @kAuftragPositionen
+	WHERE [@kAuftragPositionen].kAuftragPosition IS NOT NULL
+
+	-- KeinePosition
+	IF NOT EXISTS(SELECT * FROM #AuftragPositionen)
+	BEGIN
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES (NULL, 24);
+
+		SELECT * FROM #CanCreateRechnungResult;
+
+		RETURN;
+	END;
+
+	-- Auftrag im Status &quot;Pending&quot;
+	IF EXISTS
+	(
+		SELECT * FROM #AuftragPositionen
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragPosition.kAuftrag
+		WHERE tAuftrag.nPending = 1
+	)
+	BEGIN
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES (NULL, 34);
+
+		SELECT * FROM #CanCreateRechnungResult;
+
+		RETURN;
+	END
+
+	-- KeineGelieferteMenge
+	IF @nNurGelieferteMenge = 1
+		AND NOT EXISTS
+		(
+			SELECT 1
+			FROM #AuftragPositionen AS AuftragPositionen
+			JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = AuftragPositionen.kAuftragPosition
+			WHERE tAuftragPosition.nType IN (0, 1, 10, 11, 15, 17, 18, 19, 20)
+		)
+	BEGIN
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES (NULL, 30);
+	END
+
+	IF((SELECT COUNT(DISTINCT tAuftragPosition.kAuftrag)
+		FROM Verkauf.tAuftragPosition
+		JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) &gt; 1)
+	BEGIN
+		--Plattform
+		IF((SELECT COUNT(DISTINCT tAuftrag.kPlattform)
+			FROM Verkauf.tAuftrag
+			JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+				  FROM Verkauf.tAuftragPosition
+				  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 1);
+
+		--Lieferadresse
+		IF((SELECT COUNT(*)
+			FROM (SELECT DISTINCT
+						tAuftragAdresse.kKunde,
+						tAuftragAdresse.cFirma,
+						tAuftragAdresse.cAnrede,
+						tAuftragAdresse.cTitel,
+						tAuftragAdresse.cVorname,
+						tAuftragAdresse.cName,
+						tAuftragAdresse.cStrasse,
+						tAuftragAdresse.cPLZ,
+						tAuftragAdresse.cOrt,
+						tAuftragAdresse.cLand,
+						tAuftragAdresse.cTel,
+						tAuftragAdresse.cZusatz,
+						tAuftragAdresse.cAdressZusatz,
+						tAuftragAdresse.cPostID,
+						tAuftragAdresse.cMobil,
+						tAuftragAdresse.cMail,
+						tAuftragAdresse.cFax,
+						tAuftragAdresse.cBundesland,
+						tAuftragAdresse.cISO,
+						tAuftragAdresse.nZolldokumenteErforderlich
+				  FROM Verkauf.vAuftragLieferadresse AS tAuftragAdresse
+				  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+						FROM Verkauf.tAuftragPosition
+						JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragAdresse.kAuftrag) AS Zahlungsinfo) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 2);
+
+		--Rechnungsadresse
+		IF((SELECT COUNT(*)
+			FROM (SELECT DISTINCT
+						tAuftragAdresse.kKunde,
+						tAuftragAdresse.cFirma,
+						tAuftragAdresse.cAnrede,
+						tAuftragAdresse.cTitel,
+						tAuftragAdresse.cVorname,
+						tAuftragAdresse.cName,
+						tAuftragAdresse.cStrasse,
+						tAuftragAdresse.cPLZ,
+						tAuftragAdresse.cOrt,
+						tAuftragAdresse.cLand,
+						tAuftragAdresse.cTel,
+						tAuftragAdresse.cZusatz,
+						tAuftragAdresse.cAdressZusatz,
+						tAuftragAdresse.cPostID,
+						tAuftragAdresse.cMobil,
+						tAuftragAdresse.cMail,
+						tAuftragAdresse.cFax,
+						tAuftragAdresse.cBundesland,
+						tAuftragAdresse.cISO,
+						tAuftragAdresse.nZolldokumenteErforderlich
+				  FROM Verkauf.vAuftragRechnungsadresse AS tAuftragAdresse
+				  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+						FROM Verkauf.tAuftragPosition
+						JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragAdresse.kAuftrag) AS Zahlungsinfo) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 3);
+
+		--Kunde
+		IF((SELECT COUNT(DISTINCT tAuftrag.kKunde)
+			FROM Verkauf.tAuftrag
+			JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+				  FROM Verkauf.tAuftragPosition
+				  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 4);
+
+		--Waehrungsfaktoren
+		IF((SELECT COUNT(DISTINCT tAuftrag.fFaktor)
+			FROM Verkauf.tAuftrag
+			JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+				  FROM Verkauf.tAuftragPosition
+				  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 5);
+
+		--Steuereinstellungen
+		IF((SELECT COUNT(*)
+			FROM (SELECT DISTINCT
+						tAuftrag.nSteuereinstellung,
+						tAuftrag.cVersandlandISO,
+						tAuftrag.cVersandlandBundeslandKuerzel,
+						tAuftrag.cVersandlandWaehrung,
+						tAuftrag.fVersandlandWaehrungFaktor
+				  FROM Verkauf.tAuftrag
+				  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+						FROM Verkauf.tAuftragPosition
+						JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) AS Zahlungsinfo) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 6);
+
+		--Zahlungart
+		IF((SELECT COUNT(DISTINCT tAuftrag.kZahlungsart)
+			FROM Verkauf.tAuftrag
+			JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+				  FROM Verkauf.tAuftragPosition
+				  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 7);
+
+		--Skonto
+		IF((SELECT COUNT(*)
+			FROM (SELECT DISTINCT
+						tAuftrag.fSkonto,
+						tAuftrag.nSkontoTage
+				  FROM Verkauf.tAuftrag
+				  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+						FROM Verkauf.tAuftragPosition
+						JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) AS Zahlungsinfo) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 8);
+
+		--Zahlungsinfos
+		IF((SELECT COUNT(*)
+			FROM (SELECT DISTINCT
+						tAuftragZahlungsinfo.cKontoInhaber,
+						tAuftragZahlungsinfo.cBankname,
+						tAuftragZahlungsinfo.cIBAN,
+						tAuftragZahlungsinfo.cBIC,
+						tAuftragZahlungsinfo.cPuiZahlungsinfo,
+						tAuftragZahlungsinfo.nTyp,
+						tAuftragZahlungsinfo.cMandatsReferenz,
+						tAuftragZahlungsinfo.cVerwendungszweck,
+						tAuftragZahlungsinfo.dFaelligkeitsdatum,
+						tAuftragZahlungsinfo.cGlaeubigerID,
+						tAuftragZahlungsinfo.cEndToEndID,
+						tAuftragZahlungsinfo.cReferenzEmail
+				  FROM Verkauf.tAuftragZahlungsinfo
+				  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+						FROM Verkauf.tAuftragPosition
+						JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragZahlungsinfo.kAuftrag) AS Zahlungsinfo) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 9);
+
+		--Anmerkung
+		IF((SELECT COUNT(DISTINCT tAuftragText.cAnmerkung)
+		FROM Verkauf.tAuftragText
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragText.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 10);
+
+		--Drucktext
+		IF((SELECT COUNT(DISTINCT tAuftragText.cDrucktext)
+		FROM Verkauf.tAuftragText
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragText.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 11);
+
+		--Hinweis
+		IF((SELECT COUNT(DISTINCT tAuftragText.cHinweis)
+		FROM Verkauf.tAuftragText
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragText.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 12);
+
+		--Shop
+		IF((SELECT COUNT(DISTINCT tAuftrag.kShop)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 13);
+
+		--FirmaHistory
+		IF((SELECT COUNT(DISTINCT tAuftrag.kFirmaHistory)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 14);
+
+		--Sprache
+		IF((SELECT COUNT(DISTINCT tAuftrag.kSprache)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 15);
+
+		--VersandArt
+		IF((SELECT COUNT(DISTINCT tAuftrag.kVersandArt)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 16);
+
+		--ZahlungszielTage
+		IF((SELECT COUNT(DISTINCT tAuftrag.nZahlungszielTage)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 17);
+
+		--FulfillmentLieferant
+		IF((SELECT COUNT(DISTINCT tAuftrag.kFulfillmentLieferant)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 19);
+
+		--UstId
+		IF((SELECT COUNT(DISTINCT tAuftrag.cUstId)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 20);
+
+		--ArtikelKarton
+		IF((SELECT COUNT(DISTINCT tAuftrag.kArtikelKarton)
+		FROM Verkauf.tAuftrag
+		JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+			  FROM Verkauf.tAuftragPosition
+			  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag) &gt; 1)
+			INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 22);
+	END;
+
+	-- Lieferadresse fehlt
+	IF EXISTS
+	(
+		SELECT * FROM #AuftragPositionen
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+		LEFT JOIN Verkauf.vAuftragLieferadresse AS Lieferadresse ON Lieferadresse.kAuftrag = tAuftragPosition.kAuftrag
+		WHERE Lieferadresse.kAuftrag IS NULL
+	)
+	BEGIN
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES (NULL, 35);
+	END
+
+	-- Rechnungsadresse fehlt
+	IF EXISTS
+	(
+		SELECT * FROM #AuftragPositionen
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+		LEFT JOIN Verkauf.vAuftragRechnungsadresse AS Rechnungsadresse ON Rechnungsadresse.kAuftrag = tAuftragPosition.kAuftrag
+		WHERE Rechnungsadresse.kAuftrag IS NULL
+	)
+	BEGIN
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES (NULL, 36);
+	END
+
+	-- Auftragstatus fehlerhaft
+	IF EXISTS
+	(
+		SELECT * FROM #AuftragPositionen
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+		JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragPosition.kAuftrag
+		WHERE tAuftrag.nAuftragStatus &lt;&gt; 0
+	)
+	BEGIN
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES (NULL, 37);
+	END
+
+	--Archiv
+	IF(EXISTS(SELECT 1
+			  FROM Verkauf.tAuftrag
+			  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+					FROM Verkauf.tAuftragPosition
+					JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag
+			  WHERE tAuftrag.nArchiv = 1))
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 21);
+
+	--RechnungStatus
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT NULL, 26, tAuftrag.cAuftragsNr
+	FROM Verkauf.tAuftragEckdaten
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = tAuftragEckdaten.kAuftrag
+	JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+		  FROM Verkauf.tAuftragPosition
+		  JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftragEckdaten.kAuftrag
+	WHERE tAuftragEckdaten.nRechnungStatus = 2;
+
+	--Teilrechnung ReadOnly Auftrag
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT NULL, 28, tAuftrag.cAuftragsNr
+	FROM
+	(
+		SELECT tAuftragPosition.kAuftrag, COUNT(tAuftragPosition.kAuftragPosition) AS fAnzahlPositionen, SUM(tAuftragPosition.fAnzahl) AS fSummeAnzahl
+		FROM Verkauf.tAuftragPosition
+		WHERE tAuftragPosition.nType != 15
+		GROUP BY tAuftragPosition.kAuftrag
+	) AS SummenAuftrag
+	JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = SummenAuftrag.kAuftrag
+	JOIN
+	(
+		SELECT tAuftragPosition.kAuftrag, COUNT(AuftragPositionen.kAuftragPosition) AS fAnzahlPositionen, SUM(AuftragPositionen.fAnzahl) AS fSummeAnzahl
+		FROM Verkauf.tAuftragPosition
+		JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition
+		WHERE tAuftragPosition.nType != 15
+		GROUP BY tAuftragPosition.kAuftrag
+	) SummenPositionen ON SummenPositionen.kAuftrag = SummenAuftrag.kAuftrag
+	WHERE tAuftrag.nIstReadOnly &gt; 0 AND (SummenAuftrag.fAnzahlPositionen != SummenPositionen.fAnzahlPositionen OR SummenAuftrag.fSummeAnzahl != SummenPositionen.fSummeAnzahl);
+
+	--AuftragsType
+	IF(EXISTS(SELECT 1
+			  FROM Verkauf.tAuftrag
+			  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+					FROM Verkauf.tAuftragPosition
+					JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag
+			  WHERE tAuftrag.nType != 1))
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 23);
+
+	--Storno
+	IF(EXISTS(SELECT 1
+			  FROM Verkauf.tAuftrag
+			  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+					FROM Verkauf.tAuftragPosition
+					JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag
+			  WHERE tAuftrag.nStorno = 1))
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 18);
+
+	--Extern abgerechnet
+	IF(EXISTS(SELECT 1
+			  FROM Verkauf.tAuftrag
+			  JOIN (SELECT DISTINCT tAuftragPosition.kAuftrag
+					FROM Verkauf.tAuftragPosition
+					JOIN #AuftragPositionen AS AuftragPositionen ON AuftragPositionen.kAuftragPosition = tAuftragPosition.kAuftragPosition) AuftragKeys ON AuftragKeys.kAuftrag = tAuftrag.kAuftrag
+			  WHERE tAuftrag.nIstExterneRechnung &gt; 0))
+		INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError) VALUES(NULL, 33);
+
+	--UnzulassigeMengePosition
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT tAuftragPosition.kAuftragPosition, 25, tAuftragPosition.cName
+	FROM #AuftragPositionen
+	JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+	JOIN Verkauf.tAuftragPositionEckdaten ON tAuftragPositionEckdaten.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+	WHERE #AuftragPositionen.fAnzahl &gt; dbo.POSITIV(tAuftragPosition.fAnzahl - ISNULL(tAuftragPositionEckdaten.fAnzahlAufRechnung, 0));
+
+		--Unzulaessige Konfiguration
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT DISTINCT KonfiPos.kAuftragPosition, 31, KonfiPos.cName
+	FROM (SELECT DISTINCT tAuftragPosition.kKonfigVater
+		FROM #AuftragPositionen
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+		WHERE tAuftragPosition.kKonfigVater &gt; 0) AS Konfigurationen
+	JOIN Verkauf.tAuftragPosition AS KonfiPos ON KonfiPos.kKonfigVater = Konfigurationen.kKonfigVater
+	LEFT JOIN @kAuftragPositionen AS Pos ON Pos.kAuftragPosition = KonfiPos.kAuftragPosition
+	WHERE Pos.kAuftragPosition IS NULL
+
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT TOP 1
+		KindPos.kAuftragPosition,
+		31,
+		KindPos.cName
+	FROM #AuftragPositionen AS Pos
+	JOIN Verkauf.tAuftragPosition AS KindPos ON KindPos.kAuftragPosition = Pos.kAuftragPosition AND KindPos.kKonfigVater &gt; 0 AND KindPos.kAuftragPosition != KindPos.kKonfigVater
+	JOIN Verkauf.tAuftragPosition AS VaterPos ON VaterPos.kAuftragPosition = KindPos.kKonfigVater
+	JOIN #AuftragPositionen AS PosVater ON PosVater.kAuftragPosition = VaterPos.kAuftragPosition
+	WHERE ROUND(ISNULL(KindPos.fAnzahl / NULLIF(VaterPos.fAnzahl, 0) * PosVater.fAnzahl, 0), 4) != ROUND(Pos.fAnzahl, 4)
+
+	--Unzul&#228;ssige St&#252;ckliste
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT DISTINCT StuecklistenPositionen.kAuftragPosition, 32, StuecklistenPositionen.cName
+	FROM (SELECT DISTINCT tAuftragPosition.kAuftragStueckliste
+		FROM #AuftragPositionen
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = #AuftragPositionen.kAuftragPosition
+		WHERE tAuftragPosition.kAuftragStueckliste &gt; 0) AS Stuecklisten
+	JOIN Verkauf.tAuftragPosition AS StuecklistenPositionen ON StuecklistenPositionen.kAuftragStueckliste = Stuecklisten.kAuftragStueckliste
+	LEFT JOIN @kAuftragPositionen AS Pos ON Pos.kAuftragPosition = StuecklistenPositionen.kAuftragPosition
+	WHERE Pos.kAuftragPosition IS NULL
+
+	INSERT INTO #CanCreateRechnungResult (kAuftragPosition, nError, cSonstiges)
+	SELECT TOP 1
+		KindPos.kAuftragPosition,
+		32,
+		KindPos.cName
+	FROM #AuftragPositionen AS Pos
+	JOIN Verkauf.tAuftragPosition AS KindPos ON KindPos.kAuftragPosition = Pos.kAuftragPosition AND KindPos.kAuftragStueckliste &gt; 0 AND KindPos.kAuftragPosition != KindPos.kAuftragStueckliste
+	JOIN Verkauf.tAuftragPosition AS VaterPos ON VaterPos.kAuftragPosition = KindPos.kAuftragStueckliste
+	JOIN #AuftragPositionen AS PosVater ON PosVater.kAuftragPosition = VaterPos.kAuftragPosition
+	WHERE ROUND(ISNULL(KindPos.fAnzahl / NULLIF(VaterPos.fAnzahl, 0) * PosVater.fAnzahl, 0), 4) != ROUND(Pos.fAnzahl, 4)
+
+	SELECT * FROM #CanCreateRechnungResult;
+END;</code></pre>
+</body>
+</html>

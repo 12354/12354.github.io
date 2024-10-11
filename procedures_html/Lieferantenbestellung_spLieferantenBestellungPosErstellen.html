@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lieferantenbestellung.spLieferantenBestellungPosErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Lieferantenbestellung.spLieferantenBestellungPosErstellen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tLieferantenbestellungPos erstellt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Lieferantenbestellung].[spLieferantenBestellungPosErstellen]
+	@kLieferantenbestellung INT,
+	@xLieferantenbestellungPos XML = NULL, 
+	/* @xLieferantenbestellungPos
+		&lt;LieferantenbestellungPos&gt;
+			&lt;kArtikel&gt;
+			&lt;cArtNr&gt;
+			&lt;cLieferantenArtNr&gt;
+			&lt;cName&gt;
+			&lt;cLieferantenBezeichnung&gt;
+			&lt;fUST&gt;
+			&lt;fMenge&gt;
+			&lt;cHinweis&gt;
+			&lt;fEKNetto&gt;
+			&lt;nPosTyp&gt;
+			&lt;cNameLieeferant&gt;
+			&lt;nLiefertage&gt;
+			&lt;dLieferdatum&gt;
+			&lt;nSort&gt;
+			&lt;kLieferscheinPos&gt;
+			&lt;cVPEEinheit&gt;
+			&lt;nVPEMenge&gt;
+		&lt;/LieferantenbestellungPos&gt;
+	*/
+	@nStatus INT = NULL,
+	@kArtikel INT = NULL,
+	@cArtNr NVARCHAR(255) = NULL,
+	@cLieferantenArtNr NVARCHAR(255) = NULL,
+	@cName NVARCHAR(255) = NULL,
+	@cLieferantenBezeichnung NVARCHAR(255) = NULL,
+	@fUST DECIMAL(25,13) = NULL,
+	@fMenge DECIMAL(25,13) = NULL,
+	@cHinweis NVARCHAR(2000) = NULL,
+	@fEKNetto DECIMAL(25,13) = NULL,
+	@nPosTyp INT = NULL,
+	@cNameLieferant NVARCHAR(255) = NULL,
+	@nLiefertage INT = NULL,
+	@dLieferdatum DATETIME = NULL,
+	@nSort INT = NULL,
+	@kLieferscheinPos INT = NULL,
+	@cVPEEinheit NVARCHAR(255) = NULL,
+	@nVPEMenge DECIMAL(25,13) = NULL,
+	@kLieferantenbestellungPos INT OUT 
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5124;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			IF(OBJECT_ID(&#39;tempdb..#LieferantenbestellungPos&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #LieferantenbestellungPos;
+			END
+			CREATE TABLE #LieferantenbestellungPos(
+					kLieferantenBestellung INT,
+					kArtikel INT,
+					cArtNr NVARCHAR(255),
+					cLieferantenArtNr NVARCHAR(255),
+					cName NVARCHAR(255),
+					cLieferantenBezeichnung NVARCHAR(255),
+					fUST DECIMAL(25,13),
+					fMenge DECIMAL(25,13),
+					cHinweis NVARCHAR(2000),
+					fEKNetto DECIMAL(25,13),
+					nPosTyp INT,
+					cNameLieferant NVARCHAR(255),
+					nLiefertage INT,
+					dLieferdatum DATETIME,
+					nSort INT,
+					kLieferscheinPos INT,
+					cVPEEinheit NVARCHAR(255),
+					nVPEMenge DECIMAL(25,13)
+				);
+			IF(@xLieferantenbestellungPos IS NOT NULL)
+			BEGIN
+				INSERT INTO #LieferantenbestellungPos(
+							kLieferantenBestellung, kArtikel, cArtNr, cLieferantenArtNr, cName, cLieferantenBezeichnung, fUST,
+							fMenge, cHinweis, fEKNetto, nPosTyp, cNameLieferant, nLiefertage, dLieferdatum, nSort, kLieferscheinPos,
+							cVPEEinheit, nVPEMenge)
+					SELECT	@kLieferantenbestellung,
+							LieferantenBestellungPos.ID.value(&#39;kArtikel[1]&#39;, &#39;INT&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cArtNr[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cLieferantenArtNr[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cName[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cLieferantenBezeichnung[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;fUST[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;fMenge[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(2000)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;fEKNetto[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;nPosTyp[1]&#39;, &#39;INT&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cNameLieferant[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;nLiefertage[1]&#39;, &#39;INT&#39;),
+							LieferantenBestellungPos.ID.value(&#39;dLieferdatum[1]&#39;, &#39;DATETIME&#39;),
+							LieferantenBestellungPos.ID.value(&#39;nSort[1]&#39;, &#39;INT&#39;),
+							LieferantenBestellungPos.ID.value(&#39;kLieferscheinPos[1]&#39;, &#39;INT&#39;),
+							LieferantenBestellungPos.ID.value(&#39;cVPEEinheit[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							LieferantenBestellungPos.ID.value(&#39;nVPEMenge[1]&#39;, &#39;DECIMAL(25,13)&#39;)
+						FROM @xLieferantenbestellungPos.nodes(&#39;/LieferantenbestellungPos&#39;) AS LieferantenBestellungPos(ID);
+			END
+			ELSE
+			BEGIN
+				INSERT INTO #LieferantenbestellungPos(
+							kLieferantenBestellung, kArtikel, cArtNr, cLieferantenArtNr, cName, cLieferantenBezeichnung, fUST,
+							fMenge, cHinweis, fEKNetto, nPosTyp, cNameLieferant, nLiefertage, dLieferdatum, nSort, kLieferscheinPos,
+							cVPEEinheit, nVPEMenge)
+					VALUES(@kLieferantenbestellung, @kArtikel, @cArtNr, @cLieferantenArtNr, @cName, @cLieferantenBezeichnung, @fUST,
+							@fMenge, @cHinweis, @fEKNetto, @nPosTyp, @cNameLieferant, @nLiefertage, @dLieferdatum, @nSort, @kLieferscheinPos,
+							@cVPEEinheit, @nVPEMenge);
+			END
+			IF(@nStatus IS NULL)
+			BEGIN
+				SELECT @nStatus = nStatus
+					FROM dbo.tLieferantenBestellung 
+					WHERE dbo.tLieferantenBestellung.kLieferantenBestellung = @kLieferantenbestellung;
+			END
+			INSERT INTO dbo.tLieferantenBestellungPos(	    
+					kLieferantenBestellung, kArtikel, cArtNr, cLieferantenArtNr, cName, cLieferantenBezeichnung, fUST, fMenge,
+					cHinweis, fEKNetto, nPosTyp, cNameLieferant, nLiefertage, dLieferdatum, nSort, kLieferscheinPos,
+					fMengeGeliefert, cVPEEinheit, nVPEMenge, fAnzahlOffen)
+				SELECT	#LieferantenbestellungPos.kLieferantenBestellung,
+						#LieferantenbestellungPos.kArtikel,
+						#LieferantenbestellungPos.cArtNr,
+						#LieferantenbestellungPos.cLieferantenArtNr,
+						#LieferantenbestellungPos.cName,
+						#LieferantenbestellungPos.cLieferantenBezeichnung,
+						#LieferantenbestellungPos.fUST,
+						#LieferantenbestellungPos.fMenge,
+						#LieferantenbestellungPos.cHinweis,
+						#LieferantenbestellungPos.fEKNetto,
+						#LieferantenbestellungPos.nPosTyp,
+						#LieferantenbestellungPos.cNameLieferant,
+						#LieferantenbestellungPos.nLiefertage,
+						#LieferantenbestellungPos.dLieferdatum,
+						#LieferantenbestellungPos.nSort,
+						ISNULL(#LieferantenbestellungPos.kLieferscheinPos,0),
+						0,
+						#LieferantenbestellungPos.cVPEEinheit,
+						#LieferantenbestellungPos.nVPEMenge,
+						CASE 
+							WHEN #LieferantenbestellungPos.fMenge &lt; 0.0 
+								THEN 0.0
+							ELSE #LieferantenbestellungPos.fMenge
+						END
+					FROM #LieferantenbestellungPos;
+
+		     SET @kLieferantenbestellungPos = scope_identity();
+
+			IF(@nStatus &gt; 5 AND @nStatus &lt; 50)
+			BEGIN
+				UPDATE dbo.tArtikelShop
+					SET cInet = &#39;Y&#39;
+					FROM dbo.tArtikelShop 
+					JOIN #LieferantenbestellungPos ON #LieferantenbestellungPos.kArtikel = dbo.tArtikelShop.kArtikel;	
+				DECLARE @xArtikel AS XML
+				SET @xArtikel = (
+					SELECT #LieferantenbestellungPos.kArtikel 
+						FROM #LieferantenbestellungPos 
+					FOR XML PATH(&#39;Artikel&#39;), TYPE
+				)
+				UPDATE dbo.tLagerbestand
+					SET fZulauf = fZulauf + Menge.fMenge
+					FROM dbo.tlagerbestand 
+					JOIN (
+						SELECT #LieferantenbestellungPos.kArtikel,
+								SUM(#LieferantenbestellungPos.fMenge) AS fMenge
+							FROM #LieferantenbestellungPos 
+							GROUP BY #LieferantenbestellungPos.kArtikel
+					)AS Menge ON Menge.kArtikel = dbo.tlagerbestand.kArtikel
+			END
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+
+		COMMIT
+
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

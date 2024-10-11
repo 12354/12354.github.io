@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spBestandAktualisieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spBestandAktualisieren</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure kann der Bestand eines Artikels neu berechnet werden. </p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Maintenance].[spBestandAktualisieren]
+	@kArtikel INT = NULL,
+	@cArtNr NVARCHAR(100) = NULL
+AS
+BEGIN
+	IF(OBJECT_ID(&#39;tempdb..#FehlendeEintraege&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #FehlendeEintraege;
+	END
+	CREATE TABLE #FehlendeEintraege(kArtikel INT, kWarenlager INT);
+	DECLARE @lagerbestandProLager AS dbo.TYPE_spUpdateLagerbestandProLager;
+	DECLARE @lagerbestand AS dbo.TYPE_spUpdateLagerbestand;
+	IF(@kArtikel IS NOT NULL)
+	BEGIN
+		INSERT INTO @lagerbestandProLager(kArtikel, kWarenlager)
+			SELECT @kArtikel, kWarenLager
+				FROM dbo.tWarenLager;
+		INSERT INTO @lagerbestand(kArtikel)
+			VALUES (@kArtikel);
+	END
+	ELSE IF(@cArtNr IS NOT NULL)
+	BEGIN
+		INSERT INTO @lagerbestandProLager(kArtikel, kWarenlager)
+			SELECT tArtikel.kArtikel, kWarenlager
+				FROM dbo.tArtikel
+				CROSS JOIN dbo.tWarenLager
+				WHERE tArtikel.cArtNr = @cArtNr;
+		INSERT INTO @lagerbestand(kArtikel)
+			SELECT tArtikel.kArtikel
+				FROM dbo.tArtikel
+				WHERE tArtikel.cArtNr = @cArtNr;
+	END
+	ELSE
+	BEGIN
+		INSERT INTO @lagerbestandProLager(kArtikel, kWarenlager)
+			SELECT kArtikel, kWarenlager
+				FROM Maintenance.vLagerbestandProLager;
+		INSERT INTO @lagerbestand(kArtikel)
+			SELECT kArtikel
+				FROM Maintenance.vBestand;
+	END
+	IF(EXISTS(SELECT * FROM @lagerbestandProLager))
+	BEGIN
+		INSERT INTO dbo.tlagerbestandProLagerLagerartikel(kArtikel, kWarenlager, fBestand)
+			SELECT [@lagerbestandProLager].kArtikel, [@lagerbestandProLager].kWarenlager, 0.0
+				FROM @lagerbestandProLager
+				LEFT JOIN dbo.tlagerbestandProLagerLagerartikel ON tlagerbestandProLagerLagerartikel.kArtikel = [@lagerbestandProLager].kArtikel
+																AND tlagerbestandProLagerLagerartikel.kWarenlager = [@lagerbestandProLager].kWarenlager
+				WHERE tlagerbestandProLagerLagerartikel.kArtikel IS NULL;
+		EXEC dbo.spUpdateLagerbestandProLager @Artikel = @lagerbestandProLager;
+	END
+	IF(EXISTS(SELECT * FROM @lagerbestand))
+	BEGIN
+		EXEC dbo.spUpdateLagerbestand @Artikel = @lagerbestand;
+	END
+
+END</code></pre>
+</body>
+</html>

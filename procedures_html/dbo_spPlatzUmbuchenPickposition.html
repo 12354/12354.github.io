@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spPlatzUmbuchenPickposition</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spPlatzUmbuchenPickposition</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Artikel aus einer Pickposition auf einen anderen Warenlagerplatz umgebucht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spPlatzUmbuchenPickposition]
+	@kWarenlagerplatzNeu INT,
+	@kPicklistePos INT,
+	@kLHM INT,
+	@kBuchungsart INT,
+	@kBenutzer INT,
+	@fAnzahl DECIMAL (25,13) = NULL,
+	@cKommentar NVARCHAR(255),
+	@kPicklistePosNeu INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @retry INT = 5;
+WHILE @retry &gt; 0
+BEGIN 
+	SET @kPicklistePosNeu = 0;
+	DECLARE @kWarenlagerEingang INT;
+	DECLARE @kWarenlagerEingangNeu INT;
+	DECLARE @PickposSplitNotwendig BIT;
+	SELECT	@kWarenlagerEingang = dbo.tpicklistePos.kWarenlagerEingang,
+			@fAnzahl = CASE WHEN @fAnzahl IS NULL
+							THEN dbo.tpicklistePos.fAnzahl 
+							ELSE @fAnzahl
+						END,
+			@PickposSplitNotwendig = CASE WHEN @fAnzahl IS NULL OR @fAnzahl = dbo.tpicklistePos.fAnzahl
+												THEN 0
+												ELSE 1
+										END
+		FROM dbo.tpicklistePos
+		WHERE dbo.tpicklistePos.kPicklistePos = @kPicklistePos;
+	-- PicklisteSplit ausf&#252;hren
+	IF(@PickposSplitNotwendig = 1)
+	BEGIN
+		INSERT INTO dbo.tPicklistePos
+		(
+		    kPickliste,
+		    kWarenLager,
+		    kWarenLagerEingang,
+		    fAnzahl,
+		    kBestellPos,
+		    kArtikel,
+		    kWarenlagerPlatz,
+		    kPicklistePos_Ursprung,
+		    kLieferscheinPos,
+		    kBestellung,
+		    nPickPrio,
+		    kAnsprechpartner,
+			nVorreserviert
+		)
+		SELECT dbo.tPicklistePos.kPickliste,
+				dbo.tPicklistePos.kWarenLager,
+				dbo.tPicklistePos.kWarenLagerEingang,
+				dbo.tPicklistePos.fAnzahl - @fAnzahl,
+				dbo.tPicklistePos.kBestellPos,
+				dbo.tPicklistePos.kArtikel,
+				dbo.tPicklistePos.kWarenlagerPlatz,
+				dbo.tPicklistePos.kPicklistePos,
+				dbo.tPicklistePos.kLieferscheinPos,
+				dbo.tPicklistePos.kBestellung,
+				dbo.tPicklistePos.nPickPrio,
+				dbo.tPicklistePos.kAnsprechpartner,
+				dbo.tPicklistePos.nVorreserviert				
+			FROM dbo.tPicklistePos 
+			WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePos
+		SELECT @kPicklistePosNeu = SCOPE_IDENTITY();
+		INSERT INTO dbo.tPicklistePosStatus
+		(
+		    kPicklistePos,
+		    kbenutzer,
+		    dZeitstempel,
+		    nStatus
+		)
+		SELECT	@kPicklistePosNeu,
+				dbo.tPicklistePosStatus.kbenutzer,
+				dbo.tPicklistePosStatus.dZeitstempel,
+				dbo.tPicklistePosStatus.nStatus
+			FROM dbo.tPicklistePosStatus 
+			WHERE dbo.tPicklistePosStatus.kPicklistePos = @kPicklistePos
+	END
+	-- Umlagerung ausf&#252;hren
+	 BEGIN TRY  
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END
+		EXEC dbo.spPlatzUmbuchenAusfuehren @kWarenlagerEingang, @fAnzahl, @kWarenlagerplatzNeu, @kLHM, @kBuchungsart, 1, @kBenutzer, @cKommentar, @kWarenlagerEingangNeu OUTPUT;
+		-- Pickposition umschreiben
+		IF(@kWarenlagerEingangNeu &lt;&gt; @kWarenlagerEingang)
+		BEGIN
+			UPDATE dbo.tPicklistePos
+				SET kWarenLagerEingang = @kWarenlagerEingangNeu,
+					fAnzahl = @fAnzahl
+				WHERE kPicklistePos = @kPicklistePos;
+		END
+	   SET @retry = 0;
+        IF(@TranCount = 0)
+        BEGIN           
+            COMMIT TRANSACTION      
+        END
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END</code></pre>
+</body>
+</html>

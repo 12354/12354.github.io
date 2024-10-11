@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPlatzWarenlagerUmlagern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPlatzWarenlagerUmlagern</h1>
+    <p><strong>Description:</strong> Die Stored Procedure ruft spPlatzUmlagern auf kann dabei aber auch warenlagerübergreifende Aktionen vornehmen.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPlatzWarenlagerUmlagern]
+	@kWarenLagerPlatzStart INT, 
+	@kWarenLagerPlatzZiel INT,
+	@kBenutzer INT,
+	@cKommentar NVARCHAR(255)
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @kWarenlagerAlt INT;
+	DECLARE @kWarenlagerNeu INT;
+	SELECT @kWarenlagerAlt = WarenlagerPlatz.kWarenLager FROM dbo.tWarenLagerPlatz AS WarenlagerPlatz WHERE WarenlagerPlatz.kWarenLagerPlatz = @kWarenLagerPlatzStart;
+	SELECT @kWarenlagerNeu = WarenlagerPlatz.kWarenLager FROM dbo.tWarenLagerPlatz AS WarenlagerPlatz WHERE WarenlagerPlatz.kWarenLagerPlatz = @kWarenLagerPlatzZiel;
+	BEGIN TRY
+	IF(@kWarenlagerAlt = @kWarenlagerNeu)
+		BEGIN
+			EXEC WMS.spPlatzUmlagern @kWarenLagerPlatzStart, @kWarenLagerPlatzZiel, @kBenutzer, @cKommentar;		
+		END
+		ELSE		
+		BEGIN
+
+			DECLARE @temp_ArtikelZumUmbuchen TABLE(kArtikel INT, fMenge DECIMAL(25,13));
+			INSERT INTO @temp_ArtikelZumUmbuchen(kArtikel,fMenge)
+			SELECT dbo.twarenlagereingang.kArtikel, SUM(dbo.twarenlagereingang.fAnzahlAktuell)
+			FROM dbo.twarenlagereingang WITH(NOLOCK)
+			WHERE dbo.tWarenlagerEingang.kWarenlagerPlatz = @kWarenLagerPlatzStart
+			AND fAnzahlAktuell &gt; 0
+			GROUP BY dbo.twarenlagereingang.kArtikel
+
+			IF ((SELECT COUNT(*)
+				FROM dbo.tliefartikel	AS LieferantenArtikel
+				-- Artikel, welche &#252;ber das JTL-Fulfillment Network verschickt werden, haben einen Eintrag in FulfillmentNetwork.tProductRef
+				JOIN FulfillmentNetwork.tProductRef ON tProductRef.kArtikel = LieferantenArtikel.tArtikel_kArtikel 
+				JOIN @temp_ArtikelZumUmbuchen AS  ArtikelZumUmbuchen ON  ArtikelZumUmbuchen.kArtikel = tProductRef.kArtikel
+				-- Ist es ein Fremdartikel, welchen ich als Fulfillment Dienstleister einlager, ist mein Fulfillment-Kunde als Lieferant mit nJTLFulfillment angelegt
+				JOIN dbo.tlieferant		AS Lieferant			ON Lieferant.kLieferant = LieferantenArtikel.tLieferant_kLieferant AND LieferantenArtikel.tArtikel_kArtikel = tProductRef.kArtikel AND Lieferant.nJtlFulfillment = 1) &gt; 0) 
+			BEGIN
+				RAISERROR(&#39;203000901&#39;,15,1, N&#39;JTL-Fulfillment Network Artikel k&#246;nnen nicht in ein anderes Lager umgelagert werden.&#39;);
+			END
+
+			EXEC WMS.spPlatzUmlagern @kWarenLagerPlatzStart, @kWarenLagerPlatzZiel, @kBenutzer, @cKommentar;
+			DECLARE @kUmlagArtikel INT;
+			DECLARE @fUmlagAnzahl DECIMAL(28,14);
+			DECLARE cur_WarenLagerEingang CURSOR LOCAL FAST_FORWARD FOR
+			SELECT kArtikel,fMenge FROM @temp_ArtikelZumUmbuchen;
+
+
+			OPEN cur_WarenLagerEingang
+			FETCH NEXT FROM cur_WarenLagerEingang INTO @kUmlagArtikel,@fUmlagAnzahl
+
+			WHILE @@FETCH_STATUS = 0
+			BEGIN
+			
+				UPDATE tlagerbestandProLagerLagerartikel SET fBestand = fBestand - @fUmlagAnzahl WHERE kArtikel =  @kUmlagArtikel AND kWarenlager = @kWarenlagerAlt
+				UPDATE tlagerbestandProLagerLagerartikel SET fBestand = fBestand + @fUmlagAnzahl WHERE kArtikel =  @kUmlagArtikel AND kWarenlager = @kWarenlagerNeu
+
+			 FETCH NEXT FROM cur_WarenLagerEingang INTO @kUmlagArtikel,@fUmlagAnzahl;
+			 END;
+		END
+	END TRY
+		BEGIN CATCH	
+			DECLARE @errorMessage varchar(256) = ERROR_MESSAGE();
+			DECLARE @severity INT = ERROR_SEVERITY();
+			DECLARE @errorState INT = ERROR_STATE();
+			RAISERROR ( @errorMessage, @severity,@errorState );
+		END CATCH		
+END</code></pre>
+</body>
+</html>

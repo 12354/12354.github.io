@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spSetSteuerCache</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spSetSteuerCache</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden Steuerinformationen zwischengespeichert.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE dbo.spSetSteuerCache
+AS
+BEGIN
+	SET NOCOUNT ON;
+	SET ANSI_NULLS ON;
+	SET XACT_ABORT ON;
+
+	DECLARE @retry INT = 5;
+	WHILE @retry &gt; 0
+	BEGIN
+		BEGIN TRY
+			DECLARE @TranCount INT = @@TRANCOUNT;
+			IF (@TranCount = 0)
+			BEGIN
+				BEGIN TRANSACTION;
+			END;
+
+			TRUNCATE TABLE dbo.tSteuercache;
+
+			INSERT INTO dbo.tSteuercache (kSteuerklasse, fSteuersatz, kFirma, kSteuerzone)
+			SELECT DISTINCT
+				vSteuercache.kSteuerKlasse,
+				vSteuercache.fSteuersatz,
+				vSteuercache.kFirma,
+				vSteuercache.kSteuerZone
+			FROM dbo.vSteuercache;
+
+			SET @retry = 0;
+			IF (@TranCount = 0)
+			BEGIN
+				COMMIT TRANSACTION;
+			END;
+		END TRY
+		BEGIN CATCH
+			IF (ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+			END;
+			ELSE
+			BEGIN
+				SET @retry = 0;
+				THROW;
+			END;
+		END CATCH;
+	END;
+END;</code></pre>
+</body>
+</html>

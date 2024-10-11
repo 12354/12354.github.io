@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spGutschriftenStornieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spGutschriftenStornieren</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spGutschriftenStornieren]
+	@Gutschriften dbo.TYPE_spGutschriftenStornieren READONLY,
+	@kGutschriftStornogrund INT,
+	@cKommentar NVARCHAR(100),
+	@kBenutzer INT,
+	@dStorniert DATETIME,
+	@xResult XML OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+	DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+	DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+	SET CONTEXT_INFO @MyContextInfo;
+DeadlockRetry:
+	BEGIN TRY
+		IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+
+		IF(OBJECT_ID(&#39;tempdb..#GutschriftStorno&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #GutschriftStorno;
+		END
+
+		CREATE TABLE #GutschriftStorno
+		(
+			kGutschrift INT PRIMARY KEY NOT NULL,
+			cGutschriftNr NVARCHAR(50) NOT NULL,
+			nError INT NOT NULL,
+			kStornoGutschrift INT NOT NULL
+		);
+
+		INSERT INTO #GutschriftStorno (kGutschrift, cGutschriftNr, nError, kStornoGutschrift)
+		SELECT DISTINCT [@Gutschriften].kGutschrift, N&#39;&#39;, 0, [@Gutschriften].kStornoGutschrift FROM @Gutschriften
+
+		UPDATE #GutschriftStorno
+		SET
+			#GutschriftStorno.cGutschriftNr = vGutschriftStornierbar.cGutschriftNr,
+			#GutschriftStorno.nError = vGutschriftStornierbar.nError
+		FROM #GutschriftStorno
+		JOIN dbo.vGutschriftStornierbar ON vGutschriftStornierbar.kGutschrift = #GutschriftStorno.kGutschrift
+
+		-- Zahlungen von Gutschriften auf Rechnungen ziehen
+		UPDATE dbo.tZahlung
+		SET
+			tZahlung.kRechnung = tgutschrift.kRechnung,
+			tZahlung.kGutschrift = NULL
+		FROM dbo.tZahlung
+		JOIN #GutschriftStorno ON #GutschriftStorno.kGutschrift = tZahlung.kGutschrift
+		JOIN tgutschrift ON #GutschriftStorno.kGutschrift = tgutschrift.kGutschrift
+		WHERE #GutschriftStorno.nError = 0
+
+		-- tZahlungsabgleichAusgang setzen
+		UPDATE dbo.tZahlungsabgleichAusgang
+		SET
+			tZahlungsabgleichAusgang.kGutschrift = 0
+		FROM dbo.tZahlungsabgleichAusgang
+		JOIN #GutschriftStorno ON #GutschriftStorno.kGutschrift = tZahlungsabgleichAusgang.kGutschrift
+		WHERE #GutschriftStorno.nError = 0
+
+		INSERT INTO dbo.tGutschriftStorno(kGutschrift, kBenutzer, kGutschriftStornogrund, dStorniert, cKommentar, kStornoGutschrift)
+		SELECT #GutschriftStorno.kGutschrift, @kBenutzer, @kGutschriftStornogrund, @dStorniert, @cKommentar, #GutschriftStorno.kStornoGutschrift
+		FROM #GutschriftStorno
+		WHERE #GutschriftStorno.nError = 0
+
+		UPDATE dbo.tgutschrift
+		SET tgutschrift.nStorno = 1
+		FROM dbo.tgutschrift
+		JOIN #GutschriftStorno ON #GutschriftStorno.kGutschrift = tgutschrift.kGutschrift
+		WHERE #GutschriftStorno.nError = 0
+
+		--Eckdaten aktualisieren
+		IF EXISTS (SELECT * FROM #GutschriftStorno WHERE #GutschriftStorno.nError = 0)
+		BEGIN
+			DECLARE @GutschriftenEckdaten dbo.TYPE_spGutschriftEckdatenBerechnen
+
+			INSERT INTO @GutschriftenEckdaten(kGutschrift)
+			SELECT #GutschriftStorno.kGutschrift
+			FROM #GutschriftStorno
+
+			EXECUTE dbo.spGutschriftEckdatenBerechnen @Gutschriften = @GutschriftenEckdaten
+		END
+
+		--
+		-- Stornoergebnis zur&#252;ckmelden
+		--
+		SET @xResult = (
+			SELECT
+				#GutschriftStorno.kGutschrift AS kGutschrift,
+				#GutschriftStorno.cGutschriftNr AS cGutschriftNr,
+				#GutschriftStorno.nError AS nError
+			FROM #GutschriftStorno
+			FOR XML PATH(&#39;StornoResult&#39;), ROOT(&#39;StornoResults&#39;)
+		)
+
+
+		-- Ende vom Code
+		IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+		BEGIN TRY
+			EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+		END TRY
+		BEGIN CATCH
+			IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+		END CATCH;
+		THROW;
+	END CATCH
+
+	SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+	SET CONTEXT_INFO @OldContextInfo;
+	THROW;
+END CATCH</code></pre>
+</body>
+</html>

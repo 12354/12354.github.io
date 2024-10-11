@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FulfillmentNetwork.spGetShippingFee</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>FulfillmentNetwork.spGetShippingFee</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [FulfillmentNetwork].[spGetShippingFee]
+    @kFulfillmentauftrag INT,
+	@result DECIMAL(28,14) OUTPUT   
+AS
+    SET NOCOUNT ON;
+    SET ANSI_NULLS ON;
+    SET ANSI_NULL_DFLT_ON ON;
+    SET ANSI_PADDING ON;
+    SET CONCAT_NULL_YIELDS_NULL ON;
+    SET XACT_ABORT OFF;
+
+    DECLARE @kThisLieferschein INT = 0;
+	DECLARE @kThisAuftrag INT = 0;
+	DECLARE @kFirstLieferschein INT = 0;
+	DECLARE @shippingFee DECIMAL(28,14) =0;
+		
+    
+    SELECT  @kThisLieferschein = Lieferschein.kLieferschein,
+			@kThisAuftrag = Auftrag.kAuftrag
+	FROM    tFulfillmentauftrag AS FulfillmentAuftrag
+	JOIN	tLieferschein AS Lieferschein ON Lieferschein.kLieferschein = FulfillmentAuftrag.kLieferschein
+	JOIN	Verkauf.tAuftrag AS Auftrag ON Auftrag.kAuftrag = Lieferschein.kBestellung            
+    WHERE   kFulfillmentAuftrag = @kFulfillmentauftrag;
+
+	SELECT TOP(1) @kFirstLieferschein = OuterLieferschein.kLieferschein 
+	FROM tLieferschein AS OuterLieferschein	
+	WHERE OuterLieferschein.kBestellung IN
+	(
+		SELECT	InnerLieferschein.kBestellung 
+		FROM	tLieferschein AS InnerLieferschein 
+		JOIN	tFulfillmentAuftrag AS FulfillmentAuftrag ON FulfillmentAuftrag.kLieferschein = InnerLieferschein.kLieferschein
+		WHERE	kFulfillmentAuftrag = @kFulfillmentauftrag
+	)
+	ORDER BY OuterLieferschein.dErstellt ASC
+
+    IF @kThisLieferschein != @kFirstLieferschein
+        BEGIN
+			SET @result = 0.0
+        END
+	ELSE
+    BEGIN
+        SELECT @shippingFee = fVkNetto 
+		FROM Verkauf.tAuftragPosition 
+		WHERE kAuftrag = @kThisAuftrag AND nType = 2
+		SET @result = @shippingFee
+    END</code></pre>
+</body>
+</html>

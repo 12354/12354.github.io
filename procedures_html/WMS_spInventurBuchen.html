@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spInventurBuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spInventurBuchen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure werden die Differenzen in der WMS Inventur gebucht.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spInventurBuchen]
+    @kWmsInventur   INT,             -- Die Inventur die Gebucht werden soll
+    @kBenutzer      INT,			  -- Der Benutzer der ausbucht
+    @kWarenlager    INT,              -- Warenlager der Inventur
+    @dBuchungsDatum Datetime,         -- BuchungsDatum , wir nehmen das aus dem WMS
+    @nRet           INT OUTPUT        -- Falls != 0 , dann Fehler
+
+-- Funktion: Mit dieser Procedur wird eine WMS Inventur gebucht. Anhand der Differenzen werden Warenlagereingaenge entweder hinzugef&#252;gt oder weggebucht
+--           Falls bei einer Buchung ein Fehler auftritt, wird ALLES zur&#252;ckgesetzt. Unbekannte Fehler werden in tLog gespeichert.
+
+	
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @kWarenlagerPlatz      INT;
+DECLARE @cPlatzName			  NVARCHAR(255);
+DECLARE @kArtikel              INT;
+DECLARE @dMHD				 DATETIME;
+DECLARE @cCharge			 NVARCHAR(255);
+DECLARE @fMengeIst		      DECIMAL(25,13);
+DECLARE @fMengeSoll		      DECIMAL(25,13);
+DECLARE @fMengeAktuell	      DECIMAL(25,13);
+DECLARE @fDifferenz		      DECIMAL(25,13);
+DECLARE @cLagerAktiv		 NVARCHAR(255);
+DECLARE @kWarenlagereingang    INT;
+DECLARE @fBuchungsMenge        DECIMAL(25,13);
+DECLARE @fMengeZuBuchen        DECIMAL(25,13);
+DECLARE @fAnzahlAktuell	      DECIMAL(25,13);
+DECLARE @fAnzahlReserviertPickpos  DECIMAL(25,13);
+DECLARE @cLagerArtikel         NVARCHAR(255);
+DECLARE @nAnfangsMenge		 INT;
+DECLARE @cErrorLog		      NVARCHAR(MAX);
+DECLARE @klagerartikel	      INT;
+DECLARE @TableVar		      TABLE(Nummer INT);
+DECLARE @fEkNetto             DECIMAL(28,14);
+DECLARE @kWmsInventurlogSubsets INT;
+DECLARE @fSubsetFactor			DECIMAL(28,14);
+DECLARE @cSubsetNumber			NVARCHAR(100);
+DECLARE @kWarenlagerPlatzTM INT;
+DECLARE @kArtikelTM INT;
+DECLARE @dMHDTM DATETIME;
+DECLARE @cChargenNrTM nVARCHAR(255);
+DECLARE @fMengeTM DECIMAL(25,13);
+DECLARE @fEkNettoTM DECIMAL(25,13);
+DECLARE @fSubsetFactorTM DECIMAL(25,13);
+DECLARE @cKommentarTM nVARCHAR(1000);
+DECLARE @kWmsInventurlogSubsetsTM INT;
+DECLARE @cSubsetNumberTM nVARCHAR(100);
+DECLARE @SubsetDetails subset.TYPE_spSubsetDetails;
+
+
+
+IF(OBJECT_ID(&#39;tempdb..#WarenLagerEingaengeInv&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #WarenLagerEingaengeInv;
+	END
+	CREATE TABLE #WarenLagerEingaengeInv (
+		kArtikel INT NOT NULL,
+		kWarenLagerPlatz INT NOT NULL,
+		kBenutzer INT NOT NULL,
+		fAnzahl DECIMAL(25,13) NOT NULL,
+		fEKEinzel DECIMAL(25,13) NOT NULL,
+	     cChargenNr NVARCHAR(255) NULL,
+		dMHD DATETIME NULL,
+		dErstellt DATETIME NULL,
+		cKommentar NVARCHAR(255) NULL,
+		kGutschriftPos INT NULL,
+		fanzahlreserviertPickpos DECIMAL(25,13) NOT NULL,
+		kSessionId INT NULL,
+		kWarenLagerEingang_Ursprung INT NULL,
+		kWmsInventurlogSubsets INT NULL,
+		fSubsetFactor DECIMAL(25,13) NULL, 
+		cSubsetNumber NVARCHAR(100) NULL
+	);
+
+IF(OBJECT_ID(&#39;tempdb..#WarenLagerEingaengeZumAusbuchenInv&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #WarenLagerEingaengeZumAusbuchenInv;
+	END
+	CREATE TABLE #WarenLagerEingaengeZumAusbuchenInv (
+		kWarenLagerEingang INT NOT NULL,
+		kLieferscheinPos INT NULL,
+		fAnzahl DECIMAL(25,13) NOT NULL,
+		cKommentar NVARCHAR(MAX) NULL,
+		kBenutzer INT NOT NULL,
+		kBuchungsart INT NOT NULL,
+		kWmsInventurlogSubsets INT NULL
+	);
+
+	IF(OBJECT_ID(&#39;tempdb..#ArtikelNichtLageraktiv&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #ArtikelNichtLageraktiv;
+	END
+	CREATE TABLE #ArtikelNichtLageraktiv (
+		kArtikel INT NOT NULL
+	);
+
+BEGIN TRY
+	 SET @nRet = 0;
+
+     DECLARE cur_GetArtikelMengenGrouped CURSOR LOCAL FAST_FORWARD FOR  
+     SELECT dbo.tWmsInventurlog.kWarenlagerPlatz,
+            dbo.tWmsInventurlog.kArtikel,
+            dbo.tWmsInventurlog.dMHD,
+            CASE WHEN dbo.tWmsInventurlog.cCharge =&#39;&#39; THEN null ELSE dbo.tWmsInventurlog.cCharge END AS cCharge,
+            CASE WHEN tWmsInventurlogSubsets.kWmsInventurlogSubsets &gt; 0 THEN ( SUM(dbo.tWmsInventurlog.fAnzahl * tWmsInventurlogSubsets.fFactor) - SUM(dbo.tWmsInventurlog.fDifferenz * tWmsInventurlogSubsets.fFactor))  ELSE SUM(dbo.tWmsInventurlog.fAnzahl) - SUM(dbo.tWmsInventurlog.fDifferenz) END fMengeIst, 
+            CASE WHEN tWmsInventurlogSubsets.kWmsInventurlogSubsets &gt; 0 THEN SUM(dbo.tWmsInventurlog.fAnzahl * tWmsInventurlogSubsets.fFactor)   ELSE  SUM(dbo.tWmsInventurlog.fAnzahl) END AS fMengeSoll,
+            MIN(ISNULL(t2.fMenge,0)) fMengeAktuell,
+            CASE WHEN tWmsInventurlogSubsets.kWmsInventurlogSubsets &gt; 0 THEN  SUM(dbo.tWmsInventurlog.fDifferenz * tWmsInventurlogSubsets.fFactor)  ELSE SUM(dbo.tWmsInventurlog.fDifferenz) END AS fDifferenz,
+            tArtikel.cLagerAktiv,
+			dbo.tWarenLagerPlatz.cName,
+			tArtikel.cLagerArtikel,
+			dbo.tArtikel.fEKNetto,
+			tWmsInventurlogSubsets.kWmsInventurlogSubsets,
+			tWmsInventurlogSubsets.fFactor,
+			tWmsInventurlogSubsets.cSubsetNumber
+     FROM dbo.tWmsInventurlog WITH(NOLOCK)
+	 JOIN dbo.tWarenLagerPlatz ON dbo.tWarenLagerPlatz.kWarenLagerPlatz = dbo.tWmsInventurlog.kWarenlagerPlatz
+     JOIN dbo.tArtikel WITH(NOLOCK) on dbo.tArtikel.kArtikel = dbo.tWmsInventurlog.kArtikel
+	 LEFT JOIN dbo.tWmsInventurlogSubsets ON tWmsInventurlogSubsets.kWmsInventurlog = tWmsInventurlog.kWmsInventurlog
+     LEFT JOIN [eazybusiness].[dbo].[tBenutzer] WITH(NOLOCK) ON tBenutzer.kBenutzer = dbo.tWmsInventurlog.kBenutzer
+     LEFT JOIN (SELECT SUM(ISNULL(dbo.tWarenlagereingang.fAnzahlAktuell,0)) fMenge,dbo.tWarenlagereingang.kWarenlagerPlatz,dbo.tWarenlagereingang.kArtikel,dbo.tWarenlagereingang.dMHD,ISNULL(dbo.tWarenlagereingang.cChargenNr,&#39;&#39;) AS cChargenNr
+                                                            FROM dbo.tWarenlagereingang WITH(NOLOCK) WHERE dbo.tWarenlagereingang.fAnzahlAktuell &gt; 0 
+                                                            GROUP BY dbo.tWarenlagereingang.kWarenlagerPlatz,dbo.tWarenlagereingang.kArtikel,dbo.tWarenlagereingang.dMHD,ISNULL(dbo.tWarenlagereingang.cChargenNr,&#39;&#39;)) 
+                                                            AS t2 ON t2.kWarenlagerPlatz = dbo.tWmsInventurlog.kWarenlagerPlatz
+                                                                    AND t2.kArtikel = dbo.tWmsInventurlog.kArtikel
+                                                                    AND (t2.dMHD =  dbo.tWmsInventurlog.dMHD or (t2.dMHD IS NULL AND dbo.tWmsInventurlog.dMHD IS NULL))
+                                                                    AND (t2.cChargenNr = dbo.tWmsInventurlog.cCharge OR (t2.cChargenNr IS NULL OR t2.cChargenNr = &#39;&#39; ) AND (dbo.tWmsInventurlog.cCharge IS NULL OR dbo.tWmsInventurlog.cCharge = &#39;&#39; ))
+     WHERE dbo.tWmsInventurlog.kWmsInventur = @kWmsInventur
+     GROUP BY dbo.tWmsInventurlog.kWarenlagerPlatz,dbo.tWmsInventurlog.kArtikel,dbo.tArtikel.cArtNr,dbo.tWmsInventurlog.dMHD,CASE WHEN dbo.tWmsInventurlog.cCharge =&#39;&#39; THEN null ELSE dbo.tWmsInventurlog.cCharge END,dbo.tArtikel.cLagerAktiv,
+	          dbo.tWarenLagerPlatz.cName,tArtikel.cLagerArtikel,dbo.tArtikel.fEKNetto, tWmsInventurlogSubsets.kWmsInventurlogSubsets,tWmsInventurlogSubsets.fFactor,tWmsInventurlogSubsets.cSubsetNumber
+     HAVING SUM(dbo.tWmsInventurlog.fDifferenz) &lt;&gt; 0;
+
+
+
+
+    OPEN cur_GetArtikelMengenGrouped 
+	FETCH NEXT FROM cur_GetArtikelMengenGrouped INTO @kWarenlagerPlatz, @kArtikel, @dMHD ,@cCharge ,@fMengeIst ,@fMengeSoll,@fMengeAktuell,@fDifferenz,@cLagerAktiv,@cPlatzName,@cLagerArtikel,@fEkNetto,@kWmsInventurlogSubsets,@fSubsetFactor,@cSubsetNumber;
+	WHILE @@FETCH_STATUS = 0 AND @nRet = 0
+     BEGIN
+     
+	   IF(@cLagerAktiv != &#39;Y&#39;)
+	   BEGIN
+
+		INSERT INTO #ArtikelNichtLageraktiv (kArtikel) VALUES (@kArtikel);
+
+	   END;
+
+     SET @fMengeZuBuchen = ABS(@fDifferenz);
+     
+     IF(@fDifferenz &lt; 0) --Wenn weniger gez&#228;hlt, Warenlagereing&#228;nge ausbuchen
+     BEGIN
+
+	    --
+	    -- &#220;ber alle Warenlagereing&#228;nge des aktiven Artikels auf dem Platz
+	    --
+	    DECLARE cur_GetWarenlagerEingaengeForWMSUmbuchung CURSOR LOCAL FAST_FORWARD FOR 
+	    SELECT dbo.twarenlagereingang.kWarenLagerEingang,dbo.twarenlagereingang.fAnzahlAktuell,ISNULL(dbo.twarenlagereingang.fAnzahlReserviertPickpos,0) fAnzahlReserviertPickpos
+	    FROM  dbo.twarenlagereingang WITH(NOLOCK)
+	    LEFT JOIN dbo.tartikel WITH(NOLOCK) ON dbo.tArtikel.kArtikel = dbo.twarenlagereingang.kartikel 
+	    LEFT JOIN dbo.tWarenlagerPlatz WITH(NOLOCK) ON dbo.tWarenlagerPlatz.kWarenlagerPLatz = dbo.tWarenlagerEingang.kWarenlagerPlatz
+		LEFT JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenlagereingang = twarenlagereingang.kWarenlagereingang
+	    WHERE dbo.tArtikel.kArtikel = @kArtikel
+	    AND dbo.tWarenlagerPlatz.kWarenlagerPlatz = @kWarenlagerPlatz 
+	    AND fAnzahlAktuell &gt; 0 
+	    AND (@dMHD is null OR  CONVERT(VARCHAR(255), dbo.tWarenlagerEingang.dMHD, 104) = CONVERT(NVARCHAR(255), @dMHD , 104))
+	    AND (LEN(ISNULL(@cCharge,&#39;&#39;)) = 0 OR cChargenNr = isnull(@cCharge,&#39;&#39;))
+		AND (tWarenLagerEingangSubsets.kWarenLagerEingangSubset IS NULL OR tWarenLagerEingangSubsets.cSubsetNumber = @cSubsetNumber);
+        
+
+
+         OPEN cur_GetWarenlagerEingaengeForWMSUmbuchung 
+	    FETCH NEXT FROM cur_GetWarenlagerEingaengeForWMSUmbuchung INTO @kWarenlagereingang,@fAnzahlAktuell,@fAnzahlReserviertPickpos
+	    WHILE (@@FETCH_STATUS = 0 AND @fMengeZuBuchen &gt; 0 AND @nRet = 0)
+         BEGIN
+
+            IF(@fAnzahlAktuell - @fAnzahlReserviertPickpos) &gt; @fMengeZuBuchen
+               SET @fBuchungsMenge = @fMengeZuBuchen;
+            ELSE
+               SET @fBuchungsMenge = (@fAnzahlAktuell - @fAnzahlReserviertPickpos);
+          
+	       INSERT INTO #WarenLagerEingaengeZumAusbuchenInv (kWarenlagerEingang,kLieferscheinPos,fAnzahl,cKommentar,kBenutzer,kBuchungsart,kWmsInventurlogSubsets) 
+	       VALUES (@kWarenlagereingang,null,@fBuchungsMenge,&#39;Inventur vom Platz: &#39; + CAST(@cPlatzName AS NVARCHAR),@kBenutzer,100,@kWmsInventurlogSubsets);
+	     
+            SET @fMengeZuBuchen = (@fMengeZuBuchen - @fBuchungsMenge);
+          
+	FETCH NEXT FROM cur_GetWarenlagerEingaengeForWMSUmbuchung INTO @kWarenlagereingang,@fAnzahlAktuell,@fAnzahlReserviertPickpos
+     END;
+       
+
+     IF(@cLagerArtikel = &#39;Y&#39;)
+     BEGIN
+		;WITH t AS
+		(
+			SELECT TOP(CAST (ABS(@fDifferenz) as INT)) *
+			FROM dbo.tLagerArtikel WITH (ROWLOCK)
+			WHERE kArtikel = @kArtikel
+			AND kWarenlager = @kWarenlager
+			AND ISNULL(kLieferscheinPos,0) = 0
+			ORDER BY CASE cSeriennr when &#39;#$KEINE$#&#39; then 0 else 1 end
+		)
+		UPDATE t SET kLieferscheinPos = 999999999;
+     END;
+     
+     CLOSE cur_GetWarenlagerEingaengeForWMSUmbuchung;
+	DEALLOCATE cur_GetWarenlagerEingaengeForWMSUmbuchung;
+
+     END;
+     
+     
+     IF(@fDifferenz &gt; 0) --Wenn mehr gez&#228;hlt als auf Platz, Warenlagereingang erzeugen
+     BEGIN
+     
+       IF(@cLagerArtikel = &#39;Y&#39;) 
+       BEGIN
+       
+	       SET @nAnfangsMenge = CAST (@fMengeZuBuchen as INT);
+                     
+	       WHILE @nAnfangsMenge &gt; 0
+	       BEGIN
+	       
+               DELETE FROM @TableVar
+	           INSERT INTO @TableVar(Nummer) EXEC dbo.spGetAndUpdatePK &#39;tlagerartikel&#39;
+	           SET @klagerartikel = (SELECT Nummer FROM @TableVar);
+	          				
+	          
+	          	INSERT INTO dbo.tlagerartikel  WITH(ROWLOCK) (kLager,kLagerOrt,kArtikel,cSeriennr,fEK,cBeschreibung1,cBeschreibung2,kBestellPos,kLieferscheinPos,kWarenlager,kLieferant) 
+	          	VALUES (0,0,@kArtikel,&#39;#$KEINE$#&#39;,0,&#39;&#39;,&#39;&#39;,0,0,@kWarenlager,0);
+	          
+	               SET @nAnfangsMenge = @nAnfangsMenge - 1;
+	          END;
+       
+       END;
+
+	  INSERT INTO #WarenLagerEingaengeInv WITH(ROWLOCK) (kArtikel,kWarenLagerPlatz,kBenutzer,fAnzahl,fEKEinzel,dErstellt,kSessionID,cKommentar,cChargenNr,dMHD,fanzahlreserviertPickpos,kWmsInventurlogSubsets,fSubsetFactor,cSubsetNumber) 
+	  VALUES (@kArtikel,@kWarenlagerPlatz,@kBenutzer,@fMengeZuBuchen,ISNULL(@fEkNetto,0),@dBuchungsDatum,0,&#39;Inventur vom Platz: &#39; + CAST(@cPlatzName AS NVARCHAR) ,@cCharge,@dMHD,0,@kWmsInventurlogSubsets,@fSubsetFactor,@cSubsetNumber);
+     
+     END;
+     
+     FETCH NEXT FROM cur_GetArtikelMengenGrouped INTO @kWarenlagerPlatz, @kArtikel, @dMHD ,@cCharge ,@fMengeIst ,@fMengeSoll,@fMengeAktuell,@fDifferenz,@cLagerAktiv,@cPlatzName,@cLagerArtikel,@fEkNetto,@kWmsInventurlogSubsets,@fSubsetFactor,@cSubsetNumber;
+     END;
+
+
+	 -- Warenlagereing&#228;nge normal
+	 DECLARE @xWarenlagerEingaenge XML = NULL;
+	 SET @xWarenlagerEingaenge = (
+	 SELECT kArtikel,kWarenlagerPlatz,kBenutzer,fAnzahl,fEKEinzel,cChargenNr,dMHD,cKommentar,kSessionId,100 AS kBuchungsart, 0 AS kBestellPosUmlagerung,0 AS kRTMRetourePos
+	 FROM #WarenLagerEingaengeInv
+	 WHERE ISNULL(#WarenLagerEingaengeInv.kWmsInventurlogSubsets,0) = 0 
+	 FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+	 );
+    
+
+	 -- Warenlagereing&#228;nge Teilmengen
+	 DECLARE cur_WarenlagerEingaengeTeilmengen CURSOR LOCAL FAST_FORWARD FOR  
+	 SELECT #WarenLagerEingaengeInv.kWarenLagerPlatz,#WarenLagerEingaengeInv.kArtikel,#WarenLagerEingaengeInv.dMHD,#WarenLagerEingaengeInv.cChargenNr,#WarenLagerEingaengeInv.fAnzahl,fEKEinzel,kWmsInventurlogSubsets, fSubsetFactor , cKommentar,  cSubsetNumber
+	 FROM #WarenLagerEingaengeInv
+	 WHERE #WarenLagerEingaengeInv.kWmsInventurlogSubsets &gt; 0
+
+
+ 
+	 -- Warenlagerausg&#228;nge normal
+     DECLARE @xWarenlagerEingaengeZumAusbuchen XML = NULL;
+	 SET @xWarenlagerEingaengeZumAusbuchen = (
+	 SELECT kWarenLagerEingang,kLieferscheinPos,fAnzahl,cKommentar,kBenutzer,kBuchungsart
+	 FROM #WarenLagerEingaengeZumAusbuchenInv
+	 WHERE ISNULL(#WarenLagerEingaengeZumAusbuchenInv.kWmsInventurlogSubsets,0) = 0 
+	 FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+	 );
+
+	 -- Warenlagerausg&#228;nge Teilmengen
+	DECLARE @xWarenlagerEingaengeZumAusbuchenTeilmengen XML = NULL;
+	SET @xWarenlagerEingaengeZumAusbuchenTeilmengen = (
+	SELECT WLE.kWarenLagerEingang AS kWarenLagerEingang,WLE.kLieferscheinPos AS kLieferscheinPos,WLE.fAnzahl AS fAnzahl,WLE.cKommentar AS cKommentar,WLE.kBenutzer AS kBenutzer,WLE.kBuchungsart AS kBuchungsart
+	FROM #WarenLagerEingaengeZumAusbuchenInv AS WLE
+	WHERE WLE.kWmsInventurlogSubsets &gt; 0
+	FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+	);
+
+	BEGIN TRAN T2
+
+	-- Alle Artikel in der Inventur die nicht lageraktiv waren, lageraktiv machen
+	UPDATE dbo.tArtikel SET cLagerAktiv = &#39;Y&#39;
+	FROM dbo.tArtikel
+	JOIN #ArtikelNichtLageraktiv ON  #ArtikelNichtLageraktiv.kArtikel = dbo.tArtikel.kArtikel
+
+	IF (@xWarenlagerEingaenge IS NOT NULL)
+	BEGIN
+	    EXEC dbo.spWarenlagerEingangSchreiben @xWarenlagerEingaenge  = @xWarenlagerEingaenge;
+	END;
+
+
+	OPEN cur_WarenlagerEingaengeTeilmengen 
+	FETCH NEXT FROM cur_WarenlagerEingaengeTeilmengen INTO @kWarenlagerPlatzTM, @kArtikelTM, @dMHDTM ,@cChargenNrTM ,@fMengeTM,@fEkNettoTM,@kWmsInventurlogSubsetsTM, @fSubsetFactorTM, @cKommentarTM,@cSubsetNumberTM;
+	WHILE @@FETCH_STATUS = 0
+    BEGIN
+
+
+		DELETE FROM @SubsetDetails;
+		
+		INSERT INTO @SubsetDetails(kDimension,fValue,fGroundValue,kMassEinheit)
+		SELECT kDimension,fValue,fGroundValue, kMassEinheit
+		FROM dbo.tWmsInventurlogSubsetDetails 
+		WHERE tWmsInventurlogSubsetDetails.kWmsInventurlogSubsets = @kWmsInventurlogSubsetsTM;
+
+
+		SET @fMengeTM = (@fMengeTM / @fSubsetFactorTM); --besser w&#228;re es wenn wir in der SP ne Option h&#228;tten die nicht den faktor multipliziert
+
+		EXEC subset.spWarenlagerEingangSchreiben
+		@kArtikel = @kArtikelTM,
+		@kWarenLagerPlatz = @kWarenlagerPlatzTM,
+		@kLieferantenBestellungPos = 0,
+		@kBenutzer = @kBenutzer,
+		@fEKNetto = @fEkNettoTM,
+		@cLieferscheinNr = null,
+		@fQuantity = @fMengeTM,
+		@fSubsetFactor = @fSubsetFactorTM,
+		@cSubsetNumber = @cSubsetNumberTM,
+		@cChargenNr = @cChargenNrTM,
+		@dMHD = @dMHDTM,
+		@dGeliefertAm = @dBuchungsDatum,
+		@cKommentar = @cKommentarTM,
+		@kGutschriftPos = 0,
+		@kLHM = 0,
+		@kSessionId = 0,
+		@kBuchungsart = 100,
+		@kBestellPosUmlagerung = 0,
+		@kRMRetourePos  = 0,
+		@nHistorieNichtSchreiben = 0,
+		@Subsets = @SubsetDetails;
+
+		FETCH NEXT FROM cur_WarenlagerEingaengeTeilmengen INTO @kWarenlagerPlatzTM, @kArtikelTM, @dMHDTM ,@cChargenNrTM ,@fMengeTM,@fEkNettoTM,@kWmsInventurlogSubsetsTM, @fSubsetFactorTM, @cKommentarTM,@cSubsetNumberTM;
+	
+	END;
+
+
+	IF (@xWarenlagerEingaengeZumAusbuchen IS NOT NULL)
+	BEGIN
+	    EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerEingaengeZumAusbuchen;
+	END;
+
+	IF (@xWarenlagerEingaengeZumAusbuchenTeilmengen IS NOT NULL)
+	BEGIN
+	    EXEC subset.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = @xWarenlagerEingaengeZumAusbuchenTeilmengen, @nKeepFactor = 1;
+	END;
+
+     IF (@nRet = 0)
+       COMMIT TRAN T2;
+     ELSE
+       ROLLBACK TRAN T2;
+
+
+END TRY
+BEGIN CATCH
+    
+    IF(@@TRANCOUNT &gt; 0)
+    BEGIN
+       ROLLBACK TRAN T2;
+    END;
+   
+    
+    SET @nRet = -203000201; -- unbekannter Fehler Inventur
+    SET @cErrorLog = CAST(ERROR_NUMBER() as NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_SEVERITY() as NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_STATE() as NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_PROCEDURE() as NVARCHAR) + &#39; : &#39; +
+                     CAST(ERROR_LINE() as NVARCHAR) + &#39; : &#39; +
+                     ERROR_MESSAGE();
+
+
+    
+
+    INSERT INTO dbo.tLog WITH(ROWLOCK) (dDatum,cLog,kBenutzer,nTyp,nVorgang) 
+    VALUES (@dBuchungsDatum,@cErrorLog,@kBenutzer,16,2);
+
+END CATCH;</code></pre>
+</body>
+</html>

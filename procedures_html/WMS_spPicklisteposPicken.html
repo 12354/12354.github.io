@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklisteposPicken</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklisteposPicken</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklisteposPicken]
+  @kPicklistePos INT,
+  @kLhm INT,
+  @kBenutzer INT,
+  @fPickMenge DECIMAL(25,13),
+  @dTimestamp DATETIME,
+  @nRestmengeLoeschen INT, -- 0= Nein, 1= Ja,
+  @nStatusNachPick INT
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @fPickPosMenge DECIMAL(25,13);
+DECLARE @kWarenLagerPlatz INT;
+DECLARE @nPicklistePosStatus INT;
+DECLARE @cKommentar NVARCHAR(255);
+DECLARE @kPicklistePosNeu INT;
+DECLARE @kPickliste INT;
+DECLARE @cPicklisteNr NVARCHAR(255);
+
+BEGIN 
+    SELECT @fPickPosMenge = dbo.tPicklistePos.fAnzahl, @nPicklistePosStatus = dbo.tPicklistePos.nStatus,@kPickliste = dbo.tPicklistePos.kPickliste, @cPicklisteNr = tPickliste.cPicklisteNr
+    FROM dbo.tPicklistePos WITH(NOLOCK)
+	JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+    WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePos;
+
+
+    IF (@nPicklistePosStatus &lt; @nStatusNachPick)
+    BEGIN
+
+        IF(@kLhm &gt; 0)
+	   BEGIN
+		  SELECT @kWarenLagerPlatz = kWarenLagerPlatz 
+		  FROM dbo.tLHM  WITH(NOLOCK) 
+		  WHERE kLHM = @kLhm;
+	   END;
+	   ELSE
+	   BEGIN
+		  SELECT @kWarenLagerPlatz = dbo.tPicklistePos.kWarenLagerPlatz 
+		  FROM dbo.tPicklistePos  WITH(NOLOCK) 
+		  WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePos;
+	   END;
+
+	   IF(@nStatusNachPick = 20)
+		  		SET @cKommentar = &#39;Gepickt in der Pickliste &#39; + @cPicklisteNr
+	   IF(@nStatusNachPick = 30 AND CONTEXT_INFO() NOT IN(0x5087))
+		 		SET @cKommentar = &#39;In Box gelegt durch die Pickliste &#39; + @cPicklisteNr
+
+	   EXEC dbo.spPlatzUmbuchenPickposition
+			 @kWarenlagerplatzNeu = @kWarenLagerPlatz,
+			 @kPicklistePos = @kPicklistePos,
+			 @kLHM = @kLhm,
+			 @kBuchungsart =  null, -- Er soll die alte Buchungsart des WEs behalten
+			 @kBenutzer = @kBenutzer,
+			 @fAnzahl = @fPickMenge,
+	           @cKommentar = @cKommentar,
+			 @kPicklistePosNeu = @kPicklistePosNeu OUTPUT;
+
+
+
+	   -- Falls die Restmenge der PickPos gel&#246;scht werden soll
+	   IF(@fPickPosMenge &gt; @fPickMenge AND @nRestmengeLoeschen = 1 AND @kPicklistePosNeu &gt; 0)
+	   BEGIN
+
+		  DELETE FROM dbo.tPicklistePos
+		  WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePosNeu;
+
+	   END;
+
+    END;
+
+    EXEC WMS.spPicklisteposStatusAendern @kPicklistePos = @kPicklistePos, @nNewStatus = @nStatusNachPick, @kBenutzer = @kBenutzer, @dTimestamp = @dTimestamp;
+
+    DECLARE  @nIstAusDemWE INT;
+    SET @nIstAusDemWE = 0;
+
+    SELECT TOP 1  @nIstAusDemWE = CASE WHEN ISNULL(tPickliste.kPicklistenVorlage,0) &lt; 0 THEN 1 ELSE 0 END
+    FROM tPickliste
+    JOIN tPicklistePos ON tPicklistePos.kPickliste = tPickliste.kPickliste
+    WHERE tPicklistePos.kPicklistePos = @kPicklistePos
+
+    -- Nach in Box legen, die versandbox pr&#252;fen
+    IF(@nStatusNachPick = 30 AND @kLhm &gt; 0)
+    BEGIN
+	   EXEC WMS.spVersandBoxPruefen 
+	   @kLHM = @kLhm,
+	   @nAusDemWE = @nIstAusDemWE
+    END;
+END;</code></pre>
+</body>
+</html>

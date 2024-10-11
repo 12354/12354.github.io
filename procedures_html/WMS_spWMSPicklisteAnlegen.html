@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spWMSPicklisteAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spWMSPicklisteAnlegen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spWMSPicklisteAnlegen]
+@kBestellung INT,
+@kWarenlager INT,
+@kBenutzer INT,
+@nTeilLiefErlaubt INT,
+@kPickliste INT OUT,
+@nErrorCode INT OUT
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+	
+	DECLARE @ErrorMessage NVARCHAR(4000);
+	DECLARE @ErrorSeverity INT;
+	DECLARE @ErrorState INT;
+	DECLARE @retry INT;
+	DECLARE @CreatedTransaction INT;
+	DECLARE @kSessionIDPickliste INT;
+	DECLARE @dAktuellesDatum DATETIME;
+	DECLARE @kPicklisteVorlageAktuell INT;
+	DECLARE @fMengeErfolgreichReserviert DECIMAL(25,13) = 0;
+	DECLARE @kPicklisteStatus INT;
+	DECLARE @BestellungZuReservieren TYPE_spBestellungReservieren_BestellungZuReservieren;
+	DECLARE @nIstStandardLager TINYINT = 0;
+
+	SET @retry = 5;
+	WHILE @retry &gt; 0
+	BEGIN
+
+
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+		   SET @CreatedTransaction = 1;
+		   BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION Savepoint0;
+		END;
+
+
+		IF(EXISTS (SELECT * FROM dbo.tBestellungPicklisteLock
+				   WHERE tBestellungPicklisteLock.kBestellung = @kBestellung))
+		BEGIN
+			RAISERROR (	&#39;Auftrag wird grade von wo anders reserviert.&#39;, 18, 1);
+			RETURN;
+
+		END;
+
+		SELECT TOP(1) @kPickliste = tPicklistePos.kPickliste
+		FROM dbo.tPicklistePos 
+		JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tPicklistePos.kBestellPos
+		WHERE tAuftragPosition.kAuftrag = @kBestellung
+		AND tPicklistePos.nStatus &lt; 30
+		AND tPicklistePos.kPickliste &gt; 0
+		AND tPicklistePos.kWarenLager = @kWarenlager
+		GROUP BY dbo.tPicklistePos.kPickliste;
+		
+		
+	    SELECT @nIstStandardLager = CASE WHEN tWarenlager.nLagerplatzVerwaltung = 1 THEN 0 ELSE 1 END
+	    FROM tWarenlager
+	    WHERE tWarenlager.kWarenLager = @kWarenlager;
+
+
+		IF(@kPickliste &gt; 0)
+		BEGIN
+
+			IF(@CreatedTransaction = 1)
+			BEGIN
+				COMMIT;-- Nur wenn kein Savepoint gesetzt
+			END
+			RETURN;
+
+		END;
+
+
+		SET @dAktuellesDatum = GETDATE();
+
+		INSERT INTO dbo.tPicklisteVorlage
+		(
+		    kPickliste, nIstVorlage, nAnzahlBestellungen, kBestellNr, nAnzahlArtikelAuftragMax, nAnzahlArtikelAuftragMin, nTeillieferungen,fTeillieferungenWert,
+		    nBoxenVon,  nBoxenBis,nPicklistenVorlageTyp,fGewichtVon, fGewichtBis, nSortierung,  cKommentar,dVonDatum,
+		    dBisDatum,kBenutzer,dAngelegt,cVersandartNr,cShops, cPlattformen,kWarenlager,cName,nQuickSlot,cWarengruppen,kRollendeKommissionierungPickwagen,
+		    nBestellungWMSFreigabe, nMaxAnzahlArtikel,nNichtBezahltVorkommissionieren, nNichtBezahltAutomatischAufVorkommi, cLieferlaender,
+		    cLagerbereiche,fPreisAuftragMax, fPreisAuftragMin, cAuftragkennzeichnung,cFirmen, cKundengruppen, cVersandklassen, cZahlungsarten,nEnthaeltArtAusWarengruppe,
+		    nAlleOhneWarengruppe,nAlleOhneVersandart, nAlleOhneZahlungsart,nDirektVerpacken, cBenutzer, nSortenrein, nAuftragsArt,nMHDHandling,nMHDMinHaltbarkeit,
+		    nArtikelBreiteVon,nArtikelBreiteBis, nArtikelHoeheVon,nArtikelHoeheBis,nArtikelLaengeVon,nArtikelLaengeBis,nBoxenNurGanzeStuecklistenAufPL,
+		    nAuftragsVolumenVon, nAuftragsVolumenBis,nOhneVolumenAusschliessen
+		)
+		VALUES
+		(
+		    0, -- kPickliste - int
+		    0, -- nIstVorlage - tinyint
+		    0, -- nAnzahlBestellungen - int
+		    0, -- kBestellNr - int
+		    0, -- nAnzahlArtikelAuftragMax - int
+		    0, -- nAnzahlArtikelAuftragMin - int
+		    0, -- nTeillieferungen - tinyint
+		    0, -- fTeillieferungenWert - decimal
+		    0, -- nBoxenVon - int
+		    0, -- nBoxenBis - int
+		    1, -- nPicklistenVorlageTyp - tinyint
+		    0, -- fGewichtVon - decimal
+		    0, -- fGewichtBis - decimal
+		    0, -- nSortierung - tinyint
+		    &#39;&#39;, -- cKommentar - varchar
+		    null, -- dVonDatum - datetime
+		    null, -- dBisDatum - datetime
+		    0, -- kBenutzer - int
+		    @dAktuellesDatum, -- dAngelegt - datetime
+		    &#39;&#39;, -- cVersandartNr - varchar
+		    &#39;&#39;, -- cShops - varchar
+		    &#39;&#39;, -- cPlattformen - varchar
+		    0, -- kWarenlager - int
+		    &#39;Packtisch&#39;, -- cName - varchar
+		    0, -- nQuickSlot - int
+		    &#39;&#39;, -- cWarengruppen - varchar
+		    0, -- kRollendeKommissionierungPickwagen - int
+		    0, -- nBestellungWMSFreigabe - tinyint
+		    0, -- nMaxAnzahlArtikel - int
+		    0, -- nNichtBezahltVorkommissionieren - tinyint
+		    0, -- nNichtBezahltAutomatischAufVorkommi - tinyint
+		    &#39;&#39;, -- cLieferlaender - varchar
+		    &#39;&#39;, -- cLagerbereiche - varchar
+		    0, -- fPreisAuftragMax - decimal
+		    0, -- fPreisAuftragMin - decimal
+		    &#39;&#39;, -- cAuftragkennzeichnung - varchar
+		    &#39;&#39;, -- cFirmen - varchar
+		    &#39;&#39;, -- cKundengruppen - varchar
+		    &#39;&#39;, -- cVersandklassen - varchar
+		    &#39;&#39;, -- cZahlungsarten - varchar
+		    0, -- nEnthaeltArtAusWarengruppe - tinyint
+		    0, -- nAlleOhneWarengruppe - tinyint
+		    0, -- nAlleOhneVersandart - tinyint
+		    0, -- nAlleOhneZahlungsart - tinyint
+		    0, -- nDirektVerpacken - tinyint
+		    @kBenutzer, -- cBenutzer - varchar
+		    0, -- nSortenrein - tinyint
+		    0, -- nAuftragsArt - tinyint
+		    1, -- nMHDHandling - tinyint
+		    0, -- nMHDMinHaltbarkeit - int
+		    0, -- nArtikelBreiteVon - int
+		    0, -- nArtikelBreiteBis - int
+		    0, -- nArtikelHoeheVon - int
+		    0, -- nArtikelHoeheBis - int
+		    0, -- nArtikelLaengeVon - int
+		    0, -- nArtikelLaengeBis - int
+		    0, -- nBoxenNurGanzeStuecklistenAufPL - tinyint
+		    0, -- nAuftragsVolumenVon - bigint
+		    0, -- nAuftragsVolumenBis - bigint
+		    0 -- nOhneVolumenAusschliessen - tinyint
+		);
+
+
+
+
+		SET @kPicklisteVorlageAktuell = SCOPE_IDENTITY();
+
+		INSERT INTO dbo.tPickliste (kWarenLager, kPicklistenVorlage, nStatus,kSessionId,nType) 
+		SELECT kWarenLager, @kPicklisteVorlageAktuell, 0,0,  nLagerplatzVerwaltung 
+		FROM dbo.tWarenlager WHERE kWarenLager = @kWarenlager
+
+
+		SET @kPickliste = SCOPE_IDENTITY();
+
+
+		--
+		-- FreiPos und Artikel ohne Lagerbestand auf Pickliste schreiben. 
+		-- Au&#223;er St&#252;cklistenv&#228;ter !!
+		--
+		INSERT INTO dbo.tPicklistePos
+		(   kPickliste,kWarenLager,kWarenLagerEingang,fAnzahl, kBestellPos, kPicklistePosStatus,kArtikel, kWarenlagerPlatz,kPicklistePos_Ursprung,
+		    kLieferscheinPos,kBestellung,nPickPrio,nStatus,kAnsprechpartner )
+
+		SELECT @kPickliste, @kWarenlager, 0, tAuftragPosition.fAnzahl - ISNULL(tPicklistePos.fAnzahl, 0) - ISNULL(BestellPosBereitsGeliefert.fAnzahl, 0), tAuftragPosition.kAuftragPosition, 0, ISNULL(tArtikel.kArtikel, 0), 0, NULL, 0, @kBestellung, 0, 10, NULL
+		FROM Verkauf.tAuftragPosition
+		LEFT JOIN dbo.tArtikel ON tArtikel.kArtikel = tAuftragPosition.kArtikel
+		LEFT JOIN dbo.tPicklistePos ON tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition AND tPicklistePos.nStatus &lt; 40
+		OUTER APPLY (SELECT (tLieferscheinPos.fAnzahl) AS fAnzahl
+					 FROM dbo.tLieferscheinPos
+					 WHERE tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition) AS BestellPosBereitsGeliefert
+		WHERE (tArtikel.kArtikel IS NULL OR tArtikel.cLagerAktiv = &#39;N&#39; 
+		       OR ISNULL(tAuftragPosition.kAuftragStueckliste, 0) = tAuftragPosition.kAuftragPosition AND ISNULL(tAuftragPosition.kAuftragStueckliste, 0) &gt; 0
+			   OR (@nIstStandardLager = 0 AND (tArtikel.cLagerAktiv = &#39;N&#39; AND EXISTS (SELECT teigenschaft.kArtikel 
+			                                                                          FROM dbo.teigenschaft 
+						                                                              WHERE tArtikel.kArtikel = teigenschaft.kArtikel AND teigenschaft.cAktiv = &#39;Y&#39; AND tEigenschaft.cTyp != &#39;PFLICHT-FREIFELD&#39; AND tEigenschaft.cTyp != &#39;FREIFELD&#39;) ))
+			   ) 
+		AND tAuftragPosition.kAuftrag = @kBestellung
+		AND tAuftragPosition.nType IN (0,1,10,11,17,18,19,20)
+		AND ISNULL(tAuftragPosition.kAuftragStueckliste, 0) != tAuftragPosition.kAuftragPosition
+		AND tAuftragPosition.fAnzahl - ISNULL(tPicklistePos.fAnzahl,0) - ISNULL(BestellPosBereitsGeliefert.fAnzahl,0) &gt; 0;
+
+
+
+		INSERT INTO dbo.tPicklistePosStatus (kPicklistePos, nStatus, kBenutzer, dZeitstempel)  
+		SELECT tPicklistePos.kPicklistePos, 10, @kBenutzer, @dAktuellesDatum
+		FROM dbo.tPicklistePos 
+		WHERE tPicklistePos.kPickliste = @kPickliste;
+		
+
+		INSERT INTO @BestellungZuReservieren (kBestellung,nTeillieferungErlaubt,nVorkommissionieren)
+		SELECT @kBestellung,ISNULL(@nTeilLiefErlaubt,0),0;
+
+
+
+		EXEC WMS.spBestellungReservieren @kPickliste = @kPickliste, 
+		                                 @kWarenlager = @kWarenlager, 
+		                                 @kPicklisteVorlage = @kPicklisteVorlageAktuell, 
+								   @kBenutzer = @kBenutzer,
+								   @BestandReservieren = 1,	
+								   @kSessionID = 0, 
+								   @BestellungZuReservieren = @BestellungZuReservieren,
+								   @nAnzahlReservierteBestellung = @fMengeErfolgreichReserviert OUTPUT;
+	        			
+
+		--
+		-- St&#252;cklistenv&#228;ter auf Pickliste schreiben. Menge Anhand von Komponenten auf der St&#252;ckliste
+		--
+			INSERT INTO dbo.tPicklistePos
+		(   kPickliste,kWarenLager,kWarenLagerEingang,fAnzahl, kBestellPos, kPicklistePosStatus,kArtikel, kWarenlagerPlatz,kPicklistePos_Ursprung,
+		    kLieferscheinPos,kBestellung,nPickPrio,nStatus,kAnsprechpartner )
+	    SELECT @kPickliste, @kWarenlager, 0, (ISNULL(StKompAufPl.Anzahl, 0) * tAuftragPosition.fAnzahl) / StKompAll.Anzahl  , tAuftragPosition.kAuftragPosition, 0, tAuftragPosition.kArtikel, 0, NULL, 0, @kBestellung, 0, 10, NULL
+		FROM Verkauf.tAuftragPosition
+		OUTER APPLY (
+					SELECT SUM(tPicklistePos.fAnzahl) AS Anzahl
+					FROM dbo.tPicklistePos
+					JOIN Verkauf.tAuftragPosition AS StKomponent ON  StKomponent.kAuftragPosition = tPicklistePos.kBestellPos
+					WHERE tPicklistePos.kPickliste = @kPickliste
+					AND ISNULL(StKomponent.kAuftragStueckliste,0) = tAuftragPosition.kAuftragPosition 
+					AND ISNULL(StKomponent.kAuftragStueckliste,0) != StKomponent.kAuftragPosition
+		) AS StKompAufPl
+		OUTER APPLY (
+					SELECT SUM(StKomponentALL.fAnzahl) AS Anzahl
+					FROM Verkauf.tAuftragPosition AS StKomponentALL
+					WHERE ISNULL(StKomponentALL.kAuftragStueckliste,0) = tAuftragPosition.kAuftragPosition 
+					AND ISNULL(StKomponentALL.kAuftragStueckliste,0) != StKomponentALL.kAuftragPosition
+		) AS StKompAll
+		WHERE tAuftragPosition.kAuftrag = @kBestellung
+		AND tAuftragPosition.nType = 1
+		AND ISNULL(tAuftragPosition.kAuftragStueckliste,0) &gt; 0
+		AND ISNULL(tAuftragPosition.kAuftragStueckliste,0) = tAuftragPosition.kAuftragPosition
+		AND ISNULL(StKompAufPl.Anzahl,0) &gt; 0;
+
+
+
+		
+		IF( NOT EXISTS (SELECT * 
+						FROM dbo.tPicklistePos
+						WHERE tPicklistePos.kPickliste = @kPickliste))
+		BEGIN
+
+		  IF(@CreatedTransaction = 1)
+		  BEGIN
+		      ROLLBACK TRANSACTION;
+		  END;
+		  ELSE
+		  BEGIN
+		      ROLLBACK TRANSACTION Savepoint0;
+		  END;
+
+		  SET @kPickliste = 0;
+
+
+
+
+
+
+		  --
+		  -- FEHLERBEHANDLUNG. Wieso konnte der Auftrag nicht reserviert werden ?
+		  --
+
+		  IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+		           JOIN tkunde ON tKunde.kKunde  =  tAuftrag.kKunde
+		           WHERE tAuftrag.kAuftrag = @kBestellung
+		           AND tkunde.cSperre = &#39;Y&#39;))
+		  BEGIN 
+		      SET @nErrorCode = 5131001; --Der Kunde f&#252;r diese Bestellung ist gesperrt.
+			  RETURN;
+		  END;
+		  
+		  
+		  IF( 0 &lt; (SELECT count(*) FROM Verkauf.tAuftrag
+		           WHERE kAuftrag = @kBestellung
+		           AND tAuftrag.kRueckhalteGrund &gt; 0 ))
+		  BEGIN
+		     SET @nErrorCode = 5131002; -- Bestellung wird zur&#252;ckgehalten
+			 RETURN;
+		  END;
+		  
+
+		  DECLARE @nRechnungsCount INT
+		  SELECT @nRechnungsCount = count(*) 
+		  		FROM Verkauf.tAuftrag
+				JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+		  		JOIN Rechnung.tRechnungPosition ON tRechnungPosition.kAuftrag = tAuftrag.kAuftrag
+		  		JOIN dbo.tGutschriftPos ON tGutschriftPos.kBestellPos = tRechnungPosition.kRechnungPosition
+		        WHERE tAuftrag.kAuftrag = @kBestellung;
+		  
+		  
+		  IF( 0 &lt; @nRechnungsCount)
+		  BEGIN	  
+			SET @nErrorCode = 5131004; --Bestellung hat Gutschriften. Bitte beachten sie gutgeschriebene Artikel nicht reserviert werden.
+			RETURN;
+		  END;
+		  
+		  DECLARE @FifoAktiv TINYINT = 0;
+		  SELECT @FifoAktiv= cValue 
+		  FROM tOptions
+		  WHERE cKey = &#39;FIFOAktiv&#39;;
+		  
+		  IF( 1 = @FifoAktiv)
+		  BEGIN
+		  
+		    DECLARE @nStatusBestellung INT;
+		    SELECT @nStatusBestellung = vBestellungLieferInfoProLager.nLieferbarEigen
+		    FROM Versand.vBestellungLieferInfoProLager
+		    WHERE vBestellungLieferInfoProLager.kWarenLager = kWarenlager
+		    AND vBestellungLieferInfoProLager.kBestellung = @kBestellung;
+		    
+		    IF(@nStatusBestellung = 0)
+		    BEGIN
+		      	SET @nErrorCode = 5131005; --FIFO ist aktiv. Bestellung ist nicht lieferbar. Kein freier Bestand vorhanden.
+				RETURN;
+		    END;
+		      
+		      
+		    IF(@nStatusBestellung = 1)
+		    BEGIN
+		       SET @nErrorCode = 5131006; --FIFO ist aktiv. Bestellung ist nur teilweise lieferbar. Nicht genug freier Bestand vorhanden.
+			   RETURN;
+		    END;
+		  END;
+
+
+		 
+		  
+
+
+		  IF EXISTS(SELECT * 
+					 FROM  Versand.vBestellungLieferInfoProLager 
+					 JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = vBestellungLieferInfoProLager.kWarenlager
+					 WHERE vBestellungLieferInfoProLager.kBestellung = @kBestellung
+					 AND vBestellungLieferInfoProLager.kWarenlager != @kWarenlager
+					 AND vBestellungLieferInfoProLager.nLieferbarEigen = 2
+					 AND tWarenLager.nAktiv = 1
+					 AND tWarenLager.nLagerplatzVerwaltung = 0
+					 AND tWarenLager.nFulfillment = 0)
+		  BEGIN
+		      SET @nErrorCode = 5131007; -- Bestellung ist aus einem anderen standardlager lieferbar
+		      RETURN;
+		  END;
+
+
+
+		 IF EXISTS( SELECT * 
+			        FROM  Versand.vBestellungLieferInfoProLager 
+				    JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = vBestellungLieferInfoProLager.kWarenlager
+			        WHERE vBestellungLieferInfoProLager.kBestellung = @kBestellung
+				    AND vBestellungLieferInfoProLager.kWarenlager != @kWarenlager
+				    AND vBestellungLieferInfoProLager.nLieferbarEigen = 1
+				    AND tWarenLager.nAktiv = 1
+				    AND tWarenLager.nLagerplatzVerwaltung = 0
+				    AND tWarenLager.nFulfillment = 0)
+		  BEGIN	  
+		      SET @nErrorCode = 5131008; -- Bestellung ist aus einem anderen standardlager teillieferbar
+		      RETURN;
+		  END;
+
+
+		  SET @nErrorCode = 5131099; -- Anderer Grund
+		
+		END;
+		ELSE
+		BEGIN
+
+		    SET @nErrorCode = 0;
+
+			DECLARE @nStatusPickliste INT = 10;
+
+			SELECT @nStatusPickliste = ISNULL( MIN(tPicklistePos.nStatus) , 10)
+			FROM dbo.tPicklistePos
+			WHERE tPicklistePos.kPickliste = @kPickliste;
+
+
+			INSERT INTO dbo.tPicklisteStatus
+			(
+			    --kPicklisteStatus - this column value is auto-generated
+			    kPickliste,
+			    kBenutzer,
+			    dZeitstempel,
+			    nStatus
+			)
+			VALUES
+			(
+			    @kPickliste, -- kPickliste - int
+			    @kBenutzer, -- kBenutzer - int
+			     getdate(), -- dZeitstempel - datetime
+			    @nStatusPickliste -- nStatus - int
+			);
+
+			SET @kPicklisteStatus = SCOPE_IDENTITY();
+
+			DECLARE @cNeueNummer VARCHAR(255);
+			EXEC dbo.spGetNextNummer @cName = &#39;Pickliste&#39;,                       
+									  @kFirma = 0,                       
+									  @nNoUpdate = 0,             
+									  @nNoSelect = 1,              
+									  @cNeueNummer = @cNeueNummer OUTPUT -- varchar(30)
+
+			UPDATE tPickliste SET kSessionId = null, kPicklisteStatus = @kPicklisteStatus, kPicklisteStatusAngelegt = @kPicklisteStatus, nStatus = @nStatusPickliste, cPicklisteNr = @cNeueNummer
+			WHERE kPickliste = @kPickliste;
+
+			IF(@CreatedTransaction = 1)
+			BEGIN
+				COMMIT;-- Nur wenn kein Savepoint gesetzt
+			END;
+		END;
+	END TRY
+	BEGIN CATCH
+	-- Dedlock Catch
+		IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				IF(@CreatedTransaction = 1)
+				BEGIN
+				    ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+				    ROLLBACK TRANSACTION Savepoint0;
+				END
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				EXEC dbo.spWaitRandom;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+				IF(@CreatedTransaction = 1)
+				BEGIN
+				    ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+				    ROLLBACK TRANSACTION Savepoint0;
+				END
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				RETURN;
+			END;
+	END CATCH;
+ 
+
+	RETURN;
+END</code></pre>
+</body>
+</html>

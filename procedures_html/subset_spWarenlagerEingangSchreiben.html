@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>subset.spWarenlagerEingangSchreiben</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>subset.spWarenlagerEingangSchreiben</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure kann ein Wareneingang mit Teilmengen Informationen erstellt werden. Wareneingängge können ausschließlich über die Procedure erstellt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [subset].[spWarenlagerEingangSchreiben]
+	@kArtikel INT,
+	@kWarenLagerPlatz INT,
+	@kLieferantenBestellungPos INT = NULL,
+	@kBenutzer INT ,
+	@fEKNetto DECIMAL(25,13),
+	@cLieferscheinNr NVARCHAR(255) = NULL,
+	@fQuantity INT,
+	@fSubsetFactor DECIMAL(25,13),
+	@cSubsetNumber NVARCHAR(100),
+	@cChargenNr NVARCHAR(255) = NULL,
+	@dMHD DATETIME = NULL,
+	@dGeliefertAm DATETIME = NULL,
+	@cKommentar NVARCHAR(255) = NULL,
+	@kGutschriftPos INT = NULL,
+	@kLHM INT = NULL,
+	@kSessionId INT = NULL,
+	@kBuchungsart INT,
+	@kBestellPosUmlagerung INT = NULL,
+	@kRMRetourePos  INT = NULL,
+	@nHistorieNichtSchreiben INT = 0,
+	@Subsets AS subset.TYPE_spSubsetDetails READONLY,
+	@kWarenlagerEingang INT = NULL OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @hash VARBINARY(128);
+	DECLARE @fAnzahl DECIMAL(25,13);
+	DECLARE @kWarenLagerEingangSubset INT;
+
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;subset.spWarenlagerEingangSchreiben&#39;);
+	
+	DECLARE @retry INT = 5;
+	WHILE @retry &gt; 0
+	BEGIN      
+		BEGIN TRY  
+			DECLARE @TranCount INT = @@TRANCOUNT;
+			IF(@TranCount = 0)
+			BEGIN
+				BEGIN TRANSACTION  
+			END
+          
+			-- Daten f&#252;r spWarenlagereingang berechnen
+		    SET @fAnzahl = CONVERT(DECIMAL(25,13),@fQuantity) * @fSubsetFactor;
+
+			-- Warenlagereingang buchen
+			EXECUTE [dbo].spWarenlagerEingangSchreiben	NULL
+			,                                           @kArtikel
+			,                                           @kWarenLagerPlatz
+			,                                           @kLieferantenBestellungPos
+			,                                           @kBenutzer
+			,                                           @fAnzahl
+			,                                           @fEKNetto
+			,                                           @cLieferscheinNr
+			,                                           @cChargenNr
+			,                                           @dMHD
+			,                                           @dGeliefertAm
+			,                                           @cKommentar
+			,                                           @kGutschriftPos
+			,                                           @kLHM
+			,                                           @kSessionId
+			,                                           @kBuchungsart
+			,                                           @kBestellPosUmlagerung
+			,                                           @kRMRetourePos
+			,                                           1 -- Wir schreiben Historie selber
+			,                                           @kWarenlagerEingang OUTPUT;
+
+			-- Subset Informationen setzen
+			SET CONTEXT_INFO @hash;
+			
+			INSERT INTO [dbo].[tWarenLagerEingangSubsets] (kWarenLagerEingang,cSubsetNumber,fQuantity,fFactor) VALUES (@kWarenlagerEingang,LTRIM(RTRIM(@cSubsetNumber)),@fQuantity,@fSubsetFactor)
+			SELECT @kWarenLagerEingangSubset = SCOPE_IDENTITY();
+
+			INSERT INTO [dbo].[tWarenLagerEingangSubsetDetails] (kWarenLagerEingangSubset,kDimension,fValue,fGroundValue,kMassEinheit) 
+			SELECT @kWarenLagerEingangSubset, subset.kDimension, subset.fValue, subset.fGroundValue, subset.kMassEinheit FROM @Subsets as subset
+			
+			SET CONTEXT_INFO 0x0;
+
+
+
+			-- Historie schreiben
+			INSERT INTO dbo.tArtikelHistory
+			(
+				kWarenLagerPlatz, kArtikel, fAnzahl, dGebucht, kBenutzer, kWarenEingang, kBestellPos, kGutschriftPos, fEKNetto, cKommentar, kBuchungsart, kLieferscheinPos,
+				fLagerBestandGesamt, fLagerBestand, kLieferantenBestellungPos, cLieferscheinNr, cChargenNr, dMHD, fVerfuegbar, fReserviert, fLagerBestandInLager, cSubsetNumber, cDimensionen
+			)
+			SELECT tWarenlagereingang.kWarenLagerPlatz,
+		  		   tWarenlagereingang.kArtikel,
+				   tWarenlagereingang.fAnzahl/tWarenlagereingangSubsets.fFactor, -- Factor darf nie 0 sein
+				   tWarenlagereingang.dErstellt AS dErstellt,
+				   tWarenlagereingang.kBenutzer,
+				   0 AS kWarenLagerEingang,
+				   0 AS  kBestellPos,
+				   ISNULL(tWarenlagereingang.kGutschriftPos,0),
+				   ISNULL(tWarenlagereingang.fEKEinzel,
+				   ISNULL(tArtikel.fEKNetto,0.0)) AS fEKEinzel,
+				   tWarenlagereingang.cKommentar,
+				   tWarenlagereingang.kBuchungsart,
+				   0 AS kLieferscheinPos,
+				   tlagerbestand.fLagerbestandEigen AS fLagerBestandGesamt, 
+	   			   LagerBestand.fBestandPlatz AS fLagerBestand, -- Nur Lagerbestand auf dem Platz wo der WE grade liegt
+				   tWarenlagereingang.kLieferantenBestellungPos,
+				   tWarenlagereingang.cLieferscheinNr,
+				   tWarenlagereingang.cChargenNr,
+				   tWarenlagereingang.dMHD,
+				   ISNULL(tlagerbestand.fVerfuegbar,0),
+				   ISNULL(tlagerbestand.fInAuftraegen,0),
+				   LagerBestand.BestandInWarenlager AS BestandInWarenlager,
+				   tWarenlagereingangSubsets.cSubsetNumber,
+				   Dimensionen.cDimensionen
+			FROM dbo.tWarenlagereingang
+			JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenlagereingang.kArtikel
+			JOIN dbo.tWarenlagereingangSubsets ON tWarenlagereingangSubsets.kWarenlagereingang = tWarenlagereingang.kWarenlagereingang
+			JOIN dbo.tlagerbestand ON tlagerbestand.kArtikel = tWarenlagereingang.kArtikel
+			OUTER APPLY (SELECT	SUM(tWarenLagerEingang.fAnzahlAktuell) AS fBestandPlatz, MAX(tlagerbestandProLagerLagerartikel.fBestand) AS BestandInWarenlager
+						 FROM dbo.tWarenLagerEingang
+						 JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tWarenLagerEingang.kWarenLagerPlatz
+						 LEFT JOIN dbo.tlagerbestandProLagerLagerartikel ON tlagerbestandProLagerLagerartikel.kArtikel = tWarenLagerEingang.kArtikel AND tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLagerPlatz.kWarenLager
+						 WHERE tWarenLagerEingang.kArtikel = tWarenlagereingang.kArtikel
+						 AND tWarenLagerEingang.kWarenLagerPlatz = tWarenlagereingang.kWarenlagerPlatz) AS LagerBestand
+			OUTER APPLY (
+			 SELECT STUFF((
+					SELECT &#39;, &#39; + LEFT(tDimensionSprache.cName, 1) + &#39;: &#39; + CAST(CAST(CAST(tWarenLagerEingangSubsetDetails.fValue as decimal(12,4)) AS FLOAT) AS VARCHAR) + &#39; &#39; + tMassEinheit.cDisplayCode
+					FROM dbo.tWarenLagerEingangSubsetDetails 
+					JOIN dbo.tMassEinheit ON tMassEinheit.kMassEinheit = tWarenLagerEingangSubsetDetails.kMassEinheit 
+					JOIN dbo.tSpracheUsed ON nStandard = 1
+					JOIN subset.tDimensionSprache ON tDimensionSprache.kDimension = tWarenLagerEingangSubsetDetails.kDimension AND tDimensionSprache.kSprache = tSpracheUsed.kSprache
+					WHERE tWarenLagerEingangSubsetDetails.kWarenLagerEingangSubset = tWarenLagerEingangSubsets.kWarenLagerEingangSubset
+						FOR XML PATH(&#39;&#39;)
+						), 1, 1, &#39;&#39;) AS cDimensionen
+		 
+			 ) AS Dimensionen 
+			WHERE tWarenlagereingang.kWarenlagereingang = @kWarenlagerEingang;
+
+	
+
+			-- IM tArtikelSpeicher die Teilmengen Nummer Speichern
+			INSERT INTO [dbo].[tArtikelSpeicher] (cNummer, kArtikel,nID,nAktiv) 
+			SELECT tWarenLagerEingangSubsets.cSubsetNumber AS Nummer, tWarenLagerEingang.kArtikel, 12 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			FROM dbo.tWarenLagerEingangSubsets
+			JOIN dbo.tWarenLagerEingang ON tWarenLagerEingangSubsets.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+			LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft SubsetNumber&#39;
+			LEFT JOIN 
+				dbo.tArtikelSpeicher 
+				ON tArtikelSpeicher.cNummer = tWarenLagerEingangSubsets.cSubsetNumber
+				AND tArtikelSpeicher.kArtikel = tWarenLagerEingang.kArtikel
+				AND tArtikelSpeicher.nID = 12
+			WHERE tArtikelSpeicher.kArtikel IS NULL
+			GROUP BY tWarenLagerEingangSubsets.cSubsetNumber, tWarenLagerEingang.kArtikel, dbo.tOptions.cValue
+			
+
+			SET @retry = 0;
+			IF(@TranCount = 0)
+			BEGIN           
+				COMMIT TRANSACTION      
+			END
+		END TRY       
+		BEGIN CATCH           
+			IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+			BEGIN              
+				SET @retry = @retry - 1;               
+				ROLLBACK       
+			END          
+			ELSE          
+			BEGIN              
+				SET @retry = 0;               
+				THROW;           
+			END      
+		END CATCH
+	END
+
+
+	SET CONTEXT_INFO 0x000;
+	RETURN
+END;</code></pre>
+</body>
+</html>

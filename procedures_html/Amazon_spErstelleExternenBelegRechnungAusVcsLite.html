@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spErstelleExternenBelegRechnungAusVcsLite</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spErstelleExternenBelegRechnungAusVcsLite</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[spErstelleExternenBelegRechnungAusVcsLite]
+(
+    @TransactionID AS NVARCHAR(50) = NULL, @InvoiceNumber AS NVARCHAR(100) = NULL, @UserId AS INT = 0, @nFehlerIgnorieren AS BIT = 0
+)
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+    DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+    DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+    DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+    --IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+    SET CONTEXT_INFO @MyContextInfo;
+
+    IF (ISNULL(LEN(@TransactionID), 0) = 0 AND ISNULL(LEN(@InvoiceNumber), 0) = 0)
+        THROW 50000, &#39;Ung&#252;ltiger Aufruf: Entweder TransactionId oder InvoiceNumber angeben.&#39;, 1;
+
+	IF (@UserId = 0)
+        THROW 50000, &#39;Ung&#252;ltiger Aufruf: UserId angeben.&#39;, 1;
+
+	IF OBJECT_ID(N&#39;tempdb..#VCSItems&#39;) IS NOT NULL
+	BEGIN
+		DROP TABLE #VCSItems;
+    END
+    
+    CREATE TABLE #VCSItems
+    (
+        Id INT NOT NULL,
+        kUser INT NOT NULL,
+        TransactionID NVARCHAR(50) NULL,
+        InvoiceNumber NVARCHAR(100) NULL,
+        ShippingDate DATETIME2(0) NULL,
+        OrderID NVARCHAR(50) NOT NULL,
+		ShippingID NVARCHAR(50) NULL,
+        OrderItemID NVARCHAR(50) NULL,
+        OrderDate DATETIME2(0) NULL,
+        TransactionType NVARCHAR(20) NOT NULL,
+        IsInvoiceCorrected BIT NOT NULL,
+		IsAmazonInvoiced BIT NOT NULL,
+        SKU NVARCHAR(100) NOT NULL,
+        ProductName NVARCHAR(255) NOT NULL,
+        QuantityPurchased DECIMAL(25, 13) NOT NULL,
+        Currency CHAR(3) NOT NULL,
+        ItemVatInclAmount DECIMAL(25, 13) NOT NULL,
+        ItemVatExclAmount DECIMAL(25, 13) NOT NULL,
+        ItemVatRate DECIMAL(25, 13) NOT NULL,
+        ItemPromoVatInclAmount DECIMAL(25, 13) NOT NULL,
+        ItemPromoVatExclAmount DECIMAL(25, 13) NOT NULL,
+        ItemPromotionID NVARCHAR(50) NOT NULL,
+        ShippingVatInclAmount DECIMAL(25, 13) NOT NULL,
+        ShippingVatExclAmount DECIMAL(25, 13) NOT NULL,
+        ShippingVatRate DECIMAL(25, 13) NOT NULL,
+        ShippingPromoVatInclAmount DECIMAL(25, 13) NOT NULL,
+        ShippingPromoVatExclAmount DECIMAL(25, 13) NOT NULL,
+        ShippingPromotionID NVARCHAR(50) NOT NULL,
+        GiftWrapVatInclAmount DECIMAL(25, 13) NOT NULL,
+        GiftWrapVatExclAmount DECIMAL(25, 13) NOT NULL,
+        GiftWrapVatRate DECIMAL(25, 13) NOT NULL,
+        GiftWrapPromoVatInclAmount DECIMAL(25, 13) NOT NULL,
+        GiftWrapPromoVatExclAmount DECIMAL(25, 13) NOT NULL,
+        GiftWrapPromotionID NVARCHAR(50) NOT NULL,
+        BuyerVatNumber NVARCHAR(30) NULL,
+        SellerVatNumber NVARCHAR(30) NULL,
+        BillName NVARCHAR(255) NOT NULL,
+        BillAddress1 NVARCHAR(255) NOT NULL,
+        BillAddress2 NVARCHAR(255) NOT NULL,
+        BillAddress3 NVARCHAR(255) NOT NULL,
+        BillCity NVARCHAR(100) NOT NULL,
+        BillState NVARCHAR(100) NOT NULL,
+        BillPostalCode NVARCHAR(20) NOT NULL,
+        BillCountry CHAR(2) NOT NULL,
+        BillPhoneNumber NVARCHAR(100) NOT NULL,
+        PurchaseOrderNumber NVARCHAR(50) NULL,
+        ShipName NVARCHAR(255) NOT NULL,
+        ShipAddress1 NVARCHAR(255) NOT NULL,
+        ShipAddress2 NVARCHAR(255) NOT NULL,
+        ShipAddress3 NVARCHAR(255) NOT NULL,
+        ShipCity NVARCHAR(100) NOT NULL,
+        ShipState NVARCHAR(100) NOT NULL,
+        ShipPostalCode NVARCHAR(20) NOT NULL,
+        ShipCountry CHAR(2) NOT NULL,
+        ShipPhoneNumber NVARCHAR(100) NOT NULL,
+        ShipServiceLevel NVARCHAR(30) NOT NULL,
+        ShipFromCity NVARCHAR(100) NOT NULL,
+        ShipFromState NVARCHAR(100) NOT NULL,
+        ShipFromCountry CHAR(2) NOT NULL,
+        ShipFromPostalCode NVARCHAR(100) NOT NULL,
+        OriginalInvoiceNumber NVARCHAR(100) NULL,
+        Citation NVARCHAR(2000) NULL,
+        MarketplaceID NVARCHAR(20) NOT NULL,
+        kAmazonBestellungPos INT NULL,
+        kAuftragPosition INT NULL,
+        nType TINYINT NULL,
+        cArtNr NVARCHAR(100) NULL,
+        kArtikel INT NULL,
+        cName NVARCHAR(255) NULL,
+        fEkNetto DECIMAL(25, 13) NULL,
+        cEinheit NVARCHAR(25) NOT NULL,
+    );
+
+	-- Daten rauskopieren, damit wir im weiteren Verlauf nicht mehr auf TransactionID vs InvoiceNumber achten m&#252;ssen
+    INSERT INTO #VCSItems (
+        Id,
+        kUser,
+        TransactionID,
+        InvoiceNumber,
+        ShippingDate,
+        OrderDate,
+        OrderID,
+		ShippingID,
+        OrderItemID,
+        TransactionType,
+        IsInvoiceCorrected,
+		IsAmazonInvoiced,
+        SKU,
+        ProductName,
+        QuantityPurchased,
+        Currency,
+        ItemVatInclAmount,
+        ItemVatExclAmount,
+        ItemVatRate,
+        ItemPromoVatInclAmount,
+        ItemPromoVatExclAmount,
+        ItemPromotionID,
+        ShippingVatInclAmount,
+        ShippingVatExclAmount,
+        ShippingVatRate,
+        ShippingPromoVatInclAmount,
+        ShippingPromoVatExclAmount,
+        ShippingPromotionID,
+        GiftWrapVatInclAmount,
+        GiftWrapVatExclAmount,
+        GiftWrapVatRate,
+        GiftWrapPromoVatInclAmount,
+        GiftWrapPromoVatExclAmount,
+        GiftWrapPromotionID,
+        BuyerVatNumber,
+        SellerVatNumber,
+        BillName,
+        BillAddress1,
+        BillAddress2,
+        BillAddress3,
+        BillCity,
+        BillState,
+        BillPostalCode,
+        BillCountry,
+        BillPhoneNumber,
+        PurchaseOrderNumber,
+        ShipName,
+        ShipAddress1,
+        ShipAddress2,
+        ShipAddress3,
+        ShipCity,
+        ShipState,
+        ShipPostalCode,
+        ShipCountry,
+        ShipPhoneNumber,
+        ShipServiceLevel,
+        ShipFromCity,
+        ShipFromState,
+        ShipFromCountry,
+        ShipFromPostalCode,
+        OriginalInvoiceNumber,
+        Citation,
+        MarketplaceID,
+        kAmazonBestellungPos,
+        kAuftragPosition,
+        nType,
+        cArtNr,
+        kArtikel,
+        cName,
+        fEkNetto,
+        cEinheit)
+    SELECT tVcsLite.kVcsLite,
+           tVcsLite.kUser,
+           IIF(LEN(tVcsLite.TransactionID) &gt; 0, tVcsLite.TransactionID, NULL) AS TransactionID,
+           IIF(LEN(tVcsLite.InvoiceNumber) &gt; 0, LEFT(tVcsLite.InvoiceNumber, 50), NULL) AS InvoiceNumber,
+           tVcsLite.ShippingDate,
+           tVcsLite.OrderDate,
+           IIF(LEN(tVcsLite.OrderID) &gt; 0, tVcsLite.OrderID, NULL) AS OrderID,
+		   tVcsLite.ShippingID,
+           tVcsLite.LegacyCustomerOrderItemId AS OrderItemId,
+           tVcsLite.TransactionType,
+           tVcsLite.isInvoiceCorrected AS IsInvoiceCorrected,
+		   tVcsLite.IsAmazonInvoiced AS IsAmazonInvoiced,
+           ISNULL(tVcsLite.SKU, &#39;&#39;) AS SKU,
+           ISNULL(tVcsLite.ProductName, &#39;&#39;) AS ProductName,
+           ISNULL(tVcsLite.QuantityPurchased, 0.0) AS QuantityPurchased,
+           tVcsLite.Currency,
+           ISNULL(tVcsLite.ItemVatInclAmount, 0.0) AS ItemVatInclAmount,
+           ISNULL(tVcsLite.ItemVatExclAmount, 0.0) AS ItemVatExclAmount,
+           ISNULL(tVcsLite.ItemVatRate, 0.0) AS ItemVatRate,
+           ISNULL(tVcsLite.ItemPromoVatInclAmount, 0.0) AS ItemPromoVatInclAmount,
+           ISNULL(tVcsLite.ItemPromoVatExclAmount, 0.0) AS ItemPromoVatExclAmount,
+           ISNULL(tVcsLite.ItemPromotionID, &#39;&#39;) AS ItemPromotionID,
+           ISNULL(tVcsLite.ShippingVatInclAmount, 0.0) AS ShippingVatInclAmount,
+           ISNULL(tVcsLite.ShippingVatExclAmount, 0.0) AS ShippingVatExclAmount,
+           ISNULL(tVcsLite.ShippingVatRate, 0.0) AS ShippingVatRate,
+           ISNULL(tVcsLite.ShippingPromoVatInclAmount, 0.0) AS ShippingPromoVatInclAmount,
+           ISNULL(tVcsLite.ShippingPromoVatExclAmount, 0.0) AS ShippingPromoVatExclAmount,
+           ISNULL(tVcsLite.ShipPromotionID, &#39;&#39;) AS ShippingPromotionID,
+           ISNULL(tVcsLite.GiftWrapVatInclAmount, 0.0) AS GiftWrapVatInclAmount,
+           ISNULL(tVcsLite.GiftWrapVatExclAmount, 0.0) AS GiftWrapVatExclAmount,
+           ISNULL(tVcsLite.GiftWrapVatRate, 0.0) AS GiftWrapVatRate,
+           ISNULL(tVcsLite.GiftPromoVatInclAmount, 0.0) AS GiftWrapPromoVatInclAmount,
+           ISNULL(tVcsLite.GiftPromoVatExclAmount, 0.0) AS GiftWrapPromoVatExclAmount,
+           ISNULL(tVcsLite.GiftPromotionID, &#39;&#39;) AS GiftWrapPromotionID,
+           IIF(LEN(tVcsLite.BuyerVatNumber) &gt; 0, tVcsLite.BuyerVatNumber, NULL) AS BuyerVatNumber,
+           IIF(LEN(tVcsLite.SellerVatNumber) &gt; 0, tVcsLite.SellerVatNumber, NULL) AS SellerVatNumber,
+           ISNULL(tVcsLite.BillingName, &#39;&#39;) AS BillName,
+           ISNULL(tVcsLite.BillAddress1, &#39;&#39;) AS BillAddress1,
+           ISNULL(tVcsLite.BillAddress2, &#39;&#39;) AS BillAddress2,
+           ISNULL(tVcsLite.BillAddress3, &#39;&#39;) AS BillAddress3,
+           ISNULL(tVcsLite.BillCity, &#39;&#39;) AS BillCity,
+           ISNULL(tVcsLite.BillState, &#39;&#39;) AS BillState,
+           ISNULL(tVcsLite.BillPostalCode, &#39;&#39;) AS BillPostalCode,
+           ISNULL(tVcsLite.BillCountry, &#39;&#39;) AS BillCountry,
+           ISNULL(tVcsLite.BillingPhoneNumber, &#39;&#39;) AS BillPhoneNumber,
+           LEFT(IIF(LEN(tVcsLite.PurchaseOrderNumber) &gt; 0, tVcsLite.PurchaseOrderNumber, NULL), 50) AS PurchaseOrderNumber,
+           ISNULL(tVcsLite.RecipientName, &#39;&#39;) AS ShipName,
+           ISNULL(tVcsLite.ShipAddress1, &#39;&#39;) AS ShipAddress1,
+           ISNULL(tVcsLite.ShipAddress2, &#39;&#39;) AS ShipAddress2,
+           ISNULL(tVcsLite.ShipAddress3, &#39;&#39;) AS ShipAddress3,
+           ISNULL(tVcsLite.ShipCity, &#39;&#39;) AS ShipCity,
+           ISNULL(tVcsLite.ShipState, &#39;&#39;) AS ShipState,
+           ISNULL(tVcsLite.ShipPostalCode, &#39;&#39;) AS ShipPostalCode,
+           ISNULL(tVcsLite.ShipCountry, &#39;&#39;) AS ShipCountry,
+           ISNULL(tVcsLite.ShipPhoneNumber, &#39;&#39;) AS ShipPhoneNumber,
+           ISNULL(tVcsLite.ShipServiceLevel, &#39;&#39;) AS ShipServiceLevel,
+           ISNULL(tVcsLite.ShipFromCity, &#39;&#39;) AS ShipFromCity,
+           ISNULL(tVcsLite.ShipFromState, &#39;&#39;) AS ShipFromState,
+           ISNULL(tVcsLite.ShipFromCountry, &#39;&#39;) AS ShipFromCountry,
+           ISNULL(tVcsLite.ShipFromPostalCode, &#39;&#39;) AS ShipFromPostalCode,
+           IIF(LEN(tVcsLite.originalVATInvoiceNumber) &gt; 0, LEFT(tVcsLite.OriginalVatInvoiceNumber, 50), NULL) AS OriginalInvoiceNumber,
+           CASE
+               WHEN tVcsLite.isInvoiceCorrected = 1 THEN
+                   LEFT(tVcsLite.invoiceCorrectionDetails, 2000)
+               WHEN LEN(tVcsLite.citationDe) &gt; 0 THEN
+                   LEFT(tVcsLite.citationDe, 2000)
+               WHEN LEN(tVcsLite.citationEs) &gt; 0 THEN
+                   LEFT(tVcsLite.citationEs, 2000)
+               WHEN LEN(tVcsLite.citationIt) &gt; 0 THEN
+                   LEFT(tVcsLite.citationIt, 2000)
+               WHEN LEN(tVcsLite.citationFr) &gt; 0 THEN
+                   LEFT(tVcsLite.citationFr, 2000)
+               ELSE
+                   NULL
+           END AS Citation,
+           tVcsLite.MarketplaceID,
+           AmazonBestellungPos.kAmazonBestellungPos,
+           AmazonBestellungPos.kAuftragPosition,
+           AmazonBestellungPos.nType,
+           AmazonBestellungPos.cArtNr,
+           AmazonBestellungPos.kArtikel,
+           LEFT(ISNULL(AmazonBestellungPos.cName, &#39;&#39;), 255) AS cName,
+           AmazonBestellungPos.fEkNetto,
+           ISNULL(LEFT(AmazonBestellungPos.cEinheit, 25), &#39;&#39;) AS cEinheit
+    FROM Amazon.tVcsLite
+    OUTER APPLY (
+		-- Suchen der AmazonBestellungPos: Es wird die erste passende Position &#252;ber die OrderItemId genommen
+        SELECT Items.kAmazonBestellungPos,
+               Items.kAuftragPosition,
+               Items.nType,
+               Items.cArtNr,
+               Items.kArtikel,
+               Items.cName,
+               Items.fEkNetto,
+               Items.cEinheit
+        FROM (
+            SELECT ROW_NUMBER() OVER (PARTITION BY pf_amazon_bestellungpos.cOrderItemId
+                                      ORDER BY pf_amazon_bestellungpos.kAmazonBestellungPos
+                                ) AS RowNumber,
+                   pf_amazon_bestellungpos.kAmazonBestellungPos,
+                   tAuftragPosition.kAuftragPosition,
+                   tAuftragPosition.nType,
+                   tAuftragPosition.cArtNr,
+                   tAuftragPosition.kArtikel,
+                   tAuftragPosition.cName,
+                   tAuftragPosition.fEkNetto,
+                   tAuftragPosition.cEinheit
+            FROM dbo.pf_amazon_bestellungpos
+            JOIN dbo.pf_amazon_bestellung ON pf_amazon_bestellung.kAmazonBestellung = pf_amazon_bestellungpos.kAmazonBestellung
+            JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAmazonBestellungPos = pf_amazon_bestellungpos.kAmazonBestellungPos
+                                             AND tAuftragPosition.kAmazonBestellungPos &lt;&gt; 0
+            WHERE pf_amazon_bestellung.cOriginalOrderId = tVcsLite.OrderID
+				AND pf_amazon_bestellung.kUser = tVcsLite.kUser
+                AND pf_amazon_bestellungpos.cOrderItemId = tVcsLite.LegacyCustomerOrderItemId
+        ) AS Items
+        WHERE Items.RowNumber = 1
+    ) AS AmazonBestellungPos(kAmazonBestellungPos, kAuftragPosition, nType, cArtNr, kArtikel, cName, fEkNetto, cEinheit)
+    WHERE tVcsLite.kUser = @UserId
+		AND ((LEN(@TransactionID) &gt; 0 AND tVcsLite.TransactionID = @TransactionID)
+			OR (LEN(@InvoiceNumber) &gt; 0 AND tVcsLite.InvoiceNumber = @InvoiceNumber));
+    IF (@@ROWCOUNT = 0) THROW 60001, &#39;Keine Eintr&#228;ge gefunden&#39;, 1;
+
+    IF EXISTS (SELECT TOP (1) 1 FROM #VCSItems WHERE #VCSItems.kAmazonBestellungPos IS NULL)
+    BEGIN
+        UPDATE #VCSItems
+        SET #VCSItems.kAmazonBestellungPos = AmazonBestellungPosFallback.kAmazonBestellungPos,
+            #VCSItems.kAuftragPosition = AmazonBestellungPosFallback.kAuftragPosition,
+            #VCSItems.nType = AmazonBestellungPosFallback.nType,
+            #VCSItems.cArtNr = AmazonBestellungPosFallback.cArtNr,
+            #VCSItems.kArtikel = AmazonBestellungPosFallback.kArtikel,
+            #VCSItems.cName = LEFT(ISNULL(AmazonBestellungPosFallback.cName, &#39;&#39;), 255),
+            #VCSItems.fEkNetto = AmazonBestellungPosFallback.fEkNetto,
+            #VCSItems.cEinheit = ISNULL(LEFT(AmazonBestellungPosFallback.cEinheit, 25), &#39;&#39;)
+        FROM #VCSItems
+        CROSS APPLY (
+			-- Suchen der AmazonBestellungPos: Es wird die erste passende Position &#252;ber die SKU/cArtNr genommen
+            SELECT Items.kAmazonBestellungPos,
+                   Items.kAuftragPosition,
+                   Items.nType,
+                   Items.cArtNr,
+                   Items.kArtikel,
+                   Items.cName,
+                   Items.fEkNetto,
+                   Items.cEinheit
+            FROM (
+                SELECT ROW_NUMBER() OVER (PARTITION BY tAuftragPosition.cArtNr
+                                          ORDER BY pf_amazon_bestellungpos.kAmazonBestellungPos
+                                    ) AS RowNumber,
+                       pf_amazon_bestellungpos.kAmazonBestellungPos,
+                       tAuftragPosition.kAuftragPosition,
+                       tAuftragPosition.nType,
+                       tAuftragPosition.cArtNr,
+                       tAuftragPosition.kArtikel,
+                       tAuftragPosition.cName,
+                       tAuftragPosition.fEkNetto,
+                       tAuftragPosition.cEinheit
+                FROM dbo.pf_amazon_bestellungpos
+                JOIN dbo.pf_amazon_bestellung ON pf_amazon_bestellung.kAmazonBestellung = pf_amazon_bestellungpos.kAmazonBestellung
+                JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAmazonBestellungPos = pf_amazon_bestellungpos.kAmazonBestellungPos
+                                                 AND tAuftragPosition.kAmazonBestellungPos &lt;&gt; 0
+                WHERE pf_amazon_bestellung.cOriginalOrderId = #VCSItems.OrderID
+					AND pf_amazon_bestellung.kUser = #VCSItems.kUser
+                    AND pf_amazon_bestellungpos.cArtNr = #VCSItems.SKU
+            ) AS Items
+            WHERE Items.RowNumber = 1
+        ) AS AmazonBestellungPosFallback(kAmazonBestellungPos, kAuftragPosition, nType, cArtNr, kArtikel, cName, fEkNetto, cEinheit)
+        WHERE #VCSItems.kAmazonBestellungPos IS NULL;
+    END;
+
+	IF (SELECT COUNT(DISTINCT #VCSItems.IsInvoiceCorrected) FROM #VCSItems) &lt;&gt; 1
+        THROW 60002, &#39;Ung&#252;ltige Daten: Datens&#228;tze mit unterschiedlichem IsInvoiceCorrected gefunden.&#39;, 1;
+
+    IF EXISTS (SELECT TOP (1) 1 FROM #VCSItems WHERE #VCSItems.TransactionType NOT IN (&#39;SHIPMENT&#39;))
+        THROW 60002, &#39;Ung&#252;ltige Daten: Datens&#228;tze mit TransactionType &lt;&gt; SHIPMENT gefunden.&#39;, 1;
+
+    IF (SELECT TOP (1) COUNT(DISTINCT #VCSItems.Currency)FROM #VCSItems) &lt;&gt; 1
+        THROW 60002, &#39;Ung&#252;ltige Daten: Unterschiedliche W&#228;hrungen innerhalb eines Belegs.&#39;, 1;
+
+    DECLARE @Conflicts NVARCHAR(1000);
+    SET @Conflicts
+        = STUFF(
+          (
+              SELECT &#39;, &#39; + Items.cBelegnr
+              FROM (
+                  SELECT DISTINCT
+                         tExternerBeleg.cBelegnr
+                  FROM Rechnung.tExternerBeleg
+                  JOIN dbo.tPlattform ON nPlattform = kPlattform
+                  JOIN Rechnung.tExternerBelegTransaktion ON tExternerBelegTransaktion.kExternerBeleg = tExternerBeleg.kExternerBeleg
+                  JOIN Rechnung.tExternerBelegPosition ON tExternerBelegPosition.kExternerBelegTransaktion = tExternerBelegTransaktion.kExternerBelegTransaktion 
+                  JOIN #VCSItems ON #VCSItems.Id = tExternerBelegPosition.kExterneId
+                  WHERE tPlattform.nTyp IN (6, 7)
+              ) AS Items
+              FOR XML PATH(&#39;&#39;)
+          ),
+          1,
+          2,
+          &#39;&#39;
+          );
+
+    IF @Conflicts IS NOT NULL
+    BEGIN
+        SET @Conflicts = N&#39;Teile der Positionen sind bereits auf externen Belegen: &#39; + @Conflicts;
+        THROW 60003, @Conflicts, 1;
+    END;
+
+    SET @Conflicts = STUFF((
+                               SELECT &#39;, &#39; + Items.cRechnungsnr
+                               FROM (
+                                   SELECT DISTINCT
+                                          tRechnung.cRechnungsnr
+                                   FROM Rechnung.tRechnung
+                                   JOIN dbo.tPlattform ON nPlattform = tRechnung.kPlattform
+                                   JOIN #VCSItems ON #VCSItems.OrderID = tRechnung.cExterneAuftragsnummer									
+								   JOIN Rechnung.tRechnungEckdaten ON tRechnungEckdaten.kRechnung = tRechnung.kRechnung
+                                   WHERE tPlattform.nTyp IN (6, 7) 
+										AND tRechnung.nStorno = 0 
+										AND tRechnungEckdaten.fVkBruttoGesamt - tRechnungEckdaten.fGutschrift &lt;&gt; 0.0
+                               ) AS Items
+                               FOR XML PATH(&#39;&#39;)
+                           ),
+                           1,
+                           2,
+                           &#39;&#39;
+                     );
+
+    IF (1 = 0 AND @Conflicts IS NOT NULL)
+    BEGIN
+        SET @Conflicts = N&#39;Teile der Positionen sind bereits auf Rechnungen: &#39; + @Conflicts;
+        THROW 60003, @Conflicts, 1;
+    END;
+
+    SET @Conflicts
+        = STUFF(
+          (
+              SELECT &#39;, &#39; + Items.Item
+              FROM (
+                  SELECT CONCAT(
+                             &#39;TransactionId: &#39;,
+                             #VCSItems.TransactionID,
+                             &#39; - OrderId: &#39;,
+                             #VCSItems.OrderID,
+                             &#39; - OrderItemId: &#39;,
+                             #VCSItems.OrderItemID,
+                             &#39; - SKU: &#39;,
+                             #VCSItems.SKU
+                         ) AS Item
+                  FROM #VCSItems
+                  WHERE #VCSItems.kAmazonBestellungPos IS NULL
+              ) AS Items
+              FOR XML PATH(&#39;&#39;)
+          ),
+          1,
+          2,
+          &#39;&#39;
+          );
+    IF (@Conflicts IS NOT NULL AND @nFehlerIgnorieren = 0)
+    BEGIN
+        SET @Conflicts = N&#39;Amazon-Bestellpositionen nicht gefunden: &#39; + @Conflicts;
+        THROW 60004, @Conflicts, 1;
+    END;
+
+    SET @Conflicts
+        = STUFF(
+          (
+              SELECT &#39;, &#39; + Items.Item
+              FROM (
+                  SELECT CONCAT(
+                             &#39;TransactionId: &#39;,
+                             #VCSItems.TransactionID,
+                             &#39; - OrderId: &#39;,
+                             #VCSItems.OrderID,
+                             &#39; - OrderItemId: &#39;,
+                             #VCSItems.OrderItemID,
+                             &#39; - SKU: &#39;,
+                             #VCSItems.SKU
+                         ) AS Item
+                  FROM #VCSItems
+                  WHERE #VCSItems.kAuftragPosition IS NULL
+              ) AS Items
+              FOR XML PATH(&#39;&#39;)
+          ),
+          1,
+          2,
+          &#39;&#39;
+          );
+    IF (@Conflicts IS NOT NULL AND @nFehlerIgnorieren = 0)
+    BEGIN
+        SET @Conflicts = N&#39;Amazon-Bestellpositionen wurden noch nicht &#252;bernommen: &#39; + @Conflicts;
+        THROW 60004, @Conflicts, 1;
+    END;
+
+    DECLARE @OrderIdCount AS INT;
+    SELECT @OrderIdCount = MAX(Transactions.OrderIdCount)
+    FROM (
+        SELECT COUNT(DISTINCT (#VCSItems.OrderID)) AS OrderIdCount
+        FROM #VCSItems
+        GROUP BY #VCSItems.TransactionID
+    ) AS Transactions;
+
+    IF @OrderIdCount &lt;&gt; 1
+        THROW 60002, &#39;Ung&#252;ltige Daten: Unterschiedliche OrderIDs innerhalb einer Transaktion&#39;, 1;
+	DECLARE @kFirma AS INT;
+	DECLARE @bIsInvoiceCorrected AS BIT;
+	DECLARE @bIsAmazonInvoiced AS BIT;
+	DECLARE @cShippingId AS NVARCHAR(50);
+
+	SELECT TOP(1)
+		@kFirma = pf_user.kFirma,
+		@bIsInvoiceCorrected = #VCSItems.IsInvoiceCorrected,
+		@bIsAmazonInvoiced = #VCSItems.IsAmazonInvoiced,
+		@cShippingId = #VCSItems.ShippingID
+	FROM #VCSItems
+	JOIN dbo.pf_user ON pf_user.kUser = #VCSItems.kUser
+	
+    DECLARE @kFirmaHistory AS INT = (
+                SELECT TOP (1)
+                       tFirmaHistory.kFirmaHistory
+                FROM dbo.tFirmaHistory
+                WHERE tFirmaHistory.kFirma = @kFirma
+                ORDER BY tFirmaHistory.kFirmaHistory DESC
+            );
+
+    DeadlockRetry:
+    BEGIN TRY
+        IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+        IF (ISNULL(LEN(@InvoiceNumber), 0) = 0)
+        BEGIN
+            EXEC dbo.spGetNextNummer @cName = N&#39;Externe Rechnung&#39;,
+                                     @kFirma = @kFirma,
+                                     @nNoUpdate = 0,
+                                     @cNeueNummer = @InvoiceNumber OUTPUT;
+        --@nSilent = 1
+        END;
+		
+        -- Start vom Code
+        INSERT INTO Rechnung.tExternerBeleg (
+            dBelegdatumUtc,
+            cBelegnr,
+            nBelegtyp,
+            kFirmaHistory,
+            cFirmaUstid,
+            kPlattform,
+            kPlattformKey,
+            cWaehrungISO,
+            cKaeuferUstId,
+            cRAName,
+            cRAAdresse1,
+            cRAAdresse2,
+            cRAAdresse3,
+            cRAOrt,
+            cRAStaat,
+            cRAPostcode,
+            cRALandISO,
+            cRATelefon,
+            cBezugsbelegnr,
+            cHinweis
+        )
+        SELECT TOP (1)
+               GETUTCDATE() AS dBelegdatumUtc,
+               @InvoiceNumber AS cBelegnr,
+			   CASE 
+					WHEN @bIsInvoiceCorrected = 1 THEN IIF(@InvoiceNumber LIKE &#39;DOC-%&#39; OR @InvoiceNumber LIKE &#39;RECEIPT-%&#39; OR @InvoiceNumber LIKE &#39;SIM-INV-%&#39;, 103, 100) 
+					ELSE IIF(@InvoiceNumber LIKE &#39;DOC-%&#39; OR @InvoiceNumber LIKE &#39;RECEIPT-%&#39; OR @InvoiceNumber LIKE &#39;SIM-INV-%&#39;, 3, 0) 
+			   END AS nBelegtyp,
+               @kFirmaHistory AS kFirmaHistory,
+               #VCSItems.SellerVatNumber AS cFirmaUstId,
+               CASE
+                   WHEN #VCSItems.MarketplaceID = &#39;DE&#39; THEN
+                       51
+                   WHEN #VCSItems.MarketplaceID = &#39;COM&#39; THEN
+                       52 -- geraten
+                   WHEN #VCSItems.MarketplaceID = &#39;GB&#39; THEN
+                       53
+                   WHEN #VCSItems.MarketplaceID = &#39;FR&#39; THEN
+                       54
+                   WHEN #VCSItems.MarketplaceID = &#39;CA&#39; THEN
+                       55 -- geraten
+                   WHEN #VCSItems.MarketplaceID = &#39;IT&#39; THEN
+                       56
+                   WHEN #VCSItems.MarketplaceID = &#39;ES&#39; THEN
+                       57
+                   WHEN #VCSItems.MarketplaceID = &#39;MX&#39; THEN
+                       58 -- geraten
+                   WHEN #VCSItems.MarketplaceID = &#39;AU&#39; THEN
+                       59 -- geraten
+                   WHEN #VCSItems.MarketplaceID = &#39;NL&#39; THEN
+                       60
+                   WHEN #VCSItems.MarketplaceID = &#39;TR&#39; THEN
+                       61
+                   WHEN #VCSItems.MarketplaceID = &#39;SE&#39; THEN
+                       62
+                   WHEN #VCSItems.MarketplaceID = &#39;PL&#39; THEN
+                       63
+                   ELSE
+                       50
+               END AS kPlattform,
+               #VCSItems.kUser AS kPlattformKey,
+               #VCSItems.Currency AS cWaehrungISO,
+               #VCSItems.BuyerVatNumber AS cKaeuferUstId,
+               #VCSItems.BillName AS cRAName,
+               #VCSItems.BillAddress1 AS cRAAdresse1,
+               #VCSItems.BillAddress2 AS cRAAdresse2,
+               #VCSItems.BillAddress3 AS cRAAdresse3,
+               #VCSItems.BillCity AS cRAOrt,
+               #VCSItems.BillState AS cRAStaat,
+               #VCSItems.BillPostalCode AS cRAPostCode,
+               #VCSItems.BillCountry AS cRALandISO,
+               #VCSItems.BillPhoneNumber AS cRATelefon,
+               #VCSItems.OriginalInvoiceNumber AS cBezugsbelegnr,
+               #VCSItems.Citation AS cHinweis
+        FROM #VCSItems;
+        DECLARE @kExternerBeleg AS INT = (SELECT TOP (1) SCOPE_IDENTITY());
+
+        WITH
+        Transactions AS (SELECT DISTINCT (#VCSItems.TransactionID) AS TransactionID FROM #VCSItems)
+        INSERT INTO Rechnung.tExternerBelegTransaktion (
+            kExternerBeleg,
+            nTransaktionstyp,
+            cTransaktionId,
+            dTransaktionsdatumUtc,
+            cExterneAuftragsnummer,
+            dExternesAuftragsdatumUtc,
+            cKundenAuftragsnummer,
+            cLAName,
+            cLAAdresse1,
+            cLAAdresse2,
+            cLAAdresse3,
+            cLAOrt,
+            cLAStaat,
+            cLAPostcode,
+            cLALandISO,
+            cLATelefon,
+            cVAOrt,
+            cVAStaat,
+            cVAPostcode,
+            cVALandISO
+        )
+        SELECT @kExternerBeleg AS kExternerBeleg,
+               0 AS nTransaktionstyp,
+               Transactions.TransactionID AS cTransaktionId,
+               VcsItems.ShippingDate AS dTransaktionsdatumUtc,
+               VcsItems.OrderID AS cExterneAuftragsnummer,
+               VcsItems.OrderDate AS dExternesAuftragsdatumUtc,
+               VcsItems.PurchaseOrderNumber AS cKundenAuftragsnummer,
+               VcsItems.ShipName AS cLAName,
+               VcsItems.ShipAddress1 AS cLAAdresse1,
+               VcsItems.ShipAddress2 AS cLAAdresse2,
+               VcsItems.ShipAddress3 AS cLAAdresse3,
+               VcsItems.ShipCity AS cLAOrt,
+               VcsItems.ShipState AS cLAStaat,
+               VcsItems.ShipPostalCode AS cLAPostCode,
+               VcsItems.ShipCountry AS cLALandISO,
+               VcsItems.ShipPhoneNumber AS cLATelefon,
+               VcsItems.ShipFromCity AS cVAOrt,
+               VcsItems.ShipFromState AS cVAStaat,
+               VcsItems.ShipFromPostalCode AS cVAPostcode,
+               VcsItems.ShipFromCountry AS cVALandISO
+        FROM Transactions
+        CROSS APPLY (
+            SELECT TOP (1)
+                   #VCSItems.TransactionType,
+                   #VCSItems.ShippingDate,
+                   #VCSItems.OrderID,
+                   #VCSItems.OrderDate,
+                   #VCSItems.PurchaseOrderNumber,
+                   #VCSItems.ShipName,
+                   #VCSItems.ShipAddress1,
+                   #VCSItems.ShipAddress2,
+                   #VCSItems.ShipAddress3,
+                   #VCSItems.ShipCity,
+                   #VCSItems.ShipState,
+                   #VCSItems.ShipPostalCode,
+                   #VCSItems.ShipCountry,
+                   #VCSItems.ShipPhoneNumber,
+                   #VCSItems.ShipFromCity,
+                   #VCSItems.ShipFromState,
+                   #VCSItems.ShipFromCountry,
+                   #VCSItems.ShipFromPostalCode
+            FROM #VCSItems
+            WHERE #VCSItems.TransactionID = Transactions.TransactionID
+            ORDER BY #VCSItems.Id
+        ) AS VcsItems;
+
+        INSERT INTO Rechnung.tExternerBelegPosition (
+            kExternerBelegTransaktion,
+            kExternerBelegPositionVater,
+            nKindtyp,
+            kAuftragPosition,
+            kBezugRechnungPosition,
+            kBezugExternerBelegPosition,
+            nPositionstyp,
+            cArtNr,
+            kArtikel,
+            cText,
+            fAnzahl,
+            fVkBrutto,
+            fVkNetto,
+            fMwStSatz,
+            fRabattBrutto,
+            fRabattNetto,
+            cRabatttext,
+            fEkNetto,
+            cEinheit,
+            kExterneId
+        )
+        SELECT tExternerBelegTransaktion.kExternerBelegTransaktion,
+               NULL AS kExternerBelegPositionVater,
+               0 AS nKindtyp,                     -- keine Kindposition
+               #VCSItems.kAuftragPosition AS kAuftragPosition,
+               NULL AS kBezugRechnungPosition,
+               NULL AS kBezugExternerBelegPosition,
+               ISNULL(#VCSItems.nType, 1) AS nPositionstyp, -- normaler Artikel
+               ISNULL(#VCSItems.cArtNr, SKU) AS cArtNr,
+               #VCSItems.kArtikel AS kArtikel,
+               ISNULL(#VCSItems.cName, #VCSItems.ProductName) AS cText,
+               #VCSItems.QuantityPurchased AS fAnzahl,
+               #VCSItems.ItemVatInclAmount AS fVKBrutto,
+               #VCSItems.ItemVatExclAmount AS fVKNetto,
+               #VCSItems.ItemVatRate AS fMwStSatz,
+               #VCSItems.ItemPromoVatInclAmount AS fRabattBrutto,
+               #VCSItems.ItemPromoVatExclAmount AS fRabattNetto,
+               #VCSItems.ItemPromotionID AS cRabatttext,
+               #VCSItems.fEkNetto AS fEkNetto,
+               ISNULL(LEFT(#VCSItems.cEinheit, 25), &#39;&#39;) AS cEinheit,
+               #VCSItems.Id AS kExterneId
+        FROM #VCSItems
+        JOIN Rechnung.tExternerBelegTransaktion ON tExternerBelegTransaktion.kExternerBeleg = @kExternerBeleg
+                                                   AND tExternerBelegTransaktion.cTransaktionId = TransactionID;
+
+        INSERT INTO Rechnung.tExternerBelegPosition (
+            kExternerBelegTransaktion,
+            kExternerBelegPositionVater,
+            nKindtyp,
+            kAuftragPosition,
+            kBezugRechnungPosition,
+            kBezugExternerBelegPosition,
+            nPositionstyp,
+            cArtNr,
+            kArtikel,
+            cText,
+            fAnzahl,
+            fVkBrutto,
+            fVkNetto,
+            fMwStSatz,
+            fRabattBrutto,
+            fRabattNetto,
+            cRabatttext,
+            fEkNetto,
+            cEinheit,
+            kExterneId
+        )
+        SELECT tExternerBelegPosition.kExternerBelegTransaktion,
+               tExternerBelegPosition.kExternerBelegPosition AS kExternerBelegPositionVater,
+               1 AS nKindtyp,               -- St&#252;cklistenkind
+               Kind.kAuftragPosition AS kAuftragPosition,
+               NULL,
+               NULL,
+               Kind.nType AS nPositionstyp, -- normaler Artikel
+               Kind.cArtNr AS cArtNr,
+               Kind.kArtikel AS kArtikel,
+               Kind.cName AS cText,
+               Kind.fAnzahl / Vater.fAnzahl * tExternerBelegPosition.fAnzahl AS fAnzahl,
+               NULL AS fVKBrutto,
+               NULL AS fVKNetto,
+               NULL AS fMwStSatz,
+               NULL AS fRabattBrutto,
+               NULL AS fRabattNetto,
+               &#39;&#39; AS cRabatttext,
+               NULL AS fEkNetto,
+               ISNULL(LEFT(Kind.cEinheit, 25), &#39;&#39;) AS cEinheit,
+               tExternerBelegPosition.kExterneId AS kExterneId
+        FROM Rechnung.tExternerBelegPosition
+        JOIN Rechnung.tExternerBelegTransaktion ON tExternerBelegTransaktion.kExternerBelegTransaktion = tExternerBelegPosition.kExternerBelegTransaktion
+        JOIN Verkauf.tAuftragPosition AS Vater ON Vater.kAuftragPosition = tExternerBelegPosition.kAuftragPosition
+        JOIN Verkauf.tAuftragPosition AS Kind ON Kind.kAuftragStueckliste = tExternerBelegPosition.kAuftragPosition
+                                                 AND Kind.kAuftragPosition &lt;&gt; Kind.kAuftragStueckliste
+        WHERE tExternerBelegTransaktion.kExternerBeleg = @kExternerBeleg;
+
+        INSERT INTO Rechnung.tExternerBelegPosition (
+            kExternerBelegTransaktion,
+            kExternerBelegPositionVater,
+            nKindtyp,
+            kAuftragPosition,
+            kBezugRechnungPosition,
+            kBezugExternerBelegPosition,
+            nPositionstyp,
+            cArtNr,
+            kArtikel,
+            cText,
+            fAnzahl,
+            fVkBrutto,
+            fVkNetto,
+            fMwStSatz,
+            fRabattBrutto,
+            fRabattNetto,
+            cRabatttext,
+            fEkNetto,
+            cEinheit,
+            kExterneId
+        )
+        SELECT tExternerBelegTransaktion.kExternerBelegTransaktion,
+               tExternerBelegPosition.kExternerBelegPosition AS kExternerBelegPositionVater,
+               IIF(tExternerBelegPosition.kExternerBelegPosition IS NULL, 0, 3) AS nKindtyp,
+               tExternerBelegPosition.kAuftragPosition AS kAuftragPosition,
+               NULL,
+               NULL,
+               2 AS nPositionstyp, -- Versandposition
+               &#39;&#39; AS cArtNr,
+               NULL AS kArtikel,
+               &#39;Versandkosten&#39; + IIF(#VCSItems.ShipServiceLevel &lt;&gt; &#39;&#39;, &#39; (&#39; + #VCSItems.ShipServiceLevel + &#39;)&#39;, &#39;&#39;) AS cText,
+               1 AS fAnzahl,
+               #VCSItems.ShippingVatInclAmount + #VCSItems.ShippingPromoVatInclAmount AS fVKBrutto,
+               #VCSItems.ShippingVatExclAmount + #VCSItems.ShippingPromoVatExclAmount AS fVKNetto,
+               #VCSItems.ShippingVatRate AS fMwStSatz,
+               #VCSItems.ShippingPromoVatInclAmount AS fRabattBrutto,
+               #VCSItems.ShippingPromoVatExclAmount AS fRabattNetto,
+               #VCSItems.ShippingPromotionID AS cRabatttext,
+               NULL AS fEkNetto,
+               &#39;&#39; AS cEinheit,
+               #VCSItems.Id AS kExterneId
+        FROM #VCSItems
+        JOIN Rechnung.tExternerBelegTransaktion ON tExternerBelegTransaktion.kExternerBeleg = @kExternerBeleg
+                                                   AND tExternerBelegTransaktion.cTransaktionId = #VCSItems.TransactionID
+        JOIN Rechnung.tExternerBelegPosition ON tExternerBelegPosition.kExterneId = #VCSItems.Id
+                                                AND tExternerBelegPosition.nKindtyp = 0
+                                                AND tExternerBelegPosition.kExternerBelegTransaktion = tExternerBelegTransaktion.kExternerBelegTransaktion
+        WHERE #VCSItems.ShippingVatInclAmount &lt;&gt; 0.0
+              OR #VCSItems.ShippingVatExclAmount &lt;&gt; 0.0;
+
+        INSERT INTO Rechnung.tExternerBelegPosition (
+            kExternerBelegTransaktion,
+            kExternerBelegPositionVater,
+            nKindtyp,
+            kAuftragPosition,
+            kBezugRechnungPosition,
+            kBezugExternerBelegPosition,
+            nPositionstyp,
+            cArtNr,
+            kArtikel,
+            cText,
+            fAnzahl,
+            fVkBrutto,
+            fVkNetto,
+            fMwStSatz,
+            fRabattBrutto,
+            fRabattNetto,
+            cRabatttext,
+            fEkNetto,
+            cEinheit,
+            kExterneId
+        )
+        SELECT tExternerBelegTransaktion.kExternerBelegTransaktion,
+               tExternerBelegPosition.kExternerBelegPosition AS kExternerBelegPositionVater,
+               IIF(tExternerBelegPosition.kExternerBelegPosition IS NULL, 0, 3) AS nKindtyp,
+               tExternerBelegPosition.kAuftragPosition AS kAuftragPosition,
+               NULL,
+               NULL,
+               10 AS nPositionstyp, -- Geschenkverpackung
+               &#39;&#39; AS cArtNr,
+               NULL AS kArtikel,
+               &#39;Geschenkverpackung&#39; AS cText,
+               1 AS fAnzahl,
+               #VCSItems.GiftWrapVatInclAmount + #VCSItems.GiftWrapPromoVatInclAmount AS fVKBrutto,
+               #VCSItems.GiftWrapVatExclAmount + #VCSItems.GiftWrapPromoVatExclAmount AS fVKNetto,
+               #VCSItems.GiftWrapVatRate AS fMwStSatz,
+               #VCSItems.GiftWrapPromoVatInclAmount AS fRabattBrutto,
+               #VCSItems.GiftWrapPromoVatExclAmount AS fRabattNetto,
+               #VCSItems.GiftWrapPromotionID AS cRabatttext,
+               NULL AS fEkNetto,
+               &#39;&#39; AS cEinheit,
+               #VCSItems.Id AS kExterneId
+        FROM #VCSItems
+        JOIN Rechnung.tExternerBelegTransaktion ON tExternerBelegTransaktion.kExternerBeleg = @kExternerBeleg
+                                                   AND tExternerBelegTransaktion.cTransaktionId = #VCSItems.TransactionID
+        JOIN Rechnung.tExternerBelegPosition ON tExternerBelegPosition.kExterneId = #VCSItems.Id
+                                                AND tExternerBelegPosition.nKindtyp = 0
+                                                AND tExternerBelegPosition.kExternerBelegTransaktion = tExternerBelegTransaktion.kExternerBelegTransaktion
+        WHERE #VCSItems.GiftWrapVatInclAmount &lt;&gt; 0.0
+              OR #VCSItems.GiftWrapVatExclAmount &lt;&gt; 0.0;
+
+		-- InvoiceNumber in VCS-Lite Report zur&#252;ckschreiben
+		UPDATE Amazon.tVcsLite
+			SET tVcsLite.InvoiceNumber = @InvoiceNumber,
+				tVcsLite.dVerarbeitetUtc = GETUTCDATE()
+		FROM Amazon.tVcsLite
+		JOIN #VCSItems ON #VCSItems.Id = tVcsLite.kVcsLite
+		WHERE tVcsLite.InvoiceNumber &lt;&gt; @InvoiceNumber;
+
+		EXEC Rechnung.spExternerBelegEckdatenBerechnen @kExternerBeleg = @kExternerBeleg;
+		
+		IF (@bIsAmazonInvoiced = 0 AND LEN(@cShippingId) &gt; 0)
+		BEGIN
+			MERGE INTO Amazon.tVcsLiteUploadQueue
+			USING 
+			(
+				SELECT tExternerBeleg.kExternerBeleg,
+					1 AS nBelegTyp, --Rechnung
+					tExternerBeleg.cBelegnr AS cBelegnummer,
+					tExternerBeleg.cBelegnr AS cBezugsbelegnummer,
+					tExternerBelegTransaktion.cExterneAuftragsnummer AS cOrderId,
+					@cShippingId AS cShippingId,
+					tExternerBelegTransaktion.cTransaktionId AS cTransactionId,
+					tExternerBeleg.kPlattformKey AS kUser
+				FROM Rechnung.tExternerBeleg
+				JOIN Rechnung.tExternerBelegTransaktion ON tExternerBelegTransaktion.kExternerBeleg = tExternerBeleg.kExternerBeleg				
+				WHERE tExternerBeleg.kExternerBeleg = @kExternerBeleg
+			) AS SOURCE(kExternerBeleg, nBelegTyp, cBelegnummer, cBezugsbelegnummer, cOrderId, cShippingId, cTransactionId, kUser) ON tVcsLiteUploadQueue.kExternerBeleg = Source.kExternerBeleg
+			WHEN MATCHED THEN
+				UPDATE SET tVcsLiteUploadQueue.nStatus = 0,
+					tVcsLiteUploadQueue.nUploadVersuche = 0,
+					tVcsLiteUploadQueue.nAusgabeVersuche = 0
+			WHEN NOT MATCHED BY TARGET THEN 
+				INSERT (kExternerBeleg, nBelegTyp, cBelegnummer, cBezugsbelegnummer, cOrderId, cShippingId, cTransactionId, kUser) 
+				VALUES (Source.kExternerBeleg, Source.nBelegTyp, Source.cBelegnummer, Source.cBezugsbelegnummer, Source.cOrderId, Source.cShippingId, Source.cTransactionId, Source.kUser);
+		END
+
+        -- Ende vom Code
+        IF (@DeadlockRetries &gt; 0)
+           AND (@@TRANCOUNT &gt; 0)
+           AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        BEGIN TRY
+            EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+            IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+        END TRY
+        BEGIN CATCH
+            IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+        END CATCH;
+        THROW;
+    END CATCH;
+
+    SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+    SET CONTEXT_INFO @OldContextInfo;
+    THROW;
+END CATCH;</code></pre>
+</body>
+</html>

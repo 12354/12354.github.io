@@ -1,0 +1,2943 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spBestellungReservieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spBestellungReservieren</h1>
+    <p><strong>Description:</strong> Mit der procedure werden für das WMS Bestellungen reserviert und für das Ausliefern vorbereitet.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spBestellungReservieren] 
+	@kWarenlager INT, 
+	@kPicklisteVorlage INT, 
+	@kBenutzer INT,
+	@kSessionID INT, 
+	@BestellungZuReservieren TYPE_spBestellungReservieren_BestellungZuReservieren  READONLY,
+	@BestandReservieren TINYINT = 0,
+	@kPickliste INT = 0,
+	@kPickPosNeuReservieren INT = 0,
+	@fAnzahlPickPosNeuReservieren DECIMAL(25,13) = 0,
+	@cSubsetNumberNeuReservieren NVARCHAR(100) = NULL,
+	@nAnzahlReservierteBestellung INT OUTPUT,  -- Gibt an Wieviele Bestellungen erfolgreich reserviert werden k&#246;nnen
+	@WarenLagerPlatzZuReservieren WMS.TYPE_spBestellungReservieren_WarenLagerPlatzZuReservieren  READONLY
+WITH RECOMPILE
+AS
+BEGIN	 
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+
+
+DECLARE @cLagerBereiche NVARCHAR(MAX);
+DECLARE @cPlatzTypen NVARCHAR(1000);
+DECLARE @nIsEazyShippingAuftrag INT;
+DECLARE @nBoxenNurGanzeStuecklistenAufPL TINYINT;
+DECLARE @nMHDHandling INT;
+DECLARE @nMinMHD INT;
+DECLARE @nOptionalMHDChargeAnywhere TINYINT = 0; -- Versteckte Option, wenn geschaltet kann man MHDs/Chargen auch reservieren wenn sie durcheinander liegen
+DECLARE @nStuecklisteNurWennAlleAufPlatz TINYINT = 0;
+DECLARE @nAngebrocheneBoxenImmerVervollstaendigen TINYINT = 0;
+DECLARE @nPicklistenVorlageTyp INT;
+DECLARE @nGewMax INT;
+DECLARE @nGewMin INT;
+DECLARE @nAnzArtMax INT;
+DECLARE @nAnzArtMin INT;
+DECLARE @nSortierung INT;
+DECLARE @nPlatzPrioBeruecksichtigen TINYINT = 0;
+DECLARE @bHasMHDorChargenHandling TINYINT;
+DECLARE @nNachschubPickenLast TINYINT;
+DECLARE @nSortenrein TINYINT;
+DECLARE @nAnzAuftraege INT;
+DECLARE @nAnzAuftraegeMin INT;
+DECLARE @MakeBestandCheckWithMHDChargen BIT;
+DECLARE @kRollendeKommissionierungPickwagen INT;
+DECLARE @nArtikelAttributeBeachten TINYINT;
+DECLARE @nMaxAnzahlArtikel INT;
+DECLARE @nMinAnzahlArtikel INT;
+DECLARE @nStuecklisteVonGleichenPlatz INT;
+DECLARE @FifoAktiv TINYINT = 0;
+DECLARE @kBestellNr INT;
+DECLARE @IstAuftragMitStuecklisten INT = 0;
+DECLARE @PicklistenVorlageUrsprung INT;
+DECLARE @kWarenlagerPlatzAltePickPos INT = 0;
+DECLARE @VersandBoxenProzessMitRoko INT = 0;
+DECLARE @nAlleOhneLagerbereich INT;
+DECLARE @nKeineOderAlleInLagerbereich INT;
+DECLARE @nTeilmengen BIT = 0;
+DECLARE @nWMSLogAktiv BIT = 0;
+DECLARE @Chargenrein INT = 0;
+DECLARE @nSortenreinMaxAnzahlArtikel INT = 0;
+DECLARE @nIsMinArtikelAnzahlCheckFailed BIT = 0;
+DECLARE @nLagerplatzNachMenge INT = 0;
+DECLARE @nKeineAuftraegeVollstaendigAufPickliste TINYINT;
+DECLARE @nIdentischeAuftraegeMitTeillieferung TINYINT;
+DECLARE @nIstStandardLager TINYINT = 0;
+DECLARE @nPlaetzeOhneReservierungZuerst TINYINT = 0;
+DECLARE @nIstReservierungsPicklistenOffen TINYINT = 0;
+DECLARE @nVollstaendigTeilgeliefertFIFO TINYINT = 0;
+DECLARE @kPicklisteVorlageParent INT = 0;
+    
+-- FehlerCodes f&#252;r Reservierungs&#252;bersicht
+DECLARE @DBError_000002001 INT = 100002001;  --&#39;&#39; &lt;-- Leerzteile
+DECLARE @DBError_000002002 INT = 100002002;  --&#39;Artikel im Auftrag&#39;
+DECLARE @DBError_000002003 INT = 100002003;  --&#39;Artikel: {0} &gt;  Offene Menge im Auftrag: {1}&#39;
+DECLARE @DBError_000002004 INT = 100002004;  -- &#39;Der Auftrag hat keine Artikel die vom WMS reserviert werden k&#246;nnen.&#39;
+DECLARE @DBError_000002005 INT = 100002005;  --&#39;&#39; &lt;--  &#39;Lagerpl&#228;tze mit reservierbarem Bestand&#39;
+DECLARE @DBError_000002006 INT = 100002006;  --&#39;&#39; &lt;--  Lagerplatz: {0}
+DECLARE @DBError_000002007 INT = 100002007;  --&#39;&#39; &lt;--  &#39;Es wurden keine Warenlagerpl&#228;tze gefunden.&#39;
+DECLARE @DBError_000002008 INT = 100002008;  --&#39;&#39; &lt;--   &#39; MHD-/Chargen-Prozess ist aktiviert&#39;
+DECLARE @DBError_000002009 INT = 100002009;  --&#39;&#39; &lt;--  &#39;Wir empfehlen Artikel mit MHD / Chargen sortenrein nach Charge und MHD einzulagern und nicht zu mischen.&#39;
+DECLARE @DBError_000002010 INT = 100002010;  -- &#39;Artikel mit unterschiedlichem MHD oder unterschiedlicher Charge d&#252;rfen dann zusammen auf einem Lagerplatz gelagert werden, wenn alle Artikel mit diesen MHD / Chargen auf einem einzigen Lagerplatz und nicht &#252;ber mehrere Lagerpl&#228;tze verteilt gelagert werden.&#39;
+DECLARE @DBError_000002011 INT = 100002011;  --&#39;&#39; &lt;--   &#39;Artikel, die nicht in ausreichender Menge reserviert werden k&#246;nnen&#39;
+DECLARE @DBError_000002012 INT = 100002012;  --&#39;&#39; &lt;--   &#39;Bitte pr&#252;fen Sie, ob der ben&#246;tigte Bestand auf Lagerpl&#228;tzen au&#223;erhalb der Reichweite der verwendeten Picklistenvorlage liegt.&#39;
+DECLARE @DBError_000002013 INT = 100002013;  --&#39;&#39; &lt;--   &#39;Artikel: {0} &gt;  Offene Menge im Auftrag: {1}             |      Reservierbare Menge im Lager: {2}&#39;
+DECLARE @DBError_000002014 INT = 100002014;  --&#39;&#39; &lt;--   &#39;Lagerpl&#228;tze, auf denen sich Artikel mit abgelaufenem MHD befinden&#39;
+DECLARE @DBError_000002015 INT = 100002015;  -- &#39;Artikel mit abgelaufenem MHD sind in der Picklistenvorlage ausgeschlossen. M&#246;chten Sie abgelaufene Ware dennoch versenden, m&#252;ssen Sie dies in der Picklistenvorlage konfigurieren.&#39;
+DECLARE @DBError_000002016 INT = 100002016;  -- &#39;Lagerplatz:  {0}    |     Artikel: {1}    |    Menge: {2}    |   MHD: {3} &#39;
+DECLARE @DBError_000002017 INT = 100002017;  --&#39;&#39; &lt;--&#39;Artikel, die als Komponente zu einer St&#252;ckliste geh&#246;ren und nicht reserviert werden k&#246;nnen&#39;
+DECLARE @DBError_000002018 INT = 100002018;  -- &#39;Nicht alle St&#252;cklistenkomponenten sind in ausreichender Menge verf&#252;gbar. St&#252;cklisten k&#246;nnen nur vollst&#228;ndig reserviert werden.&#39;
+DECLARE @DBError_000002019 INT = 100002019;  -- &#39;Artikel: {0}   &gt;  Offene Menge im Auftrag: {1}            |      Reservierbare Menge im Lager: {2}
+DECLARE @DBError_000002020 INT = 100002020;  --&#39;Artikel, die nicht reserviert werden k&#246;nnen, da nicht alle Komponenten der St&#252;ckliste auf dem gleichen Lagerplatz vorhanden sind.&#39;
+DECLARE @DBError_000002021 INT = 100002021;  -- &#39;Artikel: {0}  &gt;  Offene Menge im Auftrag:  {1}           |      Reservierbare Menge im Lager:  {2} 
+DECLARE @DBError_000002022 INT = 100002022;  --&#39;&#39; &lt;--  &#39;&#220;berpr&#252;fung der Picklistenkonfiguration auf Mindest- und Maximaleinschr&#228;nkungen&#39;
+DECLARE @DBError_000002023 INT = 100002023;  -- &#39;Versandgewicht des reservierenden Bestandes: {0} , Versandgewicht des Auftrags min.: {1} , Versandgewicht des Auftrags max.: {2} &#39; 
+DECLARE @DBError_000002024 INT = 100002024;  -- &#39;Anzahl des zu reservierenden Bestandes: {0} , Anzahl Artikel im Auftrag min.: {1} , Anzahl Artikel im Auftrag max.: {2} &#39; 
+DECLARE @DBError_000002025 INT = 100002025;  --&#39;&#39; &lt;--  &#39;Die Option &quot;St&#252;cklisten nur reservieren, wenn alle Komponenten auf dem gleichen Lagerplatz vorhanden sind&quot; ist aktiviert. Bitte pr&#252;fen Sie, ob der Bestand im Lager ausreicht und die Komponenten auf unterschiedlichen Lagerpl&#228;tzen liegen.&#39;
+DECLARE @DBError_000002026 INT = 100002026;  -- Es gibt keine Freien Boxen f&#252;r den Auftrag im Warenlager
+DECLARE @DBError_000002027 INT = 100002027;  --&#39;Reservierung von Auftrag {0} abgebrochen. &#39;
+DECLARE @DBError_000002028 INT = 100002028;  -- &#39;Fehlender Artikel {0} , Fehlerhafte Menge: {1} &#39;
+DECLARE @ReservierungsFehler_MinAnzAufraege INT = 1;  -- &#39;Fehlender Artikel {0} , Fehlerhafte Menge: {1} &#39;
+DECLARE @ReservierungsFehler_MinAnzArtikel  INT = 2;  -- Nicht genug Artikel reserviert
+
+IF(@BestandReservieren = 1 AND EXISTS (SELECT * FROM WMS.tWMSErrorLogController WHERE nProzess = 2 AND (cQuelle = &#39;spBestellungReservieren&#39; OR ISNULL(tWMSErrorLogController.cQuelle,&#39;&#39;) = &#39;&#39;) AND nAktiv = 1 AND getdate() BETWEEN dStartZeit AND dEndZeit AND kWarenlager = @kWarenlager ))
+BEGIN
+		SET @nWMSLogAktiv = 1;
+
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_START&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,null ,@kPicklisteVorlage ,@kPickliste)
+
+END;
+
+
+    ----------------------------------------------------
+    ---  Anlegen von Tempor&#228;ren Tabellen
+    ----------------------------------------------------
+
+    -- Input Type Parameter in Temp Speichern
+    IF(object_id(&#39;tempdb..#BestellungZuReservieren&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellungZuReservieren;
+END;
+CREATE TABLE #BestellungZuReservieren(kBestellung INT,nTeillieferungErlaubt TINYINT,nVorkommissionieren TINYINT  PRIMARY KEY (kBestellung));
+
+INSERT INTO #BestellungZuReservieren(kBestellung,nTeillieferungErlaubt,nVorkommissionieren)
+SELECT kBestellung,nTeillieferungErlaubt,nVorkommissionieren
+FROM @BestellungZuReservieren;
+
+
+
+--
+-- #BestellPosLieferInfo enth&#228;lt alle Auftragspositionen die laut PicklistenVorlage und Gesamtlagerbestand reserviert werden k&#246;nnten.
+--
+IF (object_id(&#39;tempdb..#BestellPosLieferInfo&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellPosLieferInfo;
+END;
+
+CREATE TABLE #BestellPosLieferInfo (kBestellPos INT,kBestellung INT,fAnzahlReserviertEigen DECIMAL(25,13), fAnzahlZuPicken DECIMAL(25,13), nIstVorreserviert TINYINT,  kArtikel INT PRIMARY KEY (kBestellPos));
+
+
+IF (object_id(&#39;tempdb..#PickPosVerRes&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #PickPosVerRes;
+END;
+
+CREATE TABLE #PickPosVerRes (kAuftragPos INT PRIMARY KEY (kAuftragPos));
+
+INSERT INTO #PickPosVerRes (kAuftragPos)
+SELECT tPicklistePos.kbestellpos
+FROM dbo.tPicklistePos
+         JOIN #BestellungZuReservieren ON  tPicklistePos.kBestellung = #BestellungZuReservieren.kBestellung
+         JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+WHERE tPickliste.nType = 3
+  AND tPicklistePos.nStatus &lt; 40;
+
+
+
+INSERT INTO #BestellPosLieferInfo(kBestellPos,fAnzahlReserviertEigen,kBestellung,fAnzahlZuPicken,kArtikel,nIstVorreserviert)
+SELECT Versand.vBestellPosLieferInfoProLager.kBestellPos,Versand.vBestellPosLieferInfoProLager.fAnzahlReserviertEigen, Versand.vBestellPosLieferInfoProLager.kBestellung,
+       Versand.vBestellPosLieferInfoProLager.fAnzahlZuPicken, Versand.vBestellPosLieferInfoProLager.kArtikel, CASE WHEN VorReserviert.IsVorreserviert &gt; 0 THEN 1 ELSE 0 END
+FROM  Versand.vBestellPosLieferInfoProLager
+    JOIN #BestellungZuReservieren ON  Versand.vBestellPosLieferInfoProLager.kBestellung = #BestellungZuReservieren.kBestellung
+    OUTER APPLY ( SELECT COUNT(*) AS IsVorreserviert 
+						FROM #PickPosVerRes 
+					     WHERE #PickPosVerRes.kAuftragPos = Versand.vBestellPosLieferInfoProLager.kBestellPos
+					  ) AS VorReserviert
+WHERE  Versand.vBestellPosLieferInfoProLager.fAnzahlZuPicken &gt; 0
+  AND vBestellPosLieferInfoProLager.kWarenlager = @kWarenlager
+OPTION (RECOMPILE);
+
+
+----
+-- #WarenlagerPlatz enth&#228;lt alle Warenlagerpl&#228;tze die f&#252;r diese PicklistenVorlage g&#252;ltig sind.
+--
+IF (object_id(&#39;tempdb..#WarenlagerPlatz&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #WarenlagerPlatz;
+END;
+
+CREATE TABLE #WarenlagerPlatz (kWarenlagerPlatz INT, PRIMARY KEY (kWarenlagerPlatz));
+
+
+
+--
+-- #BestellPosZuReservieren hier werden alle Bestellpos mit den offenen und reservierbaren bestand gef&#252;hrt. Diese Tabelle wird durch mehrere Filter bearbeitet und liefert zum Schlu&#223; das Ergebniss wieviele Bestellung reservierbar sind.
+--
+IF (object_id(&#39;tempdb...#BestellPosZuReservieren&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellPosZuReservieren;
+END;
+
+CREATE TABLE #BestellPosZuReservieren (kArtikel INT, kBestellung INT, fAnzahlOffen DECIMAL(25,13), kBestellstueckliste INT,  fArtGewicht DECIMAL(25,13),  fAnzahlReservierbar DECIMAL(25,13) ,nTeillieferbar INT PRIMARY KEY (kBestellung,kArtikel,kBestellstueckliste));
+
+--
+-- ##BestellPosZuReservierenArtikelGrouped Tabelle ist identisch wie BestellPosZuReservieren. Allerding nach Artikel gruppiert, hier sind uns St&#252;cklisten egal.
+--
+IF (object_id(&#39;tempdb...##BestellPosZuReservierenArtikelGrouped&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellPosZuReservierenArtikelGrouped;
+END;
+
+CREATE TABLE #BestellPosZuReservierenArtikelGrouped (kArtikel INT, kBestellung INT, fAnzahlOffen DECIMAL(25,13),  fArtGewicht DECIMAL(25,13),  fAnzahlReservierbar DECIMAL(25,13) ,nTeillieferbar INT PRIMARY KEY (kBestellung,kArtikel));
+
+
+
+--
+-- Die Pickpositionen die erstellt werden sollen, werden hier zwischengespeichert.
+--
+IF (object_id(&#39;tempdb..#PickPosReserviert&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #PickPosReserviert;
+END
+
+CREATE TABLE #PickPosReserviert (kPickPosReserviert INT IDENTITY(1,1) , kWarenLagerEingang INT,fAnzahl DECIMAL(25,13), kBestellPos INT, kArtikel INT, kWarenlagerPlatz INT, kBestellung INT, nVorreserviert TINYINT );
+CREATE NONCLUSTERED INDEX IX_tempPickPosReserviert_kWarenLagerEingang ON #PickPosReserviert(kWarenLagerEingang)  INCLUDE (fAnzahl);
+	CREATE NONCLUSTERED INDEX IX_tempPickPosReserviert_kBestellung ON #PickPosReserviert(kBestellung)  INCLUDE (fAnzahl);
+
+
+
+--
+-- Die Boxen f&#252;r reservierbare Auftr&#228;ge werden hier zwischengespeichert
+--
+IF (object_id(&#39;tempdb..#BoxenFuerBestellungen&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BoxenFuerBestellungen;
+END;
+	
+	-- nBelegt: 0 = Box Frei, 1 = Box durch andere Bestellung gesperrt , 2= Box durch f&#252;r selbe kBestellung reserviert
+CREATE TABLE #BoxenFuerBestellungen (kLHM INT, kBestellung INT, nStatus TINYINT, nBelegt TINYINT, cLhmId NVARCHAR(30), bAttributePassen BIT  );
+CREATE CLUSTERED INDEX IX_tempBoxenFuerBestellungen_kArtikel ON #BoxenFuerBestellungen(kBestellung,nBelegt,kLHM);
+
+
+
+--
+-- Alle St&#252;cklisten die Komplett auf einen LagerPlatz sind
+--
+IF (object_id(&#39;tempdb..#BestellungsStuecklisteKomplettAufPlatz&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellungsStuecklisteKomplettAufPlatz;
+END;
+
+CREATE TABLE #BestellungsStuecklisteKomplettAufPlatz (kBestellungStueckliste INT,  kWarenlagerPlatz INT PRIMARY KEY(kBestellungStueckliste,kWarenlagerPlatz));
+
+
+--
+-- #BestellPosLieferInfo enth&#228;lt alle Auftragspositionen die laut PicklistenVorlage und Gesamtlagerbestand reserviert werden k&#246;nnten.
+--
+IF (object_id(&#39;tempdb..#ArtikelMitGemischtenChargenUeberPlaetze&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #ArtikelMitGemischtenChargenUeberPlaetze;
+END;
+
+CREATE TABLE #ArtikelMitGemischtenChargenUeberPlaetze (kArtikel INT PRIMARY KEY (kArtikel));
+
+
+
+IF (object_id(&#39;tempdb..#PlatzTypen&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #PlatzTypen;
+END;
+
+CREATE TABLE #PlatzTypen (PlatzTyp INT );
+CREATE CLUSTERED INDEX IX_tempPlatzTypen_PlatzTyp ON #PlatzTypen(PlatzTyp);
+
+
+	IF (object_id(&#39;tempdb..#LagerBereiche&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #LagerBereiche;
+END;
+
+CREATE TABLE #LagerBereiche (kWMSLagerbereich INT );
+CREATE CLUSTERED INDEX IX_tempLagerBereiche_kWMSLagerbereich ON #LagerBereiche(kWMSLagerbereich);
+
+	
+----------------------------------------------------
+----------------------------------------------------
+
+----------------------------------------------------
+--- Speichern aller ben&#246;tigten Optionen aus PicklistenVorlage und WarenlagerOptionen
+----------------------------------------------------
+SET @nAnzahlReservierteBestellung = 0;
+
+
+SELECT @nMHDHandling = nMHDHandling,
+       @nMinMHD = nMHDMinHaltbarkeit,
+       @nIsEazyShippingAuftrag = CASE WHEN tPicklisteVorlage.nPicklistenVorlageTyp IN (1,4,3) THEN 1 ELSE 0 END, -- Massenauslieferung, MoPa wie Eazyshippingbehandeln 
+       @nBoxenNurGanzeStuecklistenAufPL = nBoxenNurGanzeStuecklistenAufPL,
+       @nStuecklisteNurWennAlleAufPlatz = nStuecklisteNurWennAlleAufPlatz,
+       @nAngebrocheneBoxenImmerVervollstaendigen = nAngebrocheneBoxenImmerVervollstaendigen,
+       @cLagerBereiche = CASE WHEN LEN(cLagerbereiche) = 0
+                                  THEN &#39;&#39;
+                              ELSE cLagerbereiche + &#39;,&#39;
+           END,
+       @nPicklistenVorlageTyp = tPicklisteVorlage.nPicklistenVorlageTyp,
+       @nGewMax = tPicklisteVorlage.fGewichtBis,
+       @nGewMin = tPicklisteVorlage.fGewichtVon,
+       @nAnzArtMax = tPicklisteVorlage.nAnzahlArtikelAuftragMax,
+       @nAnzArtMin = tPicklisteVorlage.nAnzahlArtikelAuftragMin,
+       @nAnzAuftraege = nAnzahlBestellungen,
+       @nAnzAuftraegeMin = nAnzahlBestellungenMin,
+       @nSortenrein = nSortenrein,
+       @kRollendeKommissionierungPickwagen = isnull(kRollendeKommissionierungPickwagen,0),
+       @nMaxAnzahlArtikel = nMaxAnzahlArtikel,
+       @nMinAnzahlArtikel = nMinAnzahlArtikel,
+       @nStuecklisteVonGleichenPlatz = nStuecklisteVonGleichenPlatz,
+       @kBestellNr = kBestellNr,
+       @nPlatzPrioBeruecksichtigen = nPlatzPrioBeruecksichtigen,
+       @nSortierung = nSortierung,
+       @nNachschubPickenLast = nNachschubPickenLast,
+       @nAlleOhneLagerbereich = nAlleOhneLagerbereich,
+       @nKeineOderAlleInLagerbereich = nKeineOderAlleInLagerbereich,
+       @cPlatzTypen = CASE WHEN LEN(ISNULL(cPlatzTypen,&#39;&#39;)) = 0  THEN &#39;1,3,7,13,14&#39; ELSE cPlatzTypen END,
+       @PicklistenVorlageUrsprung = CASE WHEN tPicklisteVorlage.nIstVorlage = 1 THEN tPicklisteVorlage.kPicklisteVorlage ELSE tPicklisteVorlage.kPicklistenVorlageUrsprung END,
+       @Chargenrein = ISNULL(tPicklisteVorlage.nAuftraegeChargenrein,0),
+       @nSortenreinMaxAnzahlArtikel = ISNULL(tPicklisteVorlage.nSortenreinMaxAnzahlArtikel,0),
+       @nLagerplatzNachMenge = nLagerplatzNachMenge,
+       @nKeineAuftraegeVollstaendigAufPickliste = nKeineAuftraegeVollstaendigAufPickliste,
+       @nPlaetzeOhneReservierungZuerst = nPlaetzeOhneReservierungZuerst,
+       @nVollstaendigTeilgeliefertFIFO = nVollstaendigTeilgeliefertFIFO,
+       @kPicklisteVorlageParent = kPicklisteVorlageParent
+FROM dbo.tPicklisteVorlage
+WHERE dbo.tPicklisteVorlage.kPicklistevorlage = @kPicklisteVorlage;
+
+SELECT @kWarenlagerPlatzAltePickPos = tPicklistePos.kWarenlagerPlatz
+FROM dbo.tPicklistePos
+WHERE tPicklistePos.kPicklistePos = @kPickPosNeuReservieren;
+
+SELECT @nIstStandardLager = CASE WHEN tWarenlager.nLagerplatzVerwaltung = 1 THEN 0 ELSE 1 END
+FROM tWarenlager
+WHERE tWarenlager.kWarenLager = @kWarenlager;
+
+
+SELECT  @bHasMHDorChargenHandling = CASE WHEN tWarenLagerOptionen.nMHD &gt; 0 OR tWarenLagerOptionen.nChargen &gt; 0 THEN 1 ELSE 0 END,
+        @nArtikelAttributeBeachten = tWarenLagerOptionen.nArtikelAttributeBeachten ,@nTeilmengen = nTeilmengen ,
+        @nIdentischeAuftraegeMitTeillieferung = CASE WHEN tWarenLagerOptionen.nIdentischeAuftraegeMitTeillieferung = 1 AND tWarenLagerOptionen.nMassenauslieferung = 1 THEN 1 ELSE 0 END,
+        @nOptionalMHDChargeAnywhere = tWarenLagerOptionen.nMHDChargeAnywhere
+FROM dbo.tWarenLagerOptionen
+WHERE dbo.tWarenLagerOptionen.kWarenLager = @kWarenlager;
+
+
+
+IF(@kPicklisteVorlageParent &gt; 0) -- Parent vorhanden,  gibt es bereichts eine Pickliste zu den Parent
+BEGIN
+
+DECLARE @nAnzAuftraegeParent INT;
+DECLARE @nAnzArtikelParent INT;
+
+SELECT @nAnzAuftraegeParent = nAnzahlBestellungen, @nAnzArtikelParent = nMaxAnzahlArtikel
+FROM dbo.tPicklisteVorlage
+WHERE dbo.tPicklisteVorlage.kPicklistevorlage = @kPicklisteVorlageParent;
+
+
+
+IF(@nAnzAuftraegeParent &gt; 0 OR @nAnzArtikelParent &gt; 0)
+BEGIN
+
+DECLARE @nAnzReserviertParent INT = 0;
+DECLARE @nArtikelReserviertParent INT = 0;
+
+SELECT @nAnzReserviertParent = COUNT(DISTINCT tPicklistepos.kBestellung), @nArtikelReserviertParent = SUM(tPicklistepos.fAnzahl)
+FROM dbo.tPickliste
+         JOIN dbo.tPicklistepos ON tPicklistepos.kPickliste = tPickliste.kPickliste
+WHERE tPickliste.kPicklistenVorlage IN ( SELECT kPicklisteVorlage FROM tPicklisteVorlage WHERE kPicklisteVorlageParent = @kPicklisteVorlageParent)
+  AND tPickliste.nStatus = 10;
+
+IF(@nAnzAuftraegeParent &gt; 0)
+BEGIN
+
+-- Auftraganzahl bereits von fr&#252;heren Vorlagen erreicht, raus hier
+IF(@nAnzAuftraegeParent - @nAnzReserviertParent = 0)
+BEGIN
+    
+    SET @nAnzahlReservierteBestellung = 0;
+    RETURN;
+
+END;
+			    
+-- Anzahl max Auftr&#228;ge anpassen, anhand der globalen Einstellungen und des schon reservierten
+IF(@nAnzAuftraege = 0)
+BEGIN
+    SET @nAnzAuftraege = @nAnzAuftraegeParent - @nAnzReserviertParent;
+END
+ELSE
+BEGIN
+        SET @nAnzAuftraege = CASE WHEN (@nAnzAuftraegeParent - @nAnzReserviertParent) &lt; @nAnzAuftraege THEN (@nAnzAuftraegeParent - @nAnzReserviertParent)   ELSE @nAnzAuftraege  END;
+END;
+END;
+
+IF(@nAnzArtikelParent &gt; 0)
+BEGIN
+    -- Auftraganzahl bereits von fr&#252;heren Vorlagen erreicht, raus hier
+    IF(@nAnzArtikelParent - @nArtikelReserviertParent = 0)
+BEGIN
+	SET @nAnzahlReservierteBestellung = 0;
+	RETURN;
+END;
+
+						
+-- Anzahl max Artikel anpassen, anhand der globalen Einstellungen und des schon reservierten
+IF(@nMaxAnzahlArtikel = 0)
+BEGIN
+	 SET @nMaxAnzahlArtikel = @nAnzArtikelParent - @nArtikelReserviertParent;
+END
+ELSE
+BEGIN
+	 SET @nMaxAnzahlArtikel = CASE WHEN (@nAnzArtikelParent - @nArtikelReserviertParent) &lt; @nMaxAnzahlArtikel THEN (@nAnzArtikelParent - @nArtikelReserviertParent)   ELSE @nMaxAnzahlArtikel  END;
+END;
+END;
+END;
+END;
+
+
+
+	
+IF(EXISTS (SELECT * FROM dbo.tPickliste 
+					JOIN tPicklistePos ON tPicklistepos.kPickliste = tPickliste.kPickliste
+					JOIN #BestellungZuReservieren ON #BestellungZuReservieren.kBestellung = tPicklistePos.kBestellung
+					WHERE nType = 3 AND tPickliste.nStatus &lt; 40 AND tPickliste.kWarenLager = @kWarenlager))
+BEGIN
+    SET @nIstReservierungsPicklistenOffen = 1;
+END;
+
+
+IF(LEN(@cLagerBereiche) &gt; 0)
+BEGIN
+    -- F&#252;llt die Tempor&#228;re Tabelle, mit werten aus dem komma separierten varchar
+INSERT INTO #LagerBereiche (kWMSLagerbereich)
+SELECT  CAST(part as INT) FROM [dbo].[SplitString] (@cLagerBereiche,&#39;,&#39;);
+END;
+
+IF(LEN(@cPlatzTypen) &gt; 0)
+BEGIN
+    -- F&#252;llt die Tempor&#228;re Tabelle, mit werten aus dem komma separierten varchar
+INSERT INTO #PlatzTypen (PlatzTyp)
+SELECT  CAST(part as INT) FROM [dbo].[SplitString] (@cPlatzTypen,&#39;,&#39;);
+END;
+
+SELECT @VersandBoxenProzessMitRoko = COUNT(*)
+FROM dbo.twarenlageroptionen
+WHERE ISNULL(nVersandboxenProzess,0) = 1
+  AND ISNULL(nVersandboxenProzessmitRoko,0) = 1
+  AND kWarenlager = @kWarenlager;
+
+
+SELECT @FifoAktiv= CAST(cValue AS TINYINT)
+FROM tOptions
+WHERE cKey = &#39;FIFOAktiv&#39;;
+
+----------------------------------------------------
+
+----------------------------------------------------
+--- BEGIN DER BESTELLPOS RESERVIERUNG
+----------------------------------------------------
+
+IF(@kPickPosNeuReservieren &gt; 0) -- Falls wir einen PickPos Neu-Reservieren (Mobile App)
+BEGIN
+
+INSERT INTO #BestellPosZuReservieren(kArtikel,kBestellung,fAnzahlOffen,kBestellstueckliste,fArtGewicht,nTeillieferbar)
+SELECT tPicklistePos.kArtikel
+     ,tPicklistePos.kBestellung
+     ,@fAnzahlPickPosNeuReservieren
+     ,ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0)
+     ,0
+     ,1
+FROM dbo.tPicklistePos
+         JOIN Verkauf.tAuftragPosition ON tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition
+WHERE kPicklistePos = @kPickPosNeuReservieren
+
+DELETE FROM #BestellPosLieferInfo;
+
+INSERT INTO #BestellPosLieferInfo(kBestellPos,fAnzahlReserviertEigen,kBestellung,fAnzahlZuPicken,kArtikel,nIstVorreserviert)
+SELECT tPicklistePos.kBestellPos,@fAnzahlPickPosNeuReservieren,tPicklistePos.kBestellung,@fAnzahlPickPosNeuReservieren,tPicklistePos.kArtikel,CASE WHEN VorReserviert.IsVorreserviert &gt; 0 THEN 1 ELSE 0 END
+FROM dbo.tPicklistePos
+    OUTER APPLY ( SELECT COUNT(*) AS IsVorreserviert 
+				      FROM dbo.tPicklistePos 
+				      JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+				      WHERE tPicklistePos.kbestellpos =tPicklistePos.kBestellPos
+				      AND tPickliste.nType = 3
+				      AND tPicklistePos.nStatus &lt; 40 ) AS VorReserviert
+WHERE kPicklistePos = @kPickPosNeuReservieren
+
+
+END;
+ELSE
+BEGIN
+    
+
+IF (object_id(&#39;tempdb..#AuftragPositionEigenschaftTemp&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #AuftragPositionEigenschaftTemp;
+END;
+
+CREATE TABLE #AuftragPositionEigenschaftTemp (kAuftragPosition INT PRIMARY KEY (kAuftragPosition));
+
+
+IF  (@nIstStandardLager != 1)
+BEGIN
+
+    INSERT INTO #AuftragPositionEigenschaftTemp (kAuftragPosition)
+    SELECT DISTINCT vAuftragPositionEigenschaft.kAuftragPosition
+    FROM Verkauf.vAuftragPositionEigenschaft
+             JOIN dbo.tEigenschaftwert ON tEigenschaftwert.kEigenschaftwert = vAuftragPositionEigenschaft.kEigenschaftWert
+             JOIN dbo.tEigenschaft ON tEigenschaft.kEigenschaft = tEigenschaftWert.kEigenschaft
+             JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = vAuftragPositionEigenschaft.kAuftragPosition
+             JOIN #BestellungZuReservieren ON #BestellungZuReservieren.kBestellung = tAuftragPosition.kAuftrag
+    WHERE tEigenschaft.cTyp IS NOT NULL
+      AND tEigenschaft.cTyp NOT IN (&#39;PFLICHT-FREIFELD&#39;,&#39;FREIFELD&#39;)
+
+
+END;
+
+--- 
+--- #BestellPosZuReservieren wird mit allen Reservierbaren Bestellpositionen gef&#252;llt
+---
+INSERT INTO #BestellPosZuReservieren(kArtikel,kBestellung,fAnzahlOffen,kBestellstueckliste,fArtGewicht,nTeillieferbar)
+SELECT dbo.tArtikel.kArtikel
+     ,Verkauf.tAuftragPosition.kAuftrag
+     ,SUM(#BestellPosLieferInfo.fAnzahlReserviertEigen)
+     ,ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0)
+     ,SUM(dbo.tArtikel.fGewicht)
+     ,CASE WHEN ( #BestellungZuReservieren.nTeillieferungErlaubt &gt; 0 OR (#BestellungZuReservieren.nVorkommissionieren &gt; 0 AND (@nPicklistenVorlageTyp = 0 OR (@nPicklistenVorlageTyp = 2 AND @VersandBoxenProzessMitRoko = 1))) )
+               THEN 1  ELSE 0 END
+FROM Verkauf.tAuftragPosition
+         JOIN #BestellPosLieferInfo ON #BestellPosLieferInfo.kBestellpos = Verkauf.tAuftragPosition.kAuftragPosition
+         JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel AND ISNULL(dbo.tArtikel.kStueckliste, 0) = 0
+         JOIN #BestellungZuReservieren ON #BestellungZuReservieren.kBestellung = #BestellPosLieferInfo.kBestellung
+WHERE dbo.tArtikel.cLagerAktiv = &#39;Y&#39;
+  AND dbo.tArtikel.cLagerVariation &lt;&gt; &#39;Y&#39;
+  AND (
+    NOT EXISTS (
+            SELECT * FROM #AuftragPositionEigenschaftTemp
+            WHERE #AuftragPositionEigenschaftTemp.kAuftragPosition = tAuftragPosition.kAuftragPosition
+        )
+    )
+  AND (
+        NOT EXISTS (
+                SELECT *
+                FROM dbo.teigenschaft
+                WHERE cAktiv = &#39;Y&#39;
+                  AND kArtikel = dbo.tartikel.kArtikel
+                  AND dbo.tEigenschaft.cTyp NOT IN (&#39;PFLICHT-FREIFELD&#39;,&#39;FREIFELD&#39;)
+            )  OR @nIstStandardLager = 1
+    )
+GROUP BY dbo.tArtikel.kArtikel,Verkauf.tAuftragPosition.kAuftragStueckliste,Verkauf.tAuftragPosition.kAuftrag,#BestellungZuReservieren.nTeillieferungErlaubt,#BestellungZuReservieren.nVorkommissionieren
+HAVING SUM(#BestellPosLieferInfo.fAnzahlReserviertEigen) &gt; 0
+ORDER BY Verkauf.tAuftragPosition.kAuftrag,Verkauf.tAuftragPosition.kAuftragStueckliste,dbo.tArtikel.kArtikel;
+
+END;
+
+
+IF(@nWMSLogAktiv = 1)
+BEGIN
+	    DECLARE @xBestellPosZuReservieren XML;
+		  		SET @xBestellPosZuReservieren = (
+		  			    SELECT *
+		  				FROM #BestellPosZuReservieren 
+		  				FOR XML PATH(&#39;BestellPosZuReservieren&#39;), TYPE );
+
+
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_#BestellPosZuReservieren&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,@xBestellPosZuReservieren ,@kPicklisteVorlage ,@kPickliste)
+END;
+
+
+
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0)
+BEGIN
+
+DECLARE @cBestellNr VARCHAR(255);
+
+SELECT @cBestellNr = cAuftragsNr
+FROM Verkauf.tAuftrag
+WHERE kAuftrag = @kBestellNr;
+
+
+
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2)
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002002,GETDATE(),0,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002003,GETDATE(),1,tArtikel.cArtNr, CAST(CAST(#BestellPosZuReservieren.fAnzahlOffen AS FLOAT) AS NVARCHAR)
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+WHERE #BestellPosZuReservieren.kBestellung = @kBestellNr
+UNION ALL
+SELECT @kSessionID,@kBenutzer, @DBError_000002004,GETDATE(),2,NULL,NULL
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+WHERE #BestellPosZuReservieren.kBestellung = @kBestellNr
+HAVING COUNT(*) = 0
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL; --&#39;&#39; &lt;-- Leerzteile
+
+
+END;
+
+
+
+---
+--- #WarenlagerPlatz wird mit allen Lagerpl&#228;tzen gef&#252;llt die f&#252;r die PicklistenVorlage in Frage kommen.
+---
+
+INSERT INTO #WarenlagerPlatz(kWarenlagerplatz)
+SELECT kWarenlagerplatz
+FROM @WarenLagerPlatzZuReservieren;
+
+IF NOT EXISTS (SELECT * FROM #WarenlagerPlatz)
+BEGIN
+
+		DECLARE @SQLWarenlagerPlaetze NVARCHAR(4000);
+
+		SET @SQLWarenlagerPlaetze =
+
+		N&#39;INSERT INTO #WarenlagerPlatz (kWarenlagerplatz)
+		SELECT DISTINCT tWarenLagerPlatz.kWarenLagerPlatz 
+		FROM  dbo.tWarenLagerPlatz
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz AND tWarenLagerEingang.fanzahlaktuell &gt; 0
+		JOIN #BestellPosZuReservieren ON #BestellPosZuReservieren.kArtikel = tWarenLagerEingang.kArtikel 
+		JOIN dbo.tWarenLager ON tWarenLager.kWarenLager = tWarenLagerPlatz.kWarenLager
+		WHERE tWarenLagerPlatz.kWarenLagerPlatz = tWarenLagerEingang.kWarenLagerPlatz 
+		AND tWarenLagerPlatz.kWarenLager = @kWarenlager
+		AND (tWarenLagerPlatz.kWarenLagerPlatz != @kWarenlagerPlatzAltePickPos OR @cSubsetNumberNeuReservieren IS NOT NULL)
+		AND tWarenLagerPlatz.nStatus = 0 &#39;;
+
+IF EXISTS(SELECT * FROM dbo.tWarenLager WHERE kWarenLager = @kWarenlager AND tWarenLager.nLagerplatzVerwaltung = 1) AND
+   EXISTS(SELECT * FROM #PlatzTypen)
+BEGIN
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; AND (tWarenlagerPlatz.kWarenlagerPlatzTyp IN (SELECT PlatzTyp FROM #PlatzTypen) OR tWarenLager.nLagerplatzVerwaltung = 0 ) &#39;;
+END;
+    
+IF EXISTS(SELECT * FROM  WMS.tPicklisteVorlageVorgangsTypen WHERE  tPicklisteVorlageVorgangsTypen.kPicklisteVorlage = @PicklistenVorlageUrsprung AND tPicklisteVorlageVorgangsTypen.nVorgangsTyp IN(6,7))
+BEGIN
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; AND (tWarenlagerPlatz.kWarenLagerPlatz NOT IN (SELECT kWarenLagerPlatz FROM pps.tWorkbenchBin)) &#39;;
+END;
+
+-- Falls Lagerberechsfilter aktiv ist
+IF (EXISTS(SELECT * FROM #LagerBereiche) OR @nAlleOhneLagerbereich = 1)
+BEGIN
+
+IF(@nKeineOderAlleInLagerbereich = 0) --Platz MUSS im vorgegebenen Lagerbereich sein
+BEGIN
+
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; AND ( tWarenLagerPlatz.kWarenLagerPlatz IN (SELECT tWMSLagerBereichPlatz.kWarenLagerPlatz  
+																  								      FROM tWMSLagerBereichPlatz 
+		  													  									      JOIN #LagerBereiche AS t1 ON t1.kWMSLagerbereich = tWMSLagerBereichPlatz.kWMSLagerbereich) &#39;;
+END;
+
+ELSE IF(@nKeineOderAlleInLagerbereich = 1)  -- Platz darf NICHT im vorgegebenen Lagerbereich sein
+BEGIN
+
+	SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; AND ( tWarenLagerPlatz.kWarenLagerPlatz NOT IN (SELECT tWMSLagerBereichPlatz.kWarenLagerPlatz  
+																  										  FROM tWMSLagerBereichPlatz 
+		  													  											  JOIN #LagerBereiche AS t1 ON t1.kWMSLagerbereich = tWMSLagerBereichPlatz.kWMSLagerbereich) &#39;;
+END;
+
+IF(@nAlleOhneLagerbereich = 1)
+BEGIN
+				
+IF(@nKeineOderAlleInLagerbereich = 0) -- Alle Plaetze Ohne Lagerbereich auch betrachten
+BEGIN
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; OR tWarenLagerPlatz.kWarenLagerPlatz NOT IN ( SELECT kWarenlagerplatz FROM dbo.tWMSLagerBereichPlatz ) ) &#39;;
+END;
+ELSE -- Alle Plaetze Ohne Lagerbereich Ausschlie&#223;en
+BEGIN  
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; AND tWarenLagerPlatz.kWarenLagerPlatz IN ( SELECT kWarenlagerplatz FROM dbo.tWMSLagerBereichPlatz ) ) &#39;;
+END;
+
+
+END;
+ELSE -- Wenn Lagerbereiche ausgeschlo&#223;en, dann nur pl&#228;tze mit Lagerbereichen betrachten
+BEGIN
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; ) &#39;;
+END;
+
+END;
+ELSE
+BEGIN
+
+IF(@nAlleOhneLagerbereich = 1) -- Es werden nur Plaetze die keinen Lagerbereich haben betrachtet
+BEGIN
+    SET @SQLWarenlagerPlaetze = @SQLWarenlagerPlaetze + &#39; AND tWarenLagerPlatz.kWarenLagerPlatz NOT IN ( SELECT kWarenlagerplatz FROM dbo.tWMSLagerBereichPlatz ) &#39;;
+END;
+
+END;
+
+
+EXECUTE SP_EXECUTESQL @SQLWarenlagerPlaetze,
+			  N&#39; @kWarenlager INT, @kWarenlagerPlatzAltePickPos INT, @cSubsetNumberNeuReservieren VARCHAR(100)&#39; ,
+				  @kWarenlager = @kWarenlager, @kWarenlagerPlatzAltePickPos = @kWarenlagerPlatzAltePickPos, @cSubsetNumberNeuReservieren = @cSubsetNumberNeuReservieren;
+END
+
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0)
+BEGIN
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1)
+SELECT @kSessionID,@kBenutzer,@DBError_000002005,GETDATE(),0,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002006,GETDATE(),1,tWarenLagerPlatz.cName
+FROM #WarenlagerPlatz
+         JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = #WarenlagerPlatz.kWarenLagerPlatz
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002007,GETDATE(),2,null
+FROM #WarenlagerPlatz
+         JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = #WarenlagerPlatz.kWarenLagerPlatz
+HAVING COUNT(*) = 0
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL; --&#39;&#39; &lt;-- Leerzteile
+
+END;
+
+
+---
+--- Der aktuell reservierbare Bestand (laut tWarenlagereingang) wird in die Tabelle #BestellPosZuReservieren f&#252;r jede BestellPos geschrieben.
+--- Zuerst Checken wir ob auf die Sonderf&#228;lle von MHD/Chargen gepr&#252;ft werden mu&#223;, falls nicht wird das SQL viel schlanker
+---
+IF(@bHasMHDorChargenHandling = 1)
+BEGIN
+
+SELECT @MakeBestandCheckWithMHDChargen = CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+WHERE tArtikel.nCharge &gt; 0 OR tArtikel.nMHD &gt; 0;
+
+END;
+ELSE
+BEGIN
+    SET @MakeBestandCheckWithMHDChargen = 0;
+END;
+
+
+-- Potenzielle reservierbare Warenlagereing&#228;nge zwischenspeichern
+IF (object_id(&#39;tempdb..#WarenlagerEingangTemp&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #WarenlagerEingangTemp;
+END;
+
+CREATE TABLE #WarenlagerEingangTemp (kWarenlagereingang INT, kWarenLagerPlatz INT, kArtikel INT , dMHD DATETIME, fAnzahl DECIMAL(25,13) PRIMARY KEY (kWarenlagereingang));
+CREATE NONCLUSTERED INDEX [IX_#WarenlagerEingangTemp_kArtikel_kWarenLagerPlatz_dMHD] ON #WarenlagerEingangTemp (kArtikel,kWarenLagerPlatz,dMHD) INCLUDE(fAnzahl);
+
+INSERT INTO #WarenlagerEingangTemp (kWarenlagereingang , kWarenLagerPlatz , kArtikel  , dMHD, fAnzahl)
+SELECT kWarenlagereingang , kWarenLagerPlatz , kArtikel  , dMHD,fAnzahlAktuell - ISNULL(fAnzahlReserviertPickpos,0)
+FROM dbo.tWarenLagerEingang
+WHERE fAnzahlAktuell &gt; 0
+  AND EXISTS( SELECT * FROM #WarenlagerPlatz WHERE #WarenlagerPlatz.kWarenlagerPlatz = tWarenLagerEingang.kWarenLagerPlatz )
+  AND EXISTS (SELECT * FROM #BestellPosZuReservieren WHERE #BestellPosZuReservieren.kArtikel = tWarenLagerEingang.kArtikel)
+
+
+
+
+-- BestandsCheck mit MHD/Chargen Pr&#252;fung
+IF(@MakeBestandCheckWithMHDChargen = 1)
+BEGIN 
+    
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0)
+BEGIN
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1)
+SELECT @kSessionID,@kBenutzer,@DBError_000002008,GETDATE(),0
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002009,GETDATE(),1
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002010,GETDATE(),1
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1 ;
+
+END;
+
+IF(@nOptionalMHDChargeAnywhere = 0)
+BEGIN
+
+INSERT INTO #ArtikelMitGemischtenChargenUeberPlaetze (kArtikel)
+SELECT DISTINCT twarenlagereingang.kartikel
+FROM twarenlagereingang
+         JOIN #BestellPosZuReservieren ON #BestellPosZuReservieren.kArtikel = twarenlagereingang.kArtikel
+         JOIN #WarenlagerPlatz  ON #WarenlagerPlatz.kwarenlagerplatz = twarenlagereingang.kwarenlagerplatz
+         JOIN dbo.tartikel  on twarenlagereingang.kartikel = tartikel.kartikel
+WHERE (tartikel.ncharge &gt; 0 OR tartikel.nmhd&gt; 0)
+  AND twarenlagereingang.fAnzahlAktuell &gt; 0
+GROUP BY twarenlagereingang.kartikel, twarenlagereingang.cchargennr, twarenlagereingang.dmhd
+HAVING COUNT(DISTINCT twarenlagereingang.kwarenlagerplatz) &gt; 1;
+
+
+;WITH tempPickPosVorRes AS
+(
+    SELECT CASE WHEN SUM(CASE WHEN tPickliste.nType = 3 THEN tPicklistePos.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN tPicklistePos.fAnzahl ELSE 0 END) &lt; 0
+                    THEN 0 ELSE SUM(CASE WHEN tPickliste.nType = 3 THEN tPicklistePos.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN tPicklistePos.fAnzahl ELSE 0 END)  END fAnzahl,
+           tPicklistePos.kArtikel,tPicklistePos.kBestellung
+    FROM tPicklistePos
+             JOIN tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+    WHERE  tPickliste.nStatus &lt; 40
+    GROUP BY tPicklistePos.kArtikel,tPicklistePos.kBestellung
+)
+UPDATE #BestellPosZuReservieren
+SET #BestellPosZuReservieren.fAnzahlReservierbar = ISNULL(WLE.fAnzahl,0)  + ISNULL(VorRes.fAnzahl,0)
+    FROM #BestellPosZuReservieren
+		   OUTER APPLY
+		   (
+			  SELECT  SUM  (#WarenlagerEingangTemp.fAnzahl) AS fAnzahl
+			  FROM  #WarenlagerEingangTemp
+			  JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = #WarenlagerEingangTemp.kWarenLagerPlatz
+			  JOIN dbo.tArtikel ON #WarenlagerEingangTemp.kArtikel = tARtikel.kArtikel
+										AND ((tArtikel.nCharge = 0 AND tArtikel.nMHD = 0 )
+										   OR (
+												 -- Keine Chargen/MHDs reservieren , wo andere chargen/MHD auf anderen Platzen liegen
+												 NOT EXISTS (SELECT * FROM #ArtikelMitGemischtenChargenUeberPlaetze WHERE #ArtikelMitGemischtenChargenUeberPlaetze.kArtikel = #BestellPosZuReservieren.kArtikel)
+											  )	
+												 --es werden nur chargen und MHD-reine pl&#228;tze betrachtet
+												 OR (
+													tArtikel.nMHD = 1 
+													AND 2 &gt; (SELECT COUNT(DISTINCT tWE2.dMHD)
+															  FROM dbo.tWarenlagerEingang tWE2  WITH(NOLOCK)
+															  WHERE kartikel = tartikel.kartikel
+																 AND tWE2.kwarenlagerplatz = #WarenlagerEingangTemp.kWarenLagerPlatz
+																 AND tWE2.fanzahlaktuell &gt; 0)
+													)
+												 OR (
+													tArtikel.nCharge = 1 
+													AND 2 &gt; (SELECT COUNT(DISTINCT tWE3.cChargenNr)
+															  FROM dbo.tWarenlagerEingang tWE3  WITH(NOLOCK)
+															  WHERE tWE3.kartikel = tartikel.kartikel
+																 AND tWE3.kwarenlagerplatz = #WarenlagerEingangTemp.kWarenLagerPlatz
+																 AND tWE3.fanzahlaktuell &gt; 0
+														   )
+													)
+										   )
+		   WHERE #WarenlagerEingangTemp.kArtikel = #BestellPosZuReservieren.kArtikel
+		   AND ( tArtikel.nMHD = 0 
+				OR datediff(d, 0, #WarenlagerEingangTemp.dMHD)  &gt;=  datediff(d, 0, (GETDATE() + @nMinMHD))  -- Es darf kein abgelaufenes MHD reserviert werden, mindest MHD kann optional angegeben werden 
+				OR ISNULL(@nMHDHandling,0) &gt; 0
+			  )
+		   ) AS WLE
+		OUTER APPLY (	   
+				SELECT tempPickPosVorRes.fAnzahl
+				FROM tempPickPosVorRes
+				WHERE tempPickPosVorRes.kArtikel =  #BestellPosZuReservieren.kArtikel
+				AND tempPickPosVorRes.kBestellung = #BestellPosZuReservieren.kBestellung
+			) AS VorRes
+
+
+END;
+ELSE
+BEGIN
+
+;WITH tempPickPosVorRes AS
+(
+    SELECT CASE WHEN SUM(CASE WHEN tPickliste.nType = 3 THEN tPicklistePos.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN tPicklistePos.fAnzahl ELSE 0 END) &lt; 0
+                    THEN 0 ELSE SUM(CASE WHEN tPickliste.nType = 3 THEN tPicklistePos.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN tPicklistePos.fAnzahl ELSE 0 END)  END fAnzahl,
+           tPicklistePos.kArtikel,tPicklistePos.kBestellung
+    FROM tPicklistePos
+             JOIN tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+    WHERE  tPickliste.nStatus &lt; 40
+    GROUP BY tPicklistePos.kArtikel,tPicklistePos.kBestellung
+)
+UPDATE #BestellPosZuReservieren
+SET #BestellPosZuReservieren.fAnzahlReservierbar = ISNULL(WLE.fAnzahl,0) + ISNULL(VorRes.fAnzahl,0)
+    FROM #BestellPosZuReservieren
+	   OUTER APPLY
+	   (
+		  SELECT  SUM  (#WarenlagerEingangTemp.fAnzahl) AS fAnzahl
+		  FROM  #WarenlagerEingangTemp
+		  JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = #WarenlagerEingangTemp.kWarenLagerPlatz 
+		  JOIN dbo.tArtikel ON #BestellPosZuReservieren.kArtikel = tARtikel.kArtikel
+	      WHERE #WarenlagerEingangTemp.kArtikel = #BestellPosZuReservieren.kArtikel
+	      AND ( tArtikel.nMHD = 0 
+		    OR datediff(d, 0, #WarenlagerEingangTemp.dMHD)  &gt;=  datediff(d, 0, (GETDATE() + @nMinMHD))  -- Es darf kein abgelaufenes MHD reserviert werden, mindest MHD kann optional angegeben werden 
+		    OR ISNULL(@nMHDHandling,0) &gt; 0
+		  )
+	   ) AS WLE
+	    OUTER APPLY (	   
+				SELECT tempPickPosVorRes.fAnzahl
+				FROM tempPickPosVorRes
+				WHERE tempPickPosVorRes.kArtikel =  #BestellPosZuReservieren.kArtikel
+				AND tempPickPosVorRes.kBestellung = #BestellPosZuReservieren.kBestellung
+			) AS VorRes
+
+
+END;
+
+END;
+ELSE -- BestandsCheck ohne MHD/Chargen Pr&#252;fung
+BEGIN
+
+
+;WITH tempPickPosVorRes AS
+(
+    SELECT CASE WHEN SUM(CASE WHEN tPickliste.nType = 3 THEN tPicklistePos.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN tPicklistePos.fAnzahl ELSE 0 END) &lt; 0
+                    THEN 0 ELSE SUM(CASE WHEN tPickliste.nType = 3 THEN tPicklistePos.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN tPicklistePos.fAnzahl ELSE 0 END)  END fAnzahl,
+           tPicklistePos.kArtikel,tPicklistePos.kBestellung
+    FROM tPicklistePos
+             JOIN tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+    WHERE  tPickliste.nStatus &lt; 40
+    GROUP BY tPicklistePos.kArtikel,tPicklistePos.kBestellung
+)
+UPDATE #BestellPosZuReservieren
+SET #BestellPosZuReservieren.fAnzahlReservierbar = ISNULL(WLE.fAnzahl,0) + ISNULL(VorRes.fAnzahl,0)
+    FROM #BestellPosZuReservieren
+         OUTER APPLY
+         (
+	          SELECT  SUM  (#WarenlagerEingangTemp.fanzahl) AS fAnzahl
+	          FROM  #WarenlagerEingangTemp 
+	          JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = #WarenlagerEingangTemp.kWarenLagerPlatz
+              WHERE #WarenlagerEingangTemp.kArtikel = #BestellPosZuReservieren.kArtikel
+         ) AS WLE
+		OUTER APPLY (	   
+				SELECT tempPickPosVorRes.fAnzahl
+				FROM tempPickPosVorRes
+				WHERE tempPickPosVorRes.kArtikel =  #BestellPosZuReservieren.kArtikel
+				AND tempPickPosVorRes.kBestellung = #BestellPosZuReservieren.kBestellung
+			) AS VorRes
+
+
+END;
+
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0)
+BEGIN
+    
+DECLARE @bTeillieferbar TINYINT;
+
+SELECT @bTeillieferbar = CASE WHEN #BestellungZuReservieren.nTeillieferungErlaubt = 1 THEN 1 WHEN #BestellungZuReservieren.nVorkommissionieren = 1 THEN 1 ELSE 0 END
+FROM #BestellungZuReservieren
+
+
+    INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+SELECT @kSessionID,@kBenutzer,@DBError_000002011,GETDATE(),0,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002012,GETDATE(),0,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002013,GETDATE(),CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar THEN 1 ELSE 2 END ,tArtikel.cArtNr,CAST(CAST(#BestellPosZuReservieren.fAnzahlOffen AS FLOAT) AS NVARCHAR),CAST(CAST(#BestellPosZuReservieren.fAnzahlReservierbar AS FLOAT) AS NVARCHAR)
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+WHERE #BestellPosZuReservieren.fAnzahlOffen &gt; #BestellPosZuReservieren.fAnzahlReservierbar
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL;
+
+
+IF(ISNULL(@nMHDHandling,0) = 0 )
+BEGIN
+
+
+		  IF EXISTS(       
+				   SELECT *
+				   FROM dbo.tWarenLagerEingang 
+				   JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenLagerEingang.kArtikel
+				   JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = tWarenLagerEingang.kWarenlagerPlatz 
+				   WHERE tWarenLagerEingang.kArtikel IN (SELECT Verkauf.tAuftragPosition.kArtikel
+				  										 FROM #BestellPosZuReservieren 
+				  										 JOIN  Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftrag = #BestellPosZuReservieren.kBestellung)
+				   AND (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos)  &gt; 0
+				   AND tArtikel.nMHD = 1 
+				   AND datediff(d, 0, tWarenlagerEingang.dMHD)  &lt;  datediff(d, 0, (GETDATE() + @nMinMHD))  
+	       )
+
+
+BEGIN
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3,cValue4)
+SELECT @kSessionID,@kBenutzer,@DBError_000002014,GETDATE(),0,NULL,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002015,GETDATE(),1,NULL,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002016,GETDATE(),2,tWarenlagerPlatz.cName,tArtikel.cArtNr,CAST(SUM(tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos) AS varchar),CAST(tWarenLagerEingang.dMHD AS Nvarchar)
+FROM dbo.tWarenLagerEingang
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenLagerEingang.kArtikel
+         JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = tWarenLagerEingang.kWarenlagerPlatz
+         JOIN dbo.tWarenlagerPlatz ON tWarenlagerPlatz.kWarenlagerplatz = #WarenlagerPlatz.kWarenlagerplatz
+WHERE tWarenLagerEingang.kArtikel IN (SELECT Verkauf.tAuftragPosition.kArtikel
+                                      FROM #BestellPosZuReservieren
+                                               JOIN  Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftrag = #BestellPosZuReservieren.kBestellung)
+  AND (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos)  &gt; 0
+  AND tArtikel.nMHD = 1
+  AND datediff(d, 0, tWarenlagerEingang.dMHD)  &lt;  datediff(d, 0, (GETDATE() + @nMinMHD))
+GROUP BY tWarenlagerPlatz.cName,tWarenLagerEingang.dMHD, tArtikel.cArtNr
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL,NULL ;
+
+
+END;
+
+END;
+
+END;
+
+
+	-- Erstmal raus, wir haben kein auftrag split
+    -- Gibt es St&#252;cklisten im Auftrag?
+  --  IF(EXISTS(SELECT * 
+		--      FROM #BestellPosZuReservieren
+		--      WHERE #BestellPosZuReservieren.kBestellstueckliste &gt; 0) 
+	 -- AND EXISTS -- Nur beim WMS l&#228;gern
+		--	  (SELECT tWarenlager.kWarenLager
+		--	   FROM dbo.tWarenlager
+		--	   WHERE tWarenlager.kWarenLager = @kWarenlager
+		--	   AND tWarenlager.nLagerplatzVerwaltung = 1)
+	 -- AND @nWAKeinAuftragSplittBeiTeillief != 1
+		--)
+  --  BEGIN
+
+	 --  SET @IstAuftragMitStuecklisten = 1;
+
+
+	 --  -- Alle St&#252;cklisten Positionen rausnehmen, wo nicht min. ein ganzer St&#252;cklistenvater reserviert werden kann.
+	 --  DELETE  FROM #BestellPosZuReservieren
+	 --  WHERE kBestellstueckliste IN (
+   
+  -- 		 SELECT DISTINCT #BestellPosZuReservieren.kBestellstueckliste
+  -- 		 FROM  #BestellPosZuReservieren
+  -- 		 -- Minimale Menge an ganzen Stuecklisten(V&#228;ter) die aus der gefundenen Menge reserviert werden kann, f&#252;r diese St&#252;ckliste
+  -- 		 OUTER APPLY (SELECT ROUND(MIN(FLOOR((ISNULL(CAST(InnerPickPosTemp.fAnzahl AS DECIMAL(28,14)),0) * Vater.fAnzahl) /  Verkauf.tAuftragPosition.fAnzahl)),4) AS fMaxMengeVater	   
+  -- 						    FROM Verkauf.tAuftragPosition
+  -- 						    LEFT JOIN (SELECT kArtikel , SUM(CASE WHEN fAnzahlReservierbar &gt;= fAnzahlOffen THEN fAnzahlOffen ELSE fAnzahlReservierbar END) fAnzahl 
+  -- 									FROM #BestellPosZuReservieren 
+  -- 									GROUP BY #BestellPosZuReservieren.kArtikel) AS InnerPickPosTemp ON Verkauf.tAuftragPosition.kArtikel = InnerPickPosTemp.kArtikel
+  -- 						    JOIN Verkauf.tAuftragPosition AS Vater ON Vater.kAuftragPosition = #BestellPosZuReservieren.kBestellstueckliste
+  -- 						    JOIN dbo.tArtikel AS VaterArtikel ON  VaterArtikel.kArtikel = Vater.kArtikel
+  -- 						    JOIN vWMSArtikel ON vWMSArtikel.kArtikel =   Verkauf.tAuftragPosition.kArtikel
+  -- 						    WHERE ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste,0) = #BestellPosZuReservieren.kBestellstueckliste
+  -- 						    AND ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0) != Verkauf.tAuftragPosition.kAuftragPosition
+		--				    AND Verkauf.tAuftragPosition.fAnzahl &gt; 0
+		--				    HAVING SUM(Verkauf.tAuftragPosition.fAnzahl) &gt; 0
+   						
+  -- 			   ) AS SLAnteile
+  -- 		 JOIN Verkauf.tAuftragPosition AS Vater ON Vater.kAuftragPosition = #BestellPosZuReservieren.kBestellstueckliste AND Vater.fAnzahl &gt; 0
+  -- 		 JOIN #BestellungZuReservieren ON #BestellungZuReservieren.kBestellung = #BestellPosZuReservieren.kBestellung 
+  -- 		 WHERE #BestellPosZuReservieren.kBestellstueckliste &gt; 0 -- Nur St&#252;cklisten Pos Beachten
+  -- 		 AND SLAnteile.fMaxMengeVater &lt; 1 -- Min. Ein ganzer St&#252;cklistenVater auslieferbar
+  -- 		 AND (@nIsEazyShippingAuftrag = 1 OR (@nIsEazyShippingAuftrag = 0 AND (@nBoxenNurGanzeStuecklistenAufPL = 1 OR #BestellungZuReservieren.nVorkommissionieren = 0))) -- Vorkomm. erlauben wir teile von St&#252;cklisten zu reservieren
+  -- 		 AND EXISTS (SELECT *  -- Nur Teillieferbare Bestellungen betrachten
+  --       				   FROM #BestellPosZuReservieren AS InnerBestellPosZuReservieren
+  --       				   WHERE InnerBestellPosZuReservieren.fAnzahlOffen &gt; InnerBestellPosZuReservieren.fAnzahlReservierbar
+  --       				   AND InnerBestellPosZuReservieren.kBestellung = #BestellPosZuReservieren.kBestellung
+  --       				  )
+  -- 		 AND (#BestellPosZuReservieren.nTeillieferbar &gt; 0  OR  @nAngebrocheneBoxenImmerVervollstaendigen = 1)
+	 --  );
+ 
+  --  END;
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0 AND @IstAuftragMitStuecklisten = 1)
+BEGIN
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+SELECT @kSessionID,@kBenutzer,@DBError_000002017,GETDATE(),0,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002018,GETDATE(),3,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002019,GETDATE(),CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar THEN 1 ELSE 2 END ,tArtikel.cArtNr,CAST(CAST(#BestellPosZuReservieren.fAnzahlOffen AS FLOAT) AS VARCHAR),CAST(CAST(#BestellPosZuReservieren.fAnzahlReservierbar AS FLOAT) AS NVARCHAR)
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+WHERE #BestellPosZuReservieren.fAnzahlOffen &gt; #BestellPosZuReservieren.fAnzahlReservierbar
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL;
+
+END;
+ 
+
+
+---    
+--- Optional , Nur (oder bevorzugt) st&#252;cklisten reservieren die mit allen (reservierbaren) komponenten auf einen Platz liegen
+---
+IF(@nStuecklisteNurWennAlleAufPlatz = 1 OR @nStuecklisteVonGleichenPlatz = 1)
+BEGIN
+
+
+-- Alle St&#252;cklisten die Komplett auf einen Platz sind
+INSERT INTO #BestellungsStuecklisteKomplettAufPlatz (kBestellungStueckliste ,  kWarenlagerPlatz )
+SELECT ArtikelAufPlatz.kBestellstueckliste, #WarenlagerPlatz.kWarenlagerPlatz
+FROM #BestellPosZuReservieren AS OUTERBestellPos
+         JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kArtikel = OUTERBestellPos.kArtikel AND fAnzahlAktuell &gt; 0
+         JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = tWarenLagerEingang.kWarenLagerPlatz
+     -- Selectiert alle St&#252;cklistenArtikel Pro Platz
+    OUTER APPLY (
+   				    SELECT  CASE WHEN   SUM(ISNULL(WarenLagerEingang.MengeReservierbar,-1)) &lt; CASE WHEN INNERBestellPos.fAnzahlReservierbar &gt;= INNERBestellPos.fAnzahlOffen 
+   																		  THEN INNERBestellPos.fAnzahlOffen ELSE INNERBestellPos.fAnzahlReservierbar END
+     												   THEN 0 ELSE 1 END AS IstArtikelAufPlatz, INNERBestellPos.kBestellstueckliste
+     				   
+   				    FROM #BestellPosZuReservieren AS INNERBestellPos
+   				    LEFT JOIN (SELECT tWarenLagerEingang.kArtikel , tWarenLagerEingang.kWarenLagerPlatz, (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos) AS MengeReservierbar
+   				               FROM dbo.tWarenLagerEingang
+   							JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenLagerEingang.kArtikel
+   							WHERE tWarenLagerEingang.fAnzahlAktuell &gt; 0
+   							AND (tArtikel.nMHD = 0
+   				   			     OR datediff(d, 0, tWarenlagerEingang.dMHD) &gt;= datediff(d, 0, (GETDATE() + @nMinMHD))
+   				   			     OR ISNULL(@nMHDHandling, 0) &gt; 0)) AS WarenLagerEingang ON WarenLagerEingang.kArtikel = INNERBestellPos.kArtikel AND  WarenLagerEingang.kWarenLagerPlatz = #WarenlagerPlatz.kWarenlagerPlatz						
+     			    WHERE INNERBestellPos.kBestellstueckliste = OUTERBestellPos.kBestellstueckliste
+   				    GROUP BY INNERBestellPos.kBestellstueckliste,INNERBestellPos.kArtikel,INNERBestellPos.fAnzahlReservierbar,INNERBestellPos.fAnzahlOffen 
+   				  
+   
+     				   ) AS ArtikelAufPlatz
+WHERE OUTERBestellPos.kBestellstueckliste &gt; 0
+GROUP BY #WarenlagerPlatz.kWarenlagerPlatz,ArtikelAufPlatz.kBestellstueckliste
+HAVING MIN(ArtikelAufPlatz.IstArtikelAufPlatz) = 1
+
+
+    IF(@nStuecklisteNurWennAlleAufPlatz = 1 )
+BEGIN
+
+-- Entfert alle St&#252;cklisten die nicht komplett auf einen Platz liegen
+DELETE  FROM #BestellPosZuReservieren
+WHERE kBestellstueckliste NOT IN ( SELECT #BestellungsStuecklisteKomplettAufPlatz.kBestellungStueckliste
+                                   FROM #BestellungsStuecklisteKomplettAufPlatz)
+  AND kBestellstueckliste &gt; 0
+  AND #BestellPosZuReservieren.nTeillieferbar &gt; 0;
+
+
+-- Bei nicht Teillieferung, wird die reservierbare Menge auf 0 gesetzt, wodurch der Bestandcheck unten fehler schl&#228;gt
+UPDATE #BestellPosZuReservieren
+SET #BestellPosZuReservieren.fAnzahlReservierbar = 0
+    FROM #BestellPosZuReservieren
+WHERE kBestellstueckliste NOT IN ( SELECT #BestellungsStuecklisteKomplettAufPlatz.kBestellungStueckliste
+    FROM #BestellungsStuecklisteKomplettAufPlatz)
+  AND kBestellstueckliste &gt; 0
+  AND #BestellPosZuReservieren.nTeillieferbar = 0;
+
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0)
+BEGIN
+
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+SELECT @kSessionID,@kBenutzer,@DBError_000002020,GETDATE(),0,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002025,GETDATE(),1,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002021,GETDATE(),CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar THEN 1 ELSE 2 END,tArtikel.cArtNr,CAST(CAST(#BestellPosZuReservieren.fAnzahlOffen AS FLOAT) AS NVARCHAR),CAST(CAST(#BestellPosZuReservieren.fAnzahlReservierbar AS FLOAT) AS NVARCHAR)
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+WHERE #BestellPosZuReservieren.fAnzahlOffen &gt; #BestellPosZuReservieren.fAnzahlReservierbar
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL ;
+
+
+END;
+END;
+END;
+
+    
+-------------------------------------------------------------------------------------------------------------
+--- Falls @ReservierenFuerFifo = 0, Ist es nur die Vorschau und wir sind am Ende
+-------------------------------------------------------------------------------------------------------------
+IF(@BestandReservieren = 0)
+BEGIN
+
+
+-- Wir fassen die Artikel zusammen. Durch St&#252;cklisten mu&#223; #BestellPosZuReservieren nicht Artikelrein sein
+INSERT INTO #BestellPosZuReservierenArtikelGrouped (kArtikel, kBestellung, fAnzahlOffen,  fArtGewicht, fAnzahlReservierbar, nTeillieferbar)
+SELECT #BestellPosZuReservieren.kArtikel,
+       #BestellPosZuReservieren.kBestellung,
+       SUM(#BestellPosZuReservieren.fAnzahlOffen),
+       SUM(#BestellPosZuReservieren.fArtGewicht),
+       MIN(#BestellPosZuReservieren.fAnzahlReservierbar),
+       CASE WHEN @nAngebrocheneBoxenImmerVervollstaendigen = 1 AND AnzahlInBox.Anzahl &gt; 0 THEN 1 ELSE #BestellPosZuReservieren.nTeillieferbar END
+FROM  #BestellPosZuReservieren
+    OUTER APPLY (SELECT COUNT(*) AS Anzahl
+					 FROM dbo.tPicklistePos
+					 WHERE tPicklistePos.nStatus = 30
+					 AND tPicklistePos.kBestellung = #BestellPosZuReservieren.kBestellung) AS AnzahlInBox
+GROUP BY #BestellPosZuReservieren.kArtikel,
+    #BestellPosZuReservieren.kBestellung,
+    #BestellPosZuReservieren.nTeillieferbar,
+    AnzahlInBox.Anzahl;
+
+
+---
+--- #BestellPosZuReservieren wird ausgewertet. Die Reservierbare Anzahl der Bestellungen wird in @nErfolgreich gespeichert.
+---
+SELECT @nAnzahlReservierteBestellung = COUNT(Auftraege.kBestellung)
+FROM
+    (SELECT kBestellung
+     FROM  #BestellPosZuReservierenArtikelGrouped
+     GROUP BY #BestellPosZuReservierenArtikelGrouped.kBestellung
+     HAVING
+         (SUM(CASE WHEN fAnzahlOffen &lt;= fAnzahlReservierbar THEN 0 ELSE 1 END) = 0 AND MAX(#BestellPosZuReservierenArtikelGrouped.nTeillieferbar) = 0) -- ist alles Menge reservierbar und es ist kein Teillieferbarer Auftrag. Dann wurde Gewicht/Anzahl schon gecheckt
+         OR (SUM(fAnzahlReservierbar) &gt; 0
+         AND MAX(#BestellPosZuReservierenArtikelGrouped.nTeillieferbar) &gt; 0 -- Falls Teillieferbar, mu&#223; reservierbarer Bestand da sein
+         AND (
+                 -- F&#252;r die Min/Max Menge, brachten wir die das Minimum von Anzahl des Artikels im Auftrag und Reservierbarer Auftragsmenge
+                     ((@nGewMax = 0 OR SUM(#BestellPosZuReservierenArtikelGrouped.fArtGewicht * CASE WHEN #BestellPosZuReservierenArtikelGrouped.fAnzahlOffen &lt;= #BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar
+                                                                                                         THEN #BestellPosZuReservierenArtikelGrouped.fAnzahlOffen
+                                                                                                     ELSE #BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar
+                         END) &lt;= @nGewMax)
+                         AND (@nGewMin = 0 OR SUM(#BestellPosZuReservierenArtikelGrouped.fArtGewicht * CASE WHEN #BestellPosZuReservierenArtikelGrouped.fAnzahlOffen &lt;= #BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar
+                                                                                                                THEN  #BestellPosZuReservierenArtikelGrouped.fAnzahlOffen
+                                                                                                            ELSE  #BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar
+                             END) &gt;= @nGewMin))
+                     AND ((@nAnzArtMax in (0,999999) OR CASE WHEN SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlOffen) &lt;= SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar)
+                                                                 THEN SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlOffen)
+                                                             ELSE SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar)
+                                                            END &lt;= @nAnzArtMax)
+                     AND (@nAnzArtMin = 0 OR CASE WHEN SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlOffen) &lt;= SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar)
+                                                      THEN SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlOffen)
+                                                  ELSE SUM(#BestellPosZuReservierenArtikelGrouped.fAnzahlReservierbar)
+                                                 END &gt;= @nAnzArtMin))
+                 )
+         ) -- Min/Max Gewicht und Menge (vom reservierbaren) ber&#252;cksichtigen , nur f&#252;r Teillieferungen das andere wird vorher schon ausgeschlo&#223;en
+    )   AS Auftraege;
+
+END;
+ELSE
+BEGIN
+
+
+-------------------------------------------------------------------------------------------------------------
+-- Start des Best&#228;nde Reservieren Abschnitts
+-------------------------------------------------------------------------------------------------------------
+
+
+
+
+IF (object_id(&#39;tempdb..#BestellungsArtikelKannReservierWerden&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellungsArtikelKannReservierWerden;
+END;
+
+CREATE TABLE #BestellungsArtikelKannReservierWerden (kBestellung INT,  kArtikel INT,fAnzahlReservierbar DECIMAL(25,13), kBestellStueckliste INT PRIMARY KEY(kBestellung,kArtikel,kBestellStueckliste));
+CREATE NONCLUSTERED INDEX [IX_BestellungsArtikelKannReservierWerden_bestellung] ON #BestellungsArtikelKannReservierWerden (kBestellung) INCLUDE(kArtikel,kBestellStueckliste);
+
+
+-- Alle Bestellungen die wir reservieren k&#246;nnen, nach Artikel/Stueckliste Gruppiert
+INSERT INTO #BestellungsArtikelKannReservierWerden (kBestellung ,  kArtikel ,fAnzahlReservierbar, kBestellStueckliste)
+SELECT #BestellPosZuReservieren.kBestellung, #BestellPosZuReservieren.kArtikel, SUM(#BestellPosZuReservieren.fAnzahlReservierbar),#BestellPosZuReservieren.kBestellstueckliste
+FROM  #BestellPosZuReservieren
+          JOIN ( SELECT kBestellung
+                 FROM  #BestellPosZuReservieren
+                 GROUP BY #BestellPosZuReservieren.kBestellung
+                 HAVING
+                     (SUM(CASE WHEN fAnzahlOffen &lt;= fAnzahlReservierbar THEN 0 ELSE 1 END) = 0 AND MAX(#BestellPosZuReservieren.nTeillieferbar) = 0) -- ist alles Menge reservierbar und es ist kein Teillieferbarer Auftrag. Dann wurde Gewicht/Anzahl schon gecheckt
+                     OR (SUM(fAnzahlReservierbar) &gt; 0 AND @kPickPosNeuReservieren &gt; 0) -- Falls neu reservieren, mu&#223; reservierbarer Bestand da sein
+                     OR (SUM(fAnzahlReservierbar) &gt; 0
+                     AND MAX(#BestellPosZuReservieren.nTeillieferbar) &gt; 0 -- Falls Teillieferbar, mu&#223; reservierbarer Bestand da sein
+                     AND (@nAngebrocheneBoxenImmerVervollstaendigen = 1
+                         -- F&#252;r die Min/Max Menge, brachten wir die das Minimum von Anzahl des Artikels im Auftrag und Reservierbarer Auftragsmenge
+                         OR (((@nGewMax = 0 OR SUM(#BestellPosZuReservieren.fArtGewicht * CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar
+                                                                                                   THEN #BestellPosZuReservieren.fAnzahlOffen
+                                                                                               ELSE #BestellPosZuReservieren.fAnzahlReservierbar
+                             END) &lt;= @nGewMax)
+                             AND (@nGewMin = 0 OR SUM(#BestellPosZuReservieren.fArtGewicht * CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar
+                                                                                                      THEN  #BestellPosZuReservieren.fAnzahlOffen
+                                                                                                  ELSE  #BestellPosZuReservieren.fAnzahlReservierbar
+                                 END) &gt;= @nGewMin))
+                             AND ((@nAnzArtMax in (0,999999) OR CASE WHEN SUM(#BestellPosZuReservieren.fAnzahlOffen) &lt;= SUM(#BestellPosZuReservieren.fAnzahlReservierbar)
+                                                                         THEN SUM(#BestellPosZuReservieren.fAnzahlOffen)
+                                                                     ELSE SUM(#BestellPosZuReservieren.fAnzahlReservierbar)
+                                                                    END &lt;= @nAnzArtMax)
+                                 AND (@nAnzArtMin = 0 OR CASE WHEN SUM(#BestellPosZuReservieren.fAnzahlOffen) &lt;= SUM(#BestellPosZuReservieren.fAnzahlReservierbar)
+                                                                  THEN SUM(#BestellPosZuReservieren.fAnzahlOffen)
+                                                              ELSE SUM(#BestellPosZuReservieren.fAnzahlReservierbar)
+                                                             END &gt;= @nAnzArtMin)))
+                             )
+                     ) -- Min/Max Gewicht und Menge (vom reservierbaren) ber&#252;cksichtigen , nur f&#252;r Teillieferungen das andere wird vorher schon ausgeschlo&#223;en
+) AS AuftraegeReservierbar ON AuftraegeReservierbar.kBestellung = #BestellPosZuReservieren.kBestellung
+GROUP BY #BestellPosZuReservieren.kBestellung, #BestellPosZuReservieren.kArtikel,#BestellPosZuReservieren.kBestellstueckliste;
+
+
+IF(@nWMSLogAktiv = 1)
+BEGIN
+	      DECLARE @xBestellungsArtikel XML;
+					SET @xBestellungsArtikel = (
+						    SELECT *
+							FROM #BestellungsArtikelKannReservierWerden 
+							FOR XML PATH(&#39;BestellungsArtikel&#39;), TYPE );
+
+
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_#BestellungsArtikelKannReservierWerden&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,@xBestellungsArtikel ,@kPicklisteVorlage ,@kPickliste)
+END;
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0 AND ((@nGewMax &gt; 0 OR @nGewMin &gt; 0) OR  (@nAnzArtMax NOT IN (0,999999) OR @nAnzArtMin &gt; 0)) )
+BEGIN
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+SELECT @kSessionID,@kBenutzer,@DBError_000002022,GETDATE(),0,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002023,GETDATE(),CASE WHEN SUM(#BestellPosZuReservieren.fArtGewicht * CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar
+                                                                                                                         THEN  #BestellPosZuReservieren.fAnzahlOffen
+                                                                                                                     ELSE  #BestellPosZuReservieren.fAnzahlReservierbar
+    END ) &gt; @nGewMax
+    OR SUM(#BestellPosZuReservieren.fArtGewicht * CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar
+                                                           THEN  #BestellPosZuReservieren.fAnzahlOffen
+                                                       ELSE  #BestellPosZuReservieren.fAnzahlReservierbar
+        END ) &lt; @nGewMin
+                                                                    THEN 2 ELSE 1 END,
+       CAST(CAST(SUM(#BestellPosZuReservieren.fArtGewicht * CASE WHEN #BestellPosZuReservieren.fAnzahlOffen &lt;= #BestellPosZuReservieren.fAnzahlReservierbar
+                                                                     THEN  #BestellPosZuReservieren.fAnzahlOffen
+                                                                 ELSE  #BestellPosZuReservieren.fAnzahlReservierbar
+           END ) AS FLOAT) AS VARCHAR),
+       CAST(@nGewMin AS FLOAT),CAST (@nGewMax AS FLOAT)
+FROM  #BestellPosZuReservieren
+WHERE (@nGewMax &gt; 0 OR @nGewMin &gt; 0)
+GROUP BY #BestellPosZuReservieren.kBestellung
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002024,GETDATE(),CASE WHEN SUM(#BestellPosZuReservieren.fAnzahlReservierbar) &gt; @nAnzArtMax OR SUM(#BestellPosZuReservieren.fAnzahlReservierbar) &lt; @nAnzArtMin THEN 2 ELSE 1 END,CAST(CAST(CASE WHEN SUM(#BestellPosZuReservieren.fAnzahlOffen) &lt;= SUM(#BestellPosZuReservieren.fAnzahlReservierbar)
+                                                                                                                                                                                                                                             THEN SUM(#BestellPosZuReservieren.fAnzahlOffen)
+                                                                                                                                                                                                                                         ELSE   SUM(#BestellPosZuReservieren.fAnzahlReservierbar)
+    END AS FLOAT) AS NVARCHAR),
+       CAST(@nAnzArtMin AS NVARCHAR),CAST(@nAnzArtMax AS NVARCHAR)
+FROM  #BestellPosZuReservieren
+WHERE (@nAnzArtMax NOT IN (0,999999) OR @nAnzArtMin &gt; 0)
+GROUP BY #BestellPosZuReservieren.kBestellung
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL;
+
+
+END;
+
+	   
+
+-- Sortenreinie Reservierung ? Falls ja verwenden wir ne andere Sortierung
+-- Wir declarieren den Cursor &#252;ber alle reservierbaren bestellpositionen, je nach option hat er eine andere Sortierung
+IF(@nSortenrein = 1)
+BEGIN
+
+IF (object_id(&#39;tempdb..#BestellPosLieferInfoSortenRein&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #BestellPosLieferInfoSortenRein;
+END;
+
+CREATE TABLE #BestellPosLieferInfoSortenRein (kBestellPos INT, kBestellung INT, fAnzahlReservierbar DECIMAL(28, 14),kArtikel INT,fAnzahlZuPicken DECIMAL(28, 14), nSort INT,  kBestellStueckliste INT, nVorkomm INT,nIstVorreserviert TINYINT);
+
+INSERT INTO #BestellPosLieferInfoSortenRein
+SELECT #BestellPosLieferInfo.kBestellPos ,#BestellPosLieferInfo.kBestellung,#BestellungsArtikelKannReservierWerden.fAnzahlReservierbar,  #BestellungsArtikelKannReservierWerden.kArtikel,CASE WHEN #BestellPosLieferInfo.fAnzahlZuPicken &gt; #BestellPosLieferInfo.fAnzahlReserviertEigen THEN #BestellPosLieferInfo.fAnzahlReserviertEigen ELSE #BestellPosLieferInfo.fAnzahlZuPicken END ,
+       0,  #BestellungsArtikelKannReservierWerden.kBestellStueckliste, Vorkomm.IsVorkomm, #BestellPosLieferInfo.nIstVorreserviert
+FROM #BestellPosLieferInfo
+         JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = #BestellPosLieferInfo.kBestellPos
+    OUTER APPLY (
+				SELECT Best.nVorkommissionieren AS IsVorkomm
+				FROM #BestellungZuReservieren AS Best
+				WHERE Best.kBestellung =  #BestellPosLieferInfo.kBestellung
+
+		   ) AS Vorkomm
+		   JOIN #BestellungsArtikelKannReservierWerden WITH(INDEX (IX_BestellungsArtikelKannReservierWerden_bestellung)) ON #BestellungsArtikelKannReservierWerden.kBestellung = #BestellPosLieferInfo.kBestellung AND #BestellungsArtikelKannReservierWerden.kArtikel =  #BestellPosLieferInfo.kArtikel AND #BestellungsArtikelKannReservierWerden.kBestellStueckliste = ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0)
+
+
+
+UPDATE #BestellPosLieferInfoSortenRein
+SET #BestellPosLieferInfoSortenRein.nSort = AuftraegeMitGleichenArtikeln.Anzahl
+    FROM #BestellPosLieferInfoSortenRein
+		  JOIN (						
+			 	SELECT o1.kBestellung, MAX(o1.anzahl) AS Anzahl
+			 	FROM 
+			 	( SELECT T1.kBestellung, t1.kArtikel,COUNT(t2.kArtikel) AS anzahl
+			 	  FROM (SELECT  kBestellung, kArtikel FROM  #BestellPosLieferInfoSortenRein GROUP BY kBestellung,kArtikel) AS T1
+			 	  LEFT JOIN  (SELECT  kBestellung, kArtikel FROM  #BestellPosLieferInfoSortenRein GROUP BY kBestellung,kArtikel) AS T2 ON T2 .kBestellung != T1.kBestellung	AND T1.kArtikel = T2.kArtikel
+			 	  GROUP BY T1.kBestellung, t1.kArtikel) AS O1
+			 	  GROUP BY O1.kBestellung) AS AuftraegeMitGleichenArtikeln ON AuftraegeMitGleichenArtikeln.kBestellung = #BestellPosLieferInfoSortenRein.kBestellung
+
+
+
+    IF(@nSortenreinMaxAnzahlArtikel &gt; 0)
+BEGIN
+
+
+-- Der Cursor &#252;ber die Bestellpos die zu reservieren sind, &#252;ber den wir dann die Best&#228;nde suchen 
+-- Auftr&#228;ge die mehr unterschiedliche Artikel als erlaubt haben, werden nach hinten sortiert. Dann werden zuerst die Auftr&#228;ge mit weniger unterschiedlichen Artikeln betrachtet. Danach Auftr&#228;ge die die meisten gleichen Artikel mit anderen Auftr&#228;gen haben.
+-- Dadurch sollen zuerst m&#246;glichs viele Auftr&#228;ge gefunden und zuerst reserviert werden, die den sortenreinen Bedinngungen entsprechen. Danach kommt erst die normale Sortierung &#252;ber Prio , Erstellzeit ect.
+
+DECLARE cur_BestellPosZuReservieren CURSOR LOCAL FOR
+SELECT #BestellPosLieferInfoSortenRein.kBestellPos ,#BestellPosLieferInfoSortenRein.kBestellung,#BestellPosLieferInfoSortenRein.fAnzahlReservierbar,
+       #BestellPosLieferInfoSortenRein.kArtikel,#BestellPosLieferInfoSortenRein.fAnzahlZuPicken, #BestellPosLieferInfoSortenRein.kBestellStueckliste,
+       tAuftragPositionTeilmengen.fLagerFactor, tArtikelTeilmengen.nReservierungsModus,tArtikelTeilmengen.nTeilmengenPuffer, #BestellPosLieferInfoSortenRein.nIstVorreserviert
+FROM #BestellPosLieferInfoSortenRein
+         JOIN Verkauf.tAuftrag WITH(NOLOCK) ON Verkauf.tAuftrag.kAuftrag = #BestellPosLieferInfoSortenRein.kBestellung
+    JOIN Verkauf.tAuftragEckdaten WITH(NOLOCK) ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag
+    LEFT JOIN dbo.tZahlungsart  WITH(NOLOCK) ON dbo.tZahlungsart.kZahlungsart = Verkauf.tAuftrag.kZahlungsart
+    LEFT JOIN Verkauf.tAuftragPositionTeilmengen ON tAuftragPositionTeilmengen.kAuftragPosition = #BestellPosLieferInfoSortenRein.kBestellPos
+    LEFT JOIN Artikel.tArtikelTeilmengen  WITH(NOLOCK) ON tArtikelTeilmengen.kArtikel = #BestellPosLieferInfoSortenRein.kArtikel
+    OUTER APPLY ( SELECT COUNT(DISTINCT InnerPos.kArtikel) AS nAnzahl
+    FROM #BestellPosLieferInfoSortenRein AS InnerPos
+    WHERE InnerPos.kBestellung = #BestellPosLieferInfoSortenRein.kBestellung
+    ) AS AuftragArtikelCount
+WHERE (#BestellPosLieferInfoSortenRein.nVorkomm = 1 OR AuftragArtikelCount.nAnzahl &lt;= @nSortenreinMaxAnzahlArtikel)
+ORDER BY CASE WHEN AuftragArtikelCount.nAnzahl &gt; @nSortenreinMaxAnzahlArtikel THEN 2 ELSE 1 END,
+			                   #BestellPosLieferInfoSortenRein.nSort DESC,                                                               
+				               Verkauf.tAuftrag.nLieferPrioritaet DESC, CASE dbo.tZahlungsart.nAusliefernVorZahlung 
+	 									   WHEN 1 
+	 									   THEN Verkauf.tAuftrag.dERstellt 
+	 										      ELSE tAuftragEckdaten.dBezahlt
+END, #BestellPosLieferInfoSortenRein.kBestellung, #BestellPosLieferInfoSortenRein.kBestellStueckliste DESC,
+	 										 	 #BestellPosLieferInfoSortenRein.kArtikel,
+												  tAuftragPositionTeilmengen.fLagerFactor DESC,
+												   #BestellPosLieferInfoSortenRein.fAnzahlZuPicken
+			 OPTION(MAXDOP 4, RECOMPILE);
+
+
+END;
+ELSE
+BEGIN
+
+-- Der Cursor &#252;ber die Bestellpos die zu reservieren sind, &#252;ner den wir dann die Best&#228;nde suchen 
+DECLARE cur_BestellPosZuReservieren CURSOR LOCAL FOR
+SELECT #BestellPosLieferInfoSortenRein.kBestellPos ,#BestellPosLieferInfoSortenRein.kBestellung,#BestellPosLieferInfoSortenRein.fAnzahlReservierbar,
+       #BestellPosLieferInfoSortenRein.kArtikel, #BestellPosLieferInfoSortenRein.fAnzahlZuPicken, #BestellPosLieferInfoSortenRein.kBestellStueckliste,
+       tAuftragPositionTeilmengen.fLagerFactor, tArtikelTeilmengen.nReservierungsModus,tArtikelTeilmengen.nTeilmengenPuffer, #BestellPosLieferInfoSortenRein.nIstVorreserviert
+FROM #BestellPosLieferInfoSortenRein
+         JOIN Verkauf.tAuftrag WITH(NOLOCK) ON Verkauf.tAuftrag.kAuftrag = #BestellPosLieferInfoSortenRein.kBestellung
+    JOIN Verkauf.tAuftragEckdaten WITH(NOLOCK) ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag
+    LEFT JOIN dbo.tZahlungsart  WITH(NOLOCK) ON dbo.tZahlungsart.kZahlungsart = Verkauf.tAuftrag.kZahlungsart
+    LEFT JOIN Verkauf.tAuftragPositionTeilmengen ON tAuftragPositionTeilmengen.kAuftragPosition = #BestellPosLieferInfoSortenRein.kBestellPos
+    LEFT JOIN Artikel.tArtikelTeilmengen  WITH(NOLOCK) ON tArtikelTeilmengen.kArtikel = #BestellPosLieferInfoSortenRein.kArtikel
+ORDER BY #BestellPosLieferInfoSortenRein.nSort DESC,
+    Verkauf.tAuftrag.nLieferPrioritaet DESC, CASE dbo.tZahlungsart.nAusliefernVorZahlung
+    WHEN 1
+    THEN Verkauf.tAuftrag.dERstellt
+    ELSE tAuftragEckdaten.dBezahlt
+END, #BestellPosLieferInfoSortenRein.kBestellung, #BestellPosLieferInfoSortenRein.kBestellStueckliste DESC,
+	 										 	 #BestellPosLieferInfoSortenRein.kArtikel,
+												  tAuftragPositionTeilmengen.fLagerFactor DESC,
+												   #BestellPosLieferInfoSortenRein.fAnzahlZuPicken
+			 OPTION(MAXDOP 4, RECOMPILE);
+
+END;
+
+
+END;
+ELSE
+BEGIN
+
+
+-- Der Cursor &#252;ber die Bestellpos die zu reservieren sind, &#252;ner den wir dann die Best&#228;nde suchen 
+DECLARE cur_BestellPosZuReservieren CURSOR LOCAL FOR
+SELECT #BestellPosLieferInfo.kBestellPos ,#BestellPosLieferInfo.kBestellung,#BestellungsArtikelKannReservierWerden.fAnzahlReservierbar,
+       #BestellungsArtikelKannReservierWerden.kArtikel,CASE WHEN #BestellPosLieferInfo.fAnzahlZuPicken &gt; #BestellPosLieferInfo.fAnzahlReserviertEigen THEN #BestellPosLieferInfo.fAnzahlReserviertEigen ELSE #BestellPosLieferInfo.fAnzahlZuPicken END,#BestellungsArtikelKannReservierWerden.kBestellStueckliste,
+       tAuftragPositionTeilmengen.fLagerFactor, tArtikelTeilmengen.nReservierungsModus,tArtikelTeilmengen.nTeilmengenPuffer, #BestellPosLieferInfo.nIstVorreserviert
+FROM #BestellPosLieferInfo
+         JOIN Verkauf.tAuftragPosition WITH(NOLOCK) ON Verkauf.tAuftragPosition.kAuftragPosition = #BestellPosLieferInfo.kBestellPos
+    LEFT JOIN Verkauf.tAuftragPositionTeilmengen ON tAuftragPositionTeilmengen.kAuftragPosition = tAuftragPosition.kAuftragPosition
+    JOIN #BestellungsArtikelKannReservierWerden WITH(INDEX (IX_BestellungsArtikelKannReservierWerden_bestellung)) ON #BestellungsArtikelKannReservierWerden.kBestellung = #BestellPosLieferInfo.kBestellung AND #BestellungsArtikelKannReservierWerden.kArtikel =  #BestellPosLieferInfo.kArtikel AND #BestellungsArtikelKannReservierWerden.kBestellStueckliste = ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0)
+    JOIN Verkauf.tAuftrag WITH(NOLOCK) ON Verkauf.tAuftrag.kAuftrag = #BestellungsArtikelKannReservierWerden.kBestellung
+    JOIN Verkauf.tAuftragEckdaten WITH(NOLOCK) ON tAuftragEckdaten.kAuftrag = tAuftrag.kAuftrag
+    LEFT JOIN dbo.tZahlungsart WITH(NOLOCK) ON dbo.tZahlungsart.kZahlungsart = Verkauf.tAuftrag.kZahlungsart
+    LEFT JOIN Artikel.tArtikelTeilmengen  WITH(NOLOCK) ON tArtikelTeilmengen.kArtikel = tAuftragPosition.kArtikel
+ORDER BY Verkauf.tAuftrag.nLieferPrioritaet DESC, CASE dbo.tZahlungsart.nAusliefernVorZahlung
+    WHEN 1
+    THEN Verkauf.tAuftrag.dERstellt
+    ELSE tAuftragEckdaten.dBezahlt
+END, #BestellPosLieferInfo.kBestellung, #BestellungsArtikelKannReservierWerden.kBestellStueckliste DESC,
+	 										 	 #BestellPosLieferInfo.kArtikel, 
+										         tAuftragPositionTeilmengen.fLagerFactor DESC,
+												 #BestellPosLieferInfo.fAnzahlZuPicken
+			 OPTION(MAXDOP 4, RECOMPILE);
+
+
+END;
+
+
+-------------------------------------------------------------------------------------------------------------
+--- In frage kommende Warenlagereing&#228;nge zwischenspeichern und bereit f&#252;rs reservieren machen
+-------------------------------------------------------------------------------------------------------------
+
+IF (object_id(&#39;tempdb..#WarenlagerEingaenge&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #WarenlagerEingaenge;
+END;
+
+CREATE TABLE #WarenlagerEingaenge (kWarenlagerEingang INT,fAnzahlAktuell DECIMAL(25,13),kArtikel INT,kWarenlagerPlatz INT, dErstellt DATETIME, dMHD DATETIME, kRMRetourePos INT, cCharge NVARCHAR(255), fAnzahlChargen DECIMAL(25,13), fAnzahlVorreserviert DECIMAL(25,13));
+CREATE CLUSTERED INDEX IX_tempWarenlagerEingaenge_kArtikel ON #WarenlagerEingaenge(kArtikel, fAnzahlAktuell DESC);
+	  
+--
+-- Reservierbare Wareneing&#228;nge in Temp Table packen
+--
+IF(@nIstReservierungsPicklistenOffen = 1)
+BEGIN
+
+INSERT INTO #WarenlagerEingaenge(kWarenlagerEingang,fAnzahlAktuell,kArtikel,kWarenlagerPlatz,dErstellt,dMHD,kRMRetourePos,cCharge)
+SELECT tWarenLagerEingang.kWarenlagerEingang, (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos) , tWarenLagerEingang.kArtikel,tWarenLagerEingang.kWarenLagerPlatz,tWarenLagerEingang.dErstellt, tWarenLagerEingang.dMHD, tWarenLagerEingang.kRMRetourePos, tWarenLagerEingang.cChargenNr
+FROM dbo.tWarenLagerEingang
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenLagerEingang.kArtikel
+         JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = tWarenLagerEingang.kWarenlagerPlatz
+WHERE tWarenLagerEingang.kArtikel IN (SELECT #BestellungsArtikelKannReservierWerden.kArtikel FROM #BestellungsArtikelKannReservierWerden )
+  AND tWarenLagerEingang.fAnzahlAktuell &gt; 0
+  AND ((tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos)  &gt; 0 OR tWarenLagerEingang.kWarenLagerEingang IN (SELECT tPicklistePos.kWarenLagerEingang
+                                                                                                                                           FROM dbo.tPicklistePos
+                                                                                                                                                    JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+                                                                                                                                           WHERE tPickliste.nType = 3
+                                                                                                                                             AND tPicklistePos.nStatus &lt; 40
+                                                                                                                                             AND tPickliste.kWarenLager = @kWarenlager))
+  AND (tArtikel.nMHD = 0
+    OR datediff(d, 0, tWarenlagerEingang.dMHD)  &gt;=  datediff(d, 0, (GETDATE() + @nMinMHD))  -- Es darf kein abgelaufenes MHD reserviert werden, mindest MHD kann optional angegeben werden 
+    OR ISNULL(@nMHDHandling,0) &gt; 0);
+
+
+END
+ELSE
+BEGIN
+
+INSERT INTO #WarenlagerEingaenge(kWarenlagerEingang,fAnzahlAktuell,kArtikel,kWarenlagerPlatz,dErstellt,dMHD,kRMRetourePos,cCharge)
+SELECT tWarenLagerEingang.kWarenlagerEingang, (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos) , tWarenLagerEingang.kArtikel,tWarenLagerEingang.kWarenLagerPlatz,tWarenLagerEingang.dErstellt, tWarenLagerEingang.dMHD, tWarenLagerEingang.kRMRetourePos, tWarenLagerEingang.cChargenNr
+FROM dbo.tWarenLagerEingang
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = tWarenLagerEingang.kArtikel
+         JOIN #WarenlagerPlatz ON #WarenlagerPlatz.kWarenlagerPlatz = tWarenLagerEingang.kWarenlagerPlatz
+WHERE tWarenLagerEingang.kArtikel IN (SELECT #BestellungsArtikelKannReservierWerden.kArtikel FROM #BestellungsArtikelKannReservierWerden )
+  AND tWarenLagerEingang.fAnzahlAktuell &gt; 0
+  AND (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos)  &gt; 0
+  AND (tArtikel.nMHD = 0
+    OR datediff(d, 0, tWarenlagerEingang.dMHD)  &gt;=  datediff(d, 0, (GETDATE() + @nMinMHD))  -- Es darf kein abgelaufenes MHD reserviert werden, mindest MHD kann optional angegeben werden 
+    OR ISNULL(@nMHDHandling,0) &gt; 0);
+
+END;
+
+
+
+-------------------------------------------------------------------------------------------------------------
+
+IF(@Chargenrein = 1) -- F&#252;r jeden WLE Eintrag berechnen wieviel chargen es insgesammt zum reservieren gibt
+BEGIN
+
+			;WITH chargen
+                      AS
+                      (
+                          SELECT #WarenlagerEingaenge.kArtikel, SUM(#WarenlagerEingaenge.fAnzahlAktuell) AS fAnzahlChargenArtikel , #WarenlagerEingaenge.cCharge
+                          FROM #WarenlagerEingaenge
+                          WHERE #WarenlagerEingaenge.cCharge IS NOT NULL
+                          GROUP BY #WarenlagerEingaenge.kArtikel, #WarenlagerEingaenge.cCharge
+                      )
+UPDATE #WarenlagerEingaenge SET fAnzahlChargen = chargen.fAnzahlChargenArtikel
+    FROM #WarenlagerEingaenge
+			JOIN chargen ON chargen.kArtikel = #WarenlagerEingaenge.kArtikel AND #WarenlagerEingaenge.cCharge = chargen.cCharge
+
+
+END;
+
+
+
+----------------------------------------------------------------------------------------------
+--- Boxen f&#252;r die reservierbaren Bestellungen zwischenspeichern
+----------------------------------------------------------------------------------------------
+IF(@nIsEazyShippingAuftrag = 0)
+BEGIN
+
+IF (object_id(&#39;tempdb..#AttributStringBestellung&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #AttributStringBestellung
+END;
+
+CREATE TABLE  #AttributStringBestellung (kBestellung INT, cAttribut NVARCHAR(255));
+CREATE CLUSTERED INDEX IX_tempAttributString_kBestellung ON  #AttributStringBestellung(kBestellung);
+	   
+
+IF (@nArtikelAttributeBeachten &gt; 0)
+BEGIN
+	   
+-- Alle Attribute der Artikel in der Sendung werden in die Temp table gespeichert (distinct)
+INSERT INTO  #AttributStringBestellung (kBestellung, cAttribut)
+SELECT  Verkauf.tAuftragPosition.kAuftrag, dbo.tArtikelAttributSprache.cWertVarchar
+FROM Verkauf.tAuftragPosition
+         JOIN dbo.tArtikel ON dbo.tArtikel.kArtikel = Verkauf.tAuftragPosition.kArtikel
+    AND dbo.tArtikel.cLagerAktiv = &#39;Y&#39;
+    AND dbo.tArtikel.cLagerVariation &lt;&gt; &#39;Y&#39;
+    AND (dbo.tArtikel.nIstVater = 0)
+         LEFT JOIN dbo.tArtikelAttribut ON dbo.tArtikelAttribut.kArtikel = dbo.tArtikel.kArtikel -- Artikel von au&#223;en
+         LEFT JOIN dbo.tArtikelAttributSprache ON dbo.tArtikelAttributSprache.kSprache = 0
+    AND dbo.tArtikelAttribut.kArtikelAttribut = dbo.tArtikelAttributSprache.kArtikelAttribut
+         LEFT JOIN dbo.tAttribut ON dbo.tAttribut.kAttribut = dbo.tArtikelAttribut.kAttribut
+         LEFT JOIN dbo.tAttributSprache ON dbo.tAttributSprache.kAttribut = dbo.tAttribut.kAttribut
+         JOIN Versand.vBestellPosLieferInfo ON Versand.vBestellPosLieferInfo.kBestellPos =  Verkauf.tAuftragPosition.kAuftragPosition
+WHERE dbo.tAttributSprache.kSprache = 0
+  AND dbo.tAttributSprache.cName = &#39;WMS_LagerEigenschaft&#39;
+  AND Verkauf.tAuftragPosition.kAuftrag IN (SELECT kBestellung FROM #BestellungsArtikelKannReservierWerden)
+  AND (NOT EXISTS (SELECT TOP(1) kEigenschaft
+                   FROM dbo.teigenschaft WITH(NOLOCK)
+                   WHERE cAktiv = &#39;Y&#39;
+                       AND kArtikel = dbo.tartikel.kArtikel))
+GROUP BY Verkauf.tAuftragPosition.kAuftrag, dbo.tArtikelAttributSprache.cWertVarchar;
+
+END;
+	   
+
+	   
+IF(ISNULL(@kRollendeKommissionierungPickwagen,0) &gt; 0) --Wenn der RollendeKommissionierwagen gesetzt ist (dies ist ein Lagerplatz), werden nur Boxen auf diesem Platz reserviert
+BEGIN
+
+INSERT INTO #BoxenFuerBestellungen (kLHM , kBestellung, nStatus,nBelegt,cLhmId, bAttributePassen )
+SELECT FreieBox.kLHM, Verkauf.tAuftrag.kAuftrag,FreieBox.nStatus,FreieBox.nBelegt,FreieBox.cLHMId, FreieBox.nAttributPasst
+FROM Verkauf.tAuftrag
+    OUTER APPLY (SELECT tLHMStatus.kLHM 
+						    FROM dbo.tLHMStatus
+						    WHERE tLHMStatus.kBestellung = tAuftrag.kAuftrag
+						    AND  tlhmstatus.nStatus &lt; 30
+						    AND NOT EXISTS (SELECT * FROM tLHMStatus AS NewStatus WHERE NewStatus.kLHMStatus &gt; tLHMStatus.kLHMStatus AND NewStatus.kLHM = tLHMStatus.kLHM)
+			   ) AS AuftragsLHM
+
+			   CROSS APPLY 
+			   (
+			   SELECT DISTINCT  tlhm.cLHMId,
+	 						tLHMSTatus.nStatus,
+	 						tlhm.kLHM,
+	    						CASE  WHEN (@nArtikelAttributeBeachten = 1 AND tLHMAttribut.cAttribut in (SELECT cAttribut FROM  #AttributStringBestellung WHERE  #AttributStringBestellung.kBestellung = Verkauf.tAuftrag.kAuftrag)) 
+	    							THEN 1 
+	    							ELSE 0 
+	    						END AS nAttributPasst,
+							CASE WHEN tLHMSTatus.kBestellung = Verkauf.tAuftrag.kAuftrag THEN 1 ELSE 0 END AS nBelegt
+	    						FROM dbo.tlhm
+	    						JOIN dbo.tLHMSTatus  ON dbo.tLHMStatus.kLHMStatus = dbo.tLHM.kLHMSTatus AND ((dbo.tlhmstatus.kbestellung = 0) OR 
+	    																					 (dbo.tlhmstatus.kbestellung = Verkauf.tAuftrag.kAuftrag AND tlhmstatus.nStatus &lt; 30))
+	    						JOIN dbo.twarenlagerplatz  ON dbo.twarenlagerplatz.kwarenlagerplatz = dbo.tlhm.kwarenlagerplatz AND dbo.twarenlagerplatz.kWarenlager = @kWarenlager
+	    						LEFT JOIN dbo.tLHMAttribut ON dbo.tLHMAttribut.kLHM = dbo.tLHM.kLHM
+	    						WHERE dbo.tlhm.klhmtyp = 4 	
+	    						AND NOT EXISTS (SELECT * FROM dbo.tWarenLagerEingang  WITH(NOLOCK) 
+	    								   WHERE dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0 
+	    								  AND tWarenLagerEingang.klhm = dbo.tlhm.klhm 
+	    								  AND dbo.tlhmstatus.nStatus = 10)
+	    						AND dbo.tlhm.kwarenlagerplatz = @kRollendeKommissionierungPickwagen
+	    						AND ISNUMERIC(dbo.tLHM.cLHMId ) = 1
+	    						AND dbo.tlhm.nSperre = 0
+	    						AND (
+	    							@nArtikelAttributeBeachten &lt; 2 
+	    							OR  NOT EXISTS(SELECT dbo.tLHMAttribut.kLHMAttribut 
+	    										  FROM  #AttributStringBestellung
+	    										  LEFT JOIN dbo.tLHMAttribut ON dbo.tLHMAttribut.cAttribut =  #AttributStringBestellung.cAttribut AND dbo.tLHMAttribut.kLHM = dbo.tlhm.kLHM
+	    										  WHERE  dbo.tLHMAttribut.kLHMAttribut IS NULL
+	    										  AND   #AttributStringBestellung.kBestellung = Verkauf.tAuftrag.kAuftrag
+	    										  )
+	    							OR (
+	    								NOT EXISTS (SELECT * FROM  #AttributStringBestellung  WHERE  #AttributStringBestellung.kBestellung = Verkauf.tAuftrag.kAuftrag)
+	    								AND dbo.tLHMAttribut.cAttribut IS NULL
+	    								)
+	    							)
+	    						AND NOT EXISTS (SELECT * FROM  #BoxenFuerBestellungen  WHERE #BoxenFuerBestellungen.kLHM =  tlhm.klhm)	
+	 						AND (NOT EXISTS (SELECT * FROM dbo.tPicklisteVorlageBoxen  WHERE dbo.tPicklisteVorlageBoxen.kPicklisteVorlage = @PicklistenVorlageUrsprung)
+	 							OR tlhm.kLHM IN (SELECT dbo.tPicklisteVorlageBoxen.kLHM FROM dbo.tPicklisteVorlageBoxen WHERE dbo.tPicklisteVorlageBoxen.kPicklisteVorlage = @PicklistenVorlageUrsprung AND (AuftragsLHM.kLHM IS NULL OR AuftragsLHM.kLHM = tPicklisteVorlageBoxen.kLHM) ))
+	   
+			   ) AS FreieBox
+WHERE Verkauf.tAuftrag.kAuftrag IN (SELECT kBestellung FROM #BestellungsArtikelKannReservierWerden);
+
+
+
+END;
+ELSE --ansonsten werden nur normale Boxen auf einem Platz reserviert, der kein Pickwagen ist
+BEGIN
+
+INSERT INTO #BoxenFuerBestellungen (kLHM , kBestellung, nStatus,nBelegt,cLhmId, bAttributePassen )
+SELECT FreieBox.kLHM, Verkauf.tAuftrag.kAuftrag,FreieBox.nStatus,FreieBox.nBelegt,FreieBox.cLHMId, FreieBox.nAttributPasst
+FROM Verkauf.tAuftrag
+    CROSS APPLY 
+			   (
+			   SELECT DISTINCT  tlhm.cLHMId,
+	 						tLHMSTatus.nStatus,
+	 						tlhm.kLHM,
+	    						CASE  WHEN (@nArtikelAttributeBeachten = 1 AND tLHMAttribut.cAttribut in (SELECT cAttribut FROM  #AttributStringBestellung WHERE  #AttributStringBestellung.kBestellung = Verkauf.tAuftrag.kAuftrag)) 
+	    							THEN 1 
+	    							ELSE 0 
+	    						END AS nAttributPasst,
+							CASE WHEN tLHMSTatus.kBestellung = Verkauf.tAuftrag.kAuftrag THEN 1 ELSE 0 END AS nBelegt
+	    						FROM dbo.tlhm
+	    						JOIN dbo.tLHMSTatus  ON dbo.tLHMStatus.kLHMStatus = dbo.tLHM.kLHMSTatus AND ((dbo.tlhmstatus.kbestellung = 0) OR 
+	    																					 (dbo.tlhmstatus.kbestellung = Verkauf.tAuftrag.kAuftrag AND tlhmstatus.nStatus &lt; 30))
+	    						JOIN dbo.twarenlagerplatz  ON dbo.twarenlagerplatz.kwarenlagerplatz = dbo.tlhm.kwarenlagerplatz AND dbo.twarenlagerplatz.kWarenlager = @kWarenlager
+	    						LEFT JOIN dbo.tLHMAttribut ON dbo.tLHMAttribut.kLHM = dbo.tLHM.kLHM
+	    						WHERE dbo.tlhm.klhmtyp = 4 	
+	    						AND NOT EXISTS (SELECT * FROM dbo.tWarenLagerEingang  WITH(NOLOCK) 
+	    								   WHERE dbo.tWarenLagerEingang.fAnzahlAktuell &gt; 0 
+	    								  AND tWarenLagerEingang.klhm = dbo.tlhm.klhm 
+	    								  AND dbo.tlhmstatus.nStatus = 10)
+	    						AND dbo.twarenlagerplatz.kwarenlagerplatztyp = 6
+	    						AND ISNUMERIC(dbo.tLHM.cLHMId ) = 1
+	    						AND dbo.tlhm.nSperre = 0
+	    						AND (
+	    							@nArtikelAttributeBeachten &lt; 2 
+	    							OR  NOT EXISTS(SELECT dbo.tLHMAttribut.kLHMAttribut 
+	    										  FROM  #AttributStringBestellung
+	    										  LEFT JOIN dbo.tLHMAttribut ON dbo.tLHMAttribut.cAttribut =  #AttributStringBestellung.cAttribut AND dbo.tLHMAttribut.kLHM = dbo.tlhm.kLHM
+	    										  WHERE  dbo.tLHMAttribut.kLHMAttribut IS NULL
+	    										  AND   #AttributStringBestellung.kBestellung = Verkauf.tAuftrag.kAuftrag
+	    										  )
+	    							OR (
+	    								NOT EXISTS (SELECT * FROM  #AttributStringBestellung  WHERE  #AttributStringBestellung.kBestellung = Verkauf.tAuftrag.kAuftrag)
+	    								AND dbo.tLHMAttribut.cAttribut IS NULL
+	    								)
+	    							)
+	    						AND NOT EXISTS (SELECT * FROM  #BoxenFuerBestellungen  WHERE #BoxenFuerBestellungen.kLHM =  tlhm.klhm)	
+	 						AND (NOT EXISTS (SELECT * FROM dbo.tPicklisteVorlageBoxen  WHERE dbo.tPicklisteVorlageBoxen.kPicklisteVorlage = @PicklistenVorlageUrsprung)
+	 							OR tlhm.kLHM IN (SELECT dbo.tPicklisteVorlageBoxen.kLHM FROM dbo.tPicklisteVorlageBoxen WHERE dbo.tPicklisteVorlageBoxen.kPicklisteVorlage = @PicklistenVorlageUrsprung))
+	   
+			   ) AS FreieBox
+WHERE Verkauf.tAuftrag.kAuftrag IN (SELECT kBestellung FROM #BestellungsArtikelKannReservierWerden);
+
+END;
+
+
+END;
+----------------------------------------------------------------------------------------------
+
+
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0 AND NOT EXISTS  (SELECT * FROM #BoxenFuerBestellungen) AND @nIsEazyShippingAuftrag = 0)
+BEGIN
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+SELECT @kSessionID,@kBenutzer,@DBError_000002026,GETDATE(),2,NULL,NULL,NULL
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL ;
+
+END;
+
+
+----------------------------------------------------------------------------------------------
+-- Reihenfolge der Reservierung von Artikel berechnen
+
+
+
+DECLARE @SortSQL NVARCHAR(4000) = &#39; ORDER BY &#39;;
+DECLARE @StuecklisteKomplettAufPlatzSQL NVARCHAR(4000)  = &#39;&#39;;
+DECLARE @VorgabePlaetzeSQL NVARCHAR(4000)  = &#39;&#39;;
+DECLARE @ChargenMHDSelectSQL NVARCHAR(4000)  = &#39;&#39;;
+DECLARE @FETCH_STATUS_SortierungsKriterien INT = 0;
+DECLARE @nID INT,@Aufsteigend INT;
+
+DECLARE @TeilmengenAPPLY NVARCHAR(4000) = &#39;&#39;;
+DECLARE @TeilmengenSORT NVARCHAR(1000) = &#39;&#39;;
+DECLARE @TeilmengenWHERE NVARCHAR(1000) = &#39;&#39;;
+DECLARE @TeilmengenSELECT NVARCHAR(1000) = &#39; W0.fAnzahlAktuell &#39;;
+DECLARE @FactorSELECT NVARCHAR(1000) = &#39; 1 &#39;;
+DECLARE @ChargenreinAPPLY NVARCHAR(2000) = &#39;&#39;;
+DECLARE @cReservierungsPicklistenOffenAPPLY NVARCHAR(2000) = &#39;&#39;;
+DECLARE @cAnzahlCheckWHERE NVARCHAR(500) = &#39; AND W0.fAnzahlAktuell &gt; 0 &#39;;
+
+
+
+IF(@nTeilmengen = 1)
+BEGIN   	  -- Pass der Warenlagereingang in die Bestellpos ?
+
+
+
+		 SET @TeilmengenSELECT = &#39; CASE AT.nReservierungsModus WHEN 0 THEN (W0.fAnzahlAktuell / S1.fFactor) * AP1.fLagerFactor WHEN 1 THEN CASE WHEN (W0.fAnzahlAktuell - ((W0.fAnzahlAktuell / 100) * AT.nTeilmengenPuffer)) - (W0.fAnzahlAktuell - ((W0.fAnzahlAktuell / 100) * AT.nTeilmengenPuffer))%AP1.fLagerFactor &gt;   TV.MaxTeile * ((W0.fAnzahlAktuell - ((W0.fAnzahlAktuell / 100) * AT.nTeilmengenPuffer)) / S1.fFactor) THEN  TV.MaxTeile * (W0.fAnzahlAktuell / S1.fFactor)
+ ELSE (W0.fAnzahlAktuell - ((W0.fAnzahlAktuell / 100) * AT.nTeilmengenPuffer)) - (W0.fAnzahlAktuell - ((W0.fAnzahlAktuell / 100) * AT.nTeilmengenPuffer))%AP1.fLagerFactor END ELSE W0.fAnzahlAktuell END &#39;;				
+
+		   SET @FactorSELECT = &#39; S1.fFactor &#39;;
+	        
+	       SET @TeilmengenAPPLY = &#39;
+ LEFT JOIN tWarenLagerEingangSubsets AS S1 ON S1.kWarenLagerEingang = W0.kWarenLagerEingang
+ LEFT JOIN Verkauf.tAuftragPositionTeilmengen AS AP1 ON AP1.kAuftragPosition = @kBestellPos
+ LEFT JOIN Artikel.tArtikelTeilmengen AT ON AT.kArtikel =  W0.kArtikel
+ OUTER APPLY ( SELECT MIN(CASE WHEN APT.fValue = WLE.fValue THEN 2 ELSE CASE WHEN APT.fValue &lt; WLE.fValue THEN 1 ELSE 0 END END ) AS ValueFit, MIN( CAST (WLE.fValue / APT.fValue AS INT)) * MAX(AP2.fLagerFactor) AS MaxTeile
+ FROM Verkauf.tAuftragPositionTeilmengenKonfiguration AS APT
+ JOIN Verkauf.tAuftragPositionTeilmengen AS AP2 ON AP2.kAuftragPosition = APT.kAuftragPosition
+ OUTER APPLY  ( SELECT dbo.CalcMeasurement(SD2.fValue,SD2.kMassEinheit,APT.kMassEinheit) /* - ISNULL(Res.fAnzahl,0) */ AS fValue
+				FROM tWarenLagerEingang AS W2
+				JOIN tWarenLagerEingangSubsets AS S2 ON S2.kWarenLagerEingang = W2.kWarenLagerEingang
+				JOIN tWarenLagerEingangSubsetDetails SD2 ON SD2.kWarenLagerEingangSubset = S2.kWarenLagerEingangSubset
+				WHERE fAnzahlAktuell &gt; 0 AND W2.kWarenLagerEingang = W0.kWarenlagerEingang
+				AND SD2.kDimension = APT.kDimension
+ )  AS WLE 
+ WHERE APT.kAuftragPosition = @kBestellPos ) AS TV &#39;;
+	 
+
+	       -- tWarenLagerEingangSubsets.fFactor EVTL Optional sotieren
+	       SET @SortSQL = @SortSQL + &#39; ISNULL(TV.ValueFit,0) DESC, S1.fFactor ,&#39;;
+
+		   SET @TeilmengenWHERE = &#39; AND (TV.ValueFit IS NULL OR TV.ValueFit &gt; 0) AND (@cSubsetNumberNeuReservieren IS NULL OR W0.kWarenlagerPlatz &lt;&gt; @kWarenlagerPlatzAltePickPos OR S1.cSubsetNumber &lt;&gt; @cSubsetNumberNeuReservieren) &#39;
+
+
+END;
+
+IF(@nIstReservierungsPicklistenOffen = 1)
+BEGIN
+
+	       -- Die Menge die wir reservieren d&#252;rfen ist die Mengen in der Typ3 Pickpos minus Menge der Bestellpos mit dem Wareneingang schon auf Pickliste
+	       SET @cReservierungsPicklistenOffenAPPLY = &#39; OUTER APPLY (	   
+SELECT CASE WHEN SUM(CASE WHEN tPickliste.nType = 3 THEN PP5.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN PP5.fAnzahl ELSE 0 END) &lt; 0 
+THEN 0 ELSE SUM(CASE WHEN tPickliste.nType = 3 THEN PP5.fAnzahl ELSE 0 END) -  SUM (CASE WHEN  tPickliste.nType != 3 THEN PP5.fAnzahl ELSE 0 END)  END fAnzahl,
+CASE WHEN SUM(CASE WHEN tPickliste.nType = 3 THEN PP5.fAnzahl ELSE 0 END) &gt; 0 THEN 1 ELSE 0 END AS IsRes
+FROM Verkauf.tAuftragPosition AP5
+JOIN tPicklistePos PP5 ON PP5.kBestellPos = AP5.kAuftragPosition
+JOIN tPickliste ON tPickliste.kPickliste = PP5.kPickliste
+WHERE PP5.kBestellpos =  @kBestellPos  
+AND  PP5.kWarenLagerEingang = W0.kWarenLagerEingang
+AND tPickliste.nStatus &lt; 40) AS RPL&#39;;
+
+
+		   SET @cAnzahlCheckWHERE = &#39; AND (@nIstVorreserviert = 0 AND W0.fAnzahlAktuell &gt; 0 OR @nIstVorreserviert = 1 AND RPL.fAnzahl &gt; 0) &#39;; --Wir m&#252;ssen nicht auf offene Menge achten, wenn wir wissen das der Wareneingang vorreserviert ist
+
+IF(@nTeilmengen != 1)
+BEGIN
+		       SET @TeilmengenSELECT = &#39; CASE WHEN RPL.fAnzahl &gt; 0 THEN RPL.fAnzahl ELSE W0.fAnzahlAktuell END &#39;;
+END; 
+		   --Sp&#228;ter: F&#252;r Teilmengen m&#252;sste theoretisch &#252;berall W0.fAnzahlAktuell durch das obere hier ersetzt werden
+
+END;
+
+IF(@Chargenrein = 1)
+BEGIN
+
+		   SET @ChargenreinAPPLY = &#39; OUTER APPLY ( SELECT SUM(AP.fAnzahlOffen) AS Anz FROM #BestellPosZuReservieren AS AP WHERE AP.kBestellung = @kAuftrag AND AP.kArtikel = W0.kArtikel ) AS Chragen&#39;;
+		   SET @SortSQL = @SortSQL + &#39; CASE WHEN Chragen.Anz &gt;  W0.fAnzahlChargen THEN 2 ELSE 1 END, W0.fAnzahlChargen , &#39;;
+
+END;
+
+
+IF(@nStuecklisteNurWennAlleAufPlatz = 1 OR @nStuecklisteVonGleichenPlatz = 1)
+BEGIN
+
+	       SET @StuecklisteKomplettAufPlatzSQL = &#39; LEFT JOIN #BestellungsStuecklisteKomplettAufPlatz ON #BestellungsStuecklisteKomplettAufPlatz.kBestellungStueckliste =  @kLastBestellStueckliste AND #BestellungsStuecklisteKomplettAufPlatz.kWarenlagerPlatz = W0.kWarenlagerPlatz &#39;
+		   SET @SortSQL = @SortSQL + &#39; CASE WHEN #BestellungsStuecklisteKomplettAufPlatz.kWarenlagerPlatz = W0.kWarenlagerPlatz THEN 0 ELSE 1 END,&#39;;
+
+END;
+	   
+IF(@nNachschubPickenLast = 1)
+BEGIN
+
+	       SET @SortSQL = @SortSQL + &#39; CASE WHEN EXISTS (SELECT *
+ FROM dbo.tWMSLagerBereichPlatz AS BPO
+ JOIN dbo.tWMSLagerBereich ON dbo.tWMSLagerBereich.kWMSLagerBereich = BPO.kWMSLagerBereich
+ WHERE BPO.kWarenLagerPlatz = tWarenlagerPlatz.kWarenLagerPlatz
+ AND dbo.tWMSLagerBereich.nTyp = 2)
+ THEN 1 ELSE 0 END,&#39;;
+
+END;
+
+	     
+-- Wenn Auf dem platz gen&#252;gend Menge ist, wird er bevorzugt  
+IF(@nLagerplatzNachMenge = 1)
+BEGIN
+		   SET @SortSQL = @SortSQL + &#39; CASE WHEN PL.anz &gt;= RES.anz THEN 1 ELSE 2 END, &#39;;
+END;
+
+IF(@nPlaetzeOhneReservierungZuerst = 1)
+BEGIN
+		   SET @SortSQL = @SortSQL + &#39; PLRES.Res, &#39;;
+END;
+	   
+
+
+IF(NOT EXISTS (SELECT *
+			   FROM [WMS].[tPicklisteVorlageSortierungsKriterium]
+			   WHERE nAktiv = 1
+			   AND kPicklisteVorlage = @PicklistenVorlageUrsprung))
+BEGIN
+
+	       IF(@SortSQL = &#39; ORDER BY &#39;)
+			   SET @SortSQL = &#39; ORDER BY W0.dMHD, W0.dErstellt &#39;;
+ELSE
+			   SET @SortSQL = @SortSQL + &#39; W0.dMHD, W0.dErstellt &#39;;
+
+
+END
+
+ELSE
+BEGIN
+
+DECLARE cur_SortierungsKriterien CURSOR LOCAL FOR
+SELECT nID,Aufsteigend
+FROM [WMS].[tPicklisteVorlageSortierungsKriterium]
+WHERE nAktiv = 1
+  AND kPicklisteVorlage = @PicklistenVorlageUrsprung
+ORDER BY nSort;
+
+OPEN cur_SortierungsKriterien;
+FETCH NEXT FROM cur_SortierungsKriterien  INTO @nID, @Aufsteigend
+
+    SET @FETCH_STATUS_SortierungsKriterien = @@FETCH_STATUS;
+WHILE (@FETCH_STATUS_SortierungsKriterien = 0)
+BEGIN
+
+IF(@nID = 1) --Wareneingangsdatum
+BEGIN
+
+    SET @SortSQL = @SortSQL +  &#39; W0.dErstellt &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;ASC&#39; ELSE &#39;DESC&#39; END + &#39;,&#39;;
+
+END;
+ELSE IF(@nID = 2) --Lagerplatz Bezeichnung
+BEGIN
+
+    SET @SortSQL = @SortSQL +  &#39; tWarenLagerPlatz.cName &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;ASC&#39; ELSE &#39;DESC&#39; END + &#39;,&#39;;
+
+END;
+ELSE IF(@nID = 3) --Lagerplatz Sortierungnummer
+BEGIN
+
+    SET @SortSQL = @SortSQL +  &#39; tWarenLagerPlatz.nsort &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;ASC&#39; ELSE &#39;DESC&#39; END + &#39;,&#39;;
+
+END;
+ELSE IF(@nID = 4) -- Lagerplatz Priorit&#228;t
+BEGIN
+
+    SET @SortSQL = @SortSQL +  &#39; tWarenLagerPlatz.nPrio &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;ASC&#39; ELSE &#39;DESC&#39; END + &#39;,&#39;;
+
+END;
+ELSE IF(@nID = 5) --Vorgabepl&#228;tze
+BEGIN
+
+		
+    SET @VorgabePlaetzeSQL = &#39;  LEFT JOIN (
+	 SELECT COUNT(OP.kArtikel) nCount
+	 ,OP.kArtikel
+	 ,CASE WHEN LB.kWarenLagerPlatz &gt; 0 THEN LB.kWarenLagerPlatz ELSE OP.kWarenLagerPlatz END kWarenLagerPlatz
+	 FROM dbo.tWarenlagerArtikelOptionen AS OP
+	 LEFT JOIN dbo.tWMSLagerBereichPlatz AS LB ON LB.kWMSLagerBereich = OP.kWMSLagerBereich
+	 WHERE (LB.kWarenLagerPlatz &gt; 0 OR OP.kWarenLagerPlatz &gt; 0)
+	 GROUP BY OP.kArtikel
+ 		,LB.kWarenLagerPlatz
+ 		,OP.kWarenLagerPlatz
+	 ) AS VorgabePlaetze ON VorgabePlaetze.kArtikel = W0.kArtikel AND VorgabePlaetze.kWarenLagerPlatz = W0.kWarenLagerPlatz &#39;
+
+    SET @SortSQL = @SortSQL +  &#39; CASE WHEN VorgabePlaetze.nCount &gt; 0 &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;THEN 0 ELSE 1 END &#39; ELSE &#39;THEN 1 ELSE 0 END &#39; END + &#39;,&#39;
+
+END;
+ELSE IF(@nID = 6) --Ablaufdatum MHD
+BEGIN
+
+    SET @SortSQL = @SortSQL +  &#39; W0.dMHD &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;ASC&#39; ELSE &#39;DESC&#39; END + &#39;,&#39;;
+
+END;
+ELSE IF(@nID = 7) --Retournierte Artike
+BEGIN
+	   
+    SET @SortSQL = @SortSQL +  &#39; CASE WHEN W0.kRMRetourePos &gt; 0 &#39; + CASE WHEN @Aufsteigend = 1 THEN &#39;THEN 0 ELSE 1 END&#39; ELSE &#39;THEN 1 ELSE 0 END&#39; END + &#39;,&#39;;
+
+END;
+
+
+FETCH NEXT FROM cur_SortierungsKriterien  INTO @nID, @Aufsteigend
+    SET @FETCH_STATUS_SortierungsKriterien = @@FETCH_STATUS;
+END;
+
+CLOSE cur_SortierungsKriterien;
+DEALLOCATE cur_SortierungsKriterien;
+
+
+IF(@SortSQL = &#39; ORDER BY &#39;)
+	SET @SortSQL = &#39;&#39;;
+ELSE
+	SET @SortSQL = STUFF(@SortSQL, LEN(@SortSQL), 1, &#39;&#39;);
+END;
+
+
+-- Wenn Chargen/MHD Check und es gemischte Pl&#228;tze gibt, dann darf nur von chargen/MHD reinen Pl&#228;tzen gepickt werden.
+IF(@nOptionalMHDChargeAnywhere = 0 AND @MakeBestandCheckWithMHDChargen = 1 AND EXISTS (SELECT * FROM #ArtikelMitGemischtenChargenUeberPlaetze))
+BEGIN
+
+SET @ChargenMHDSelectSQL = &#39; JOIN (
+ SELECT CP.* 
+ FROM dbo.tWarenlagerplatz AS CP
+ WHERE NOT EXISTS (SELECT * FROM #ArtikelMitGemischtenChargenUeberPlaetze WHERE #ArtikelMitGemischtenChargenUeberPlaetze.kArtikel = @kArtikel)
+ OR NOT EXISTS (
+ SELECT WL.kArtikel
+ FROM dbo.tWarenlagerEingang AS WL
+ JOIN dbo.tArtikel AS AR ON AR.kArtikel = WL.kArtikel
+ WHERE AR.kArtikel = @kArtikel
+ AND WL.kWarenlagerplatz = CP.kWarenlagerplatz
+ AND (AR.nMHD = 1 OR AR.nCharge = 1)
+ AND WL.fanzahlaktuell &gt; 0
+ GROUP BY WL.kArtikel
+ HAVING (COUNT(DISTINCT WL.dMHD) &gt; 1 OR COUNT(DISTINCT ISNULL(WL.cChargenNr,&#39;&#39;&#39;&#39;)) &gt; 1)
+   )
+  ) AS tWarenlagerplatz ON tWarenlagerplatz.kWarenlagerplatz =  W0.kWarenlagerPlatz &#39;;
+
+END
+ELSE
+BEGIN
+    SET @ChargenMHDSelectSQL = &#39; JOIN tWarenlagerPlatz ON tWarenlagerPlatz.kWarenlagerPlatz = W0.kWarenlagerPlatz &#39;;
+END;
+
+
+DECLARE @LagerplatzNachMengeAPPLY nVARCHAR(800) = &#39;&#39;;
+
+IF(@nLagerplatzNachMenge = 1)
+BEGIN
+
+    SET @LagerplatzNachMengeAPPLY = &#39; OUTER APPLY (
+ SELECT CASE WHEN SUM(BP.fAnzahlOffen) &lt; SUM(BP.fAnzahlReservierbar) THEN SUM(BP.fAnzahlOffen) ELSE SUM(BP.fAnzahlReservierbar) END AS anz
+ FROM #BestellPosZuReservieren AS BP
+ WHERE BP.kArtikel = W0.kArtikel
+ GROUP BY BP.kArtikel
+) AS RES
+OUTER APPLY (
+ SELECT SUM(tW.fAnzahlAktuell - tW.fAnzahlReserviertPickpos) AS anz
+ FROM dbo.tWarenLagerEingang AS tW
+    WHERE tW.kArtikel = W0.kArtikel
+ AND tW.fAnzahlAktuell &gt; 0
+ AND tW.kWarenLagerPlatz = W0.kWarenLagerPlatz
+ GROUP BY tW.kArtikel
+) AS PL &#39;
+
+END;
+
+IF(@nPlaetzeOhneReservierungZuerst = 1)
+BEGIN
+    SET @LagerplatzNachMengeAPPLY = @LagerplatzNachMengeAPPLY + &#39; 
+OUTER APPLY (
+ SELECT CASE WHEN COUNT(*) &gt; 0 THEN 1 ELSE 0 END AS Res
+ FROM tWarenlagereingang AS WOR
+ WHERE WOR.kWarenLagerPlatz = W0.kWarenLagerPlatz
+ AND WOR.fAnzahlReserviertPickpos &gt; 0
+) AS PLRES &#39;
+
+END;
+
+	   
+
+
+ -- DARF NICHT GR&#214;SSER ALS 4k Zeichen sein, deswegen kurze Aliase. Falls es zu sehr anw&#228;chst in Views auslagern.
+ DECLARE @SelectSQL NVARCHAR(MAX) =  N&#39;
+ SET  @cur_WarenlagerEingaengeImLager = CURSOR FAST_FORWARD FOR
+ SELECT W0.kWarenlagerEingang, &#39; + @TeilmengenSELECT + N&#39;  AS fAnzahlAktuell ,W0.kWarenlagerPlatz , &#39; + @FactorSELECT + N&#39; AS fFaktorWarenlagereingang , W0.cCharge 
+ FROM #WarenlagerEingaenge AS W0
+ &#39; +@TeilmengenAPPLY;
+
+  DECLARE @SelectSQL2 NVARCHAR(max) =
+   +@LagerplatzNachMengeAPPLY+ &#39;
+ &#39; +@ChargenMHDSelectSQL+ &#39;
+ &#39; +@StuecklisteKomplettAufPlatzSQL+ &#39;
+ &#39; +@VorgabePlaetzeSQL+ &#39;
+ &#39; +@cReservierungsPicklistenOffenAPPLY+ &#39;
+ &#39; +@ChargenreinAPPLY+ N&#39;
+ WHERE W0.kArtikel = @kArtikel
+ &#39; + @cAnzahlCheckWHERE + &#39;
+ &#39; + @TeilmengenWHERE + &#39;
+ &#39; + @SortSQL + N&#39; 
+ ;OPEN @cur_WarenlagerEingaengeImLager; &#39;;
+
+
+
+----------------------------------------------------------------------------------------------
+
+
+IF (object_id(&#39;tempdb..#AuftragArtikelChargen&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #AuftragArtikelChargen;
+END
+
+CREATE TABLE #AuftragArtikelChargen (kAuftrag INT , kArtikel INT,cCharge NVARCHAR(255));
+
+
+----------------------------------------------------------------------------------------------
+
+
+IF(@nSortenreinMaxAnzahlArtikel &gt; 0)
+BEGIN
+
+IF (object_id(&#39;tempdb..#ArtikelSortenrein&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #ArtikelSortenrein;
+END
+
+CREATE TABLE #ArtikelSortenrein (kAuftrag INT , kArtikel INT);
+
+END
+
+----------------------------------------------------------------------------------------------
+
+IF(@nWMSLogAktiv = 1)
+BEGIN
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_Vor_cur_BestellPosZuReservieren&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,null ,@kPicklisteVorlage ,@kPickliste)
+END;
+	   
+
+DECLARE @kBestellPos INT, @nReservierungsModus INT,  @nTeilmengenPuffer INT, @kBestellung INT, @kArtikel INT, @fLagerFactor DECIMAL(25,13), @fAnzahlReservierbar DECIMAL(25,13), @fAnzahlBestellPos DECIMAL(25,13), @kLastBestellStueckliste INT, @bBestellungReserviert BIT;
+DECLARE @LastkBestellpos INT = 0, @LastBestellung INT = 0 ,@LastArtikel INT = 0,  @fRestMengeArtikelBestellung DECIMAL(25,13) , @fAnzahlZuPicken DECIMAL(25,13), @nAnzAuftraegeCounter  INT = @nAnzAuftraege , @nIstVorreserviert TINYINT;
+
+----------------------------------------------------------------------------------------------
+--- &#196;u&#223;erer Cursor, &#220;ber alle bestellPos die reserviert werden sollen. 
+--- HIER WERDEN BEST&#196;NDE RESERVIERT
+----------------------------------------------------------------------------------------------
+DECLARE @FETCH_STATUS_BestellPosZuReservieren INT = 0;
+OPEN cur_BestellPosZuReservieren;
+FETCH NEXT FROM cur_BestellPosZuReservieren  INTO @kBestellPos, @kBestellung, @fAnzahlReservierbar, @kArtikel, @fAnzahlZuPicken, @kLastBestellStueckliste, @fLagerFactor, @nReservierungsModus,@nTeilmengenPuffer,@nIstVorreserviert
+    SET @FETCH_STATUS_BestellPosZuReservieren = @@FETCH_STATUS;
+WHILE (@FETCH_STATUS_BestellPosZuReservieren = 0)
+BEGIN
+
+    DECLARE  @fAnzahlZuPickenStueck DECIMAL(25,13) ;
+
+    IF(@fAnzahlZuPicken &gt; @fAnzahlReservierbar)
+BEGIN
+        SET @fAnzahlZuPicken = @fAnzahlReservierbar;
+END;
+
+	   
+	IF(@LastArtikel != @kArtikel OR  @LastBestellung != @kBestellung)
+BEGIN
+		SET @fRestMengeArtikelBestellung = @fAnzahlZuPicken;
+END;
+
+		 
+	DECLARE  @WareneingangCursorSQL nVARCHAR(MAX) = @SelectSQL + @SelectSQL2 -- Max 8K Zeichen, wir addieren die 4K nVarchars.
+
+	IF(@nWMSLogAktiv = 1)
+BEGIN
+	    DECLARE @xBestellPosInCursor XML;
+		SET @xBestellPosInCursor = (
+						SELECT   @kBestellPos AS kBestellPos, @kBestellung AS kBestellung  , @fAnzahlReservierbar AS fAnzahlReservierbar, @kArtikel AS kArtikel, @fAnzahlZuPicken AS fAnzahlZuPicken, 
+						         @kLastBestellStueckliste AS kLastBestellStueckliste , @fLagerFactor AS fLagerFactor, @nReservierungsModus AS nReservierungsModus,@nTeilmengenPuffer AS nTeilmengenPuffer, @kBestellung AS kAuftrag
+						FOR XML PATH(&#39;BestellungsArtikel&#39;), TYPE );
+
+
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_BestellPos_INCURSOR&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,@WareneingangCursorSQL  ,@xBestellPosInCursor ,@kPicklisteVorlage ,@kPickliste)
+END;
+
+
+	DECLARE @cur_WarenlagerEingaengeImLager CURSOR;
+
+EXECUTE SP_EXECUTESQL @WareneingangCursorSQL,
+		  N&#39; @kArtikel INT, @kLastBestellStueckliste INT, @kBestellPos INT, @kAuftrag INT, @nIstVorreserviert TINYINT, @cSubsetNumberNeuReservieren NVARCHAR(100), @kWarenlagerPlatzAltePickPos INT, @cur_WarenlagerEingaengeImLager CURSOR OUTPUT&#39; ,
+		      @kLastBestellStueckliste = @kLastBestellStueckliste, @kArtikel = @kArtikel, @kBestellPos = @kBestellPos, @kAuftrag = @kBestellung,@nIstVorreserviert = @nIstVorreserviert, @cSubsetNumberNeuReservieren = @cSubsetNumberNeuReservieren, @kWarenlagerPlatzAltePickPos = @kWarenlagerPlatzAltePickPos, @cur_WarenlagerEingaengeImLager = @cur_WarenlagerEingaengeImLager OUTPUT;
+
+
+
+--
+-- Innenrer Cursor, &#220;ber alle Warenlagereing&#228;nge die f&#252;r die bestellpos reserviert werden k&#246;nnen
+--
+DECLARE @kWarenlagerEingangImLager INT, @fAnzahlAktuellImLager  DECIMAL(25,13),@fAnzahlAktuellImLagerAufPickliste  DECIMAL(25,13), @kWarenLagerPlatzImLager INT, @fFaktorWarenlagereingang DECIMAL(25,13), @cCharge NVARCHAR(255);
+
+FETCH NEXT FROM @cur_WarenlagerEingaengeImLager  INTO @kWarenlagerEingangImLager, @fAnzahlAktuellImLager,@kWarenLagerPlatzImLager, @fFaktorWarenlagereingang, @cCharge
+    WHILE (@@FETCH_STATUS = 0 AND @fRestMengeArtikelBestellung &gt; 0)
+BEGIN
+
+		IF(@Chargenrein = 1 AND @cCharge IS NOT NULL)
+BEGIN
+		    DECLARE @SetCharge NVARCHAR(255) = NULL;
+
+SELECT @SetCharge = #AuftragArtikelChargen.cCharge  FROM #AuftragArtikelChargen WHERE #AuftragArtikelChargen.kArtikel = @kArtikel AND #AuftragArtikelChargen.kAuftrag = @kBestellung;
+
+IF (@SetCharge IS NOT NULL AND @SetCharge != @cCharge) -- Falls bereits eine Charge f&#252;r den Artikel des Auftrags reserviert wurde, andere Chargen nicht erlauben
+BEGIN
+GOTO cur_WarenlagerEingaengeImLager_End;
+END;
+
+END;  
+			 
+
+	IF(@nWMSLogAktiv = 1)
+BEGIN
+	    DECLARE @xWLEInCursor XML;
+		SET @xWLEInCursor = (
+		  	  		SELECT   @kWarenlagerEingangImLager AS kWarenlagerEingangImLager, @fAnzahlAktuellImLager AS fAnzahlAktuellImLager,@kWarenLagerPlatzImLager AS kWarenLagerPlatzImLager, @fFaktorWarenlagereingang AS fFaktorWarenlagereingang, @cCharge AS charge
+		  	  		FOR XML PATH(&#39;WLE&#39;), TYPE );
+
+
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_Warenlagereingang_INCURSOR&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,@xWLEInCursor ,@kPicklisteVorlage ,@kPickliste)
+END;
+
+	IF(@fAnzahlAktuellImLager &gt;= @fRestMengeArtikelBestellung)
+BEGIN
+
+		SET @fAnzahlAktuellImLagerAufPickliste = @fRestMengeArtikelBestellung;
+		SET @fRestMengeArtikelBestellung = 0;
+END;
+ELSE
+BEGIN
+
+	    SET @fAnzahlAktuellImLagerAufPickliste = @fAnzahlAktuellImLager;
+	    SET @fRestMengeArtikelBestellung = @fRestMengeArtikelBestellung - @fAnzahlAktuellImLager;
+END;
+
+	IF(@fAnzahlAktuellImLagerAufPickliste &gt; 0)
+BEGIN
+
+	    IF(@nReservierungsModus = 0) --Teilmenge mit St&#252;ckmodus
+BEGIN
+		    SET @fAnzahlAktuellImLagerAufPickliste = ( @fAnzahlAktuellImLagerAufPickliste/ @fLagerFactor) * @fFaktorWarenlagereingang -- Es wird die volle St&#252;ckmenge des gefundenen Wareneingangs reserviert reserviert
+END;
+
+
+INSERT INTO #PickPosReserviert(kWarenLagerEingang ,fAnzahl, kBestellPos , kArtikel , kWarenlagerPlatz, kBestellung,nVorreserviert)
+SELECT @kWarenlagerEingangImLager,@fAnzahlAktuellImLagerAufPickliste,@kBestellPos,@kArtikel,@kWarenLagerPlatzImLager,@kBestellung,@nIstVorreserviert
+
+
+UPDATE #WarenlagerEingaenge set fAnzahlAktuell = fAnzahlAktuell - @fAnzahlAktuellImLagerAufPickliste WHERE kWarenlagerEingang = @kWarenlagerEingangImLager;
+
+IF(@Chargenrein = 1 AND @cCharge IS NOT NULL)
+BEGIN
+
+UPDATE #WarenlagerEingaenge set fAnzahlChargen = fAnzahlChargen - @fAnzahlAktuellImLagerAufPickliste WHERE kArtikel = @kArtikel AND cCharge = @cCharge;
+
+INSERT INTO #AuftragArtikelChargen  (kAuftrag, kArtikel ,cCharge ) VALUES (@kBestellung,@kArtikel,@cCharge);
+END;
+
+	IF(@nSortenrein = 1 AND @nSortenreinMaxAnzahlArtikel &gt; 0)
+BEGIN
+	    IF NOT EXISTS(SELECT * FROM #ArtikelSortenrein WHERE kAuftrag =  @kBestellung AND kArtikel = @kArtikel)
+BEGIN
+INSERT INTO #ArtikelSortenrein(kAuftrag, kArtikel) VALUES (@kBestellung,@kArtikel);
+END;
+END
+END;
+
+cur_WarenlagerEingaengeImLager_End:
+FETCH NEXT FROM @cur_WarenlagerEingaengeImLager   INTO @kWarenlagerEingangImLager, @fAnzahlAktuellImLager,@kWarenLagerPlatzImLager,  @fFaktorWarenlagereingang, @cCharge
+END;
+
+CLOSE @cur_WarenlagerEingaengeImLager;
+DEALLOCATE @cur_WarenlagerEingaengeImLager;
+		 
+
+SET @fRestMengeArtikelBestellung = @fRestMengeArtikelBestellung - @fAnzahlZuPicken;
+SET @LastBestellung = @kBestellung;
+
+FETCH NEXT FROM cur_BestellPosZuReservieren  INTO @kBestellPos, @kBestellung, @fAnzahlReservierbar, @kArtikel, @fAnzahlZuPicken, @kLastBestellStueckliste, @fLagerFactor, @nReservierungsModus,@nTeilmengenPuffer,@nIstVorreserviert
+    SET @FETCH_STATUS_BestellPosZuReservieren = @@FETCH_STATUS;
+
+-- Ist die Letzte Bestellung durch ?
+IF(@LastBestellung != @kBestellung OR @FETCH_STATUS_BestellPosZuReservieren != 0)
+BEGIN
+			 SET @bBestellungReserviert = 1;
+
+			 DECLARE @nTeillieferbar TINYINT = 0;
+			 DECLARE @nBestellungTeilReserviert TINYINT = 0;
+			 DECLARE @nAuftragKomplett TINYINT = 0;
+			 DECLARE @nVorkommNichtSortenrein TINYINT = 0;
+
+SELECT @nTeillieferbar = #BestellPosZuReservieren.nTeillieferbar
+FROM #BestellPosZuReservieren
+WHERE #BestellPosZuReservieren.nTeillieferbar &gt; 0
+  AND #BestellPosZuReservieren.kBestellung = @LastBestellung
+GROUP BY #BestellPosZuReservieren.nTeillieferbar
+
+
+    IF( (SELECT MAX(tArtikel.nIstTeilmengenArtikel)
+				  FROM #BestellPosZuReservieren
+			      JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+				  JOIN Artikel.tArtikelTeilmengen ON tArtikelTeilmengen.kArtikel = tArtikel.kArtikel
+				  WHERE tArtikelTeilmengen.nReservierungsModus = 0 
+				  AND #BestellPosZuReservieren.kBestellung = @LastBestellung  ) = 1 ) --Falls Bestellpos Teilmengenartikel mit St&#252;cklistenmodus haben, die Vollst&#228;ndigkeit des Auftrags anders rechnen, da wir hier mehr reservieren k&#246;nnen als die Bestellpos hat
+
+BEGIN
+
+SELECT @nAuftragKomplett = CASE WHEN COUNT(BestellPosNichtLieferbar.kBestellPos) &gt; 0 THEN 0 ELSE 1 END
+FROM (
+         SELECT #BestellPosLieferInfo.kBestellPos
+         FROM #BestellPosLieferInfo
+                  JOIN Verkauf.tAuftragPositionEckdaten ON tAuftragPositionEckdaten.kAuftragPosition = #BestellPosLieferInfo.kBestellPos
+                  JOIN Artikel.tArtikelTeilmengen ON tArtikelTeilmengen.kArtikel = #BestellPosLieferInfo.kArtikel
+             OUTER APPLY (SELECT ISNULL(SUM(#PickPosReserviert.fAnzahl / CASE WHEN tWarenLagerEingangSubsets.fFactor IS NULL THEN 1 ELSE tWarenLagerEingangSubsets.fFactor END),0) AS fAnzahl 
+						  		  FROM  #PickPosReserviert 
+								  LEFT JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingang = #PickPosReserviert.kWarenLagerEingang
+						  		  WHERE #PickPosReserviert.kBestellPos =  #BestellPosLieferInfo.kBestellPos) AS PickPosReserviert
+         WHERE #BestellPosLieferInfo.kBestellung = @LastBestellung
+           AND tArtikelTeilmengen.nReservierungsModus = 0
+         GROUP BY #BestellPosLieferInfo.kBestellPos,PickPosReserviert.fAnzahl,#BestellPosLieferInfo.fAnzahlZuPicken, tAuftragPositionEckdaten.fTeilmengenfaktorLager
+         HAVING (#BestellPosLieferInfo.fAnzahlZuPicken/tAuftragPositionEckdaten.fTeilmengenfaktorLager &gt; PickPosReserviert.fAnzahl)
+         UNION ALL
+         SELECT  #BestellPosZuReservieren.kBestellung
+         FROM #BestellPosZuReservieren
+             OUTER APPLY (SELECT ISNULL(SUM(#PickPosReserviert.fAnzahl),0) AS fAnzahl
+             FROM  #PickPosReserviert
+             WHERE #PickPosReserviert.kBestellung =  #BestellPosZuReservieren.kBestellung
+             AND #PickPosReserviert.kArtikel NOT IN  (SELECT kArtikel FROM Artikel.tArtikelTeilmengen WHERE tArtikelTeilmengen.nReservierungsModus = 0) ) AS PickPosReserviert
+         WHERE #BestellPosZuReservieren.kBestellung = @LastBestellung
+           AND #BestellPosZuReservieren.kArtikel NOT IN  (SELECT kArtikel FROM Artikel.tArtikelTeilmengen WHERE tArtikelTeilmengen.nReservierungsModus = 0)
+         GROUP BY #BestellPosZuReservieren.kBestellung,#BestellPosZuReservieren.nTeillieferbar,PickPosReserviert.fAnzahl
+         HAVING SUM(#BestellPosZuReservieren.fAnzahlOffen) != ISNULL(PickPosReserviert.fAnzahl,0)  OR PickPosReserviert.fAnzahl = 0
+     ) AS BestellPosNichtLieferbar
+
+
+END
+ELSE
+BEGIN
+
+SELECT @nAuftragKomplett = CASE WHEN COUNT(BestellPosNichtLieferbar.kBestellung) &gt; 0 THEN 0 ELSE 1 END
+FROM (
+         SELECT  #BestellPosZuReservieren.kBestellung
+         FROM #BestellPosZuReservieren
+             OUTER APPLY (SELECT ISNULL(SUM(#PickPosReserviert.fAnzahl),0) AS fAnzahl 
+				  		                FROM  #PickPosReserviert 
+				  		    		    WHERE #PickPosReserviert.kBestellung =  #BestellPosZuReservieren.kBestellung) AS PickPosReserviert
+         WHERE #BestellPosZuReservieren.kBestellung = @LastBestellung
+         GROUP BY #BestellPosZuReservieren.kBestellung,#BestellPosZuReservieren.nTeillieferbar,PickPosReserviert.fAnzahl
+         HAVING SUM(#BestellPosZuReservieren.fAnzahlOffen) != ISNULL(PickPosReserviert.fAnzahl,0)  OR PickPosReserviert.fAnzahl = 0
+     ) AS BestellPosNichtLieferbar
+
+END;
+
+
+-- Sortenrein Pr&#252;fung auf Max Artikel
+IF(@nSortenrein = 1 AND @nSortenreinMaxAnzahlArtikel &gt; 0)
+BEGIN
+			
+    IF EXISTS (SELECT * FROM #ArtikelSortenrein) AND EXISTS(SELECT * FROM #PickPosReserviert)
+BEGIN
+        
+        DECLARE @UnterschiedlicheArtikelReserviert INT;
+
+SELECT @UnterschiedlicheArtikelReserviert = COUNT (DISTINCT ReservierteArtikel.kArtikel)
+FROM (
+         SELECT DISTINCT kArtikel
+         FROM #PickPosReserviert
+         WHERE #PickPosReserviert.kBestellung = @LastBestellung
+         UNION
+         SELECT DISTINCT kArtikel
+         FROM #ArtikelSortenrein
+     ) AS ReservierteArtikel
+
+
+    IF(@UnterschiedlicheArtikelReserviert &gt; @nSortenreinMaxAnzahlArtikel) -- Falls zu viele unterschiedliche Artikel. Auftrag wird nicht reserviert / Teilreserviert
+BEGIN
+            SET @nAuftragKomplett = 0;
+        
+            IF(@nTeillieferbar = 1 AND EXISTS (SELECT * FROM #BestellungZuReservieren WHERE kBestellung = @LastBestellung AND nVorkommissionieren = 1))
+BEGIN
+        		SET @nVorkommNichtSortenrein = 1; --Bei Vorkomm, entrervieren wir nicht alles sondern nur das was von den Artikeln her nicht passt
+        		SET @nTeillieferbar = 1;
+END;
+ELSE
+BEGIN
+        		 SET @nTeillieferbar = 0;
+END;
+END;
+END;
+END;
+			 
+
+
+
+-- Ist die letzte Bestellung komplett reserviert worden ? Falls nicht und sie nicht teillieferbar ist, pickpos l&#246;schen
+IF(@nAuftragKomplett &lt;&gt; 1)
+BEGIN
+
+IF(@nTeillieferbar = 1)
+BEGIN
+SET @nBestellungTeilReserviert = 1;
+
+IF(@nVorkommNichtSortenrein = 1) -- Bei Vorkomm und Sortenrein, wird nur das entreserviert was nicht passt
+BEGIN
+							-- Alle Artikel entfernen die nicht schon vorher f&#252;r die Sortenrein Tabelle reserviert wurden.
+DELETE FROM #ArtikelSortenrein
+WHERE #ArtikelSortenrein.kAuftrag = @LastBestellung
+  AND #ArtikelSortenrein.kArtikel NOT IN (SELECT SR.kArtikel FROM #ArtikelSortenrein AS SR WHERE SR.kAuftrag != @LastBestellung);
+
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung = @LastBestellung
+  AND #PickPosReserviert.kArtikel NOT IN (SELECT kArtikel FROM #ArtikelSortenrein AS SR);
+END;
+
+
+
+IF(@FifoAktiv = 1 AND @nVollstaendigTeilgeliefertFIFO = 1)
+BEGIN
+
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung = @LastBestellung;
+
+END;
+
+
+END;
+ELSE
+BEGIN
+
+-- Detailinformationen anzeigen beim Reservieren
+IF(@kBestellNr &gt; 0)
+BEGIN
+
+
+INSERT INTO [WMS].[tTexteMitValues] (kSessionId,kBenutzer, nTextID, dZeitstempel,nValue1,cValue1,cValue2,cValue3)
+SELECT @kSessionID,@kBenutzer,@DBError_000002027,GETDATE(),0,NULL,NULL,NULL
+UNION ALL
+SELECT  @kSessionID,@kBenutzer,@DBError_000002028,GETDATE(),2, tArtikel.cArtNr, CAST(CAST((SUM(#BestellPosZuReservieren.fAnzahlOffen) - ISNULL(PickPosReserviert.fAnzahl,0)) AS FLOAT) AS NVARCHAR), NULL
+FROM #BestellPosZuReservieren
+         JOIN dbo.tArtikel ON tArtikel.kArtikel = #BestellPosZuReservieren.kArtikel
+    OUTER APPLY (SELECT ISNULL(SUM(#PickPosReserviert.fAnzahl),0) AS fAnzahl 
+					     		        FROM  #PickPosReserviert 
+					    		        WHERE #PickPosReserviert.kArtikel =  #BestellPosZuReservieren.kArtikel) AS PickPosReserviert
+WHERE #BestellPosZuReservieren.kBestellung = @LastBestellung
+GROUP BY #BestellPosZuReservieren.kArtikel,tArtikel.cArtNr,ISNULL(PickPosReserviert.fAnzahl,0)
+HAVING SUM(#BestellPosZuReservieren.fAnzahlOffen) != ISNULL(PickPosReserviert.fAnzahl,0)
+UNION ALL
+SELECT @kSessionID,@kBenutzer,@DBError_000002001,GETDATE(),1,NULL,NULL,NULL ;
+
+
+END;
+
+-- Bestand wieder drauf z&#228;hlen und reservierbar machen
+UPDATE #WarenlagerEingaenge
+SET fAnzahlAktuell=  fAnzahlAktuell + #PickPosReserviert.fAnzahl
+    FROM #WarenlagerEingaenge
+					  JOIN #PickPosReserviert ON #PickPosReserviert.kWarenLagerEingang = #WarenlagerEingaenge.kWarenLagerEingang
+WHERE #PickPosReserviert.kBestellung = @LastBestellung;
+
+IF(@Chargenrein = 1)
+BEGIN
+
+-- Freie Chargen wieder draufz&#228;hlen
+UPDATE #WarenlagerEingaenge
+SET fAnzahlChargen=  fAnzahlChargen + PickPos.fAnzahl
+    FROM #WarenlagerEingaenge
+						CROSS APPLY(
+						     SELECT SUM(#PickPosReserviert.fAnzahl) AS fAnzahl, kArtikel
+						     FROM #PickPosReserviert
+							 WHERE #PickPosReserviert.kBestellung = @LastBestellung
+						     GROUP BY #PickPosReserviert.kArtikel
+									) AS PickPos
+WHERE #WarenlagerEingaenge.kArtikel = PickPos.kArtikel;
+
+
+DELETE FROM #AuftragArtikelChargen WHERE #AuftragArtikelChargen.kAuftrag = @LastBestellung;
+
+END;
+
+-- Reservierte Artikel aus der #ArtikelSortenrein Tabelle entfernen
+IF(@nSortenrein = 1 AND @nSortenreinMaxAnzahlArtikel &gt; 0)
+BEGIN
+DELETE FROM #ArtikelSortenrein
+WHERE #ArtikelSortenrein.kAuftrag = @LastBestellung;
+END
+
+
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung = @LastBestellung;
+
+
+SET @bBestellungReserviert = 0;
+END;
+
+END;
+
+
+IF(@nIdentischeAuftraegeMitTeillieferung = 1)
+BEGIN
+
+IF( EXISTS ( SELECT * FROM WMS.tPicklisteVorlageAuftraege WHERE kAuftrag = @LastBestellung AND nIsTeillieferung = 1 AND kPicklisteVorlage = @kPicklisteVorlage))
+BEGIN
+
+						;WITH BestellPosAusPickListe(kArtikel, fAnzahl)
+                                  AS
+                                  (
+                                      SELECT #PickPosReserviert.kArtikel,  SUM(#PickPosReserviert.fAnzahl) AS fAnzahl
+                                      FROM #PickPosReserviert
+                                      WHERE #PickPosReserviert.kBestellung = @LastBestellung
+                                      GROUP BY #PickPosReserviert.kArtikel
+                                  ),
+                              BestellposKomplettAuftrag(kArtikel, fAnzahl)
+                                  AS
+                                  (
+                                      SELECT tAuftragPosition.kArtikel,tAuftragPosition.fAnzahl
+                                      FROM Verkauf.tAuftragPosition
+                                      WHERE tAuftragPosition.kAuftrag = (SELECT TOP 1 kAuftrag FROM  WMS.tPicklisteVorlageAuftraege WHERE nIsTeillieferung = 0 AND kPicklisteVorlage = @kPicklisteVorlage)
+
+                                  )
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung = @LastBestellung
+  AND #PickPosReserviert.kArtikel IN
+      (
+          SELECT BestellPosAusPickListe.kArtikel
+          FROM BestellPosAusPickListe
+                   LEFT JOIN BestellposKomplettAuftrag ON BestellposKomplettAuftrag.kArtikel = BestellPosAusPickListe.kArtikel AND BestellposKomplettAuftrag.fAnzahl = BestellPosAusPickListe.fAnzahl
+          WHERE BestellposKomplettAuftrag.kArtikel IS NULL
+      )
+
+END;
+
+END;
+
+IF(@nKeineAuftraegeVollstaendigAufPickliste = 1 AND  @nPicklistenVorlageTyp = 0 )
+BEGIN
+
+			    -- Wenn die Anzahl der noch zur Lieferung ausstehenden Artikel des Auftrags gleich der grade reservierten ist, dann wird der Auftrag von der Pickliste gel&#246;scht
+				IF (EXISTS (
+					   SELECT SUM(vBestellPosLieferInfo.fAnzahlOffen) AS fAnzahlOffen , MAX(Pickpos.fAnzahl)
+				       FROM Versand.vBestellPosLieferInfo
+				       JOIN dbo.vWMSArtikel_Simple AS Artikel ON Artikel.kArtikel = vBestellPosLieferInfo.kArtikel
+					    OUTER APPLY (
+					    	SELECT ISNULL(SUM(fAnzahl),0) AS fAnzahl
+ 					    	FROM #PickPosReserviert
+					    	WHERE #PickPosReserviert.kBestellung = @LastBestellung
+					    	) AS Pickpos
+				       WHERE kBestellung = @LastBestellung
+					   AND Artikel.cLagerAktiv = &#39;Y&#39;
+					   HAVING SUM(vBestellPosLieferInfo.fAnzahlOffen) = MAX(Pickpos.fAnzahl) ))
+BEGIN
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung = @LastBestellung;
+
+SET @bBestellungReserviert = 0;
+END;
+END;
+		   
+		  	
+
+
+
+		     ---- Stueckliste , Nur ganze St&#252;cklisten ausliefern bei Eazyshipping. Falls der Auftrag teillieferbar war
+			 IF( @nTeillieferbar = 1 AND @nBoxenNurGanzeStuecklistenAufPL = 1 AND 
+			      EXISTS (SELECT tWarenlager.kWarenLager
+				  FROM dbo.tWarenlager
+				  WHERE tWarenlager.kWarenLager = @kWarenlager
+				  AND tWarenlager.nLagerplatzVerwaltung = 1) AND @kPickPosNeuReservieren = 0)
+BEGIN
+
+		
+
+-- Ueber alle St&#252;cklistenkomponenten die gefunden wurden, anpassen der Menge auf die maximal g&#252;lte f&#252;r ganze Stuecklisten
+DECLARE cur_StuecklistenPos CURSOR LOCAL FAST_FORWARD FOR
+SELECT #PickPosReserviert.fAnzahl , ROUND((CAST(SLAnteile.fMaxMengeVater AS DECIMAL(28,14)) / Vater.fAnzahl) * OuterBestellPos.fAnzahl,4), #PickPosReserviert.kWarenLagerEingang,
+       #PickPosReserviert.kBestellPos, OuterBestellPos.kAuftragStueckliste, #PickPosReserviert.kArtikel, ROUND((CAST(SLAnteile.fMaxMengeVaterTeilBar AS DECIMAL(28,14)) / Vater.fAnzahl) *OuterBestellPos.fAnzahl,4), SLAnteile.cTeilbar
+FROM #PickPosReserviert
+         JOIN Verkauf.tAuftragPosition AS OuterBestellPos ON OuterBestellPos.kAuftragPosition = #PickPosReserviert.kBestellPos
+     -- Minimale Menge an ganzen Stuecklisten die aus der gefundenen Menge reserviert werden kann, f&#252;r diese St&#252;ckliste
+    OUTER APPLY (SELECT ROUND(MIN((ISNULL(InnerPickPosTemp.fAnzahl,0) * Vater.fAnzahl) /  Verkauf.tAuftragPosition.fAnzahl),4) AS fMaxMengeVaterTeilBar
+									,ROUND(MIN(FLOOR((ISNULL(InnerPickPosTemp.fAnzahl,0) * Vater.fAnzahl) / Verkauf.tAuftragPosition.fAnzahl)),4) AS fMaxMengeVater , VaterArtikel.cTeilbar 
+							 FROM Verkauf.tAuftragPosition
+							 LEFT JOIN (SELECT kBestellPos , SUM(fAnzahl) fAnzahl FROM #PickPosReserviert 
+										GROUP BY #PickPosReserviert.kBestellPos) AS InnerPickPosTemp ON Verkauf.tAuftragPosition.kAuftragPosition = InnerPickPosTemp.kBestellPos
+							 JOIN Verkauf.tAuftragPosition AS Vater ON Vater.kAuftragPosition  = OuterBestellPos.kAuftragStueckliste
+							 JOIN dbo.tArtikel AS VaterArtikel ON  VaterArtikel.kArtikel = Vater.kArtikel
+							 JOIN vWMSArtikel ON vWMSArtikel.kArtikel =  Verkauf.tAuftragPosition.kArtikel
+							 WHERE ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0)  = OuterBestellPos.kAuftragStueckliste
+							 AND ISNULL(Verkauf.tAuftragPosition.kAuftragStueckliste, 0) != Verkauf.tAuftragPosition.kAuftragPosition
+							 AND Verkauf.tAuftragPosition.fAnzahl &gt; 0
+							 AND tAuftragPosition.kAuftrag = OuterBestellPos.kAuftrag
+							 GROUP BY VaterArtikel.cTeilbar
+							 HAVING SUM(Verkauf.tAuftragPosition.fAnzahl) &gt; 0
+				) AS SLAnteile
+				
+				JOIN Verkauf.tAuftragPosition AS Vater ON Vater.kAuftragPosition = OuterBestellPos.kAuftragStueckliste AND Vater.fAnzahl &gt; 0
+WHERE OuterBestellPos.kAuftragStueckliste &gt; 0
+ORDER BY OuterBestellPos.kAuftragStueckliste,#PickPosReserviert.kArtikel;
+
+
+
+DECLARE @fAnzahlIst DECIMAL(28, 14);	-- Die Menge der gefunden Artikel
+				DECLARE @fAnzahlMax DECIMAL(28, 14);	-- Soviel darf Maximal reserviert werden, wegen Stuecklisten beschraenkungen
+				DECLARE @fAnzahlMaxBeiTeilbarerMenge DECIMAL(28, 14);	-- Soviel darf Maximal reserviert werden, wegen Stuecklisten beschraenkungen wenn St&#252;cklistenvater ein teilbarer Artikel ist
+				DECLARE @kParWarenlagereingang INT;
+				DECLARE @kParBestellPos INT;
+				DECLARE @kParStueckListe INT;
+				DECLARE @kParArtikel INT;
+				DECLARE @kOldStueckListe INT = 0;       -- Letzte Stueckliste Merker
+				DECLARE @kOldArtikel INT = 0;		    -- Letztee Artikel Merker
+				DECLARE @kOldPickPos INT = 0;		    -- Letztee PickPos Merker
+				DECLARE @fMengeErlaubt DECIMAL(28, 14); -- Temp Speicher f&#252;r Menge 
+				DECLARE @cStuecklistenVaterTeilbar VARCHAR(255);
+
+OPEN cur_StuecklistenPos;
+
+FETCH NEXT FROM cur_StuecklistenPos
+    INTO @fAnzahlIst,@fAnzahlMax,@kParWarenlagereingang,@kParBestellPos,@kParStueckListe,@kParArtikel,@fAnzahlMaxBeiTeilbarerMenge,@cStuecklistenVaterTeilbar;
+
+
+WHILE @@FETCH_STATUS = 0
+BEGIN
+
+
+IF(@kOldStueckListe != @kParStueckListe OR @kOldArtikel != @kParArtikel OR @kOldPickPos != @kParBestellPos)
+BEGIN
+
+						IF(@cStuecklistenVaterTeilbar = &#39;Y&#39;)
+							SET @fMengeErlaubt = @fAnzahlMaxBeiTeilbarerMenge;
+ELSE
+							SET @fMengeErlaubt = @fAnzahlMax;
+END
+					
+
+
+					IF(@fAnzahlIst &gt; @fMengeErlaubt)
+BEGIN
+
+UPDATE #PickPosReserviert
+SET fAnzahl = @fMengeErlaubt
+    FROM #PickPosReserviert
+	JOIN Verkauf.tAuftragPosition ON Verkauf.tAuftragPosition.kAuftragPosition = #PickPosReserviert.kBestellPos
+WHERE #PickPosReserviert.kWarenLagerEingang = @kParWarenlagereingang
+  AND #PickPosReserviert.kBestellPos = @kParBestellPos
+  AND Verkauf.tAuftragPosition.kAuftragStueckliste = @kParStueckListe;
+
+SET @fMengeErlaubt = 0;
+END;
+ELSE
+BEGIN
+	SET @fMengeErlaubt = @fMengeErlaubt - @fAnzahlIst;
+END;
+
+SET @kOldStueckListe = @kParStueckListe;
+SET @kOldArtikel = @kParArtikel;
+SET @kOldPickPos = @kParBestellPos;
+
+FETCH NEXT FROM cur_StuecklistenPos
+    INTO @fAnzahlIst,@fAnzahlMax,@kParWarenlagereingang,@kParBestellPos,@kParStueckListe,@kParArtikel,@fAnzahlMaxBeiTeilbarerMenge,@cStuecklistenVaterTeilbar;
+
+END;
+
+CLOSE cur_StuecklistenPos;
+DEALLOCATE cur_StuecklistenPos;
+
+			   
+-- Falls der Auftrag komplett entreserviert wurde
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.fAnzahl = 0
+  AND #PickPosReserviert.kBestellung = @LastBestellung;
+
+IF(NOT EXISTS (SELECT * FROM #PickPosReserviert WHERE #PickPosReserviert.kBestellung = @LastBestellung))
+BEGIN
+					  SET @bBestellungReserviert = 0;
+END;
+
+
+END;
+    
+    
+    
+-- Der Bestellung eine freie Box zuweisen 
+IF(@nIsEazyShippingAuftrag = 0 AND @bBestellungReserviert = 1)
+BEGIN
+
+DECLARE @kFreeLhm INT = 0;
+
+SELECT TOP(1) @kFreeLhm =  #BoxenFuerBestellungen.kLHM
+FROM #BoxenFuerBestellungen
+WHERE #BoxenFuerBestellungen.kBestellung = @LastBestellung
+ORDER BY #BoxenFuerBestellungen.nBelegt DESC,#BoxenFuerBestellungen.bAttributePassen DESC, CAST(#BoxenFuerBestellungen.cLhmId AS INT);
+
+
+IF(@kFreeLhm &gt; 0)
+BEGIN
+
+-- Reservierte Box f&#252;r Bestellug markieren
+UPDATE #BoxenFuerBestellungen
+SET  #BoxenFuerBestellungen.nBelegt = CASE WHEN #BoxenFuerBestellungen.kBestellung = @LastBestellung THEN 2 ELSE 1 END
+WHERE #BoxenFuerBestellungen.kLHM =  @kFreeLhm
+  AND #BoxenFuerBestellungen.kBestellung = @LastBestellung;
+
+-- Reservierte Box f&#252;r andere Bestellungen L&#246;schen
+DELETE FROM #BoxenFuerBestellungen
+WHERE #BoxenFuerBestellungen.kLHM =  @kFreeLhm
+  AND #BoxenFuerBestellungen.kBestellung != @LastBestellung
+				    AND #BoxenFuerBestellungen.nBelegt = 0;
+
+END
+ELSE
+BEGIN
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung = @LastBestellung;
+
+SET @bBestellungReserviert = 0;
+END;
+
+END;
+    
+
+
+-- Bestellung kann reserviert werden, falls optional auf maximale Anzahl Auftr&#228;ge eingeschr&#228;nkt wird hier hochz&#228;hlen oder beenden.
+IF(@nAnzAuftraege &gt; 0 AND @bBestellungReserviert = 1)
+BEGIN
+    SET @nAnzAuftraegeCounter = @nAnzAuftraegeCounter - 1;
+
+    IF(@nAnzAuftraegeCounter = 0)
+	    BREAK;
+END;
+END;
+END;
+
+
+CLOSE cur_BestellPosZuReservieren;
+DEALLOCATE cur_BestellPosZuReservieren;
+		 
+
+-------------------------------------------------------------------------------------------------------------
+--- Zu diesen Zeitpunkt wurden PicklistenPositionen erstellt und in #PickPosReserviert zwischengespeichert
+-------------------------------------------------------------------------------------------------------------
+
+
+--
+-- OPTION: Falls die Pickliste auf eine Maximale Artikelanzahl beschr&#228;nkt ist, werden Evtl. Bestellungen nicht reserviert.
+--
+IF(@nMaxAnzahlArtikel &gt; 0)
+BEGIN
+	
+		  IF( EXISTS (SELECT  *
+				    FROM  #PickPosReserviert
+				    HAVING SUM(#PickPosReserviert.fAnzahl)  &gt; @nMaxAnzahlArtikel))
+BEGIN
+
+			 DECLARE CUR_PickPosReserviert CURSOR FAST_FORWARD LOCAL FOR
+SELECT  kBestellung , SUM(#PickPosReserviert.fAnzahl) AS fAnzahl
+FROM  #PickPosReserviert
+GROUP BY #PickPosReserviert.kBestellung
+ORDER BY MIN(#PickPosReserviert.kPickPosReserviert)
+
+DECLARE @kBestellungNext INT; 
+			 DECLARE @BestellungsMenge DECIMAL(28, 14);
+			 DECLARE @BestellungenToKeep TABLE (kBestellung INT)
+
+
+			 OPEN CUR_PickPosReserviert;
+FETCH NEXT FROM CUR_PickPosReserviert  INTO @kBestellungNext, @BestellungsMenge;
+WHILE (@@FETCH_STATUS = 0)
+BEGIN
+	   
+IF(@nMaxAnzahlArtikel &gt;= @BestellungsMenge)
+BEGIN
+    SET @nMaxAnzahlArtikel = @nMaxAnzahlArtikel - @BestellungsMenge;
+INSERT INTO @BestellungenToKeep VALUES (@kBestellungNext);
+END;
+
+
+IF(@nMaxAnzahlArtikel = 0)
+    BREAK;
+
+FETCH NEXT FROM CUR_PickPosReserviert  INTO @kBestellungNext, @BestellungsMenge;
+END;
+
+CLOSE CUR_PickPosReserviert;
+DEALLOCATE CUR_PickPosReserviert;
+
+DELETE FROM #PickPosReserviert
+WHERE #PickPosReserviert.kBestellung NOT IN (SELECT kBestellung FROM @BestellungenToKeep);
+
+
+END;
+END;
+
+IF(@nMinAnzahlArtikel &gt; 0)
+BEGIN
+
+DECLARE @AnzahlArtikel  DECIMAL(28, 14);
+
+SELECT  @AnzahlArtikel = SUM(#PickPosReserviert.fAnzahl)
+FROM  #PickPosReserviert;
+
+IF(@AnzahlArtikel &gt; 0 AND @AnzahlArtikel &lt; @nMinAnzahlArtikel)
+BEGIN
+DELETE FROM #PickPosReserviert;
+
+SET @nIsMinArtikelAnzahlCheckFailed = 1;
+
+IF(@nWMSLogAktiv = 1)
+BEGIN
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_MinAnzahlArtikel&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,CAST(@AnzahlArtikel AS NVARCHAR(255)) ,null  ,null ,@kPicklisteVorlage ,@kPickliste);
+END;
+END;
+END
+	   
+
+-- Gibt an wieviele Bestellungen reserviert worden sind
+SELECT @nAnzahlReservierteBestellung = COUNT(DISTINCT #PickPosReserviert.kBestellung)
+FROM #PickPosReserviert;
+
+IF(@nWMSLogAktiv = 1)
+BEGIN
+
+	      DECLARE @xPickpos XML;
+					SET @xPickpos = (
+						    SELECT *
+							FROM #PickPosReserviert 
+							FOR XML PATH(&#39;Pickpos&#39;), TYPE );
+
+
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_Vor_PickPos_Schreiben&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,@xPickpos ,@kPicklisteVorlage ,@kPickliste)
+END;
+
+	
+-------------------------------------------------------------------------------------------------------------
+--- START DER TRANSAKTION. Um Serverseitig die g&#252;ltigkeit des Bestandes zu gew&#228;hrleisten fangen wir eine transaction an.
+-------------------------------------------------------------------------------------------------------------
+BEGIN TRANSACTION
+	   
+	   --
+	   -- Plausibilit&#228;tscheck
+	   --
+	   IF(@nAnzahlReservierteBestellung &gt; 0 AND
+	     (@nAnzahlReservierteBestellung &gt;= @nAnzAuftraegeMin OR @kBestellNr &gt; 0 OR @kPickPosNeuReservieren &gt; 0)  AND --Bei Reservieren aus Auftrag&#252;bersicht, wird er min. auftrag Filter ausgehebelt
+	    -- Bestand mu&#223; reservierbar sein
+		 NOT EXISTS(   SELECT * 
+					FROM dbo.tWarenLagerEingang
+					JOIN #PickPosReserviert ON #PickPosReserviert.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+					WHERE (tWarenLagerEingang.fAnzahlAktuell - tWarenLagerEingang.fAnzahlReserviertPickpos) &lt; #PickPosReserviert.fAnzahl AND #PickPosReserviert.nVorreserviert = 0)
+		 --  LHMs m&#252;&#223;en frei sein
+		 AND NOT EXISTS (SELECT * 
+					  FROM #BoxenFuerBestellungen	
+					  JOIN dbo.tLHM ON tLHM.kLHM = #BoxenFuerBestellungen.kLHM
+					  JOIN dbo.tLHMStatus ON tLHMStatus.kLHMStatus = tLHM.kLHMStatus
+					  WHERE (tLHMStatus.nStatus &gt; 10 OR tLHM.nSperre &gt; 0)
+					  AND #BoxenFuerBestellungen.nBelegt = 2
+					  AND #BoxenFuerBestellungen.nStatus &lt; 20)
+					 )
+BEGIN
+	   
+DECLARE @VoucherStatusPickPos INT = CASE WHEN @nIsEazyShippingAuftrag = 0 THEN 30 ELSE 20 END; 
+
+IF(object_id(&#39;tempdb..#IdentityTablePicklistePos&#39;) IS NOT NULL)
+BEGIN
+DROP TABLE #IdentityTablePicklistePos;
+END;
+CREATE TABLE #IdentityTablePicklistePos(kPicklistePos INT PRIMARY KEY (kPicklistePos));
+
+
+
+
+INSERT INTO dbo.tPicklistePos
+(
+    kPickliste,
+    kWarenLager,
+    kWarenLagerEingang,
+    fAnzahl,
+    kBestellPos,
+    kArtikel,
+    kWarenlagerPlatz,
+    kBestellung,
+    nStatus,
+    kPicklistePos_Ursprung,
+    nVorreserviert
+)
+    OUTPUT Inserted.kPicklistePos INTO #IdentityTablePicklistePos(kPicklistePos)
+SELECT @kPickliste,@kWarenlager, PPR.kWarenLagerEingang,PPR.fAnzahl,PPR.kBestellPos,PPR.kArtikel,PPR.kWarenlagerPlatz, PPR.kBestellung ,
+       CASE WHEN ISNULL(tAuftragPosition.nType,0) IN(18, 20) THEN @VoucherStatusPickPos ELSE 10 END , @kPickPosNeuReservieren, PPR.nVorreserviert
+FROM #PickPosReserviert AS PPR
+         LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = PPR.kBestellPos
+WHERE PPR.fAnzahl &gt; 0;
+
+
+
+
+
+SET CONTEXT_INFO 0x5022;
+
+INSERT INTO dbo.tPicklistePosStatus (kPicklistePos,nStatus,kBenutzer,dZeitstempel)
+SELECT dbo.tPicklistePos.kPicklistePos, CASE WHEN ISNULL(tAuftragPosition.nType,0) IN(18, 20) THEN @VoucherStatusPickPos ELSE 10 END,@kBenutzer,GETDATE()
+FROM dbo.tPicklistePos
+         JOIN #IdentityTablePicklistePos ON #IdentityTablePicklistePos.kPicklistePos = tPicklistePos.kPicklistePos
+         LEFT JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = tPicklistePos.kBestellPos
+WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+
+
+UPDATE dbo.tPicklistePos SET kPicklistePosStatus = dbo.tPicklistePosStatus.kPicklistePosStatus
+    FROM dbo.tPicklistePos
+		   JOIN dbo.tPicklistePosStatus ON  dbo.tPicklistePosStatus.kPicklistePos = dbo.tPicklistePos.kPicklistePos
+    JOIN #IdentityTablePicklistePos ON #IdentityTablePicklistePos.kPicklistePos = tPicklistePos.kPicklistePos
+WHERE dbo.tPicklistePos.kPickliste = @kPickliste;
+
+SET CONTEXT_INFO 0x0000;
+
+DELETE FROM #BoxenFuerBestellungen
+WHERE kBestellung NOT IN (SELECT kBestellung FROM #PickPosReserviert)
+
+
+-- Bestellungen den boxen zuteilen
+    INSERT INTO dbo.tlhmstatus (klhm, nstatus, dzeitstempel, kbestellung)
+SELECT #BoxenFuerBestellungen.kLHM,20,GETDATE(),#BoxenFuerBestellungen.kBestellung
+FROM #BoxenFuerBestellungen
+WHERE #BoxenFuerBestellungen.nBelegt = 2
+  AND #BoxenFuerBestellungen.kBestellung IN (SELECT kBestellung FROM #PickPosReserviert);
+
+UPDATE tlhm
+SET kLHMStatus = LastStatus.LastkLHMStatus
+    FROM dbo.tlhm
+		   JOIN #BoxenFuerBestellungen ON #BoxenFuerBestellungen.kLHM = tlhm.kLHM AND #BoxenFuerBestellungen.nBelegt = 2
+    CROSS APPLY (SELECT MAX(tlhmstatus.kLHMStatus) AS LastkLHMStatus
+    FROM dbo.tlhmstatus
+    WHERE tlhmstatus.kLHM = tlhm.kLHM) AS LastStatus
+WHERE #BoxenFuerBestellungen.kBestellung IN (SELECT kBestellung FROM #PickPosReserviert);
+
+
+END;
+ELSE
+BEGIN
+
+IF( @nAnzahlReservierteBestellung &lt; @nAnzAuftraegeMin)
+BEGIN
+
+UPDATE dbo.tPicklisteVorlage SET nReservierungsFehler = @ReservierungsFehler_MinAnzAufraege
+WHERE kPicklisteVorlage = @kPicklisteVorlage;
+
+SET @nAnzahlReservierteBestellung = 0;
+END;
+ELSE IF (@nIsMinArtikelAnzahlCheckFailed &gt; 0)
+BEGIN
+UPDATE dbo.tPicklisteVorlage SET nReservierungsFehler = @ReservierungsFehler_MinAnzArtikel
+WHERE kPicklisteVorlage = @kPicklisteVorlage;
+
+SET @nAnzahlReservierteBestellung = 0;
+
+END
+ELSE IF(@nAnzahlReservierteBestellung &gt; 0)
+BEGIN
+    SET @nAnzahlReservierteBestellung = -999999; -- Wahrscheinlich ein Problem mit parallelen Revervierungen. Wir gehen zur&#252;ck aus der SP und machennen Retry.
+END;
+
+END;
+
+IF(@nWMSLogAktiv = 1)
+BEGIN
+INSERT INTO [WMS].[tWMSErrorLog] ([cName] ,[nProzess]  ,[cQuelle]   ,[nTyp] ,[nLevel]  ,[dTimeStamp]  ,[kBenutzer] ,[cArbeitsPlatz]  ,[cValue]   ,[cValueBig]  ,[cValueXML] ,[kKey1]   ,[kKey2])
+VALUES  (&#39;spBestellungReservieren_ENDE&#39; ,2 ,&#39;spBestellungReservieren&#39;  ,1   ,0  ,GETDATE() ,@kBenutzer ,null,null ,null  ,null ,@kPicklisteVorlage ,@kPickliste)
+END;
+
+-- Sicherheitscheck, es darf nie mehr reserviert worden sein als menge vorhanden.
+IF(@fAnzahlPickPosNeuReservieren = 0 AND --Au&#223;nahme neu reservieren, wir l&#246;schen die Pickpos in der anderen SP nach der Reservierung hier
+	      EXISTS (SELECT * 
+	      FROM dbo.tPicklistePos 
+		  JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = tPicklistePos.kWarenLagerEingang
+		  WHERE dbo.tPicklistePos.kPickliste = @kPickliste
+		  AND tWarenLagerEingang.fAnzahlAktuell &lt; fAnzahlReserviertPickpos))
+BEGIN
+ROLLBACK;
+SET @nAnzahlReservierteBestellung = -999999; -- Reserviete Mengen inkonsitent. Wahrscheinlich ein Problem mit parallelen Revervierungen. Wir gehen zur&#252;ck aus der SP und machennen Retry.
+
+END;
+ELSE
+BEGIN
+COMMIT TRANSACTION;
+END;
+	  
+
+
+-------------------------------------------------------------------------------------------------------------
+--- ENDE DER TRANSAKTION. Falls es Fehler gab, landen wir im Catch Block der SP [spPicklisteErstellen].
+-------------------------------------------------------------------------------------------------------------
+
+END;  -- ENDE DES BESTANDES RESERVIREN ABSCHNITTS
+
+
+
+END;</code></pre>
+</body>
+</html>

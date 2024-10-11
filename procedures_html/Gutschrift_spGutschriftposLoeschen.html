@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gutschrift.spGutschriftposLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Gutschrift.spGutschriftposLoeschen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tgutschriftpos gelöscht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Gutschrift].[spGutschriftposLoeschen]
+	@xGutschriftpos XML = NULL,
+	@kGutschriftpos INT = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5119;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			IF(OBJECT_ID(&#39;tempdb..#Gutschriftpos&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #Gutschriftpos;
+			END
+			CREATE TABLE #Gutschriftpos(kGutschriftpos INT, kRechnungPosition INT);
+			IF(@xGutschriftpos IS NOT NULL)
+			BEGIN
+				INSERT INTO #Gutschriftpos(kGutschriftpos, kRechnungPosition)
+					SELECT Gutschriftpos.ID.value(&#39;kGutschriftPos[1]&#39;, &#39;INT&#39;),
+							dbo.tgutschriftpos.kBestellPos
+						FROM @xGutschriftpos.nodes(&#39;Gutschriftpos&#39;) AS Gutschriftpos(ID)
+						JOIN dbo.tgutschriftpos ON dbo.tgutschriftpos.kGutschriftPos = Gutschriftpos.ID.value(&#39;kGutschriftPos[1]&#39;, &#39;INT&#39;);
+			END
+			ELSE
+			BEGIN
+				DECLARE @kRechnungPosition INT;
+				SELECT @kRechnungPosition = kBestellpos
+					FROM dbo.tgutschriftpos 
+					WHERE dbo.tgutschriftpos.kGutschriftPos = @kGutschriftpos;
+				INSERT INTO #Gutschriftpos(kGutschriftpos, kRechnungPosition)
+					VALUES (@kGutschriftpos, @kRechnungPosition);
+			END			
+			DELETE FROM dbo.tGutschriftpos
+				WHERE dbo.tGutschriftpos.kGutschriftPos IN (SELECT #Gutschriftpos.kGutschriftpos FROM #Gutschriftpos);
+			IF(EXISTS(SELECT * FROM #Gutschriftpos WHERE #Gutschriftpos.kRechnungPosition IS NOT NULL))
+			BEGIN
+				DECLARE @Auftraege AS Verkauf.TYPE_spAuftragEckdatenBerechnen;
+				
+				INSERT INTO @Auftraege(kAuftrag)
+				SELECT DISTINCT vAuftrag.kAuftrag
+				FROM Verkauf.vAuftrag
+				JOIN Rechnung.vRechnungPosition ON vRechnungPosition.kAuftrag = vAuftrag.kAuftrag
+				JOIN #Gutschriftpos ON #Gutschriftpos.kRechnungPosition = vRechnungPosition.kRechnungPosition;
+
+				EXEC Verkauf.spAuftragEckdatenBerechnen @Auftrag = @Auftraege;
+
+			END
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

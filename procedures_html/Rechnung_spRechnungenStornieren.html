@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rechnung.spRechnungenStornieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Rechnung.spRechnungenStornieren</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Rechnung].[spRechnungenStornieren]
+	@Rechnungen Rechnung.TYPE_spRechnungenStornieren READONLY,
+	@kRechnungStornogrund INT,
+	@cKommentar NVARCHAR(100),
+	@kBenutzer INT,
+	@dStorniert DATETIME,
+	@ZahlungenZusammenfassen BIT = 1,
+	@xResult XML OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+	DECLARE @DeadlockRetries TINYINT = CASE WHEN @@TRANCOUNT = 0 AND XACT_STATE() = 0 THEN 5 ELSE 0 END;
+	DECLARE @OldContextInfo VARBINARY(128) = ISNULL(CONTEXT_INFO(), 0x0);
+	DECLARE @MyContextInfo VARBINARY(128) = HASHBYTES(&#39;SHA1&#39;, OBJECT_NAME(@@PROCID));
+	--IF (@OldContextInfo IN (@MyContextInfo)) RETURN 0; -- rekursiven Aufruf vermeiden
+	SET CONTEXT_INFO @MyContextInfo;
+DeadlockRetry:
+	BEGIN TRY
+		IF (@DeadlockRetries &gt; 0) BEGIN TRANSACTION;
+		-- Start vom Code
+
+		IF(OBJECT_ID(&#39;tempdb..#RechnungStorno&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #RechnungStorno;
+		END
+
+		CREATE TABLE #RechnungStorno
+		(
+			kRechnung INT PRIMARY KEY NOT NULL,
+			cRechnungsnr NVARCHAR(50) NOT NULL,
+			nError INT NOT NULL,
+			kGutschrift INT NOT NULL
+		);
+
+		--
+		-- Rechnungen-Parameter umkopieren wegen Performance
+		--
+		INSERT INTO #RechnungStorno (kRechnung, cRechnungsnr, nError, kGutschrift)
+		SELECT DISTINCT [@Rechnungen].kRechnung, N&#39;&#39;, 0, [@Rechnungen].kGutschrift FROM @Rechnungen
+
+		--
+		-- Rechnungen stornierbar?
+		--
+		UPDATE #RechnungStorno
+		SET
+			#RechnungStorno.cRechnungsnr = vRechnungStornierbar.cRechnungsnr,
+			#RechnungStorno.nError = vRechnungStornierbar.nError
+		FROM #RechnungStorno
+		JOIN Rechnung.vRechnungStornierbar ON vRechnungStornierbar.kRechnung = #RechnungStorno.kRechnung
+
+		--
+		-- Zahlungen die kumuliert werden m&#252;ssen
+		--
+		IF(@ZahlungenZusammenfassen = 1)
+		BEGIN
+			IF(OBJECT_ID(&#39;tempdb..#ZahlungenZusammenfassen&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #ZahlungenZusammenfassen;
+			END
+
+			CREATE TABLE #ZahlungenZusammenfassen
+			(
+				kAuftrag INT NOT NULL,
+				kZahlung INT NOT NULL,
+				fBetrag DECIMAL(25,13) NOT NULL
+			);
+
+			IF(OBJECT_ID(&#39;tempdb..#ZahlungenKeys&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #ZahlungenKeys;
+			END
+
+			CREATE TABLE #ZahlungenKeys
+			(
+				kAuftrag INT NOT NULL,
+				kZahlung INT NOT NULL
+			);
+
+			INSERT INTO #ZahlungenKeys(kAuftrag, kZahlung)
+			SELECT DISTINCT tAuftragRechnung.kAuftrag, tZahlung.kZahlung
+			FROM #RechnungStorno
+			JOIN Verkauf.tAuftragRechnung ON tAuftragRechnung.kRechnung = #RechnungStorno.kRechnung
+			JOIN dbo.tZahlung ON tZahlung.kBestellung = tAuftragRechnung.kAuftrag AND tZahlung.kRechnung IS NULL OR tZahlung.kRechnung = tAuftragRechnung.kRechnung
+			WHERE #RechnungStorno.nError = 0
+
+			INSERT INTO #ZahlungenZusammenfassen (kAuftrag, kZahlung, fBetrag)
+			SELECT 
+				#ZahlungenKeys.kAuftrag AS kAuftrag,		
+				MIN(tZahlung.kZahlung) AS kZahlung,
+				SUM(tZahlung.fBetrag) AS fBetrag			
+			FROM dbo.tZahlung		
+			JOIN #ZahlungenKeys ON  #ZahlungenKeys.kZahlung = tZahlung.kZahlung		
+			GROUP BY 
+				tZahlung.cHinweis, 
+				tZahlung.cName, 
+				tZahlung.cExternalTransactionId, 
+				tZahlung.cZuweisungsinfo, 
+				tZahlung.cExternalTransactionId, 
+				tZahlung.cSKRManuell, 
+				tZahlung.dDatum, 
+				tZahlung.kBenutzer, 
+				tZahlung.kEingangsrechnung, 
+				tZahlung.nAnzahlung, 
+				tZahlung.nKeinExport, 
+				tZahlung.nZahlungstyp, 
+				tZahlung.nZuweisungstyp, 
+				tZahlung.nZuweisungswertung,
+				tZahlung.kGutschrift,
+				tZahlung.kZahlungsabgleichUmsatz,
+				tZahlung.kZahlungsart,
+				#ZahlungenKeys.kAuftrag;
+						
+			--
+			-- Zahlungen von Rechnungen auf Auftr&#228;ge umbuchen
+			--
+			UPDATE dbo.tZahlung
+			SET
+				tZahlung.kBestellung = #ZahlungenZusammenfassen.kAuftrag,
+				tZahlung.kRechnung = NULL,
+				tZahlung.fBetrag = #ZahlungenZusammenfassen.fBetrag
+			FROM dbo.tZahlung
+			JOIN #ZahlungenZusammenfassen ON #ZahlungenZusammenfassen.kZahlung = tZahlung.kZahlung;
+			
+			DELETE #ZahlungenKeys
+			FROM #ZahlungenKeys
+			JOIN #ZahlungenZusammenfassen ON #ZahlungenZusammenfassen.kZahlung = #ZahlungenKeys.kZahlung
+
+			--
+			-- Zahlungen l&#246;schen
+			--
+			DELETE Zahlungen
+			FROM dbo.tZahlung AS Zahlungen
+			JOIN #ZahlungenKeys ON #ZahlungenKeys.kZahlung = Zahlungen.kZahlung
+		END
+
+		--
+		-- Rechnungen stornieren
+		--
+		INSERT INTO Rechnung.tRechnungStorno (kRechnung, kBenutzer, kRechnungStornogrund, dStorniert, cKommentar, kStornoGutschrift)
+		SELECT #RechnungStorno.kRechnung, @kBenutzer, @kRechnungStornogrund, @dStorniert, @cKommentar, #RechnungStorno.kGutschrift
+		FROM #RechnungStorno
+		WHERE #RechnungStorno.nError = 0
+
+		UPDATE Rechnung.tRechnung
+		SET tRechnung.nStorno = 1
+		FROM Rechnung.tRechnung
+		JOIN #RechnungStorno ON #RechnungStorno.kRechnung = tRechnung.kRechnung
+		WHERE #RechnungStorno.nError = 0
+
+		--
+		-- LieferscheinPositionen verringern
+		--
+		UPDATE Rechnung.tRechnungLieferscheinPosition
+		SET fAnzahlAufRechnung = 0
+		FROM Rechnung.tRechnungLieferscheinPosition
+		JOIN Rechnung.tRechnungPosition ON tRechnungPosition.kRechnungPosition = tRechnungLieferscheinPosition.kRechnungPosition
+		JOIN #RechnungStorno ON #RechnungStorno.kRechnung = tRechnungPosition.kRechnung
+		WHERE #RechnungStorno.nError = 0
+
+		--
+		-- RechnungEckdaten aktualisieren
+		--
+		IF EXISTS (SELECT * FROM #RechnungStorno WHERE #RechnungStorno.nError = 0)
+		BEGIN
+			DECLARE @RechnungEckdatenBerechnen Rechnung.TYPE_spRechnungEckdatenBerechnen
+
+			INSERT INTO @RechnungEckdatenBerechnen (kRechnung)
+			SELECT DISTINCT #RechnungStorno.kRechnung
+			FROM #RechnungStorno
+			WHERE #RechnungStorno.nError = 0
+
+			EXEC Rechnung.spRechnungEckdatenBerechnen @RechnungEckdatenBerechnen
+		END
+
+		--
+		-- Stornoergebnis zur&#252;ckmelden
+		--
+		SET @xResult = (
+			SELECT
+				#RechnungStorno.kRechnung AS kRechnung,
+				#RechnungStorno.cRechnungsnr AS cRechnungsnr,
+				#RechnungStorno.nError AS nError
+			FROM #RechnungStorno
+			FOR XML PATH(&#39;StornoResult&#39;), ROOT(&#39;StornoResults&#39;)
+		)
+
+
+		-- Ende vom Code
+		IF (@DeadlockRetries &gt; 0) AND (@@TRANCOUNT &gt; 0) AND (XACT_STATE() = 1) COMMIT TRANSACTION;
+	END TRY
+	BEGIN CATCH
+		BEGIN TRY
+			EXEC spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+			IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+		END TRY
+		BEGIN CATCH
+			IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+		END CATCH;
+		THROW;
+	END CATCH
+
+	SET CONTEXT_INFO @OldContextInfo;
+END TRY
+BEGIN CATCH
+	SET CONTEXT_INFO @OldContextInfo;
+	THROW;
+END CATCH</code></pre>
+</body>
+</html>

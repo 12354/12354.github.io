@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklistePosSplitten</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklistePosSplitten</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Picklistenpositionen gesplittet werden. </p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklistePosSplitten]
+  @kPicklistePos INT,
+  @nMenge DECIMAL(25,13), 
+  @kNewPicklistePos INT OUT,
+  @nRet INT OUT
+
+-- Funktion: Splittet die eingegebene Menge von der Pickpos ab und erstellt dazu neue Pickpos. Die Mengenberechnung ob die alte Pickpos genug Menge hat mu&#223; vorher gemacht werden.
+-- Liefer die neue Pickpos wieder
+  
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @kPicklisteposStatus   INT
+BEGIN TRAN T1  
+	SET NOCOUNT ON;
+		BEGIN TRY
+		SET @nRet = 0
+
+		-- Virtuelle Tabelle erstellen
+		SELECT 				
+			  kPicklistePos,
+			  kPickliste,
+			  kWarenLager,
+			  kWarenLagerEingang,
+			  fAnzahl,
+			  kBestellPos,
+			  kPicklistePosStatus,
+			  kArtikel,
+			  kWarenlagerPlatz,
+			  kPicklistePos_Ursprung,
+			  kLieferscheinPos,
+			  kBestellung,
+			  nPickPrio,
+			  nStatus,
+			  kAnsprechpartner,
+			  nVorreserviert
+		    INTO #PicklistePos 
+			FROM tPicklistePos WITH(NOLOCK) 
+			WHERE kPicklistePos = @kPicklistePos
+
+		UPDATE #PicklistePos 
+			SET fAnzahl = @nMenge 
+			WHERE kPicklistePos = @kPicklistePos
+		-- PK der Virtuellen Tabelle dropen, damit er in der reallen erstellt werden kann
+		ALTER TABLE #PicklistePos 
+			DROP COLUMN kPicklistePos;
+
+		INSERT INTO tPicklistePos 
+		     (kPickliste,
+			  kWarenLager,
+			  kWarenLagerEingang,
+			  fAnzahl,
+			  kBestellPos,
+			  kPicklistePosStatus,
+			  kArtikel,
+			  kWarenlagerPlatz,
+			  kPicklistePos_Ursprung,
+			  kLieferscheinPos,
+			  kBestellung,
+			  nPickPrio,
+			  nStatus,
+			  kAnsprechpartner,
+			  nVorreserviert)
+		SELECT  kPickliste,
+			  kWarenLager,
+			  kWarenLagerEingang,
+			  fAnzahl,
+			  kBestellPos,
+			  kPicklistePosStatus,
+			  kArtikel,
+			  kWarenlagerPlatz,
+			  kPicklistePos_Ursprung,
+			  kLieferscheinPos,
+			  kBestellung,
+			  nPickPrio,
+			  nStatus,
+			  kAnsprechpartner,
+			  nVorreserviert
+		FROM #PicklistePos;
+
+
+		-- Neuen Pickpos wird aktuelle Pickpos
+		SET @kNewPicklistePos = scope_identity()
+		-- Ursprungs Pickpos Menge reduzieren
+		UPDATE tPicklistePos WITH(ROWLOCK) 
+			SET fAnzahl = (fAnzahl - @nMenge) 
+			WHERE kPicklistePos = @kPicklistePos
+
+		-- Ursprungs Pickpos in der neuen Pickpos eintragen
+		UPDATE tPicklistePos WITH(ROWLOCK) 
+			SET kPicklistePos_Ursprung = @kPicklistePos WHERE kPicklistePos = @kNewPicklistePos
+
+
+		--Pickpos Status mu&#223; f&#252;r den geplitteten neu erstellt werden
+		SELECT @kPicklisteposStatus = kPicklisteposStatus 
+			FROM tPicklistePos WITH(NOLOCK) 
+			WHERE kPicklistePos = @kNewPicklistePos
+
+		SELECT  
+		     kPicklisteposstatus,
+		     kPicklistePos,
+			 kbenutzer,
+			 dZeitstempel,
+			 nStatus 
+			INTO #Picklisteposstatus 
+			FROM tPicklisteposstatus WITH(NOLOCK) 
+			WHERE kPicklisteposStatus = @kPicklisteposStatus
+  
+		UPDATE #Picklisteposstatus 
+			SET kPicklistePos = @kNewPicklistePos
+  
+		ALTER TABLE #Picklisteposstatus 
+			DROP COLUMN kPicklisteposstatus;
+
+		INSERT INTO tPicklisteposstatus (kPicklistePos,
+			    kbenutzer,
+			    dZeitstempel,
+			    nStatus )
+		SELECT  kPicklistePos,
+			    kbenutzer,
+			    dZeitstempel,
+			    nStatus 
+		FROM #Picklisteposstatus;
+	 
+	COMMIT TRAN T1
+END TRY
+BEGIN CATCH
+	SET @nRet = -203000013 -- unbekannter Fehler
+	ROLLBACK TRAN T1
+END CATCH</code></pre>
+</body>
+</html>

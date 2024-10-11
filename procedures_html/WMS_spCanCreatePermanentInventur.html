@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spCanCreatePermanentInventur</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spCanCreatePermanentInventur</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spCanCreatePermanentInventur]
+	@kWarenLagerPlatz INT,
+	@kWarenLager INT,
+	@kBenutzer INT,
+	@nProzessType INT,
+	@kArtikelOut INT = NULL,
+	@fQuantityOut DECIMAL(25,13) = 0,
+	@nInventurPossible INT = 0 OUTPUT  
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+	DECLARE @nProzessTypeActive INT, @nDayActive INT, @fMaxQuantity DECIMAL(25,13), @nMaxItems INT, @nMinMonth INT, @DayOfWeek INT = ((DATEPART(WEEKDAY, GETDATE()) + @@DATEFIRST + 6 - 7 ) % 7) + 1
+
+	SELECT
+		@nProzessTypeActive = CASE
+			WHEN @nProzessType = 1 THEN InventurOptionen.nPermanentInventurProzessSaKo
+			WHEN @nProzessType = 2 THEN InventurOptionen.nPermanentInventurProzessRoKo
+			WHEN @nProzessType = 3 THEN InventurOptionen.nPermanentInventurProzessUmlagerung
+			WHEN @nProzessType = 4 THEN InventurOptionen.nPermanentInventurProzessMinusbuchung
+		END
+		, @nDayActive = CASE
+			WHEN @DayOfWeek = 1 THEN InventurOptionen.nPermanentInventurDaySo
+			WHEN @DayOfWeek = 2 THEN InventurOptionen.nPermanentInventurDayMo
+			WHEN @DayOfWeek = 3 THEN InventurOptionen.nPermanentInventurDayDi
+			WHEN @DayOfWeek = 4 THEN InventurOptionen.nPermanentInventurDayMi
+			WHEN @DayOfWeek = 5 THEN InventurOptionen.nPermanentInventurDayDo
+			WHEN @DayOfWeek = 6 THEN InventurOptionen.nPermanentInventurDayFr
+			WHEN @DayOfWeek = 7 THEN InventurOptionen.nPermanentInventurDaySa
+		END
+		, @fMaxQuantity = CASE WHEN InventurOptionen.nPermanentInventurWithStock = 1 THEN InventurOptionen.nPermanentInventurMaxQuantity ELSE 0 END
+		, @nMaxItems = CASE WHEN InventurOptionen.nPermanentInventurWithStock = 1 THEN InventurOptionen.nPermanentInventurMaxItems ELSE 0 END
+		, @nMinMonth = CASE WHEN InventurOptionen.nPermanentInventurWithStock = 1 THEN InventurOptionen.nPermanentInventurMinMonth ELSE 0 END
+
+	FROM WMS.tPermanentInventurOptionen AS InventurOptionen
+	WHERE InventurOptionen.kWarenLager = @kWarenLager
+		AND InventurOptionen.nPermanentInventur = 1
+
+	-- Inventuroptionen aktiv
+    IF (@nProzessTypeActive = 1 AND @nDayActive = 1)
+	BEGIN
+
+		DECLARE @nRechtActive INT
+
+		SELECT 
+			@nRechtActive = MAX(CASE WHEN Rechte.nAktiv = 1 OR RechtBenutzerGruppe.nIsAdmin = 1 THEN 1 ELSE 0 END)
+		FROM eazybusiness.dbo.tRecht AS Recht
+			JOIN eazybusiness.dbo.tbenutzer AS Benutzer ON Benutzer.kbenutzer = @kBenutzer
+			JOIN eazybusiness.dbo.tRechtBenutzerGruppenZuordnung AS RechtBenutzerGruppenZuordnung ON RechtBenutzerGruppenZuordnung.kBenutzer = Benutzer.kBenutzer
+			JOIN eazybusiness.dbo.tRechtBenutzerGruppe AS RechtBenutzerGruppe ON RechtBenutzerGruppe.kRechtBenutzerGruppe = RechtBenutzerGruppenZuordnung.kRechtBenutzerGruppe
+			LEFT JOIN eazybusiness.dbo.tRechte AS Rechte ON Rechte.kRechtBenutzerGruppe = RechtBenutzerGruppenZuordnung.kRechtBenutzerGruppe AND Recht.kRecht = Rechte.kRecht
+		WHERE Recht.kRecht = 686
+
+		-- Benutzerrecht aktiv
+		IF (@nRechtActive = 1)
+		BEGIN
+
+			DECLARE @nFoundPlatz INT, @dWmsInventurDatum DATETIME
+
+			SELECT @dWmsInventurDatum = Platz.dWmsInventurDatum
+				,@nFoundPlatz = Platz.kWarenLagerPlatz
+			FROM dbo.tWarenLagerPlatz AS Platz
+			WHERE Platz.kWarenLagerPlatz = @kWarenLagerPlatz
+				AND Platz.nStatus = 0
+				AND Platz.kWarenLagerPlatzTyp IN (SELECT nWarenLagerPlatzType FROM WMS.tPermanentInventurWarenLagerPlatzType WHERE kWarenLager = @kWarenLager)
+
+			-- noch keine Inventur
+			IF(@nFoundPlatz &gt; 0 AND (@dWmsInventurDatum IS NULL OR DATEPART(YEAR, @dWmsInventurDatum) &lt; DATEPART(YEAR, GETDATE())))
+			BEGIN
+
+				DECLARE @fAnzahlAktuell DECIMAL(25,13), @fAnzahlReserviert DECIMAL(25,13), @nNumberOfItems INT
+				DECLARE @fReserviertOut DECIMAL(25,13) = CASE WHEN (@nProzessType = 1 OR @nProzessType = 2) THEN @fQuantityOut ELSE 0 END
+
+				SELECT 
+					@fAnzahlReserviert = ISNULL(SUM(fAnzahlReserviert), 0) - @fReserviertOut
+					, @fAnzahlAktuell = ISNULL(SUM(fAnzahlAktuell), 0) - @fQuantityOut
+					-- Wenn Artikel nach Ausbuchung nicht mehr auf Platz, darf er nicht gez&#228;hlt werden
+					, @nNumberOfItems = COUNT(
+						CASE WHEN kArtikel = @kArtikelOut AND fAnzahlAktuell = @fQuantityOut THEN NULL
+						ELSE kArtikel END)
+				FROM (
+					SELECT
+						SUM(WarenLagerEingang.fAnzahlReserviertPickpos) AS fAnzahlReserviert
+						, SUM(WarenLagerEingang.fAnzahlAktuell) AS fAnzahlAktuell
+						, WarenLagerEingang.kArtikel
+
+					FROM dbo.tWarenLagerEingang AS WarenLagerEingang
+					WHERE WarenLagerEingang.fAnzahlAktuell &gt; 0
+						AND WarenLagerEingang.kWarenLagerPlatz = @kWarenLagerPlatz
+					GROUP BY WarenLagerEingang.kArtikel
+				) AS WarenLagerEingang
+
+				-- keine Reservierungen und Menge auf Platz pr&#252;fen
+				IF(@fAnzahlReserviert = 0 AND (@fAnzahlAktuell = 0
+					OR @fAnzahlAktuell &lt;= @fMaxQuantity AND @nNumberOfItems &lt;= @nMaxItems AND (@dWmsInventurDatum IS NULL OR DATEDIFF(MONTH, @dWmsInventurDatum, GETDATE()) &gt;= @nMinMonth)))
+				BEGIN
+
+					-- alle Bedingungen erf&#252;llt
+					SET @nInventurPossible = 1
+					RETURN @nInventurPossible
+
+				END
+
+			END
+
+		END
+
+	END
+
+	SET @nInventurPossible = 0
+	RETURN @nInventurPossible
+
+END</code></pre>
+</body>
+</html>

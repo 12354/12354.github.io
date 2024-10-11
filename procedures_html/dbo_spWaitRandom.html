@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spWaitRandom</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spWaitRandom</h1>
+    <p><strong>Description:</strong> Die Stored Procedure wird intern verwendet um zufällige Wartezeiten zu erzeugen. Sie kommt im Deadlockfall zum Einsatz.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE dbo.spWaitRandom (@SekundenDelay INT = 5)
+AS
+BEGIN
+	DECLARE @Delay VARCHAR(20);
+	SET @Delay = &#39;00:00:&#39; + CAST(CAST(@SekundenDelay * RAND() AS INT) AS NVARCHAR) +&#39;:&#39; + CAST(CAST(1000*RAND() AS INT) AS NVARCHAR);
+	WAITFOR DELAY @Delay;
+END</code></pre>
+</body>
+</html>

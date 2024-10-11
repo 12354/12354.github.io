@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spUpdateLagerbestandProLager</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spUpdateLagerbestandProLager</h1>
+    <p><strong>Description:</strong> Aktualisiert die Tabelle dbo.tLagerbestandProLagerLagerartikel - mit der SP werden die Bestände pro Lager für einzelne Artikel neu berechnet.</p>
+    <p><strong>Long Description:</strong> Die SP wird mit einem Type (Artikel und Warenlager) als Parameter aufgerufen. (Stücklistenväter oder Varkombi-Väter werden von der SP nicht beachtet)</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spUpdateLagerbestandProLager]
+    @Artikel AS TYPE_spUpdateLagerbestandProLager READONLY
+AS
+/*************************************************************************************************************
+Beschreibung:	Aktualisiert die Tabelle tLagerbestandProLagerLagerartikel
+				Im Idealfall werden nur kArtikel &#252;bergeben, die aktiv, bestandsf&#252;hrend und keine virtuellen Artikel
+				sind (St&#252;cklistenv&#228;ter, Varkombiv&#228;ter) - die SP filtert diese aber zur Sicherheit auch raus.
+--------------------------------------------------------------------------------------------------------------
+-- Beispielaufruf:
+DECLARE @Artikel dbo.TYPE_spUpdateLagerbestandProLager;
+INSERT INTO @Artikel (kArtikel, kWarenlager) SELECT kArtikel, kWarenlager FROM dbo.tArtikel CROSS JOIN dbo.tWarenLager WHERE tWarenLager.cAktiv = &#39;Y&#39;;
+EXEC dbo.spUpdateLagerbestandProLager @Artikel = @Artikel;
+*************************************************************************************************************/
+BEGIN
+	SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL, XACT_ABORT ON;
+
+	BEGIN TRY
+		DECLARE @DeadlockRetries TINYINT = 5;
+
+		DeadlockRetry:
+		BEGIN TRY
+			IF OBJECT_ID(&#39;tempdb..#LagerbestandPL&#39;) IS NOT NULL
+			BEGIN
+				DROP TABLE #LagerbestandPL;
+			END
+			CREATE TABLE #LagerbestandPL (
+				kArtikel INT NOT NULL,
+				kWarenlager INT NOT NULL,
+				fBestand DECIMAL (25,13) NOT NULL,
+				fVerfuegbarGesperrt DECIMAL (25,13) NOT NULL,
+				fAuslieferungGesperrt DECIMAL (25,13) NOT NULL
+			);
+
+			INSERT INTO #LagerbestandPL (kArtikel, kWarenlager, fBestand, fVerfuegbarGesperrt, fAuslieferungGesperrt)
+			SELECT DISTINCT
+					Input.kArtikel, Input.kWarenlager, 0.0, 0.0, 0.0
+			FROM	@Artikel AS Input
+			JOIN	Bestand.vWarenlager AS WL ON WL.kWarenlager = Input.kWarenlager
+			JOIN	Bestand.vBestandsartikel AS BestArt ON BestArt.kArtikel = Input.kArtikel;
+		
+			IF @@ROWCOUNT = 0 RETURN;
+
+			-- Temp-Tabelle updaten
+			UPDATE	Temp
+			SET		Temp.fBestand = BestPL.fBestand,
+					Temp.fVerfuegbarGesperrt  = BestPL.fBestandGesperrtFuerVerfuegbar,
+					Temp.fAuslieferungGesperrt  = BestPL.fBestandGesperrtFuerAuslieferung
+			FROM	#LagerbestandPL AS Temp
+			JOIN	Bestand.vBestandBestandsartikelProLager AS BestPL ON BestPL.kArtikel = Temp.kArtikel AND BestPL.kWarenLager = Temp.kWarenlager;
+
+			MERGE dbo.tLagerbestandProLagerLagerartikel WITH (HOLDLOCK) AS LBpL
+			USING #LagerbestandPL AS Temp ON Temp.kArtikel = LBpL.kArtikel AND Temp.kWarenlager = LBpL.kWarenlager
+			WHEN MATCHED THEN
+				UPDATE SET
+					LBpL.fBestand = Temp.fBestand,
+					LBpL.fVerfuegbarGesperrt = Temp.fVerfuegbarGesperrt,
+					LBpL.fAuslieferungGesperrt = Temp.fAuslieferungGesperrt
+			WHEN NOT MATCHED THEN
+				INSERT (kArtikel, kWarenlager, fBestand, fVerfuegbarGesperrt, fAuslieferungGesperrt)
+				VALUES (Temp.kArtikel, Temp.kWarenlager, Temp.fBestand, Temp.fVerfuegbarGesperrt, Temp.fAuslieferungGesperrt);
+		END TRY
+		BEGIN CATCH
+			BEGIN TRY
+				EXEC dbo.spErrorHandler @DeadlockRetries = @DeadlockRetries OUTPUT;
+				IF (@DeadlockRetries &gt; 0) GOTO DeadlockRetry;
+			END TRY
+			BEGIN CATCH
+				IF ERROR_NUMBER() &lt;&gt; 266 THROW;
+			END CATCH;
+			THROW;
+		END CATCH
+	END TRY
+	BEGIN CATCH
+		THROW;
+	END CATCH
+END</code></pre>
+</body>
+</html>

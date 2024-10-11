@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pos.spUpdateEntityTrackingArtikelSonderpreise</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Pos.spUpdateEntityTrackingArtikelSonderpreise</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Pos].[spUpdateEntityTrackingArtikelSonderpreise]
+	@kShop INT
+AS
+SET NOCOUNT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ANSI_WARNINGS ON;
+SET ANSI_PADDING ON;
+BEGIN
+	UPDATE Sync.tEntityTracking
+		SET tEntityTracking.dLastModified = GETDATE()
+	FROM Sync.tEntityTracking
+	JOIN dbo.tArtikelSonderpreis ON tArtikelSonderpreis.kArtikel = tEntityTracking.kEntityId
+	JOIN Sync.tEntityPlatform ON tEntityPlatform.kEntityId = tEntityTracking.kEntityId
+		AND tEntityPlatform.nEntityType = tEntityTracking.nEntityType
+		AND tEntityTracking.nSyncType = tEntityTracking.nSyncType
+	LEFT JOIN dbo.tlagerbestand ON tlagerbestand.kArtikel = tArtikelSonderpreis.kArtikel
+	WHERE (CAST(tEntityTracking.dLastModified AS DATE) &lt; CAST(tArtikelSonderpreis.dStart AS DATE) AND CAST(tArtikelSonderpreis.dStart AS DATE) &lt;= CAST(GETDATE() AS DATE)
+		OR CAST(tEntityTracking.dLastModified AS DATE) &lt; DATEADD(DAY, 1, CAST(tArtikelSonderpreis.dEnde AS DATE)) AND CAST(tArtikelSonderpreis.dEnde AS DATE) &lt; CAST(GETDATE() AS DATE))
+		AND tArtikelSonderpreis.nAktiv = 1
+		AND tEntityTracking.nEntityType = 1
+		AND tEntityTracking.nSyncType = 4
+		AND tEntityPlatform.kShop = @kShop
+END</code></pre>
+</body>
+</html>

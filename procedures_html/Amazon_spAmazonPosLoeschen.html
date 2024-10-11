@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spAmazonPosLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spAmazonPosLoeschen</h1>
+    <p><strong>Description:</strong> Positionen zu Amazon Bestellungen können nur über diese Procedure gelöscht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[spAmazonPosLoeschen]
+	@kAmazonBestellungPos INT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5103;
+	BEGIN TRY  
+		DECLARE @typeArtikel AS TYPE_spUpdateLagerbestand;
+		INSERT INTO @typeArtikel (kArtikel)
+		SELECT DISTINCT tExterneReservierung.kArtikel
+		FROM dbo.tExterneReservierung
+		WHERE tExterneReservierung.kKey = @kAmazonBestellungPos
+				AND tExterneReservierung.nTyp = 3;
+
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END
+
+		DELETE FROM dbo.pf_amazon_bestellungpos
+		WHERE kAmazonBestellungPos = @kAmazonBestellungPos;
+		
+		DELETE FROM dbo.tExterneReservierung
+		WHERE kKey = @kAmazonBestellungPos AND tExterneReservierung.nTyp = 3;
+		
+		EXEC spUpdateLagerbestand @typeArtikel;
+		
+		SET @retry = 0;
+		SET CONTEXT_INFO 0x0;
+		IF(@TranCount = 0)
+        BEGIN           
+            COMMIT TRANSACTION      
+        END
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END</code></pre>
+</body>
+</html>

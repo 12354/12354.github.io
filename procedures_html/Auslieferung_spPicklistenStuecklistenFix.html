@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenStuecklistenFix</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenStuecklistenFix</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenStuecklistenFix]
+
+-- Nach jedem Aufruf von spReservierBestellposition m&#252;ssen die St&#252;cklistenv&#228;ter
+-- in den Picklisten korrigiert werden. Allerdings reicht ein Aufruf nach der
+-- gesamten Arbeit (und nicht pro Position).
+-- Ein Gro&#223;teil der Zeiut geht bei St&#252;cklisten auf diese drei SQLs drauf, deshalb
+-- wird dieser Teil in diese SP ausgelagert und der Code ruf die dann passend auf.
+--
+-- Enth&#228;lt den Benutzer zur eindeutigen Zuordnung
+@kBenutzer INT,
+
+@kSessionId INT
+
+-- M&#246;gliche Fehler:
+-- Diese SP ist fehlerfrei
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+BEGIN TRANSACTION
+	-- Fehlende St&#252;cklistenv&#228;ter einf&#252;gen
+	INSERT INTO dbo.tPicklistePos
+	(
+		kPickliste,
+		kWarenLager,
+		kWarenLagerEingang,
+		fAnzahl,
+		kBestellPos,
+		kPicklistePosStatus,
+		kArtikel,
+		kWarenlagerPlatz,
+		kPicklistePos_Ursprung,
+		kLieferscheinPos,
+		kBestellung,
+		nPickPrio,
+		nStatus,
+		kAnsprechpartner
+	)
+	SELECT 
+		dbo.tPicklistePos.kPickliste, -- kPickliste - int
+		dbo.tPickliste.kWarenLager, -- kWarenLager - int
+		0, -- kWarenLagerEingang - int
+		0, -- fAnzahl - decimal
+		vAuftragPosition.kAuftragStueckliste, -- kBestellPos - int
+		0, -- kPicklistePosStatus - int
+		tbestellposVater.kArtikel, -- kArtikel - int
+		0, -- kWarenlagerPlatz - int
+		0, -- kPicklistePos_Ursprung - int
+		0, -- kLieferscheinPos - int
+		vAuftragPosition.kAuftrag, -- kBestellung - int
+		0, -- nPickPrio - int
+		0, -- nStatus - int
+		0 -- kAnsprechpartner - int	
+	FROM dbo.tPicklistePos
+	JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPicklistePos.nStatus &lt; 10
+	JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+	JOIN Verkauf.vAuftragPosition AS tbestellposVater ON tbestellposVater.kAuftragPosition = vAuftragPosition.kAuftragStueckliste
+	WHERE vAuftragPosition.kAuftragStueckliste &gt; 0
+	GROUP BY dbo.tPicklistePos.kPickliste, dbo.tPickliste.kWarenLager, vAuftragPosition.kAuftragStueckliste, tbestellposVater.kArtikel, vAuftragPosition.kAuftrag
+	EXCEPT(
+		SELECT
+			dbo.tPicklistePos.kPickliste, -- kPickliste - int
+			dbo.tPickliste.kWarenLager, -- kWarenLager - int
+			0, -- kWarenLagerEingang - int
+			0, -- fAnzahl - decimal
+			vAuftragPosition.kAuftragPosition, -- kBestellPos - int
+			0, -- kPicklistePosStatus - int
+			vAuftragPosition.kArtikel, -- kArtikel - int
+			0, -- kWarenlagerPlat, dbo.tbestellpos AS z - int
+			0, -- kPicklistePos_Ursprung - int
+			0, -- kLieferscheinPos - int
+			vAuftragPosition.kAuftrag, -- kBestellung - int
+			0, -- nPickPrio - int
+			0, -- nStatus - int
+			0 -- kAnsprechpartner - int	
+		FROM dbo.tPicklistePos
+		JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPicklistePos.nStatus &lt; 10
+		JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+		GROUP BY dbo.tPicklistePos.kPickliste, dbo.tPickliste.kWarenLager, vAuftragPosition.kAuftragPosition, 
+				vAuftragPosition.kAuftragStueckliste, vAuftragPosition.kAuftrag, vAuftragPosition.kArtikel
+	)
+
+	-- &#220;berfl&#252;ssige St&#252;cklistenv&#228;ter l&#246;schen
+	DELETE dbo.tPicklistePos
+	WHERE dbo.tPicklistePos.kPicklistePos IN
+	(
+		SELECT dbo.tPicklistePos.kPicklistePos
+		FROM dbo.tPicklistePos
+		JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPicklistePos.nStatus &lt; 10
+		JOIN Verkauf.vAuftragPosition AS vaterArtikel ON dbo.tPicklistePos.kBestellPos = vaterartikel.kAuftragPosition
+			AND vaterArtikel.kAuftragPosition = vaterArtikel.kAuftragStueckliste
+		JOIN Verkauf.vAuftragPosition AS kindArtikel ON vaterArtikel.kAuftragStueckliste = kindArtikel.kAuftragStueckliste
+			AND kindArtikel.kAuftragPosition &lt;&gt; kindArtikel.kAuftragStueckliste
+		LEFT JOIN dbo.tPicklistePos AS gepickteKindArtikel ON kindArtikel.kAuftragPosition = gepickteKindArtikel.kBestellPos
+			AND dbo.tPicklistePos.kPickliste = gepickteKindArtikel.kPickliste
+		GROUP BY dbo.tPicklistePos.kPicklistePos
+		HAVING MAX(ISNULL(gepickteKindArtikel.kPicklistePos, 0)) = 0
+	)
+
+	-- Mengen im St&#252;cklistenvater korrigieren  
+	UPDATE dbo.tPicklistePos
+	SET
+		dbo.tPicklistePos.fAnzahl = ISNULL((
+			SELECT
+				CONVERT(DECIMAL(23,15), SUM(PP.fAnzahl)) / CONVERT(DECIMAL(23,15), SUM(tbestellposKinder.fAnzahl)) * Vater.nAnzahl AS fAnzahl     
+			FROM Verkauf.vAuftragPosition AS tbestellposKinder
+			LEFT JOIN (
+				SELECT 
+					dbo.tPicklistePos.kBestellpos, 
+					dbo.tPicklistePos.kPickliste,
+					SUM(dbo.tPicklistePos.fAnzahl) AS fAnzahl 
+				FROM dbo.tPicklistePos 
+				GROUP BY dbo.tPicklistePos.kPickliste, dbo.tPicklistePos.kBestellPos
+				) AS PP ON tbestellposKinder.kAuftragPosition = PP.kBestellPos AND Vater.kPickliste = PP.kPickliste
+			WHERE tbestellposKinder.kAuftragStueckliste = Vater.kBestellPos AND 
+			tbestellposKinder.kAuftragPosition != tbestellposKinder.kAuftragStueckliste), 0.0)
+	FROM dbo.tPicklistePos 
+	JOIN (
+		SELECT 
+			tPicklistePosVater.kPicklistePos AS kPicklistePos,
+			tPicklistePosVater.kBestellPos AS kBestellPos,
+			tPicklistePosVater.kPickliste AS kPickliste,
+			tbestellposVater.fAnzahl AS nAnzahl
+		FROM dbo.tPicklistePos AS tPicklistePosVater
+		JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = tPicklistePosVater.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.nStatus &lt; 10
+		JOIN Verkauf.vAuftragPosition AS tbestellposVater ON tbestellposVater.kAuftragPosition = tPicklistePosVater.kBestellPos
+		WHERE tbestellposVater.kAuftragStueckliste = tbestellposVater.kAuftragPosition
+		GROUP BY tPicklistePosVater.kPicklistePos, tPicklistePosVater.kBestellPos, tPicklistePosVater.kPickliste, tbestellposVater.fAnzahl
+	) AS Vater ON Vater.kPicklistePos = dbo.tPicklistePos.kPicklistePos
+    
+COMMIT</code></pre>
+</body>
+</html>

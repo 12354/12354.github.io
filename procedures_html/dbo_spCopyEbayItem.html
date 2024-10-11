@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spCopyEbayItem</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spCopyEbayItem</h1>
+    <p><strong>Description:</strong> Die Procedure kopiert ein Ebay Item. </p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spCopyEbayItem]
+	-- =================================================================
+	-- MIT EbayArticleHelper.OverwriteEbayitemWithArtikel ABSTIMMEN ! *)
+	-- =================================================================
+	-- mit EbayItemFormCategoriesModule.AddItemFeatures abzustimmen ! **) 
+	-- Artikelmerkmale haben derzeit Vorrang;
+	-- Unterschied: Produktkennzeichnungspflicht wird hier nicht ber&#252;cksichtigt; 
+	-- Grund: zu aufwendig und bei sinnvoller Pflege der Merkmale sowieso unn&#246;tig
+	-- =================================================================
+
+	--
+	-- PK des zu kopierenden EbayItems
+	--
+	@kItemOld INT, 
+	--
+	-- PK des Artikels, zu dem das neue EbayItem geh&#246;ren soll;
+	-- = 0 =&gt; Artikel &#228;ndert sich beim Kopieren nicht
+	--
+	@kArtikelNew INT,
+	--
+	-- PK der Steuerzone des angemeldeten Benutzers (welchen die DB nicht kennt weil Session-abh&#228;ngig);
+	-- notwendig und aus dem Netto- den Brutto-Artikelpreis (= initialer Angebotspreis) berechnen zu k&#246;nnen
+	--
+	@kSteuerzone INT,
+	--
+	-- Einstellung zum Kopieren der eBay-Merkmale
+	-- 0 = Nur Merkmale vom Zielartikel verwenden (Standardverhalten): Merkmale werden nur von der Quellvorlage kopiert, wenn die Vorlage auf den selben Artikel kopiert wird (Wichtig beim automatisch Einstellen).
+	-- 1 = Alle Merkmale von Quellvorlage kopieren und Merkmale von Zielartikel erg&#228;nzen (altes Standardverhalten)
+	-- 2 = Nur Merkmale von Quellvorlage kopieren: Es werden keine Artikelmerkmale vom Zielartikel geladen
+	--
+	@nCopyEbaySpecificsMode INT,
+	--
+	-- PK des kopierten EbayItems
+	--
+	@kItemNew INT OUTPUT		
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+    --
+    -- Tabelle, um auf Ergebnisse von spGetAndUpdatePk zugreifen zu k&#246;nnen
+    -- sollte anschlie&#223;end immer geleert werden
+    --
+    DECLARE @NewPrimaryKeyTable AS TABLE(NewPrimaryKey INT);
+    --
+    -- Ergebnis von spGetAndUpdatePk als Skalar
+    --
+    DECLARE @NewPrimaryKey INT;
+
+    --
+    -- kArtikel des zu kopierenden EbayItems
+    --
+    DECLARE @kArtikelOld INT;
+    SET @kArtikelOld = 
+	(
+		SELECT dbo.ebay_item.kArtikel 
+		FROM dbo.ebay_item 
+		WHERE dbo.ebay_item.kItem = @kItemOld
+	);
+    --
+    -- wenn der Parameter f&#252;r den Artikel des neuen EbayItems nicht vergeben ist, 
+    -- soll der gleiche Artikel wie f&#252;r das zu kopierende EbayItem verwendet werden
+    --
+    IF (@kArtikelNew = 0)
+    BEGIN
+	    SET @kArtikelNew = @kArtikelOld;
+    END;
+    --
+    -- pseudo-boolsche Variable, die angeben soll, ob das EbayItem beim Kopieren seinen Artikel wechselt
+    --
+    DECLARE @SameArtikel INT;
+    --
+    -- Achtung: &quot;@kArtikelNew = 0&quot; w&#228;re ein hinreichende, aber nicht notwendige Bedingung!
+    --
+    IF (@kArtikelOld = @kArtikelNew)
+    BEGIN
+	    SET @SameArtikel = 1;
+    END
+    ELSE
+    BEGIN
+	    SET @SameArtikel = 0;
+    END;
+
+    ----------------------------------------------------------------------
+    -- kopiere ebay_item
+    ----------------------------------------------------------------------
+
+    --
+    -- berechne PK von neuem Datensatz
+    --
+    DELETE @NewPrimaryKeyTable;
+    INSERT @NewPrimaryKeyTable 
+    (
+	   NewPrimaryKey
+    )
+    EXEC spGetAndUpdatePk &#39;ebay_item&#39;;
+    SET @NewPrimaryKey = (SELECT * FROM @NewPrimaryKeyTable);
+    DELETE @NewPrimaryKeyTable;
+
+    --
+    -- merke neuen PK f&#252;r sp&#228;tere Verwendung
+    --
+    SET @kItemNew = @NewPrimaryKey;
+
+	--
+	-- kopiere ebay_item
+	--
+	IF(object_id(&#39;tempdb..#tempEbayItem&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #tempEbayItem;
+	END;
+	SELECT * INTO #tempEbayItem 
+	FROM (
+		SELECT * 
+		FROM dbo.ebay_item
+		WHERE dbo.ebay_item.kItem = @kItemOld
+	) t;
+	UPDATE #tempEbayItem	
+	SET kItem = @kItemNew,
+		kArtikel = @kArtikelNew,
+		SKU = 
+		(
+			SELECT dbo.tArtikel.cArtNr 
+			FROM dbo.tArtikel 
+			WHERE dbo.tArtikel.kArtikel = @kArtikelNew
+		),
+		nVariationenAktiv = 
+		(
+			SELECT dbo.tArtikel.nIstVater
+			FROM dbo.tArtikel 
+			WHERE dbo.tArtikel.kArtikel = @kArtikelNew
+		),
+		StartTime = NULL,
+		EndTime = NULL,
+		ListingURL = NULL,
+		nLeecher = 2;
+	IF (@SameArtikel = 0)
+	BEGIN
+		UPDATE #tempEbayItem	
+		SET kEigenschaft = 
+		(
+			SELECT CASE WHEN dbo.tArtikel.nIstVater = 0 THEN 0 ELSE 
+			(
+				SELECT TOP 1 dbo.teigenschaft.kEigenschaft 
+				FROM dbo.teigenschaft 
+				WHERE dbo.teigenschaft.kArtikel = @kArtikelNew
+			) END
+			FROM dbo.tArtikel 
+			WHERE dbo.tArtikel.kArtikel = @kArtikelNew
+		)				
+	END;
+
+	UPDATE #tempEbayItem	
+	SET nAutomatischEinstellen = 0;
+
+	INSERT dbo.ebay_item
+	SELECT * 
+	FROM #tempEbayItem;    
+
+    ----------------------------------------------------------------------
+    -- kopiere ebay_specific
+    ----------------------------------------------------------------------
+
+	--ebay Merkmale werden nicht mehr einfach kopiert, sondern aus dem Artikelstamm gezogen (au&#223;er der Artikel ist gleich)
+	IF (@SameArtikel = 1 OR @nCopyEbaySpecificsMode IN (1,2))
+	BEGIN
+		INSERT dbo.ebay_specific
+		(
+			kItem,
+			cName,
+			cValue,
+			nCustom,
+			kMerkmal,
+			kMerkmalWert,
+			kSprache
+		)
+		SELECT 
+			@kItemNew, 
+			cName, 
+			cValue, 
+			nCustom,
+			kMerkmal,
+			kMerkmalWert,
+			kSprache
+		FROM dbo.ebay_specific 
+		WHERE ebay_specific.kItem = @kItemOld;
+	END
+
+	--
+	-- ggf. Grundpreis in Kategorieattributen angeben
+	--
+	IF ((SELECT dbo.ebay_item.SiteID FROM dbo.ebay_item WHERE dbo.ebay_item.kItem = @kItemNew) = 77 AND 
+		(SELECT dbo.ebay_item.ListingType FROM dbo.ebay_item WHERE dbo.ebay_item.kItem = @kItemNew) = &#39;FixedPriceItem&#39; AND
+		(SELECT ISNULL(dbo.ebay_item.nVariationenAktiv, 0) FROM dbo.ebay_item WHERE dbo.ebay_item.kItem = @kItemNew) = 0)
+	BEGIN
+		IF(object_id(&#39;tempdb..#ebayGrundpreisKategorieattribute&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #ebayGrundpreisKategorieattribute;
+		END;
+		CREATE TABLE #ebayGrundpreisKategorieattribute(fVPEWert DECIMAL (25, 2), cName NVARCHAR(MAX));
+		INSERT #ebayGrundpreisKategorieattribute
+		(
+			fVPEWert,
+			cName
+		)
+		SELECT tArtikelTemp.fVPEWert, dbo.tEinheitSprache.cName
+		FROM dbo.ebay_item 
+		JOIN 
+		(
+			SELECT 
+				CASE WHEN (dbo.tArtikel.nVPE = 1 AND dbo.tArtikel.fVPEWert &gt; 0) 
+					OR (tVaterArtikel.nVPE = 1 AND tVaterArtikel.fVPEWert &gt; 0)
+				THEN dbo.tArtikel.kArtikel
+				ELSE 0 END AS kArtikel,
+		
+				CASE WHEN dbo.tArtikel.nVPE = 1 AND dbo.tArtikel.fVPEWert &gt; 0 
+				THEN dbo.tArtikel.kVPEEinheit 
+				ELSE tVaterArtikel.kVPEEinheit END AS kVPEEinheit,
+
+				CASE WHEN dbo.tArtikel.nVPE = 1 AND dbo.tArtikel.fVPEWert &gt; 0 
+				THEN dbo.tArtikel.fVPEWert
+				ELSE tVaterArtikel.fVPEWert END AS fVPEWert
+			FROM dbo.tArtikel 
+			LEFT JOIN dbo.tArtikel AS tVaterArtikel ON tVaterArtikel.kArtikel = dbo.tArtikel.kVaterArtikel					
+		) AS tArtikelTemp ON dbo.ebay_item.kItem = @kItemNew AND tArtikelTemp.kArtikel = dbo.ebay_item.kArtikel
+		JOIN dbo.tEinheitSprache ON dbo.tEinheitSprache.kEinheit = tArtikelTemp.kVPEEinheit
+		JOIN dbo.tSpracheUsed ON dbo.tSpracheUsed.nStandard = 1 AND tSpracheUsed.kSprache = tEinheitSprache.kSprache;
+
+		DELETE dbo.ebay_specific 
+		FROM dbo.ebay_specific JOIN #ebayGrundpreisKategorieattribute 
+			ON dbo.ebay_specific.kItem = @kItemNew 
+			AND dbo.ebay_specific.cName IN (&#39;Anzahl der Einheiten&#39;, &#39;Ma&#223;einheit&#39;);
+
+		INSERT dbo.ebay_specific
+		(
+			kItem,
+			cName,
+			cValue,
+			nCustom
+		)
+		SELECT @kItemNew, 
+			&#39;Anzahl der Einheiten&#39;, 
+			REPLACE(CAST(CAST(#ebayGrundpreisKategorieattribute.fVPEWert AS DECIMAL (18, 2)) AS NVARCHAR), &#39;.&#39;, &#39;,&#39;), 
+			1
+		FROM #ebayGrundpreisKategorieattribute;
+		INSERT dbo.ebay_specific
+		(
+			kItem,
+			cName,
+			cValue,
+			nCustom
+		)
+		SELECT @kItemNew, &#39;Ma&#223;einheit&#39;, #ebayGrundpreisKategorieattribute.cName, 1
+		FROM #ebayGrundpreisKategorieattribute;
+	END;
+
+    ----------------------------------------------------------------------
+    -- kopiere ebay_ShippingServiceOptions 
+    ----------------------------------------------------------------------
+
+    INSERT dbo.ebay_ShippingServiceOptions
+    (
+	   kItem,
+	   ShippingServiceID,
+	   ShippingServiceAdditionalCost,
+	   ShippingServiceCost,
+	   ShippingServicePriority,
+	   ShippingService
+    )
+    SELECT 
+	   @kItemNew,
+	   ShippingServiceID,
+	   ShippingServiceAdditionalCost,
+	   ShippingServiceCost,
+	   ShippingServicePriority,
+	   ShippingService
+    FROM dbo.ebay_ShippingServiceOptions 
+	WHERE dbo.ebay_ShippingServiceOptions.kItem = @kItemOld;
+
+    ----------------------------------------------------------------------
+    -- kopiere ebay_InternationalShippingServiceOption 
+    ----------------------------------------------------------------------
+
+    INSERT dbo.ebay_InternationalShippingServiceOption
+    (
+	   kItem,
+	   ShippingServiceID,
+	   ShippingServiceAdditionalCost,
+	   ShippingServiceCost,
+	   ShippingServicePriority,
+	   ShipToLocation,
+	   ShippingService
+    )
+    SELECT 
+	   @kItemNew,
+	   ShippingServiceID,
+	   ShippingServiceAdditionalCost,
+	   ShippingServiceCost,
+	   ShippingServicePriority,
+	   ShipToLocation,
+	   ShippingService
+    FROM dbo.ebay_InternationalShippingServiceOption 
+	WHERE dbo.ebay_InternationalShippingServiceOption.kItem = @kItemOld;
+
+	----------------------------------------------------------------------
+    -- kopiere ebay_beschreibungstemplate 
+    ----------------------------------------------------------------------
+
+    --
+    -- berechne PK von neuem Datensatz
+    --
+    DELETE @NewPrimaryKeyTable;
+    INSERT @NewPrimaryKeyTable 
+    (
+	   NewPrimaryKey
+    )
+    EXEC spGetAndUpdatePk &#39;ebay_beschreibungstemplate&#39;;
+    SET @NewPrimaryKey = (SELECT * FROM @NewPrimaryKeyTable)
+    DELETE @NewPrimaryKeyTable;
+
+    INSERT dbo.ebay_beschreibungstemplate
+    (
+	   kEbayBeschreibungsTemplate,
+	   kEbayuser,
+	   kItem,
+	   cTitel,
+	   cH1,
+	   cH2,
+	   cBody,
+	   cVersandhinweis,
+	   PaymentInstructions
+    )
+    SELECT 
+	   @NewPrimaryKey,
+	   kEbayuser,
+	   @kItemNew,
+	   cTitel,
+	   cH1,
+	   cH2,
+	   cBody,
+	   cVersandhinweis,
+	   PaymentInstructions
+    FROM dbo.ebay_beschreibungstemplate 
+    WHERE dbo.ebay_beschreibungstemplate.kItem = @kItemOld;
+
+    ----------------------------------------------------------------------
+    -- kopiere ebay_data_htmltemplatetagcontent 
+    ----------------------------------------------------------------------
+
+    --
+    -- locke ebay_data_htmltemplatetagcontent (weil im folgenden PKs f&#252;r neue Datens&#228;tze reserviert werden)
+    --
+	DECLARE @LockResult INT;
+    EXEC @LockResult = Sp_getapplock 
+	    @Resource = ebay_data_htmltemplatetagcontent, 
+	    @LockMode = &#39;Exclusive&#39;, 
+	    @LockOwner = &#39;Transaction&#39;, 
+	    @LockTimeout = 500, 
+	    @DbPrincipal = &#39;public&#39;; 
+
+    --
+    -- berechne neuen PK f&#252;r ebay_data_htmltemplatetagcontent 
+    --
+    DELETE @NewPrimaryKeyTable;
+    INSERT @NewPrimaryKeyTable 
+    (
+	    NewPrimaryKey
+    )
+    EXEC spGetAndUpdatePk &#39;ebay_data_htmltemplatetagcontent&#39;;
+    SET @NewPrimaryKey = 
+	(
+		SELECT * 
+		FROM @NewPrimaryKeyTable
+	);
+    DELETE @NewPrimaryKeyTable;
+
+    --
+    -- erh&#246;he Wert f&#252;r neue PKs in tpk um relevante Anzahl von Datens&#228;tzen
+    --
+    UPDATE dbo.tpk
+	SET nummer = nummer +
+		(
+			SELECT COUNT(*) 
+			FROM dbo.ebay_data_htmltemplatetagcontent 
+			WHERE dbo.ebay_data_htmltemplatetagcontent.kEbayItem = @kItemOld
+		) - 1
+	WHERE cName = &#39;ebay_data_htmltemplatetagcontent&#39;;
+
+    --
+    -- kopiere relevante Datens&#228;tze (unter Verwendung der neuen PKs)
+    --
+    WITH Temp AS 
+    (
+	    SELECT ROW_NUMBER() OVER(ORDER BY kEbayHtmlTemplateTagContent) AS RowNumber, *
+	    FROM dbo.ebay_data_htmltemplatetagcontent 
+	    WHERE dbo.ebay_data_htmltemplatetagcontent.kEbayItem = @kItemOld
+    ) 
+    INSERT dbo.ebay_data_htmltemplatetagcontent
+    (
+	   kEbayHtmlTemplateTagContent,
+	   kEbayHtmlTemplate,
+	   cTagName,
+	   kEbayItem,
+	   cTagValue,
+	   cTagOptions
+    )
+    SELECT 
+	    @NewPrimaryKey + RowNumber - 1,
+	   kEbayHtmlTemplate,
+	   cTagName,
+	   @kItemNew,
+	   cTagValue,
+	   cTagOptions
+    FROM Temp;
+
+    --
+    -- unlocke ebay_data_htmltemplatetagcontent 
+    --
+    IF (@LockResult &gt;= 0)
+    BEGIN
+	    EXEC Sp_releaseapplock 
+		    @Resource = ebay_data_htmltemplatetagcontent, 
+		    @DbPrincipal = &#39;public&#39;, 
+		    @LockOwner = &#39;Transaction&#39;; 
+    END;
+
+    ----------------------------------------------------------------------
+    -- kopiere ebay_item2kombi
+    ----------------------------------------------------------------------
+
+    IF (@SameArtikel = 1)
+    BEGIN
+	    INSERT dbo.ebay_item2kombi
+	    (
+		    kItem,
+		    kEigenschaftKombi,
+		    fPreis,
+		    fAnzahl,
+		    fMaxAnzahl,
+			cEAN,
+			fMinAnzahl,
+			fStreichPreis,
+			cStreichPreisTyp
+	    )
+	    SELECT 
+		    @kItemNew,
+		    kEigenschaftKombi,
+		    fPreis,
+		    fAnzahl,
+		    fMaxAnzahl,
+			cEAN,
+			fMinAnzahl,
+			fStreichPreis,
+			cStreichPreisTyp
+	    FROM dbo.ebay_item2kombi
+	    WHERE dbo.ebay_item2kombi.kItem = @kItemOld;
+	END
+    ELSE
+	BEGIN
+		INSERT dbo.ebay_item2kombi
+	    (
+		    kItem,
+		    kEigenschaftKombi,
+		    fPreis,
+		    fAnzahl,
+		    fMaxAnzahl,
+			cEAN,
+			fMinAnzahl
+	    )
+		SELECT 
+			@kItemNew AS kItem,
+		    tArtikel.kEigenschaftKombi AS kEigenschaftKombi,
+		    CASE WHEN ISNULL(tArtikel.fEbayPreis, 0) = 0 
+				THEN tArtikel.fVKNetto * (1 + (tsteuersatz.fSteuersatz / 100)) 
+				ELSE tArtikel.fEbayPreis END AS fPreis,
+				CASE WHEN ebay_item.MaxQuantity IS NOT NULL AND ebay_item.MaxQuantity &gt; 0 
+					THEN ebay_item.MaxQuantity						
+					ELSE
+						CASE WHEN ebay_item.Quantity IS NOT NULL AND ebay_item.Quantity &gt; 0 
+						THEN ebay_item.Quantity
+						ELSE
+							CASE WHEN tlagerbestand.fVerfuegbar - tArtikel.nPuffer &gt; 0 
+								THEN tlagerbestand.fVerfuegbar - tArtikel.nPuffer
+								ELSE 0 
+							END 
+						END
+					END
+				AS fAnzahl,
+		    CASE WHEN ebay_item.kItem IS NULL 
+				THEN	CASE WHEN tlagerbestand.fVerfuegbar - tArtikel.nPuffer &gt; 0 
+							THEN tlagerbestand.fVerfuegbar - tArtikel.nPuffer
+							ELSE 0 
+						END 
+				ELSE
+					ebay_item.MaxQuantity
+				END AS fMaxAnzahl,
+			&#39;&#39; AS cEAN,
+			CASE WHEN ebay_item.kItem IS NULL THEN 1 ELSE ebay_item.nMinQuantity END AS fMinAnzahl
+		FROM dbo.tArtikel 
+			JOIN dbo.tlagerbestand ON tArtikel.kVaterArtikel = @kArtikelNew 
+				AND tlagerbestand.kArtikel = tArtikel.kArtikel
+			JOIN dbo.tsteuersatz ON tsteuersatz.kSteuerklasse = tartikel.kSteuerklasse 
+				AND tsteuersatz.kSteuerzone = @kSteuerzone
+			LEFT JOIN dbo.ebay_item ON ebay_item.kItem = @kItemOld
+				AND ebay_item.Type = &#39;G&#39;
+		WHERE tArtikel.cAktiv = &#39;Y&#39;
+
+	END;
+
+	----------------------------------------------------------------------
+	-- kopiere ebay_itemcompatibility/ebay_itemcomp_bike
+	----------------------------------------------------------------------
+
+	INSERT dbo.ebay_itemcompatibility
+	(
+	    --kItemCompatibility - this column value is auto-generated
+	    kItem,
+	    kType,
+	    cMarke,
+	    cModell,
+	    cTyp,
+	    cPlattform,
+	    cBaujahr,
+	    cMotor,
+	    cHSNTSN,
+	    cCompatibilityNote
+	)
+	SELECT 
+		@kItemNew,
+		kType,
+	    cMarke,
+	    cModell,
+	    cTyp,
+	    cPlattform,
+	    cBaujahr,
+	    cMotor,
+	    cHSNTSN,
+	    cCompatibilityNote
+	FROM dbo.ebay_itemcompatibility 
+	WHERE dbo.ebay_itemcompatibility.kItem = @kItemOld;	
+
+	INSERT dbo.ebay_itemcomp_bike
+	(
+		--kEbay_itemcomp_bike - this column value is auto-generated
+		kItem,
+		nEpid,
+		cMarke,
+		cModell,
+		cUntermodell,
+		cTyp,
+		cBaujahr,
+		cStrassenname,
+		cCcm,
+		cCompatibilityNote
+	)
+	SELECT
+		@kItemNew,
+		nEpid,
+		cMarke,
+		cModell,
+		cUntermodell,
+		cTyp,
+		cBaujahr,
+		cStrassenname,
+		cCcm,
+		cCompatibilityNote
+	FROM dbo.ebay_itemcomp_bike 
+	WHERE dbo.ebay_itemcomp_bike.kItem = @kItemOld;
+
+	----------------------------------------------------------------------
+	----------------------------------------------------------------------
+
+	IF (@SameArtikel = 0)
+	BEGIN
+		--
+		-- Ziel-Artikel != Quell-Artikel =&gt; ersetze Vorlagenname, Angebotstitel, Preise und Steuer durch entsprechende Angaben von Ziel-Artikel
+		--
+
+		--
+		-- berechne kSpracheUsed 
+		--
+		DECLARE @kSpracheUsed INT;
+		SET @kSpracheUsed = 
+		(
+			SELECT dbo.tSpracheUsed.kSprache
+			FROM dbo.ebay_item 
+				JOIN dbo.ebay_xx_sites ON dbo.ebay_xx_sites.SiteID = dbo.ebay_item.SiteID		
+					AND dbo.ebay_item.kItem = @kItemOld
+				JOIN dbo.tSpracheUsed ON dbo.tSpracheUsed.cISO = dbo.ebay_xx_sites.cSprachISO
+		);
+
+		--
+		-- suche nach Name f&#252;r eBay
+		--
+		DECLARE @NameTable AS TABLE (Name NVARCHAR(255));
+
+		INSERT @NameTable
+		(
+			Name
+		)
+		SELECT dbo.tArtikelBeschreibung.cName
+		FROM dbo.tArtikelBeschreibung 
+		WHERE dbo.tArtikelBeschreibung.kArtikel = @kArtikelNew
+			--
+			-- eBay
+			--
+			AND dbo.tArtikelBeschreibung.kPlattform = 30
+			AND dbo.tArtikelBeschreibung.kShop = 0
+			AND dbo.tArtikelBeschreibung.kSprache = @kSpracheUsed
+			AND tArtikelBeschreibung.cName IS NOT NULL;
+
+		IF (@@ROWCOUNT = 0)
+		BEGIN
+			--
+			-- kein Name f&#252;r eBay gefunden =&gt; nimm Name f&#252;r Wawi
+			--
+			INSERT @NameTable
+			(
+				Name
+			)
+			SELECT dbo.tArtikelBeschreibung.cName
+			FROM dbo.tArtikelBeschreibung 
+			WHERE dbo.tArtikelBeschreibung.kArtikel = @kArtikelNew
+				--
+				-- Wawi
+				--
+				AND dbo.tArtikelBeschreibung.kPlattform = 1
+				AND dbo.tArtikelBeschreibung.kShop = 0
+				AND dbo.tArtikelBeschreibung.kSprache = @kSpracheUsed;
+		END;
+		--
+		-- hole Name aus tempor&#228;rer Tabelle
+		--
+		DECLARE @Name NVARCHAR(255);
+		SET @Name = 
+		(
+			SELECT [@NameTable].Name
+			FROM @NameTable 
+		);
+
+		--
+		-- berechne Steuersatz
+		--
+		DECLARE @Steuersatz DECIMAL(25, 4);
+		SET @Steuersatz = ISNULL(
+		(
+			SELECT dbo.tSteuersatz.fSteuersatz
+			FROM dbo.tArtikel JOIN dbo.tSteuersatz ON dbo.tArtikel.kArtikel = @kArtikelNew
+				AND tSteuersatz.kSteuerklasse = tArtikel.kSteuerklasse 
+				AND dbo.tSteuersatz.kSteuerzone = @kSteuerzone
+		), 0);
+
+		--
+		-- berechne Start-/Kaufpreise 
+		--
+		DECLARE @Preis DECIMAL(25, 4);
+		SET @Preis = 
+		(
+			SELECT 
+				(
+					CASE WHEN ISNULL(dbo.tArtikel.fEbayPreis, 0) = 0 
+					THEN dbo.tartikel.fVKNetto * (1 + (@Steuersatz / 100))
+					ELSE dbo.tArtikel.fEbayPreis END
+				) * dbo.tWaehrung.fFaktor 			
+			FROM dbo.ebay_item 
+				JOIN dbo.tArtikel ON dbo.ebay_item.kItem = @kItemNew
+					AND dbo.tArtikel.kArtikel = @kArtikelNew
+				JOIN dbo.tWaehrung ON dbo.tWaehrung.cEAMapping = dbo.ebay_item.Currency
+		);
+
+		--
+		-- update neues EbayItem *)
+		--
+		UPDATE dbo.ebay_item
+		SET Templatename = @Name + &#39;  (&#39; + CONVERT(NVARCHAR, GETDATE(), 13) + &#39;)&#39;,
+			Title = SUBSTRING(@Name, 1, 80),
+			CategoryMappingAllowed = 1,
+			StartPrice = 
+			(
+				CASE WHEN dbo.ebay_item.ListingType = &#39;Chinese&#39; 
+				THEN 1 
+				ELSE @Preis END
+			),
+			VATPercent = @Steuersatz
+		WHERE dbo.ebay_item.kItem = @kItemNew;
+
+		----------------------------------------------------------------------
+		----------------------------------------------------------------------
+
+		--
+		-- f&#252;ge Artikelmerkmale hinzu **)
+		--
+		
+		IF(@nCopyEbaySpecificsMode = 2)
+		BEGIN
+			RETURN;
+		END
+		
+		--
+		-- hole Artikelmerkmale
+		--
+		DECLARE @Merkmale AS TABLE (Name NVARCHAR(255), Value NVARCHAR(255), kMerkmal INT, kMerkmalWert INT, kSprache INT);			
+		INSERT @Merkmale
+		(
+			Name,
+			Value,
+			kMerkmal,
+			kMerkmalWert,
+			kSprache
+		)
+		SELECT DISTINCT 
+			tMerkmalSprache.cName AS cName, 
+			tMerkmalWertSprache.cWert AS cValue,
+			tArtikelMerkmal.kMerkmal AS kMerkmal,
+			tArtikelMerkmal.kMerkmalWert AS kMerkmalWert,
+			tSpracheUsed.kSprache AS kSprache
+		FROM dbo.ebay_xx_sites 
+			JOIN dbo.tSpracheUsed 
+				ON ebay_xx_sites.SiteID = 
+				(
+					SELECT ebay_item.SiteID 
+					FROM dbo.ebay_item 
+					WHERE ebay_item.kItem = @kItemNew
+				)
+				AND tSpracheUsed.cISO = ebay_xx_sites.cSprachISO
+			JOIN dbo.tArtikelMerkmal 
+				ON tArtikelMerkmal.kArtikel = @kArtikelNew
+			JOIN dbo.tMerkmal 
+				ON tMerkmal.kMerkmal = tArtikelMerkmal.kMerkmal
+				AND tMerkmal.nVerwendungszweck IN (2, 3)
+			JOIN dbo.tMerkmalWert 
+				ON tMerkmalWert.kMerkmal = tMerkmal.kMerkmal
+				AND tMerkmalWert.kMerkmalWert = tArtikelMerkmal.kMerkmalWert
+			JOIN dbo.tMerkmalSprache 
+				ON tMerkmalSprache.kMerkmal = tMerkmal.kMerkmal 
+				AND tMerkmalSprache.kSprache = tSpracheUsed.kSprache
+			JOIN dbo.tMerkmalWertSprache 
+				ON tMerkmalWertSprache.kMerkmalWert = tMerkmalWert.kMerkmalWert 
+				AND tMerkmalWertSprache.kSprache = tSpracheUsed.kSprache;
+
+		--
+		-- &#252;bergehe Artikelmerkmale die genau so hei&#223;en wie Variationen
+		--
+		DELETE @Merkmale
+		FROM @Merkmale 
+		WHERE [@Merkmale].Name IN 
+		(
+			SELECT dbo.tEigenschaftSprache.cName 
+			FROM dbo.ebay_item 				
+				JOIN dbo.ebay_xx_sites 
+					ON ebay_item.kItem = @kItemNew
+					AND ebay_xx_sites.SiteID = ebay_item.SiteID
+				JOIN dbo.tSpracheUsed 
+					ON dbo.tSpracheUsed.cISO = dbo.ebay_xx_sites.cSprachISO
+				JOIN dbo.teigenschaft 
+					ON teigenschaft.kArtikel = ebay_item.kArtikel
+				JOIN dbo.tEigenschaftSprache 
+					ON tEigenschaftSprache.kEigenschaft = teigenschaft.kEigenschaft
+					AND tEigenschaftSprache.kSprache = tSpracheUsed.kSprache
+		)
+
+		--
+		-- hole Kategorieattribute die nur 1 Wert annehmen k&#246;nnen (Combobox oder benutzerdefiniert);
+		-- hierbei werden beide eBay-Kategorien ber&#252;cksichtigt
+		--
+		DECLARE @EbaySpecificsMaxOne AS TABLE(cName NVARCHAR(255));			
+		INSERT @EbaySpecificsMaxOne
+		(
+			cName
+		)
+		SELECT ebay_specific.cName
+		FROM dbo.ebay_specific 
+		WHERE ebay_specific.kItem = @kItemNew 
+			AND ebay_specific.cName NOT IN
+			(
+				SELECT ebay_xx_isglobalname.cName
+				FROM dbo.ebay_item 
+				JOIN dbo.ebay_xx_is 
+					ON ebay_item.kItem = @kItemNew 
+					AND ebay_xx_is.CategoryId = ebay_item.PrimaryCategoryId						
+					AND ebay_xx_is.SiteID = ebay_item.SiteID
+					AND ebay_xx_is.nMaxValues &gt; 1 -- Listbox
+				JOIN dbo.ebay_xx_isglobalname 
+					ON ebay_xx_isglobalname.kName = ebay_xx_is.kName
+			);
+		IF ((SELECT ISNULL(dbo.ebay_item.SecondaryCategoryId, 0) 
+			FROM dbo.ebay_item 
+			WHERE dbo.ebay_item.kItem = @kItemNew) != 0)
+		BEGIN
+			INSERT @EbaySpecificsMaxOne
+			(
+				cName
+			)
+			SELECT ebay_specific.cName
+			FROM dbo.ebay_specific 
+			WHERE ebay_specific.kItem = @kItemNew 
+				AND ebay_specific.cName NOT IN
+				(
+					SELECT ebay_xx_isglobalname.cName
+					FROM dbo.ebay_item 
+					JOIN dbo.ebay_xx_is 
+						ON ebay_item.kItem = @kItemNew 
+						AND ebay_xx_is.CategoryId = ebay_item.SecondaryCategoryId
+						AND ebay_xx_is.SiteID = ebay_item.SiteID
+						AND ebay_xx_is.nMaxValues &gt; 1 -- Listbox
+					JOIN dbo.ebay_xx_isglobalname 
+						ON ebay_xx_isglobalname.kName = ebay_xx_is.kName
+				);
+		END;
+
+		--
+		-- update Kategorieattribute die nur 1 Wert annehmen k&#246;nnen mit Artikelmerkmalen;
+		-- Aufl&#246;sung willk&#252;rlich wenn mehrere gleichnamige Artikelmerkmale vorhanden sind
+		--
+		UPDATE dbo.ebay_specific
+		SET cValue = [@Merkmale].[Value]
+		FROM dbo.ebay_specific 
+		JOIN @EbaySpecificsMaxOne 
+			ON ebay_specific.kItem = @kItemNew 
+			AND [@EbaySpecificsMaxOne].cName = ebay_specific.cName
+		JOIN @Merkmale 
+			ON [@Merkmale].Name = ebay_specific.cName;
+
+		--
+		-- f&#252;ge restliche Artikelmerkmale zu Kategorieattributen hinzu;
+		-- maximale Anzahlen zul&#228;ssiger Werte spielen hier keine Rolle weil &#252;bersch&#252;ssige Werte C#-seitig ignoriert werden
+		--
+		INSERT dbo.ebay_specific
+		(
+			kItem,
+			cName,
+			cValue,
+			nCustom,
+			kMerkmal,
+			kMerkmalWert,
+			kSprache
+		)
+		SELECT @kItemNew, [@Merkmale].Name, [@Merkmale].Value, 0 AS nCustom, [@Merkmale].kMerkmal, [@Merkmale].kMerkmalWert, [@Merkmale].kSprache
+		FROM @Merkmale 
+		LEFT JOIN @EbaySpecificsMaxOne 
+			ON [@EbaySpecificsMaxOne].cName = [@Merkmale].Name
+		WHERE [@EbaySpecificsMaxOne].cName IS NULL;		
+	END;
+
+    RETURN;
+END;</code></pre>
+</body>
+</html>

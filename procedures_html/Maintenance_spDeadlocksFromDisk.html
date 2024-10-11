@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maintenance.spDeadlocksFromDisk</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Maintenance.spDeadlocksFromDisk</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Maintenance.spDeadlocksFromDisk
+AS
+	CREATE TABLE #errorlog (
+				LogDate DATETIME 
+				, ProcessInfo VARCHAR(100)
+				, [Text] VARCHAR(MAX)
+				);
+	DECLARE @tag VARCHAR (MAX) , @path VARCHAR(MAX);
+	INSERT INTO #errorlog EXEC sp_readerrorlog;
+	SELECT @tag = text
+	FROM #errorlog 
+	WHERE [Text] LIKE &#39;Logging%MSSQL\Log%&#39;;
+	DROP TABLE #errorlog;
+	SET @path = SUBSTRING(@tag, 38, CHARINDEX(&#39;MSSQL\Log&#39;, @tag) - 29);
+	SELECT 
+	  CONVERT(xml, event_data).query(&#39;/event/data/value/child::*&#39;) AS DeadlockReport,
+	  CONVERT(xml, event_data).value(&#39;(event[@name=&quot;xml_deadlock_report&quot;]/@timestamp)[1]&#39;, &#39;datetime&#39;) 
+	  AS Execution_Time
+	FROM sys.fn_xe_file_target_read_file(@path + &#39;\system_health*.xel&#39;, NULL, NULL, NULL)
+	WHERE OBJECT_NAME like &#39;xml_deadlock_report&#39; ORDER BY CONVERT(xml, event_data).value(&#39;(event[@name=&quot;xml_deadlock_report&quot;]/@timestamp)[1]&#39;, &#39;datetime&#39;) DESC;</code></pre>
+</body>
+</html>

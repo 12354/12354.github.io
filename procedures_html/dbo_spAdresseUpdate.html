@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spAdresseUpdate</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spAdresseUpdate</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure dbo.spAdresseUpdate werden die Daten der Tabelle dbo.tAdresse aktualisiert.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spAdresseUpdate]
+	@DatenAdresse TYPE_spAdresseUpdate READONLY
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+SET QUOTED_IDENTIFIER ON;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @raiseError BIT;
+DECLARE @ErrorData XML;
+DECLARE @xmlAppend XML;
+DECLARE @ReturnValue INT;
+SET @ErrorData = (SELECT &#39;Header&#39; AS Header FOR XML PATH(&#39;ErrorList&#39;));
+SET @raiseError = 0;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	IF (OBJECT_ID(&#39;tempdb..#Daten_spAdresseUpdate&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Daten_spAdresseUpdate;
+	END
+
+	CREATE TABLE #Daten_spAdresseUpdate
+	(
+		kAdresse INT,
+		kInetAdresse INT,
+		kKunde INT,
+		cFirma NVARCHAR(128),
+		cAnrede NVARCHAR(30),
+		cTitel NVARCHAR(64),
+		cVorname NVARCHAR(255),
+		cName NVARCHAR(255),
+		cStrasse NVARCHAR(255),
+		cPLZ NVARCHAR(24),
+		cOrt NVARCHAR(255),
+		cLand NVARCHAR(255),
+		cTel NVARCHAR(30),
+		cZusatz NVARCHAR(60),
+		cAdressZusatz NVARCHAR(255),
+		cPostID NVARCHAR(255),
+		cMobil NVARCHAR(30),
+		cMail NVARCHAR(255),
+		cFax NVARCHAR(30),
+		cBundesland NVARCHAR(255),
+		cISO NVARCHAR(5),
+		nStandard TINYINT,
+		nTyp TINYINT,
+		cUstId NVARCHAR(20)
+	);
+
+	INSERT INTO #Daten_spAdresseUpdate ( kAdresse,
+	                                     kInetAdresse,
+	                                     kKunde,
+	                                     cFirma,
+	                                     cAnrede,
+	                                     cTitel,
+	                                     cVorname,
+	                                     cName,
+	                                     cStrasse,
+	                                     cPLZ,
+	                                     cOrt,
+	                                     cLand,
+	                                     cTel,
+	                                     cZusatz,
+	                                     cAdressZusatz,
+	                                     cPostID,
+	                                     cMobil,
+	                                     cMail,
+	                                     cFax,
+	                                     cBundesland,
+	                                     cISO,
+	                                     nStandard,
+	                                     nTyp,
+										 cUstId )
+		SELECT DatenAdresse.kAdresse,
+			CASE WHEN DatenAdresse.kInetAdresse IS NOT NULL OR DatenAdresse.xFlag_kInetAdresse = 1
+				THEN DatenAdresse.kInetAdresse
+				ELSE tAdresse.kInetAdresse
+			END,
+			CASE WHEN DatenAdresse.kKunde IS NOT NULL OR DatenAdresse.xFlag_kKunde = 1
+				THEN DatenAdresse.kKunde
+				ELSE tAdresse.kKunde
+			END,
+			CASE WHEN DatenAdresse.cFirma IS NOT NULL OR DatenAdresse.xFlag_cFirma = 1
+				THEN DatenAdresse.cFirma
+				ELSE tAdresse.cFirma
+			END,
+			CASE WHEN DatenAdresse.cAnrede IS NOT NULL OR DatenAdresse.xFlag_cAnrede = 1
+				THEN DatenAdresse.cAnrede
+				ELSE tAdresse.cAnrede
+			END,
+			CASE WHEN DatenAdresse.cTitel IS NOT NULL OR DatenAdresse.xFlag_cTitel = 1
+				THEN DatenAdresse.cTitel
+				ELSE tAdresse.cTitel
+			END,
+            CASE WHEN DatenAdresse.cVorname IS NOT NULL OR DatenAdresse.xFlag_cVorname = 1
+				THEN DatenAdresse.cVorname
+				ELSE tAdresse.cVorname
+			END,
+            CASE WHEN DatenAdresse.cName IS NOT NULL OR DatenAdresse.xFlag_cName = 1
+				THEN DatenAdresse.cName
+				ELSE tAdresse.cName
+			END,
+            CASE WHEN DatenAdresse.cStrasse IS NOT NULL OR DatenAdresse.xFlag_cStrasse = 1
+				THEN DatenAdresse.cStrasse
+				ELSE tAdresse.cStrasse
+			END,
+            CASE WHEN DatenAdresse.cPLZ IS NOT NULL OR DatenAdresse.xFlag_cPLZ = 1
+				THEN DatenAdresse.cPLZ
+				ELSE tAdresse.cPLZ
+			END,
+            CASE WHEN DatenAdresse.cOrt IS NOT NULL OR DatenAdresse.xFlag_cOrt = 1
+				THEN DatenAdresse.cOrt
+				ELSE tAdresse.cOrt
+			END,
+            CASE WHEN DatenAdresse.cLand IS NOT NULL OR DatenAdresse.xFlag_cLand = 1
+				THEN DatenAdresse.cLand
+				ELSE tAdresse.cLand
+			END,
+            CASE WHEN DatenAdresse.cTel IS NOT NULL OR DatenAdresse.xFlag_cTel = 1
+				THEN DatenAdresse.cTel
+				ELSE tAdresse.cTel
+			END,
+            CASE WHEN DatenAdresse.cZusatz IS NOT NULL OR DatenAdresse.xFlag_cZusatz = 1
+				THEN DatenAdresse.cZusatz
+				ELSE tAdresse.cZusatz
+			END,
+            CASE WHEN DatenAdresse.cAdressZusatz IS NOT NULL OR DatenAdresse.xFlag_cAdressZusatz = 1
+				THEN DatenAdresse.cAdressZusatz
+				ELSE tAdresse.cAdressZusatz
+			END,
+            CASE WHEN DatenAdresse.cPostID IS NOT NULL OR DatenAdresse.xFlag_cPostID = 1
+				THEN DatenAdresse.cPostID
+				ELSE tAdresse.cPostID
+			END,
+            CASE WHEN DatenAdresse.cMobil IS NOT NULL OR DatenAdresse.xFlag_cMobil = 1
+				THEN DatenAdresse.cMobil
+				ELSE tAdresse.cMobil
+			END,
+            CASE WHEN DatenAdresse.cMail IS NOT NULL OR DatenAdresse.xFlag_cMail = 1
+				THEN DatenAdresse.cMail
+				ELSE tAdresse.cMail
+			END,
+            CASE WHEN DatenAdresse.cFax IS NOT NULL OR DatenAdresse.xFlag_cFax = 1
+				THEN DatenAdresse.cFax
+				ELSE tAdresse.cFax
+			END,
+            CASE WHEN DatenAdresse.cBundesland IS NOT NULL OR DatenAdresse.xFlag_cBundesland = 1
+				THEN DatenAdresse.cBundesland
+				ELSE tAdresse.cBundesland
+			END,
+            CASE WHEN DatenAdresse.cISO IS NOT NULL OR DatenAdresse.xFlag_cISO = 1
+				THEN DatenAdresse.cISO
+				ELSE tAdresse.cISO
+			END,
+            CASE WHEN DatenAdresse.nStandard IS NOT NULL OR DatenAdresse.xFlag_nStandard = 1
+				THEN DatenAdresse.nStandard
+				ELSE tAdresse.nStandard
+			END,
+            CASE WHEN DatenAdresse.nTyp IS NOT NULL OR DatenAdresse.xFlag_nTyp = 1
+				THEN DatenAdresse.nTyp
+				ELSE tAdresse.nTyp
+			END,
+			CASE WHEN DatenAdresse.cUstId IS NOT NULL OR DatenAdresse.xFlag_cUstId = 1
+				THEN DatenAdresse.cUstId
+				ELSE tAdresse.cUstId
+			END
+		FROM @DatenAdresse AS DatenAdresse
+		JOIN dbo.tAdresse ON tAdresse.kAdresse = DatenAdresse.kAdresse
+		IF(OBJECT_ID(&#39;tempdb..#Temp_spAdresseUpdate&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Temp_spAdresseUpdate;
+		END
+		CREATE TABLE #Temp_spAdresseUpdate
+		(
+			InternalId INT IDENTITY(1,1), 
+			kAdresse INT
+		);
+					
+	--
+	-- Insert Block
+	--
+	IF(@raiseError = 0)
+	BEGIN
+		IF(CONTEXT_INFO() IS NOT NULL)
+		BEGIN
+			SET @OldContextInfo = CONTEXT_INFO();
+		END
+		ELSE
+		BEGIN
+			SET @OldContextInfo = 0x0;
+		END
+		DECLARE @hash VARBINARY(128);
+		SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;dbo.spAdresseUpdate&#39;);
+		SET CONTEXT_INFO @hash; -- ContextInfo festlegen     
+	   BEGIN TRY  
+		  DECLARE @TranCount INT = @@TRANCOUNT;
+		  IF(@TranCount = 0)
+		  BEGIN
+			 BEGIN TRANSACTION  
+		  END
+
+		  --
+		  -- Alte Standardadresse zur&#252;ckbiegen
+		  --
+		  UPDATE
+				dbo.tadresse
+		  SET
+				nStandard = 0
+		  FROM
+				dbo.tadresse
+		  JOIN #Daten_spAdresseUpdate AS DatenAdresse ON DatenAdresse.kKunde = tadresse.kKunde AND DatenAdresse.nTyp = tadresse.nTyp AND DatenAdresse.nStandard = 1
+		  WHERE tadresse.nStandard &lt;&gt; 0
+
+		  --
+		  -- Adresse aktualisieren
+		  --
+		  UPDATE dbo.tadresse 
+			 SET	kKunde = DatenAdresse.kKunde,
+				    cFirma = DatenAdresse.cFirma,
+				    cAnrede = DatenAdresse.cAnrede,
+				    cTitel = DatenAdresse.cTitel,
+				    cVorname = DatenAdresse.cVorname,
+				    cName = DatenAdresse.cName,
+				    cStrasse = DatenAdresse.cStrasse,
+				    cPLZ = DatenAdresse.cPLZ,
+				    cOrt = DatenAdresse.cOrt,
+				    cLand = DatenAdresse.cLand,
+				    cTel = DatenAdresse.cTel,
+				    cZusatz = DatenAdresse.cZusatz,
+				    cAdressZusatz = DatenAdresse.cAdressZusatz,
+				    cPostID = DatenAdresse.cPostID,
+				    cMobil = DatenAdresse.cMobil,
+				    cMail = DatenAdresse.cMail,
+				    cFax = DatenAdresse.cFax,
+				    cBundesland = DatenAdresse.cBundesland,
+				    cISO = DatenAdresse.cISO,
+				    nStandard = DatenAdresse.nStandard,
+				    nTyp = DatenAdresse.nTyp,
+				    cUstId = DatenAdresse.cUstId
+			 OUTPUT INSERTED.kAdresse INTO #Temp_spAdresseUpdate(kAdresse)
+			 FROM dbo.tAdresse
+			 JOIN #Daten_spAdresseUpdate AS DatenAdresse ON DatenAdresse.kAdresse = tAdresse.kAdresse;
+
+		  --tKunde_suche aktualisieren
+		  DECLARE @KundenToUpdate AS TYPE_spUpdateKundeSuche;
+
+		  INSERT INTO @KundenToUpdate (kKunde)
+		  SELECT DISTINCT kKunde
+		  FROM #Daten_spAdresseUpdate;
+			
+		  EXEC Kunde.spUpdateKundeSuche @Kunden = @KundenToUpdate;
+
+
+
+		  SELECT @ReturnValue = COUNT(1)
+		  FROM #Temp_spAdresseUpdate;
+		  SET @retry = 0;
+		  IF(@TranCount = 0)
+		  BEGIN           
+			 COMMIT TRANSACTION      
+		  END
+		  RETURN @ReturnValue;
+	   END TRY       
+	   BEGIN CATCH           
+		  IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+		  BEGIN              
+			 SET @retry = @retry - 1;               
+			 ROLLBACK       
+		  END          
+		  ELSE          
+		  BEGIN              
+			 SET @retry = 0;               
+			 THROW;           
+		  END      
+	   END CATCH
+    END
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gutschrift.spGutschriftposAnlegen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Gutschrift.spGutschriftposAnlegen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tgutschriftpos erstellt werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Gutschrift].[spGutschriftposAnlegen]
+	@kArtikel INT,
+	@kGutschrift INT,
+	@fVKPreis DECIMAL(25,13),
+	@fMwSt DECIMAL(25,13),
+	@nAnzahl DECIMAL(25,13),
+	@fRabatt DECIMAL(25,13),
+	@cString NVARCHAR(255),
+	@fVKNetto DECIMAL(25,13),
+	@cArtNr NVARCHAR(100),
+	@nLager TINYINT,
+	@kBestellpos INT,
+	@kGutschriftStueckliste INT,
+	@kRechnungPosition INT = NULL,
+	@nEckdatenberechnen BIT = 1,
+	@nAuftragsmengeReduzieren INT = NULL,
+	@nLiefermengeReduzieren INT = NULL,
+	@kGutschriftpos INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5118;
+	DECLARE @xBestellung AS XML;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			INSERT INTO dbo.tgutschriftpos(tArtikel_kArtikel, tGutschrift_kGutschrift, fVKPreis, fMwSt, nAnzahl, fRabatt,
+										cString, fVKNetto, cArtNr, nLager, kBestellPos, kGutschriftStueckliste, kRechnungPosition, nAuftragsmengeReduzieren, nLiefermengeReduzieren)
+				VALUES(@kArtikel, @kGutschrift, @fVKPreis, @fMwSt, @nAnzahl, @fRabatt, @cString,
+						@fVKNetto, @cArtNr, @nLager, @kBestellpos, @kGutschriftStueckliste, @kRechnungPosition, @nAuftragsmengeReduzieren, @nLiefermengeReduzieren);
+			SELECT @kGutschriftpos = SCOPE_IDENTITY();
+			
+			IF(@nEckdatenberechnen = 1)
+			BEGIN
+				DECLARE @Rechnungen AS Rechnung.TYPE_spRechnungEckdatenBerechnen
+
+				INSERT INTO @Rechnungen (kRechnung)
+				SELECT DISTINCT tgutschrift.kRechnung
+				FROM dbo.tGutschriftPos
+				JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift 
+				WHERE tGutschriftPos.kRechnungPosition = @kRechnungPosition OR tGutschriftPos.kBestellPos = @kBestellpos;
+
+				EXEC Rechnung.spRechnungEckdatenBerechnen @Rechnungen = @Rechnungen;
+			END
+				
+			SET @retry = -1;
+		SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

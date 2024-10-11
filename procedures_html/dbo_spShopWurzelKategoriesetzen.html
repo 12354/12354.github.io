@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spShopWurzelKategoriesetzen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spShopWurzelKategoriesetzen</h1>
+    <p><strong>Description:</strong> Die Stored Procedure setzt die Wurzelkategorie für den Shop und bereinigt fehlerhafte Einträge.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spShopWurzelKategoriesetzen]
+	@kShop AS INT,
+	@kWurzelkategorie AS INT
+AS
+BEGIN
+
+	--
+	-- Shop muss &gt; 0 sein.
+	--
+	IF(@kShop = 0)
+	BEGIN
+		RETURN;
+	END
+
+	--
+	-- Wenn Wurzelkategorie = 0 ist dann nur dbo.tShop updaten.
+	--
+	IF(@kWurzelkategorie = 0)
+	BEGIN
+		UPDATE dbo.tShop
+			SET dbo.tshop.kKategorie = @kWurzelkategorie
+		WHERE dbo.tShop.kShop = @kShop;
+
+		UPDATE dbo.tKategorieShop
+			SET tKategorieShop.cInet = &#39;Y&#39;,
+				tKategorieShop.cDelInet = &#39;N&#39;
+		WHERE dbo.tKategorieShop.kShop = @kShop;
+		--
+		-- Da durch kWurzelkategorie = 0 alle Kategoriezuweisungen g&#252;ltig sind,
+		-- braucht nichts gel&#246;scht werden, also return.
+		--
+		RETURN;
+	END
+
+	IF (OBJECT_ID(&#39;tempdb..#KategorieBaumNeu&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #KategorieBaumNeu;
+	END
+	CREATE TABLE #KategorieBaumNeu(kKategorie INT);
+
+	IF (OBJECT_ID(&#39;tempdb..#ArtikelDelete&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #ArtikelDelete;
+	END
+	CREATE TABLE #ArtikelDelete(kArtikel INT);
+
+	INSERT INTO #KategorieBaumNeu(kKategorie)
+	SELECT KategorieBaumNeu.kKategorie
+	FROM dbo.ifKategoriebaum(@kWurzelkategorie) AS KategorieBaumNeu
+
+	INSERT INTO #ArtikelDelete(kArtikel)
+	SELECT tArtikelShop.kArtikel
+	FROM dbo.tArtikelShop WITH(NOLOCK)
+	LEFT JOIN
+	(
+		SELECT dbo.tKategorieArtikel.kArtikel
+		FROM #KategorieBaumNeu
+		JOIN dbo.tKategorieArtikel WITH(NOLOCK) ON #KategorieBaumNeu.kKategorie = dbo.tKategorieArtikel.kKategorie
+		GROUP BY dbo.tKategorieArtikel.kArtikel
+	) AS WurzelArtikel ON dbo.tArtikelShop.kArtikel = WurzelArtikel.kArtikel
+	WHERE	WurzelArtikel.kARtikel IS NULL
+			AND dbo.tArtikelShop.kShop = @kShop;
+
+	UPDATE dbo.tKategorieShop
+		SET tKategorieShop.cInet = &#39;Y&#39;,
+			tKategorieShop.cDelInet = &#39;N&#39;
+	FROM dbo.tKategorieShop WITH(NOLOCK)
+	JOIN dbo.tkategorie ON tKategorieShop.kKategorie = tkategorie.kKategorie
+	WHERE tkategorie.kOberKategorie = @kWurzelkategorie
+
+	--
+	-- Wurzelkategorie in tShop setzen wenn noch nicht passiert
+	--
+	IF(NOT EXISTS
+	(
+		SELECT TOP (1) tShop.kShop
+		FROM dbo.tShop
+		WHERE dbo.tShop.kShop = @kShop
+			AND dbo.tShop.kKategorie = @kWurzelkategorie)
+	)
+	BEGIN
+		UPDATE dbo.tShop
+			SET dbo.tShop.kKategorie = @kWurzelkategorie
+		WHERE dbo.tShop.kShop = @kShop;
+	END
+
+	--
+	-- Alle tArtikelshop Eintr&#228;ge l&#246;schen die nicht Teil der Wurzelkategorie sind
+	--
+	DELETE dbo.tArtikelShop
+	FROM dbo.tArtikelShop
+	JOIN #ArtikelDelete ON tArtikelShop.kArtikel = #ArtikelDelete.kArtikel
+	WHERE tArtikelShop.kShop = @kShop;
+
+	--
+	-- Alle Kategorieshop Eintr&#228;ge l&#246;schen die nicht Teil der Wurzelkategorie sind
+	--
+	DELETE dbo.tKategorieShop
+	FROM dbo.tKategorieShop
+	LEFT JOIN #KategorieBaumNeu ON tKategorieShop.kKategorie = #KategorieBaumNeu.kKategorie
+	WHERE #KategorieBaumNeu.kKategorie IS NULL
+		AND tKategorieShop.kShop = @kShop;
+
+	DELETE FROM dbo.tKategorieShop
+	WHERE tKategorieShop.kKategorie = @kWurzelkategorie
+		AND tKategorieShop.kShop = @kShop;
+END</code></pre>
+</body>
+</html>

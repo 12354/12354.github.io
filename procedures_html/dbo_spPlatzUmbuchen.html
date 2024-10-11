@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spPlatzUmbuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spPlatzUmbuchen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Artikel auf einen anderen Warenlagerplatz umgebucht werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spPlatzUmbuchen]
+@kArtikel INT,
+@fAnzahl DECIMAL(25,13),
+@kWarenlagerPLatzNeu INT,
+@kWarenlagerPlatzAlt INT,
+@cKommentar NVARCHAR(255),
+@kBuchungsart INT,
+@kBenutzer INT,
+@kLHMNeu INT = NULL,
+@kLHMAlt INT = NULL,
+@dMhd DATETIME = NULL,
+@cChargenNr NVARCHAR(255) = NULL,
+@cSubsetNumber NVARCHAR(255) = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+
+DECLARE @fFactor DECIMAL(25,13);
+DECLARE @retry INT = 5;
+DECLARE @kWarenLagerEingangSubsetNew INT;
+
+WHILE @retry &gt; 0
+BEGIN 
+	-- Warenlagereing&#228;nge ermitteln
+	IF(OBJECT_ID(&#39;tempdb..#WarenlagerEingaenge&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #WarenlagerEingaenge;
+		END
+		CREATE TABLE #WarenlagerEingaenge 
+		(
+			kWarenlagerEingang INT,
+			fAnzahlAktuell DECIMAL(25,13),
+			fAnzahlAufPickliste DECIMAL(25,13),
+			LfdSumme DECIMAL(25,13)
+		);
+
+
+
+
+	IF(EXISTS (SELECT * FROM dbo.tPickliste WHERE nType = 3 AND nStatus &lt; 40)) --Wenn es Reservierungen gibt, erweitertest SQL nehmen (f&#252;r Performance, da diese Option recht selten ist)
+	BEGIN
+
+		
+	    INSERT INTO #WarenlagerEingaenge
+	    (
+	    	kWarenlagerEingang,
+	    	fAnzahlAktuell,
+	    	fAnzahlAufPickliste,
+	    	LfdSumme
+	    )
+	    SELECT	wA.kWarenLagerEingang,
+	    		wA.fAnzahlAktuell,
+	    		(wA.fAnzahlReserviertPickpos - ISNULL(VorRes.fAnzahl,0)) AS fAnzahlAufPickliste,
+	    		(SELECT SUM(wB.fAnzahlAktuell - wB.fAnzahlReserviertPickpos + ISNULL(VorRes2.fAnzahl,0) )
+	    			FROM dbo.tWarenLagerEingang AS wB
+	    			LEFT JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingang = wB.kWarenLagerEingang
+					OUTER APPLY (SELECT SUM(tPicklistePos.fAnzahl) AS fAnzahl
+						         FROM dbo.tPicklistePos 
+						         JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+						         WHERE tPickliste.nStatus &lt; 40
+						         AND tPickliste.nType = 3
+						         AND tPicklistePos.kWarenLagerEingang = wB.kWarenLagerEingang
+								 AND tPicklistePos.nStatus &lt; 40 ) AS VorRes2
+	    			WHERE wB.kWarenLagerEingang &lt;= wA.kWarenLagerEingang
+	    				AND wB.kArtikel = @kArtikel
+	    				AND wB.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+	    				AND wB.fAnzahlAktuell - wB.fAnzahlReserviertPickpos + ISNULL(VorRes2.fAnzahl,0) &gt; 0.0
+	    				AND(wB.dMHD = @dMhd OR @dMhd IS NULL)
+	    				AND(wB.cChargenNr = @cChargenNr OR @cChargenNr IS NULL)
+	    				AND(wB.kLHM = @kLHMAlt OR @kLHMAlt IS NULL OR @kLHMAlt = 0)
+	    				AND(@cSubsetNumber IS NULL OR @cSubsetNumber = tWarenLagerEingangSubsets.cSubsetNumber)
+	    		) AS LfdSumme
+	    	FROM dbo.tWarenLagerEingang AS wA
+			OUTER APPLY (SELECT SUM(tPicklistePos.fAnzahl) AS fAnzahl
+						 FROM dbo.tPicklistePos 
+						 JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+						 WHERE tPickliste.nStatus &lt; 40
+						 AND tPickliste.nType = 3
+						 AND tPicklistePos.kWarenLagerEingang = wA.kWarenLagerEingang
+						 AND tPicklistePos.nStatus &lt; 40 ) AS VorRes
+	    	LEFT JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingang = wA.kWarenLagerEingang
+	    		WHERE wA.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+	    			AND wA.kArtikel = @kArtikel
+	    			AND wA.fAnzahlAktuell - wA.fAnzahlReserviertPickpos + ISNULL(VorRes.fAnzahl,0) &gt; 0.0
+	    			AND(wA.dMHD = @dMhd OR @dMhd IS NULL)
+	    			AND(wA.cChargenNr = @cChargenNr OR @cChargenNr IS NULL)
+	    			AND(wA.kLHM = @kLHMAlt OR @kLHMAlt IS NULL OR @kLHMAlt = 0)
+	    			AND(@cSubsetNumber IS NULL OR @cSubsetNumber = tWarenLagerEingangSubsets.cSubsetNumber)
+	    		ORDER BY wA.kWarenLagerEingang;
+
+	END;
+	ELSE
+	BEGIN
+
+
+	    INSERT INTO #WarenlagerEingaenge
+	    (
+	    	kWarenlagerEingang,
+	    	fAnzahlAktuell,
+	    	fAnzahlAufPickliste,
+	    	LfdSumme
+	    )
+	    SELECT	wA.kWarenLagerEingang,
+	    		wA.fAnzahlAktuell,
+	    		wA.fAnzahlReserviertPickpos AS fAnzahlAufPickliste,
+	    		(SELECT SUM(wB.fAnzahlAktuell - wB.fAnzahlReserviertPickpos)
+	    			FROM dbo.tWarenLagerEingang AS wB
+	    			LEFT JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingang = wB.kWarenLagerEingang
+	    			WHERE wB.kWarenLagerEingang &lt;= wA.kWarenLagerEingang
+	    				AND wB.kArtikel = @kArtikel
+	    				AND wB.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+	    				AND wB.fAnzahlAktuell - wB.fAnzahlReserviertPickpos &gt; 0.0
+	    				AND(wB.dMHD = @dMhd OR @dMhd IS NULL)
+	    				AND(wB.cChargenNr = @cChargenNr OR @cChargenNr IS NULL)
+	    				AND(wB.kLHM = @kLHMAlt OR @kLHMAlt IS NULL OR @kLHMAlt = 0)
+	    				AND(@cSubsetNumber IS NULL OR @cSubsetNumber = tWarenLagerEingangSubsets.cSubsetNumber)
+	    		) AS LfdSumme
+	    	FROM dbo.tWarenLagerEingang AS wA
+	    	LEFT JOIN dbo.tWarenLagerEingangSubsets ON tWarenLagerEingangSubsets.kWarenLagerEingang = wA.kWarenLagerEingang
+	    		WHERE wA.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+	    			AND wA.kArtikel = @kArtikel
+	    			AND wA.fAnzahlAktuell - wA.fAnzahlReserviertPickpos &gt; 0.0
+	    			AND(wA.dMHD = @dMhd OR @dMhd IS NULL)
+	    			AND(wA.cChargenNr = @cChargenNr OR @cChargenNr IS NULL)
+	    			AND(wA.kLHM = @kLHMAlt OR @kLHMAlt IS NULL OR @kLHMAlt = 0)
+	    			AND(@cSubsetNumber IS NULL OR @cSubsetNumber = tWarenLagerEingangSubsets.cSubsetNumber)
+	    		ORDER BY wA.kWarenLagerEingang;
+
+
+	END;
+
+
+    IF(@cSubsetNumber IS NOT NULL)
+	BEGIN
+
+		SELECT TOP(1) @fFactor =  tWarenLagerEingangSubsets.fFactor
+		FROM dbo.tWarenLagerEingangSubsets
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = tWarenLagerEingangSubsets.kWarenLagerEingang
+		WHERE tWarenLagerEingangSubsets.cSubsetNumber = @cSubsetNumber;
+
+		SET @fAnzahl = @fAnzahl * @fFactor;
+
+	END;
+
+
+
+	--
+	-- Ist aureichend Menge zum Umlagern vorhanden (Error: 150001)
+	--
+	IF(NOT EXISTS(SELECT * FROM #WarenlagerEingaenge WHERE #WarenlagerEingaenge.LfdSumme &gt;= @fAnzahl)) 
+	BEGIN
+		RAISERROR(150001,15,1, N&#39;Nicht ausreichend Menge vorhanden zum Umbuchen.&#39;);
+	END
+	BEGIN TRY  
+        DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END
+		DECLARE @kWarenlagerEingang INT;
+		DECLARE @kWarenlagerEingangNeu INT;
+		DECLARE @fAnzahlUmbuchen DECIMAL(25,13);
+		DECLARE @FETCH_STATUS_cWarenlagerEingang INT = 0;
+	
+		DECLARE cWarenlagerEingang CURSOR LOCAL FAST_FORWARD FOR
+			SELECT #WarenlagerEingaenge.kWarenlagerEingang,
+					#WarenlagerEingaenge.fAnzahlAktuell - #WarenlagerEingaenge.fAnzahlAufPickliste AS fAnzahlUmbuchen
+				FROM #WarenlagerEingaenge 
+				WHERE #WarenlagerEingaenge.LfdSumme &lt;= @fAnzahl;
+
+		OPEN cWarenlagerEingang;
+		FETCH NEXT FROM cWarenlagerEingang INTO @kWarenlagerEingang, @fAnzahlUmbuchen;
+		SET @FETCH_STATUS_cWarenlagerEingang = @@FETCH_STATUS;
+		WHILE @FETCH_STATUS_cWarenlagerEingang = 0
+		BEGIN
+			SET @kWarenlagerEingangNeu = 0;
+
+			EXEC dbo.spPlatzUmbuchenAusfuehren @kWarenlagerEingang, @fAnzahlUmbuchen, @kWarenlagerplatzNeu, @kLHMNeu, @kBuchungsart, 0, @kBenutzer, @cKommentar, @kWarenlagerEingangNeu OUTPUT;
+
+
+			IF(EXISTS(SELECT * FROM dbo.tPicklistePos 
+							   JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+							   WHERE tPicklistePos.kWarenLagerEingang = @kWarenlagerEingang
+							   AND tPicklistePos.nStatus &lt; 40
+							   AND tPickliste.nType = 3))
+
+			BEGIN
+
+		       EXEC [WMS].[spPickPosAusVorreservierungAnpassen]
+		       @kWarenlagerEingang  = @kWarenlagerEingang,
+		       @kWarenlagerEingangNeu = @kWarenlagerEingangNeu,
+		       @kWarenlagerplatzNeu = @kWarenlagerplatzNeu,
+		       @fAnzahlUmbuchen = @fAnzahlUmbuchen;
+
+			END;
+
+
+			FETCH NEXT FROM cWarenlagerEingang INTO @kWarenlagerEingang, @fAnzahlUmbuchen;
+			SET @FETCH_STATUS_cWarenlagerEingang = @@FETCH_STATUS;
+
+		END
+		CLOSE cWarenlagerEingang;
+		DEALLOCATE cWarenlagerEingang;
+
+		SET @kWarenlagerEingang = 0;
+
+		SELECT TOP(1) @kWarenlagerEingang = #WarenlagerEingaenge.kWarenlagerEingang,
+				@fAnzahlUmbuchen = @fAnzahl - (#WarenlagerEingaenge.LfdSumme - (#WarenlagerEingaenge.fAnzahlAktuell - #WarenlagerEingaenge.fAnzahlAufPickliste))
+			FROM #WarenlagerEingaenge 
+			WHERE #WarenlagerEingaenge.LfdSumme &gt; @fAnzahl
+			ORDER BY #WarenlagerEingaenge.LfdSumme;
+
+	    IF (@kWarenlagerEingang &gt; 0 AND @fAnzahlUmbuchen &gt; 0)
+		BEGIN
+			SET @kWarenlagerEingangNeu = 0;
+		
+			EXEC dbo.spPlatzUmbuchenAusfuehren @kWarenlagerEingang, @fAnzahlUmbuchen, @kWarenlagerplatzNeu, @kLHMNeu, @kBuchungsart, 0, @kBenutzer, @cKommentar, @kWarenlagerEingangNeu OUTPUT;
+
+
+			
+			IF(EXISTS(SELECT * FROM dbo.tPicklistePos 
+							   JOIN dbo.tPickliste ON tPickliste.kPickliste = tPicklistePos.kPickliste
+							   WHERE tPicklistePos.kWarenLagerEingang = @kWarenlagerEingang
+							   AND tPicklistePos.nStatus &lt; 40
+							   AND tPickliste.nType = 3))
+
+			BEGIN
+
+	
+		       EXEC [WMS].[spPickPosAusVorreservierungAnpassen]
+		       @kWarenlagerEingang  = @kWarenlagerEingang,
+		       @kWarenlagerEingangNeu = @kWarenlagerEingangNeu,
+		       @kWarenlagerplatzNeu = @kWarenlagerplatzNeu,
+		       @fAnzahlUmbuchen = @fAnzahlUmbuchen;
+
+
+		   END;
+
+
+		END;
+	   
+	   SET @retry = 0;
+        IF(@TranCount = 0)
+        BEGIN           
+            COMMIT TRANSACTION      
+        END
+
+		UPDATE Sync.tEntityTracking
+		SET tEntityTracking.dLastModified = GETDATE()
+		FROM #WarenlagerEingaenge
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerEingang = #WarenlagerEingaenge.kWarenlagerEingang
+		JOIN Sync.tEntityTracking ON tEntityTracking.kEntityId = tWarenLagerEingang.kArtikel
+			AND tEntityTracking.nEntityType = 1
+		JOIN Sync.tEntityPlatform ON tEntityPlatform.kEntityId = tEntityTracking.kEntityId
+			AND tEntityPlatform.nEntityType = tEntityTracking.nEntityType
+		JOIN dbo.tShop ON tShop.kShop = tEntityPlatform.kShop
+		LEFT JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = @kWarenlagerPLatzNeu
+			AND tWarenLagerPlatz.kWarenLager = tShop.kWarenlager
+		LEFT JOIN dbo.tWarenLagerPlatz AS WarenlagerplatzAlt ON WarenlagerplatzAlt.kWarenLagerPlatz = @kWarenlagerPlatzAlt
+			AND tWarenLagerPlatz.kWarenLager = tShop.kWarenlager
+		WHERE tShop.kWarenlagerPlatz IS NOT NULL
+			AND (tShop.kWarenlagerPlatz = @kWarenlagerPLatzNeu OR tShop.kWarenlagerPlatz = @kWarenlagerPlatzAlt)
+			OR tShop.kWarenlagerPlatz IS NULL AND tShop.nWarenlagerPlatztyp IS NOT NULL
+			AND (tWarenLagerPlatz.kWarenLagerPlatzTyp = tShop.nWarenlagerPlatztyp OR WarenlagerplatzAlt.kWarenLagerPlatzTyp = tShop.nWarenlagerPlatztyp);
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END</code></pre>
+</body>
+</html>

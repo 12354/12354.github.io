@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spArtikelHistoryNachrechnen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spArtikelHistoryNachrechnen</h1>
+    <p><strong>Description:</strong> Mit der Procedure kann die Artikelhistory für den übergebenen Artikel nachgerechnet werden.</p>
+    <p><strong>Long Description:</strong> <p>Die Procedure berechnet für den übergebenen Artikel die Artikelhstory neu. Dabei wird die komplette History neu gerechnet und geschrieben.<br /> Als zusätzlicher Parameter kann übergeben werden, dass auch der Lagerbestand zu jedem Eintrag berechnet wird. Dies kann deutlich länger dauern. Die Dauer ist abhängig von der Anzahl an Einträgen für den Artikel.</p></p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spArtikelHistoryNachrechnen]
+@kArtikel INT = 0,        -- Der Artikel f&#252;r den neu gerechnet werden soll, 0 = Alle Artikel
+@nNurOhneLagerbesand INT = 0 -- Nur in Kombination mir kArtikel &gt; 0 wirksam
+
+-- Funktion: Mit dieser Procedur wird die Artikelhistorie komplett neu berechnet. Dabei wird von jedem zeitpunkt der Lagerbestand berechnet. F&#252;r alle Artikel kann diese SP (je nach DB gr&#246;&#223;e) einige Stunden brauchen.
+	
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @NachrechnenBisDate DATETIME;
+   
+BEGIN TRY
+	
+
+
+	IF(@nNurOhneLagerbesand &gt; 0 AND @kArtikel &gt; 0)
+	BEGIN
+
+		SELECT @NachrechnenBisDate = MIN(dGebucht)
+		FROM  dbo.tArtikelHistory
+		WHERE fLagerBestandGesamt != 0
+		AND kArtikel = @kArtikel;
+
+		IF(@NachrechnenBisDate IS NULL)
+		BEGIN
+			SET @NachrechnenBisDate = GETDATE();
+		END;
+
+	END;
+	ELSE
+	BEGIN
+
+		SET @NachrechnenBisDate = GETDATE();
+
+	END;
+
+
+
+	DELETE FROM dbo.tArtikelHistory
+	WHERE (dbo.tArtikelHistory.kArtikel =  @kArtikel OR 0 = @kArtikel)
+	AND dbo.tArtikelHistory.dGebucht &lt; @NachrechnenBisDate;
+
+
+
+
+	INSERT INTO dbo.tArtikelHistory
+	(
+		--kArtikelHistory - this column value is auto-generated
+		kWarenLagerPlatz,
+		kArtikel,
+		fAnzahl,
+		dGebucht,
+		kBenutzer,
+		kWarenEingang,
+		kBestellPos,
+		kGutschriftPos,
+		fEKNetto,
+		cKommentar,
+		kBuchungsart,
+		kLieferscheinPos,
+		fLagerBestandGesamt,
+		fLagerBestand,
+		kLieferantenBestellungPos,
+		cLieferscheinNr,
+		cChargenNr,
+		dMHD
+  
+	)
+
+	SELECT    kWarenLagerPlatz,
+		kArtikel,
+		fAnzahl,
+		dGebucht,
+		ISNULL(kBenutzer,0) AS kBenutzer,
+		kWarenEingang,
+		kBestellPos,
+		kGutschriftPos,
+		ISNULL(fEKNetto,0) AS fEKNetto,
+		cKommentar,
+		kBuchungsart,
+		kLieferscheinPos,
+ 
+		ISNULL((SELECT	SUM(Lagerbewegungen.fAnzahl)
+		FROM
+		(
+			SELECT tWarenlagerEingang.kArtikel, tWarenlagerEingang.dErstellt, tWarenlagerEingang.fAnzahl 
+			FROM tWarenlagerEingang
+			UNION ALL
+			SELECT dbo.tWarenLagerAusgang.kArtikel, dbo.tWarenLagerAusgang.dErstellt, (-1) * dbo.tWarenLagerAusgang.fAnzahl 
+			FROM dbo.tWarenLagerAusgang
+		) 
+		AS Lagerbewegungen
+		WHERE Lagerbewegungen.dErstellt &lt;= Buchungen.dGebucht 
+			AND Lagerbewegungen.kArtikel = Buchungen.kArtikel
+		),0) AS fLagerBestandGesamt,
+		ISNULL((SELECT	ISNULL(SUM(Lagerbewegungen.fAnzahl),0)
+		FROM
+		(
+			SELECT tWarenlagerEingang.kArtikel, tWarenlagerEingang.dErstellt, tWarenlagerEingang.fAnzahl, dbo.tWarenLagerEingang.kWarenLagerPlatz
+			FROM tWarenlagerEingang
+			UNION ALL
+			SELECT dbo.tWarenLagerAusgang.kArtikel, dbo.tWarenLagerAusgang.dErstellt, (-1) * dbo.tWarenLagerAusgang.fAnzahl, dbo.tWarenLagerAusgang.kWarenLagerPlatz
+			FROM dbo.tWarenLagerAusgang
+		)
+		AS Lagerbewegungen
+		WHERE Lagerbewegungen.dErstellt &lt;= Buchungen.dGebucht 
+			AND Lagerbewegungen.kArtikel = Buchungen.kArtikel
+			AND Lagerbewegungen.kWarenLagerPlatz = Buchungen.kWarenLagerPlatz
+		GROUP BY kWarenLagerPlatz
+		),0)
+		AS fLagerBestand,
+		ISNULL(kLieferantenBestellungPos,0),
+		cLieferscheinNr,
+		CASE WHEN LEN(cChargenNr) = 0 THEN NULL ELSE cChargenNr END,
+		dMHD
+	FROM
+	(
+		SELECT 
+			dbo.tWarenLagerEingang.kWarenLagerPlatz,
+			dbo.tWarenLagerEingang.kArtikel,
+			dbo.tWarenLagerEingang.fAnzahl,
+			dbo.tWarenLagerEingang.dErstellt AS dGebucht,
+			dbo.tWarenLagerEingang.kBenutzer,
+			dbo.tWarenLagerEingang.kWarenLagerEingang AS kWarenEingang,
+			0 AS kBestellPos,
+			dbo.tWarenLagerEingang.kGutschriftPos,
+			dbo.tWarenLagerEingang.fEKEinzel AS fEKNetto,
+			dbo.tWarenLagerEingang.cKommentar,
+			dbo.tWarenLagerEingang.kBuchungsart,
+			0 AS kLieferscheinPos,
+			dbo.tWarenLagerEingang.kLieferantenBestellungPos,
+			dbo.tWarenLagerEingang.cLieferscheinNr,
+			dbo.tWarenLagerEingang.cChargenNr,
+			dbo.tWarenLagerEingang.dMHD
+		FROM dbo.tWarenLagerEingang
+		WHERE dbo.tWarenLagerEingang.dErstellt IS NOT NULL
+		AND (dbo.tWarenLagerEingang.kArtikel = @kArtikel OR 0 = @kArtikel)
+		AND dbo.tWarenLagerEingang.dErstellt  &lt; @NachrechnenBisDate
+		UNION ALL
+		SELECT 
+			dbo.tWarenLagerAusgang.kWarenLagerPlatz,
+			dbo.tWarenLagerAusgang.kArtikel,
+			dbo.tWarenLagerAusgang.fAnzahl,
+			dbo.tWarenLagerAusgang.dErstellt AS dGebucht,
+			dbo.tWarenLagerAusgang.kBenutzer,
+			dbo.tWarenLagerAusgang.kWarenLagerEingang AS kWarenEingang,
+			dbo.tLieferscheinPos.kBestellPos AS kBestellPos,
+			dbo.tWarenLagerEingang.kGutschriftPos,
+			dbo.tWarenLagerEingang.fEKEinzel AS fEKNetto,
+			dbo.tWarenLagerAusgang.cKommentar,
+			dbo.tWarenLagerAusgang.kBuchungsart,
+			dbo.tWarenLagerAusgang.kLieferscheinPos,
+			dbo.tWarenLagerEingang.kLieferantenBestellungPos,
+			dbo.tWarenLagerEingang.cLieferscheinNr,
+			dbo.tWarenLagerEingang.cChargenNr,
+			dbo.tWarenLagerEingang.dMHD
+		FROM dbo.tWarenLagerAusgang
+		LEFT JOIN dbo.tLieferscheinPos ON dbo.tWarenLagerAusgang.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+		LEFT JOIN dbo.tWarenLagerEingang ON dbo.tWarenLagerAusgang.kWarenLagerEingang = dbo.tWarenLagerEingang.kWarenLagerEingang
+		WHERE dbo.tWarenLagerAusgang.dErstellt IS NOT NULL
+		AND (dbo.tWarenLagerAusgang.kArtikel = @kArtikel OR 0 = @kArtikel)
+		AND dbo.tWarenLagerAusgang.dErstellt  &lt; @NachrechnenBisDate
+	) AS Buchungen
+	ORDER BY Buchungen.dGebucht;
+
+
+	UPDATE dbo.tArtikelHistory SET fAnzahl = (fAnzahl * -1)
+	WHERE fAnzahl &gt; 0
+	AND kBuchungsart IN (20,31,130,70,150)
+	AND (kArtikel = @kArtikel OR 0 = @kArtikel)
+	AND dbo.tArtikelHistory.dGebucht &lt; @NachrechnenBisDate;
+
+	
+	UPDATE dbo.tArtikelHistory 
+	SET fAnzahl = CASE WHEN dbo.tArtikelHistory.fLagerBestandGesamt &lt; HistoryOneBefore.fLagerBestandGesamt THEN fAnzahl * -1 ELSE fAnzahl END
+	FROM dbo.tArtikelHistory
+	OUTER APPLY (SELECT TOP 1 ISNULL(OneBefore.fLagerBestandGesamt,0) AS fLagerBestandGesamt
+				 FROM dbo.tArtikelHistory AS OneBefore
+				 WHERE OneBefore.kArtikel = dbo.tArtikelHistory.kArtikel
+				 AND OneBefore.kArtikelHistory &lt; dbo.tArtikelHistory.kArtikelHistory
+				 AND dbo.tArtikelHistory.dGebucht != OneBefore.dGebucht -- manchmal werden WAs mit gleichen Zeitstempel gebucht, bei diesen ist der lagerbestand gleich, daswegen die nicht betrachten
+				 ORDER BY OneBefore.kArtikelHistory DESC) AS HistoryOneBefore
+	WHERE kBuchungsart IN (60,100,120,30,90)
+	AND (kArtikel = @kArtikel OR 0 = @kArtikel)
+	AND dbo.tArtikelHistory.dGebucht &lt; @NachrechnenBisDate;
+
+
+END TRY
+BEGIN CATCH
+
+    DECLARE @ErrorMessage NVARCHAR(4000);
+    SET @ErrorMessage =  ERROR_MESSAGE();
+
+    RAISERROR (@ErrorMessage, 
+		  16,
+		  1);
+END CATCH;</code></pre>
+</body>
+</html>

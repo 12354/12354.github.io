@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bestand.spInventurBuchen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Bestand.spInventurBuchen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Bestand].[spInventurBuchen]
+	@kBenutzer INT
+AS 
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+SET QUOTED_IDENTIFIER ON;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @RollbackAll BIT = 0;
+DECLARE @ReturnValue INT;
+DECLARE @ErrorData XML;
+DECLARE @xmlAppend XML;
+DECLARE @countAuftraege INT;
+SET @ErrorData = (SELECT &#39;Header&#39; AS Header FOR XML PATH(&#39;ErrorList&#39;));
+BEGIN
+	IF(OBJECT_ID(&#39;tempdb..#Bestand&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Bestand;
+	END
+	CREATE TABLE #Bestand (kId INT IDENTITY(1,1), kArtikel INT, kWarenlagerPlatz INT, dMHD DATETIME, cChargenNr NVARCHAR(255), Differenz DECIMAL(25, 13), isCharge TINYINT, isMHD TINYINT);
+
+	--
+	-- Inventurdaten anpassen
+	--
+	-- Sp&#228;ter hinzugef&#252;gte Warenein- Ausg&#228;nge abziehen
+	--
+	IF(EXISTS(SELECT 1 
+			 FROM dbo.tWarenLagerEingang 
+			 JOIN dbo.tInventur ON dbo.tWarenLagerEingang.kArtikel = tInventur.kArtikel
+			 WHERE tWarenLagerEingang.fAnzahlAktuell &gt; 0.0
+				AND tWarenLagerEingang.dErstellt &gt; tInventur.dErstellt
+			 )
+	   OR (EXISTS(SELECT 1 
+			 FROM dbo.tWarenLagerAusgang 
+			 JOIN dbo.tInventur ON dbo.tWarenLagerAusgang.kArtikel = tInventur.kArtikel
+				AND tWarenLagerAusgang.dErstellt &gt; tInventur.dErstellt
+			 )))
+    BEGIN
+	   UPDATE dbo.tInventur
+	       SET tInventur.fAnzahl = tInventur.fAnzahl + ISNULL(Eingang.Summe, 0.0) - ISNULL(Ausgang.Summe ,0.0)
+	   FROM dbo.tInventur
+	   JOIN dbo.tArtikel ON tArtikel.kArtikel = tInventur.kArtikel
+	   LEFT JOIN (SELECT SUM(tWarenLagerEingang.fAnzahl) AS Summe, tWarenLagerEingang.kArtikel 
+				FROM dbo.tWarenlagereingang
+				JOIN dbo.tInventur ON tInventur.kArtikel = tWarenLagerEingang.kArtikel
+				WHERE tWarenLagerEingang.dErstellt &gt; tInventur.dErstellt
+				GROUP BY tWarenLagerEingang.kArtikel
+			 ) AS Eingang ON Eingang.kArtikel = tArtikel.kArtikel
+	   LEFT JOIN (SELECT SUM(tWarenLagerAusgang.fAnzahl) AS Summe, tWarenLagerAusgang.kArtikel
+				FROM dbo.tWarenLagerAusgang
+				JOIN dbo.tInventur ON tInventur.kArtikel = tWarenLagerAusgang.kArtikel
+				WHERE tWarenLagerAusgang.dErstellt &gt; tInventur.dErstellt
+				GROUP BY tWarenLagerAusgang.kArtikel
+		  ) AS Ausgang ON Ausgang.kArtikel = tArtikel.kArtikel
+    END;
+
+	--
+	-- Differenzen ermitteln 
+	--
+	WITH ChargenMHD AS (
+		SELECT DISTINCT tInventur.kArtikel,
+				tInventur.kWarenLagerPlatz,
+				CASE WHEN tInventur.cCharge = &#39;&#39; THEN NULL
+					ELSE tInventur.cCharge
+				END AS cChargenNr,
+				CASE WHEN tInventur.dMHD  = &#39;&#39; THEN NULL
+					ELSE tInventur.dMHD
+				END AS dMHD
+		FROM dbo.tInventur
+		GROUP BY kArtikel, tInventur.kWarenLagerPlatz, tInventur.cCharge, tInventur.dMHD
+	),
+	Bestand AS (
+		SELECT Result.kArtikel,
+			Result.kWarenLagerPlatz,
+			Result.dMHD,
+			Result.cChargenNr,
+			Result.Bestand,
+			Result.Typ,
+			RANK() OVER (PARTITION BY Result.kArtikel, Result.kWarenLagerPlatz ORDER BY Typ DESC) AS RankNr
+		FROM (
+			SELECT DISTINCT tWarenLagerEingang.kArtikel, 
+				tWarenLagerEingang.kWarenLagerPlatz, 
+				tWarenLagerEingang.dMHD, 
+				tWarenLagerEingang.cChargenNr,
+				SUM(tWarenLagerEingang.fAnzahlAktuell) AS Bestand,
+				CASE WHEN (dMhd IS NOT NULL AND tWarenLagerEingang.cChargenNr IS NOT NULL) THEN 3
+					WHEN (dMhd IS NOT NULL AND tWarenLagerEingang.cChargenNr IS NULL) THEN 2
+					WHEN (tWarenLagerEingang.dMHD IS NULL AND tWarenLagerEingang.cChargenNr IS NOT NULL) THEN 1
+					ELSE 0
+				END AS Typ
+			FROM dbo.tWarenlagerPlatz
+			JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+			GROUP BY CUBE(tWarenLagerEingang.kArtikel, tWarenLagerEingang.kWarenLagerPlatz, tWarenLagerEingang.dMHD, tWarenLagerEingang.cChargenNr)
+			HAVING tWarenLagerEingang.kArtikel IS NOT NULL AND tWarenLagerEingang.kWarenLagerPlatz IS NOT NULL		
+		) AS Result
+	)
+	INSERT INTO #Bestand(kArtikel, kWarenlagerPlatz, dMHD, cChargenNr, Differenz, isCharge, isMHD)
+	SELECT	DISTINCT
+			ChargenMHD.kArtikel,
+			ChargenMHD.kWarenLagerPlatz,
+			ChargenMHD.dMHD,
+			ChargenMHD.cChargenNr,
+			ISNULL(Bestand.Bestand, 0) -  ISNULL(Inventur.fAnzahl, 0) AS Differenz,
+			Inventur.nCharge,
+			Inventur.nMHD
+	FROM ChargenMHD
+	LEFT JOIN Bestand ON Bestand.kArtikel = ChargenMHD.kArtikel
+					AND Bestand.kWarenLagerPlatz = ChargenMHD.kWarenLagerPlatz
+					AND ISNULL(Bestand.cChargenNr, 0) = ISNULL(ChargenMHD.cChargenNr, 0)
+					AND ISNULL(Bestand.dMHD, 0) = ISNULL(ChargenMHD.dMHD, 0)
+	LEFT JOIN (SELECT tInventur.kArtikel,
+						tInventur.kWarenLagerPlatz,
+						CASE WHEN tInventur.cCharge = &#39;&#39; THEN NULL
+							ELSE tInventur.cCharge
+						END AS cCharge,
+						CASE WHEN tInventur.dMHD = &#39;&#39; THEN NULL
+							ELSE tInventur.dMHD 
+						END AS dMHD,
+						SUM(fAnzahl) AS fAnzahl,
+						tArtikel.nCharge,
+						tArtikel.nMHD
+				FROM dbo.tInventur
+				JOIN dbo.tArtikel ON tArtikel.kArtikel = tInventur.kArtikel
+				GROUP BY tInventur.kArtikel, tInventur.kWarenLagerPlatz, tInventur.cCharge, tInventur.dMHD, tArtikel.nCharge, tArtikel.nMHD
+			) AS Inventur ON Inventur.kArtikel = ChargenMHD.kArtikel
+							AND Inventur.kWarenLagerPlatz = ChargenMHD.kWarenLagerPlatz
+							AND ISNULL(Inventur.dMHD, 0) = ISNULL(ChargenMHD.dMHD, 0)
+							AND ISNULL(Inventur.cCharge, 0) = ISNULL(ChargenMHD.cChargenNr, 0);
+	--
+	-- Wareneing&#228;nge schreiben
+	--
+	DECLARE @xWareneingang XML;
+	SELECT @xWareneingang = (SELECT #Bestand.kArtikel,
+									#Bestand.kWarenlagerPlatz,
+									NULL AS kLieferantenBestellungPos,
+									@kBenutzer AS kBenutzer,
+									ABS(#Bestand.Differenz) AS fAnzahl,
+									tArtikel.fEKNetto AS fEKEinzel,
+									NULL AS cLieferscheinNr,
+									#Bestand.cChargenNr,
+									#Bestand.dMHD,
+									NULL AS dGeliefertAM,
+									&#39;Inventurbuchung&#39; AS cKommentar,
+									NULL AS kGutschriftPos,
+									NULL AS kLHM,
+									NULL AS kSessionId,
+									100 AS kBuchungsart,
+									NULL AS kBestellPosUmlagerung,
+									NULL AS kRMRetourePos
+								FROM #Bestand
+								JOIN dbo.tArtikel ON tArtikel.kArtikel = #Bestand.kArtikel						
+								WHERE #Bestand.Differenz &lt; 0.0
+								FOR XML PATH(&#39;WarenEingang&#39;));
+	DECLARE @kWarenlagerEingang INT;
+	IF(@xWareneingang IS NOT NULL)
+	BEGIN
+		EXEC dbo.spWarenlagerEingangSchreiben @xWarenlagerEingaenge = @xWareneingang;
+	END
+
+	--
+	-- Warenausg&#228;nge schreiben
+	--
+	IF(OBJECT_ID(&#39;tempdb..#BestandAusgang&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #BestandAusgang;
+	END   
+	CREATE TABLE #BestandAusgang (kId INT, kWarenlagerEingang INT, fAnzahl DECIMAL(25, 13));
+
+	INSERT INTO #BestandAusgang (kId, fAnzahl)
+	SELECT #Bestand.kId,
+			#Bestand.Differenz
+	FROM #Bestand 
+	WHERE #Bestand.Differenz &gt; 0.0;
+
+	DECLARE @WarenlagerAusgang XML;
+
+	-- Warenausg&#228;nge buchen die keine Charge oder MHD haben oder wo Charge und MHD nicht auf 0 gebucht werden also bekannt sind
+	IF(EXISTS(SELECT #BestandAusgang.kId FROM #BestandAusgang))
+	BEGIN
+		-- Restbest&#228;nde &#252;ber Cursor ausbuchen 
+		DECLARE @kArtikel INT;
+		DECLARE @cChargenNr NVARCHAR(255);
+		DECLARE @dMhd DATETIME;
+		DECLARE @fAnzahl DECIMAL(25, 13);
+		DECLARE @kWarenlagerPlatz INT;
+
+		DECLARE Artikel CURSOR LOCAL FAST_FORWARD FOR
+		SELECT #Bestand.kArtikel,
+				#Bestand.cChargenNr,
+				#Bestand.dMHD,
+				#BestandAusgang.fAnzahl,
+				#Bestand.kWarenlagerPlatz
+		FROM #BestandAusgang
+		JOIN #Bestand ON #Bestand.kId = #BestandAusgang.kId
+		WHERE (#Bestand.isCharge = 0 OR #Bestand.cChargenNr IS NOT NULL)
+		  AND (#Bestand.isMHD = 0 OR #Bestand.dMHD IS NOT NULL);
+
+		OPEN Artikel;
+		FETCH NEXT FROM Artikel INTO @kArtikel, @cChargenNr, @dMhd, @fAnzahl, @kWarenlagerPlatz;
+		WHILE @@FETCH_STATUS = 0
+		BEGIN
+			WHILE @fAnzahl &gt; 0.0
+			BEGIN
+				DECLARE @kWarenlagerEingangAusbuchen INT = 0;
+				DECLARE @fAnzahlAktuell DECIMAL(25, 13) = 0;
+
+				SELECT TOP(1) @kWarenlagerEingangAusbuchen = tWarenLagerEingang.kWarenLagerEingang,
+						@fAnzahlAktuell = tWarenLagerEingang.fAnzahlAktuell 
+				FROM dbo.tWarenLagerEingang
+				WHERE tWarenLagerEingang.kArtikel = @kArtikel
+					AND ISNULL(tWarenLagerEingang.cChargenNr, 0) = ISNULL(@cChargenNr, 0)
+					AND ISNULL(tWarenLagerEingang.dMHD,0) = ISNULL(@dMhd,0)
+					AND tWarenLagerEingang.kWarenLagerPlatz = @kWarenlagerPlatz
+					AND tWarenLagerEingang.fAnzahlAktuell &gt; 0.0
+				ORDER BY tWarenLagerEingang.dErstellt;
+
+				IF (@kWarenlagerEingangAusbuchen &gt; 0)
+				BEGIN
+					SELECT @WarenlagerAusgang = (SELECT @kWarenlagerEingangAusbuchen AS kWarenLagerEingang,
+										NULL AS kLieferscheinPos,
+										CASE WHEN @fAnzahlAktuell &gt; @fAnzahl THEN @fAnzahl
+											ELSE @fAnzahlAktuell
+										END AS fAnzahl,
+										&#39;Inventurbuchung&#39; AS cKommentar,
+										@kBenutzer AS kBenutzer,
+										100 AS kBuchungsart								
+								FOR XML PATH(&#39;WarenAusgang&#39;), TYPE);
+					EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = @WarenlagerAusgang;
+				END
+				ELSE
+				BEGIN
+					SET @fAnzahl = 0.0;
+				END
+				
+				SET @fAnzahl = @fAnzahl - @fAnzahlAktuell;
+			END
+			FETCH NEXT FROM Artikel INTO @kArtikel, @cChargenNr, @dMhd, @fAnzahl, @kWarenlagerPlatz;
+		END
+		CLOSE Artikel;
+		DEALLOCATE Artikel;
+	END
+
+	-- Warenausg&#228;nge buchen bei denen Charge und MHD auf 0 gebucht werden
+	IF(EXISTS(SELECT #BestandAusgang.kId FROM #BestandAusgang))
+	BEGIN
+	   IF(EXISTS(SELECT * 
+				FROM #BestandAusgang
+				JOIN #Bestand ON #Bestand.kId = #BestandAusgang.kId
+				JOIN dbo.tInventur ON tInventur.kArtikel = #Bestand.kArtikel
+				WHERE (#Bestand.isCharge = 1 AND #Bestand.cChargenNr IS NULL)
+				AND (#Bestand.isMHD = 1 AND #Bestand.dMHD IS NULL) 
+				AND tInventur.fAnzahl = 0.0
+			 )
+		  )
+	   BEGIN
+		  DECLARE Artikel CURSOR LOCAL FAST_FORWARD FOR
+		  SELECT #Bestand.kArtikel,
+				#Bestand.cChargenNr,
+				#Bestand.dMHD,
+				#BestandAusgang.fAnzahl,
+				#Bestand.kWarenlagerPlatz
+		  FROM #BestandAusgang
+		  JOIN #Bestand ON #Bestand.kId = #BestandAusgang.kId
+		  JOIN dbo.tInventur ON tInventur.kArtikel = #Bestand.kArtikel
+		  WHERE (#Bestand.isCharge = 1 AND #Bestand.cChargenNr IS NULL)
+		  AND (#Bestand.isMHD = 1 OR #Bestand.dMHD IS NULL)
+		  AND tInventur.fAnzahl = 0.0;
+
+		  OPEN Artikel;
+		  FETCH NEXT FROM Artikel INTO @kArtikel, @cChargenNr, @dMhd, @fAnzahl, @kWarenlagerPlatz;
+		  WHILE @@FETCH_STATUS = 0
+		  BEGIN
+			 WHILE @fAnzahl &gt; 0.0
+			 BEGIN
+				DECLARE @kWarenlagerEingangAusbuchen_mhdCharge INT;
+				DECLARE @fAnzahlAktuell_mhdCharge DECIMAL(25, 13);
+
+				SELECT TOP(1) @kWarenlagerEingangAusbuchen_mhdCharge = tWarenLagerEingang.kWarenLagerEingang,
+						  @fAnzahlAktuell_mhdCharge = tWarenLagerEingang.fAnzahlAktuell 
+				FROM dbo.tWarenLagerEingang
+				WHERE tWarenLagerEingang.kArtikel = @kArtikel
+					   AND tWarenLagerEingang.kWarenLagerPlatz = @kWarenlagerPlatz
+					   AND tWarenLagerEingang.fAnzahlAktuell &gt; 0.0
+				ORDER BY tWarenLagerEingang.dErstellt;
+
+				SELECT @WarenlagerAusgang = (SELECT @kWarenlagerEingangAusbuchen_mhdCharge AS kWarenLagerEingang,
+									   NULL AS kLieferscheinPos,
+									   CASE WHEN @fAnzahlAktuell_mhdCharge &gt; @fAnzahl THEN @fAnzahl
+										  ELSE @fAnzahlAktuell_mhdCharge
+									   END AS fAnzahl,
+									   &#39;Inventurbuchung&#39; AS cKommentar,
+									   @kBenutzer AS kBenutzer,
+									   100 AS kBuchungsart								
+							 FOR XML PATH(&#39;WarenAusgang&#39;), TYPE);
+				EXEC dbo.spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge = @WarenlagerAusgang;
+
+				SET @fAnzahl = @fAnzahl - @fAnzahlAktuell_mhdCharge;
+			 END
+			 FETCH NEXT FROM Artikel INTO @kArtikel, @cChargenNr, @dMhd, @fAnzahl, @kWarenlagerPlatz;
+		  END
+		  CLOSE Artikel;
+		  DEALLOCATE Artikel;
+	   END
+	END
+
+	
+
+	-- tlagerartikel aufr&#228;umen
+	IF(OBJECT_ID(&#39;tempdb..#Seriennummern&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Seriennummern;
+	END   
+	CREATE TABLE #Seriennummern(kSeriennummer INT IDENTITY(1,1),
+								kInventur INT,
+								kLagerArtikel INT,
+								kArtikel INT
+								);
+
+	WITH Seriennummern AS(
+	SELECT tInventur.kArtikel,
+			tInventur.cSeriennummer,
+			ROW_NUMBER() OVER (PARTITION BY tArtikel.kArtikel, tInventur.cSeriennummer ORDER BY tArtikel.kArtikel) AS Nummer
+	FROM dbo.tInventur
+	JOIN dbo.tArtikel ON tArtikel.kArtikel = tInventur.kArtikel
+	WHERE tArtikel.cLagerArtikel = &#39;Y&#39;
+	UNION 
+	SELECT tArtikel.kArtikel,
+			tLagerArtikel.cSeriennr,
+			ROW_NUMBER() OVER (PARTITION BY tArtikel.kArtikel, tLagerArtikel.cSeriennr ORDER BY tArtikel.kArtikel) AS Nummer
+	FROM dbo.tArtikel 
+	JOIN dbo.tLagerArtikel ON tLagerArtikel.kArtikel = tArtikel.kArtikel
+	WHERE tArtikel.cLagerArtikel = &#39;Y&#39;
+	)
+	INSERT INTO #Seriennummern (kInventur, kLagerArtikel, kArtikel)
+	SELECT Inventur.kInventur,
+			Bestand.kLagerArtikel,
+			Inventur.kArtikel
+	FROM Seriennummern
+	LEFT JOIN (SELECT tInventur.kArtikel,
+				tInventur.cSeriennummer,
+				ROW_NUMBER() OVER (PARTITION BY tArtikel.kArtikel, tInventur.cSeriennummer ORDER BY tArtikel.kArtikel) AS Nummer,
+				tInventur.kInventur
+			FROM dbo.tInventur
+			JOIN dbo.tArtikel ON tArtikel.kArtikel = tInventur.kArtikel
+			WHERE tArtikel.cLagerArtikel = &#39;Y&#39; AND tInventur.fAnzahl &gt; 0
+			) AS Inventur ON Inventur.kArtikel = Seriennummern.kArtikel
+						AND Inventur.cSeriennummer = Seriennummern.cSeriennummer
+						AND Inventur.Nummer = Seriennummern.Nummer
+	LEFT JOIN (SELECT tLagerArtikel.kLagerArtikel,
+				tArtikel.kArtikel,
+				tLagerArtikel.cSeriennr AS cSeriennummer,
+				ROW_NUMBER() OVER (PARTITION BY tArtikel.kArtikel, tLagerArtikel.cSeriennr ORDER BY tArtikel.kArtikel) AS Nummer
+			FROM dbo.tArtikel 
+			JOIN dbo.tLagerArtikel ON tLagerArtikel.kArtikel = tArtikel.kArtikel AND tLagerArtikel.kLieferscheinPos = 0
+			WHERE tArtikel.cLagerArtikel = &#39;Y&#39;
+			) AS Bestand ON Bestand.kArtikel = Seriennummern.kArtikel
+						AND Bestand.Nummer = Seriennummern.Nummer
+						AND Bestand.cSeriennummer = Seriennummern.cSeriennummer
+    WHERE Inventur.kArtikel IN (SELECT kArtikel 
+						  FROM tInventur);
+    
+	SET @retry = 5;
+	WHILE @retry &gt; 0
+	BEGIN
+		-- Context Info
+		IF(CONTEXT_INFO() IS NOT NULL)
+		BEGIN
+			SET @OldContextInfo = CONTEXT_INFO();
+		END
+		ELSE
+		BEGIN
+			SET @OldContextInfo = 0x0;
+		END
+		DECLARE @hash VARBINARY(128);
+		SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;Verkauf.spAuftragErstellen&#39;);
+		SET CONTEXT_INFO @hash; -- ContextInfo festlegen
+		IF(OBJECT_ID(&#39;tempdb..#OutputDataAuftragPosition&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #OutputDataAuftragPosition;
+		END
+		CREATE TABLE #OutputDataAuftragPosition(nRowcount INT,
+								nOutput INT);
+		BEGIN TRY
+			IF (@@TRANCOUNT = 0)
+			BEGIN
+				SET @CreatedTransaction = 1;
+				BEGIN TRANSACTION
+			END;
+			ELSE
+			BEGIN
+				SET @CreatedTransaction = 0;
+				SAVE TRANSACTION SavepointInventurBuchen;
+			END;
+			-- Seriennummern mit Menge 0 l&#246;schen
+			 DELETE FROM dbo.tLagerArtikel
+			 FROM dbo.tLagerArtikel
+			 JOIN tInventur ON tInventur.kArtikel = tLagerArtikel.kArtikel
+			 JOIN dbo.tArtikel ON tArtikel.kArtikel = tInventur.kArtikel 
+							 AND tArtikel.cLagerArtikel = &#39;Y&#39;
+			 JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tInventur.kWarenLagerPlatz
+			 JOIN tWarenlager ON tWarenLager.kWarenLager = tWarenLagerPlatz.kWarenLager
+			 WHERE tInventur.fAnzahl = 0
+				AND dbo.tLagerArtikel.kWarenlager = tWarenLagerPlatz.kWarenLager
+				AND tLagerArtikel.kBestellPos = 0;
+
+		-- Fehlende Seriennummern hinzuf&#252;gen
+			INSERT INTO dbo.tLagerArtikel ( kLager ,
+											kLagerOrt ,
+											kArtikel ,
+											cSeriennr ,
+											fEK ,
+											cBeschreibung1 ,
+											cBeschreibung2 ,
+											kBestellPos ,
+											kLieferscheinPos ,
+											kLieferant ,
+											kWarenlager ,
+											kLieferantenbestellung ,
+											kPicklistePos ,
+											kRMRetourePos )
+			SELECT	0,
+					0,
+					tInventur.kArtikel,
+					tInventur.cSeriennummer,
+					0.0,
+					&#39;&#39;,
+					&#39;&#39;,
+					0,
+					0,
+					0,
+					tWarenLagerPlatz.kWarenLager,
+					0,
+					0,
+					0
+			FROM #Seriennummern
+			JOIN dbo.tInventur ON tInventur.kInventur = #Seriennummern.kInventur
+			JOIN dbo.tWarenlagerPlatz ON tWarenLagerPlatz.kWarenLagerPlatz = tInventur.kWarenLagerPlatz
+			WHERE #Seriennummern.kLagerArtikel IS NULL;
+
+			 -- &#220;berz&#228;hlige Seriennummern l&#246;schen
+			 DELETE FROM dbo.tLagerArtikel
+			 FROM dbo.tLagerArtikel
+			 JOIN (SELECT DISTINCT kArtikel
+				    FROM #Seriennummern 
+				) AS Result ON Result.kArtikel = tLagerArtikel.kArtikel
+			 LEFT JOIN dbo.tInventur ON tInventur.kArtikel = tLagerArtikel.kArtikel
+				AND tInventur.cSeriennummer = tLagerArtikel.cSeriennr
+			 WHERE tLagerArtikel.kBestellPos = 0
+				AND tInventur.kInventur IS NULL;
+
+
+			TRUNCATE TABLE dbo.tInventur;
+
+			IF(@CreatedTransaction = 1)
+			BEGIN
+				COMMIT-- Nur wenn kein Savepoint gesetzt
+			END
+			SET @retry = -1;
+		END TRY
+		BEGIN CATCH
+		-- Dedlock Catch
+			IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				IF(@CreatedTransaction = 1)
+				BEGIN
+					ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+					ROLLBACK TRANSACTION SavepointInventurBuchen;
+				END
+				IF(@retry = 0)
+				BEGIN
+					SET CONTEXT_INFO 0x0;
+					SET @xmlAppend = (SELECT &#39;Seriennummern buchen wegen Deadlocks fehlgeschlagen.&#39; AS Header, &#39;&#39; AS Daten, ERROR_MESSAGE() AS ErrorMessage FOR XML PATH(&#39;Error&#39;));
+					SET @ErrorData.modify(&#39;insert sql:variable(&quot;@xmlAppend&quot;) as last into (/ErrorList)[1]&#39;);
+					SET @RollbackAll = 1;
+				END
+				EXEC dbo.spWaitRandom;
+			END
+			ELSE
+			BEGIN
+				SET @retry = - 1;
+				IF(@CreatedTransaction = 1)
+				BEGIN
+					ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+					ROLLBACK TRANSACTION SavepointInventurBuchen;
+				END
+				SET CONTEXT_INFO @OldContextInfo;
+				SET @xmlAppend = (SELECT &#39;Seriennummern buchen fehlgeschlagen.&#39; AS Header, &#39;&#39; AS Daten, ERROR_MESSAGE() AS ErrorMessage FOR XML PATH(&#39;Error&#39;));
+				SET @ErrorData.modify(&#39;insert sql:variable(&quot;@xmlAppend&quot;) as last into (/ErrorList)[1]&#39;);
+				SET @RollbackAll = 1;
+			END
+		END CATCH
+	END
+END</code></pre>
+</body>
+</html>

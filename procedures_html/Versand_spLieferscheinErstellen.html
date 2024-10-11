@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Versand.spLieferscheinErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Versand.spLieferscheinErstellen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure kann die Tabelle. dbo.tLieferschein geschrieben werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Versand].[spLieferscheinErstellen]
+	@xLieferschein XML = NULL,
+	@kBestellung INT,
+	@kBenutzer INT,
+	@cLieferscheinNr NVARCHAR(50),
+	@cHinweis NVARCHAR(255),
+	@dMailVersand DATETIME,
+	@dGedruckt DATETIME,
+	@nFulfillment INT,
+	@kLieferantenBestellung INT,
+	@kSessionId INT,
+	@kLieferschein INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+DECLARE @CreatedTransaction INT;
+DECLARE @OldContextInfo VARBINARY(128);
+DECLARE @Identities TABLE (kAutoInc INT IDENTITY(0, 1) NOT NULL, kLieferschein INT NOT NULL);
+
+SET @kLieferschein = -1;
+
+SET @retry = 5;
+
+WHILE @retry &gt; 0
+BEGIN	
+	IF(CONTEXT_INFO() IS NOT NULL)
+		SET @OldContextInfo = CONTEXT_INFO();
+	ELSE
+		SET @OldContextInfo = 0x0;
+	SET CONTEXT_INFO 0x5113;
+	BEGIN TRY
+		IF (@@TRANCOUNT = 0)
+		BEGIN
+		   SET @CreatedTransaction = 1;
+		   BEGIN TRANSACTION
+		END;
+		ELSE
+		BEGIN
+			SET @CreatedTransaction = 0;
+			SAVE TRANSACTION Savepoint0;
+		END;
+		IF(OBJECT_ID(&#39;tempdb..#Lieferschein&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #Lieferschein;
+		END
+		CREATE TABLE #Lieferschein(
+	        kAutoInc INT IDENTITY(0, 1) NOT NULL,
+			kBestellung INT,
+			kBenutzer INT,
+			cLieferscheinNr NVARCHAR(50),
+			cHinweis NVARCHAR(255),
+			dMailVersand DATETIME,
+			dGedruckt DATETIME,
+			nFulfillment INT,
+			kLieferantenBestellung INT,
+			kSessionId INT
+		);
+		IF(@xLieferschein IS NOT NULL)
+		BEGIN
+			INSERT INTO #Lieferschein(kBestellung, kBenutzer, cLieferscheinNr, cHinweis, dMailVersand,
+				dGedruckt, nFulfillment, kLieferantenBestellung,kSessionId)
+				SELECT Lieferschein.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;),
+						Lieferschein.ID.value(&#39;kBenutzer[1]&#39;, &#39;INT&#39;),
+						Lieferschein.ID.value(&#39;cLieferscheinNr[1]&#39;, &#39;NVARCHAR(50)&#39;),
+						Lieferschein.ID.value(&#39;cHinweis[1]&#39;, &#39;NVARCHAR(255)&#39;),
+						Lieferschein.ID.value(&#39;dMailVersand[1]&#39;, &#39;DATETIME&#39;),
+						Lieferschein.ID.value(&#39;dGedruckt[1]&#39;, &#39;DATETIME&#39;),
+						Lieferschein.ID.value(&#39;nFulfillment[1]&#39;, &#39;INT&#39;),
+						Lieferschein.ID.value(&#39;kLieferantenBestellung[1]&#39;, &#39;INT&#39;),
+						Lieferschein.ID.value(&#39;kSessionId[1]&#39;, &#39;INT&#39;)
+					FROM @xLieferschein.nodes(&#39;Lieferschein&#39;) AS Lieferschein(ID);
+		END
+		ELSE
+		BEGIN
+			INSERT INTO #Lieferschein(kBestellung, kBenutzer, cLieferscheinNr, cHinweis, dMailVersand,
+				dGedruckt, nFulfillment, kLieferantenBestellung, kSessionId)
+				VALUES(@kBestellung, @kBenutzer, @cLieferscheinNr, @cHinweis, @dMailVersand, 
+				@dGedruckt,@nFulfillment, @kLieferantenBestellung, @kSessionId);
+		END	
+
+		INSERT INTO dbo.tLieferschein(kBestellung, kBenutzer, cLieferscheinNr, cHinweis, dMailVersand, dErstellt,
+									dGedruckt, nFulfillment, kLieferantenBestellung, kSessionId)
+			OUTPUT inserted.kLieferschein INTO @Identities(kLieferschein)
+			SELECT
+				kBestellung, kBenutzer, cLieferscheinNr, cHinweis, dMailVersand, GETDATE(),
+				dGedruckt, nFulfillment, kLieferantenBestellung, kSessionId
+			FROM #Lieferschein;
+
+		IF(OBJECT_ID(&#39;tempdb..#LieferscheinBestellungenConnectorUpload&#39;) IS NOT NULL)
+		BEGIN
+			DROP TABLE #LieferscheinBestellungenConnectorUpload;
+		END
+		CREATE TABLE #LieferscheinBestellungenConnectorUpload
+		(
+			kAuftrag INT
+		);
+
+		INSERT INTO #LieferscheinBestellungenConnectorUpload (kAuftrag)
+			SELECT DISTINCT
+				tAuftrag.kAuftrag
+			FROM Verkauf.tAuftrag
+			JOIN #Lieferschein ON #Lieferschein.kBestellung = tAuftrag.kAuftrag
+			JOIN dbo.tShop ON tShop.kShop = tAuftrag.kShop
+			WHERE tShop.nTyp = 1;
+
+		IF EXISTS (SELECT 1 FROM #LieferscheinBestellungenConnectorUpload)
+		BEGIN
+			UPDATE Verkauf.tAuftrag
+			SET tAuftrag.cInet = &#39;Y&#39;
+			FROM Verkauf.tAuftrag
+			JOIN #LieferscheinBestellungenConnectorUpload ON #LieferscheinBestellungenConnectorUpload.kAuftrag = tAuftrag.kAuftrag;
+		END;
+
+		SELECT @kLieferschein = MAX(tIdentities.kLieferschein)
+		  FROM @Identities AS tIdentities
+
+		-- Kundenhistorie schreiben
+		IF(EXISTS(SELECT tAuftrag.kKunde 
+					FROM Verkauf.tAuftrag 
+					JOIN #Lieferschein ON #Lieferschein.kBestellung = tAuftrag.kAuftrag
+					AND tAuftrag.kKunde IS NOT NULL))
+		BEGIN
+			INSERT INTO Kunde.tHistorie (kKunde,
+										kAuftrag,
+										kVorgang,
+										kKey,
+										cValue1,
+										cValue2,
+										cValue3,
+										dErstellt,
+										kBenutzer)
+				SELECT tAuftrag.kKunde,
+					#Lieferschein.kBestellung,
+					2,
+					tIdentities.kLieferschein,
+					#Lieferschein.cLieferscheinNr,
+					tAuftrag.cAuftragsNr,
+					NULL,
+					GETDATE(),
+					#Lieferschein.kBenutzer
+				FROM #Lieferschein
+				JOIN Verkauf.tAuftrag ON tAuftrag.kAuftrag = #Lieferschein.kBestellung
+				JOIN @Identities AS tIdentities ON tIdentities.kAutoInc = #Lieferschein.kAutoInc
+			   WHERE tAuftrag.kKunde IS NOT NULL;
+		END
+				
+		DROP TABLE #Lieferschein;
+		SET @retry = -1;
+		SET CONTEXT_INFO @OldContextInfo;
+		IF (@CreatedTransaction = 1)
+		BEGIN
+			COMMIT
+		END
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				IF(@CreatedTransaction = 1)
+				BEGIN
+				    ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+				    ROLLBACK TRANSACTION Savepoint0;
+				END
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:01&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+
+				IF(@CreatedTransaction = 1)
+				BEGIN
+				    ROLLBACK TRANSACTION;
+				END
+				ELSE
+				BEGIN
+				    ROLLBACK TRANSACTION Savepoint0;
+				END
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO @OldContextInfo;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO @OldContextInfo;	
+END</code></pre>
+</body>
+</html>

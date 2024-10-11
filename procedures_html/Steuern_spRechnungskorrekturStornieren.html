@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Steuern.spRechnungskorrekturStornieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Steuern.spRechnungskorrekturStornieren</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE Steuern.spRechnungskorrekturStornieren 
+    @Rechnungskorrekturen Steuern.TYPE_spRechnungskorrekturStornieren READONLY,
+    @Kommentar AS NVARCHAR(100),
+    @BenutzerKey AS INT
+AS
+BEGIN
+	IF(NOT EXISTS (SELECT * FROM @Rechnungskorrekturen))
+	BEGIN
+	    RETURN;
+	END
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungskorrekturMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungskorrekturMapping;
+	END
+	
+	CREATE TABLE #TempRechnungskorrekturMapping
+	(
+	    kGutschrift INT PRIMARY KEY NOT NULL,
+	    kStornoGutschrift INT NOT NULL
+	);
+	
+	DECLARE @kGutschrift INT
+	DECLARE @NewRechnungsadresseId INT
+	DECLARE @NewRechnungskorrekturId INT
+	DECLARE @NeueNummer NVARCHAR(100)
+	DECLARE @FirmaKey INT
+	
+	DECLARE Rechnungskorrekturen_CURSOR CURSOR LOCAL FAST_FORWARD
+	FOR
+	SELECT [@Rechnungskorrekturen].kGutschrift, tgutschrift.kFirma
+	FROM @Rechnungskorrekturen
+	JOIN dbo.tgutschrift ON tgutschrift.kGutschrift = [@Rechnungskorrekturen].kGutschrift
+	OPEN Rechnungskorrekturen_CURSOR
+	FETCH NEXT FROM Rechnungskorrekturen_CURSOR INTO @kGutschrift, @FirmaKey
+	
+	WHILE @@FETCH_STATUS = 0
+	BEGIN 
+	    EXECUTE dbo.spGetAndUpdatePK @cName = &#39;trechnungsadresse&#39;, @kId = @NewRechnungsadresseId OUTPUT
+	
+	    INSERT INTO dbo.trechnungsadresse
+	    (
+	        kRechnungsAdresse,
+	        kKunde,
+	        cFirma,
+	        cAnrede,
+	        cTitel,
+	        cVorname,
+	        cName,
+	        cStrasse,
+	        cPLZ,
+	        cOrt,
+	        cLand,
+	        cTel,
+	        cZusatz,
+	        cAdressZusatz,
+	        cPostID,
+	        cMobil,
+	        cMail,
+	        cFax,
+	        cBundesland,
+	        cISO,
+	        cKundenNr,
+	        cZHaenden
+	    )
+	    SELECT 
+	        @NewRechnungsadresseId,
+	        trechnungsadresse.kKunde,
+	        trechnungsadresse.cFirma,
+	        trechnungsadresse.cAnrede,
+	        trechnungsadresse.cTitel,
+	        trechnungsadresse.cVorname,
+	        trechnungsadresse.cName,
+	        trechnungsadresse.cStrasse,
+	        trechnungsadresse.cPLZ,
+	        trechnungsadresse.cOrt,
+	        trechnungsadresse.cLand,
+	        trechnungsadresse.cTel,
+	        trechnungsadresse.cZusatz,
+	        trechnungsadresse.cAdressZusatz,
+	        trechnungsadresse.cPostID,
+	        trechnungsadresse.cMobil,
+	        trechnungsadresse.cMail,
+	        trechnungsadresse.cFax,
+	        trechnungsadresse.cBundesland,
+	        trechnungsadresse.cISO,
+	        trechnungsadresse.cKundenNr,
+	        trechnungsadresse.cZHaenden 
+	    FROM dbo.trechnungsadresse
+	    JOIN dbo.tgutschrift ON tgutschrift.kRechnungsAdresse = trechnungsadresse.kRechnungsAdresse
+	    WHERE tgutschrift.kGutschrift = @kGutschrift
+	
+	    EXECUTE dbo.spGetAndUpdatePK @cName = &#39;tGutschrift&#39;, @kId = @NewRechnungskorrekturId OUTPUT
+	
+	    EXECUTE dbo.spGetNextNummer 
+	        @cName = &#39;Stornogutschrift&#39;, 
+	        @kFirma = @FirmaKey, 
+	        @nNoUpdate = 0, 
+	        @cNeueNummer = @NeueNummer OUTPUT
+	
+	    INSERT INTO dbo.tgutschrift
+	    (
+	        kGutschrift,
+	        kRechnung,
+	        kKunde,
+	        cGutschriftNr,
+	        cKurzText,
+	        cText,
+	        fPreis,
+	        fMwSt,
+	        dErstellt,
+	        cErloeskonto,
+	        nErweitert,
+	        cWaehrung,
+	        fFaktor,
+	        kFirma,
+	        kSprache,
+	        kBenutzer,
+	        cStatus,
+	        kRechnungsAdresse,
+	        kPlattform,
+	        cVersandlandWaehrung,
+	        fVersandlandWaehrungFaktor,
+	        dDruckdatum,
+	        dMaildatum,
+	        nIstExtern,
+	        nStorno,
+	        nStornoTyp,
+	        cKundeUstId,
+	        nGutschriftStatus
+	    )
+	    SELECT 
+	        @NewRechnungskorrekturId,
+	        tgutschrift.kRechnung,
+	        tgutschrift.kKunde,
+	        @NeueNummer,
+	        tgutschrift.cKurzText,
+	        tgutschrift.cText,
+	        tgutschrift.fPreis * -1,
+	        tgutschrift.fMwSt,
+	        GETDATE(),
+	        tgutschrift.cErloeskonto,
+	        tgutschrift.nErweitert,
+	        tgutschrift.cWaehrung,
+	        tgutschrift.fFaktor,
+	        tgutschrift.kFirma,
+	        tgutschrift.kSprache,
+	        @BenutzerKey,
+	        tgutschrift.cStatus,
+	        @NewRechnungsadresseId,
+	        tgutschrift.kPlattform,
+	        tgutschrift.cVersandlandWaehrung,
+	        tgutschrift.fVersandlandWaehrungFaktor,
+	        NULL,
+	        NULL,
+	        tgutschrift.nIstExtern,
+	        0,
+	        2,
+	        tgutschrift.cKundeUstId,
+	        tgutschrift.nGutschriftStatus 
+	    FROM dbo.tgutschrift
+	    WHERE tgutschrift.kGutschrift = @kGutschrift
+	
+	    INSERT INTO #TempRechnungskorrekturMapping(kGutschrift, kStornoGutschrift)
+	    VALUES(@kGutschrift, @NewRechnungskorrekturId)
+	
+	    FETCH NEXT FROM Rechnungskorrekturen_CURSOR INTO @kGutschrift, @FirmaKey
+	END
+	
+	CLOSE Rechnungskorrekturen_CURSOR
+	DEALLOCATE Rechnungskorrekturen_CURSOR        
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungskorrekturPositionMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungskorrekturPositionMapping;
+	END
+	
+	CREATE TABLE #TempRechnungskorrekturPositionMapping
+	(
+	    kGutschriftPos INT PRIMARY KEY NOT NULL,
+	    kStornoGutschriftPos INT NOT NULL
+	);
+	
+	MERGE INTO dbo.tGutschriftPos AS Ziel
+	USING (SELECT 0 AS DummyKey, 
+	            tGutschriftPos.kGutschriftPos,
+	            tGutschriftPos.tArtikel_kArtikel,
+	            #TempRechnungskorrekturMapping.kStornoGutschrift AS tGutschrift_kGutschrift,
+	            tGutschriftPos.fVKPreis * -1 AS fVKPreis,
+	            tGutschriftPos.fMwSt,
+	            tGutschriftPos.nAnzahl,
+	            tGutschriftPos.fRabatt,
+	            tGutschriftPos.cString,
+	            tGutschriftPos.fVKNetto * -1 AS fVKNetto,
+	            tGutschriftPos.cArtNr,
+	            tGutschriftPos.nLager,
+	            tGutschriftPos.kBestellPos,
+	            tGutschriftPos.kGutschriftStueckliste,
+	            tGutschriftPos.nSort,
+	            tGutschriftPos.kRechnungPosition,
+	            0 AS nAuftragsmengeReduzieren,
+	            0 AS nLiefermengeReduzieren,
+	            tGutschriftPos.nSkontogegenbuchung
+	       FROM dbo.tGutschriftPos
+	       JOIN #TempRechnungskorrekturMapping ON #TempRechnungskorrekturMapping.kGutschrift = tGutschriftPos.tGutschrift_kGutschrift) AS Quelle
+	ON (Quelle.DummyKey = Ziel.kGutschriftPos)
+	WHEN NOT MATCHED
+	    THEN INSERT(tArtikel_kArtikel,
+	                tGutschrift_kGutschrift,
+	                fVKPreis,
+	                fMwSt,
+	                nAnzahl,
+	                fRabatt,
+	                cString,
+	                fVKNetto,
+	                cArtNr,
+	                nLager,
+	                kBestellPos,
+	                kGutschriftStueckliste,
+	                nSort,
+	                kRechnungPosition,
+	                nAuftragsmengeReduzieren,
+	                nLiefermengeReduzieren,
+	                nSkontogegenbuchung)
+	    VALUES (Quelle.tArtikel_kArtikel,
+	            Quelle.tGutschrift_kGutschrift,
+	            Quelle.fVKPreis,
+	            Quelle.fMwSt,
+	            Quelle.nAnzahl,
+	            Quelle.fRabatt,
+	            Quelle.cString,
+	            Quelle.fVKNetto,
+	            Quelle.cArtNr,
+	            Quelle.nLager,
+	            Quelle.kBestellPos,
+	            Quelle.kGutschriftStueckliste,
+	            Quelle.nSort,
+	            Quelle.kRechnungPosition,
+	            Quelle.nAuftragsmengeReduzieren,
+	            Quelle.nLiefermengeReduzieren,
+	            Quelle.nSkontogegenbuchung)
+	    OUTPUT Quelle.kGutschriftPos, Inserted.kGutschriftPos INTO #TempRechnungskorrekturPositionMapping(kGutschriftPos, kStornoGutschriftPos);
+	
+	UPDATE dbo.tGutschriftPos
+	SET tGutschriftPos.kGutschriftStueckliste = #TempRechnungskorrekturPositionMapping.kStornoGutschriftPos
+	FROM dbo.tGutschriftPos
+	JOIN #TempRechnungskorrekturPositionMapping ON #TempRechnungskorrekturPositionMapping.kGutschriftPos = tGutschriftPos.kGutschriftStueckliste
+	
+	DECLARE @kEigenschaftWert INT
+	DECLARE @kGutschriftPos INT
+	DECLARE @kArtikel INT
+	DECLARE @fNettoPreis DECIMAL(25, 13)
+	DECLARE @NewEigenschatfId INT
+	
+	DECLARE Eigenschaften_CURSOR CURSOR LOCAL FAST_FORWARD
+	FOR
+	SELECT 
+	    tgutschrifteigenschaft.kEigenschaftWert,
+	    #TempRechnungskorrekturPositionMapping.kStornoGutschriftPos AS kGutschriftPos,
+	    tgutschrifteigenschaft.kArtikel,
+	    tgutschrifteigenschaft.fNettoPreis * -1 AS fNettoPreis
+	FROM dbo.tgutschrifteigenschaft
+	JOIN #TempRechnungskorrekturPositionMapping ON #TempRechnungskorrekturPositionMapping.kGutschriftPos = tgutschrifteigenschaft.kGutschriftPos
+	OPEN Eigenschaften_CURSOR
+	FETCH NEXT FROM Eigenschaften_CURSOR INTO @kEigenschaftWert, @kGutschriftPos, @kArtikel, @fNettoPreis
+	
+	WHILE @@FETCH_STATUS = 0
+	BEGIN 
+	    EXECUTE dbo.spGetAndUpdatePK @cName = &#39;tgutschrifteigenschaft&#39;, @kId = @NewEigenschatfId OUTPUT
+	
+	    INSERT INTO dbo.tgutschrifteigenschaft
+	    (
+	        kGutschriftEigenschaft,
+	        kEigenschaftWert,
+	        kGutschriftPos,
+	        kArtikel,
+	        fNettoPreis
+	    )
+	    VALUES
+	    (   
+	        @NewEigenschatfId,
+	        @kEigenschaftWert,
+	        @kGutschriftPos,
+	        @kArtikel,
+	        @fNettoPreis
+	    )
+	
+	    FETCH NEXT FROM Eigenschaften_CURSOR INTO @kEigenschaftWert, @kGutschriftPos, @kArtikel, @fNettoPreis
+	END
+	
+	CLOSE Eigenschaften_CURSOR
+	DEALLOCATE Eigenschaften_CURSOR
+	
+	DECLARE @Gutschriften dbo.TYPE_spGutschriftenStornieren
+	INSERT INTO @Gutschriften(kGutschrift, kStornoGutschrift)
+	SELECT #TempRechnungskorrekturMapping.kGutschrift, #TempRechnungskorrekturMapping.kStornoGutschrift
+	FROM #TempRechnungskorrekturMapping
+	
+	DECLARE @dStorniert DATETIME = GETDATE()
+	DECLARE @xResultGutschrift XML;
+	EXECUTE dbo.spGutschriftenStornieren @Gutschriften = @Gutschriften,
+	                                     @kGutschriftStornogrund = 0,
+	                                     @cKommentar = @Kommentar,
+	                                     @kBenutzer = @BenutzerKey,
+	                                     @dStorniert = @dStorniert,
+	                                     @xResult = @xResultGutschrift OUTPUT
+
+	DECLARE @GutschriftenEckdaten dbo.TYPE_spGutschriftEckdatenBerechnen
+	INSERT INTO @GutschriftenEckdaten(kGutschrift)
+	SELECT #TempRechnungskorrekturMapping.kStornoGutschrift 
+	FROM #TempRechnungskorrekturMapping
+
+	EXECUTE dbo.spGutschriftEckdatenBerechnen @Gutschriften = @GutschriftenEckdaten	
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungskorrekturPositionMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungskorrekturPositionMapping;
+	END
+	
+	IF(OBJECT_ID(&#39;tempdb..#TempRechnungskorrekturMapping&#39;) IS NOT NULL)
+	BEGIN
+	    DROP TABLE #TempRechnungskorrekturMapping;
+	END
+END</code></pre>
+</body>
+</html>

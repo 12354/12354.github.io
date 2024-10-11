@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spUpdateEbayBilderLaufendGeplant</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spUpdateEbayBilderLaufendGeplant</h1>
+    <p><strong>Description:</strong> Die Stored Procedure setzt für die übergebenen Artikel das Status Bit für Bilder übertragen.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>-- SP Umstellen auf Table Type statt XML
+CREATE PROC [dbo].[spUpdateEbayBilderLaufendGeplant]
+-- Setzt f&#252;r alle laufenden/geplanten eBay-Angebote einer Menge von Artikeln in ebay_geaenderte_laufende_angebote.nChanges das Bilder-Bit auf 1/cStatus auf &quot;U&quot;.
+-- Hierbei werden auch f&#252;r alle laufenden/geplanten Angebote von Vaterartikeln der &#252;bergebenen Artikel das VarKombisNichtPreis-Bit auf 1/cStatus auf &quot;U&quot; gesetzt, 
+--		wenn der &#252;bergebene Artikel als Variation im laufenden/geplanten Angebot aktiv ist.
+--
+@Artikel TYPE_spUpdateEbayBilderLaufendGeplant READONLY
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+
+	IF(object_id(&#39;tempdb..#spUpdateEbayBilderLaufendGeplant_Artikel&#39;) IS NOT NULL)
+    BEGIN
+	   DROP TABLE #spUpdateEbayBilderLaufendGeplant_Artikel;
+    END;
+    CREATE TABLE #spUpdateEbayBilderLaufendGeplant_Artikel (kArtikel INT);
+
+    INSERT INTO #spUpdateEbayBilderLaufendGeplant_Artikel(kArtikel)
+	SELECT kArtikel FROM @Artikel
+
+    IF((SELECT COUNT(1) FROM #spUpdateEbayBilderLaufendGeplant_Artikel) = 0)
+    BEGIN
+	   RETURN;
+    END;
+
+	--
+	-- laufende Angebote berechnen 
+	--
+
+	IF(object_id(&#39;tempdb..#spUpdateEbayBilderLaufendGeplant_EbayItems&#39;) IS NOT NULL)
+    BEGIN
+	   DROP TABLE #spUpdateEbayBilderLaufendGeplant_EbayItems;
+    END;
+    CREATE TABLE #spUpdateEbayBilderLaufendGeplant_EbayItems (kEbayItem INT);
+
+	DECLARE @EBAY_STATUS_LAUFENDE_ANGEBOTE INT;
+	SET @EBAY_STATUS_LAUFENDE_ANGEBOTE = 3;
+    DECLARE @EBAY_STATUS_LAUFEND_ERROR INT; 
+	SET @EBAY_STATUS_LAUFEND_ERROR = 7;
+
+	INSERT #spUpdateEbayBilderLaufendGeplant_EbayItems(kEbayItem)
+		SELECT 
+			ebay_item.kItem
+		FROM #spUpdateEbayBilderLaufendGeplant_Artikel 
+		JOIN dbo.ebay_item ON ebay_item.kArtikel = #spUpdateEbayBilderLaufendGeplant_Artikel.kArtikel  
+			AND ebay_item.Status IN (@EBAY_STATUS_LAUFENDE_ANGEBOTE, @EBAY_STATUS_LAUFEND_ERROR)
+		GROUP BY ebay_item.kItem;
+
+	--
+	-- Bit-Wert f&#252;r Bilder berechnen
+	--
+
+	DECLARE @nBitValue INT; 
+	SET @nBitValue = POWER(2, 7);
+
+	--
+	-- laufende Angebote updaten
+	--
+
+	UPDATE dbo.ebay_geaenderte_laufende_angebote
+	SET nChanges = nChanges | @nBitValue
+	FROM #spUpdateEbayBilderLaufendGeplant_EbayItems JOIN dbo.ebay_geaenderte_laufende_angebote 
+		ON dbo.ebay_geaenderte_laufende_angebote.kItem = #spUpdateEbayBilderLaufendGeplant_EbayItems.kEbayItem;
+
+	INSERT dbo.ebay_geaenderte_laufende_angebote
+	(
+		kItem,
+		nChanges
+	)
+	SELECT #spUpdateEbayBilderLaufendGeplant_EbayItems.kEbayItem, @nBitValue
+	FROM #spUpdateEbayBilderLaufendGeplant_EbayItems LEFT JOIN dbo.ebay_geaenderte_laufende_angebote 
+		ON dbo.ebay_geaenderte_laufende_angebote.kItem = #spUpdateEbayBilderLaufendGeplant_EbayItems.kEbayItem 
+	WHERE dbo.ebay_geaenderte_laufende_angebote.kItem IS NULL;
+
+	--
+	-- geplante Angebote updaten
+	--
+
+	UPDATE dbo.ebay_planung
+	SET cStatus = &#39;U&#39;
+	FROM #spUpdateEbayBilderLaufendGeplant_Artikel 
+		JOIN dbo.ebay_item ON dbo.ebay_item.kArtikel = #spUpdateEbayBilderLaufendGeplant_Artikel.kArtikel 
+		JOIN dbo.ebay_planung ON dbo.ebay_planung.kItem = dbo.ebay_item.kItem;
+
+	--
+	-- Variationen f&#252;r laufende Angebote ber&#252;cksichtigen
+	--
+
+	DELETE #spUpdateEbayBilderLaufendGeplant_EbayItems;
+
+    INSERT #spUpdateEbayBilderLaufendGeplant_EbayItems(kEbayItem)
+	SELECT DISTINCT dbo.ebay_item.kItem 
+	FROM #spUpdateEbayBilderLaufendGeplant_Artikel 
+		JOIN dbo.tArtikel ON tArtikel.kArtikel = #spUpdateEbayBilderLaufendGeplant_Artikel.kArtikel
+		JOIN dbo.ebay_item ON ebay_item.kArtikel = tartikel.kVaterArtikel
+			AND dbo.ebay_item.Status IN (@EBAY_STATUS_LAUFENDE_ANGEBOTE, @EBAY_STATUS_LAUFEND_ERROR)
+		JOIN dbo.ebay_item2kombi ON ebay_item2kombi.kItem = ebay_item.kItem
+			AND ebay_item2kombi.kEigenschaftKombi = tArtikel.kEigenschaftKombi;
+	
+	--
+	-- Bit-Wert f&#252;r VarKombisNichtPreis berechnen
+	--
+
+	SET @nBitValue = @nBitValue | POWER(2, 9);
+
+	UPDATE dbo.ebay_geaenderte_laufende_angebote
+	SET nChanges = nChanges | @nBitValue
+	FROM #spUpdateEbayBilderLaufendGeplant_EbayItems JOIN dbo.ebay_geaenderte_laufende_angebote 
+		ON dbo.ebay_geaenderte_laufende_angebote.kItem = #spUpdateEbayBilderLaufendGeplant_EbayItems.kEbayItem; 
+
+	INSERT dbo.ebay_geaenderte_laufende_angebote
+	(
+		kItem,
+		nChanges
+	)
+	SELECT #spUpdateEbayBilderLaufendGeplant_EbayItems.kEbayItem, @nBitValue
+	FROM #spUpdateEbayBilderLaufendGeplant_EbayItems LEFT JOIN dbo.ebay_geaenderte_laufende_angebote 
+		ON dbo.ebay_geaenderte_laufende_angebote.kItem = #spUpdateEbayBilderLaufendGeplant_EbayItems.kEbayItem 
+	WHERE dbo.ebay_geaenderte_laufende_angebote.kItem IS NULL;	
+
+	--
+	-- Variationen f&#252;r geplante Angebote ber&#252;cksichtigen
+	--
+
+	UPDATE dbo.ebay_planung
+	SET cStatus = &#39;U&#39;
+	FROM #spUpdateEbayBilderLaufendGeplant_Artikel
+		JOIN dbo.tArtikel ON tArtikel.kArtikel = #spUpdateEbayBilderLaufendGeplant_Artikel.kArtikel
+		JOIN dbo.ebay_item ON dbo.ebay_item.kArtikel = dbo.tArtikel.kVaterArtikel
+		JOIN dbo.ebay_item2kombi ON ebay_item2kombi.kItem = ebay_item.kItem
+			AND ebay_item2kombi.kEigenschaftKombi = tArtikel.kEigenschaftKombi
+		JOIN dbo.ebay_planung ON dbo.ebay_planung.kItem = dbo.ebay_item.kItem; 
+END;</code></pre>
+</body>
+</html>

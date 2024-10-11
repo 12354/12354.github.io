@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spAmazonPosAendern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spAmazonPosAendern</h1>
+    <p><strong>Description:</strong> Änderungen an Amazonpositionen können nur über diese Procedure vorgenommen werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[spAmazonPosAendern]
+	@kAmazonBestellungPos INT,
+	@kAmazonBestellung INT,
+	@cArtNr NVARCHAR(100),
+	@cName NVARCHAR(255),
+	@nQuantityPurchased INT,
+	@fItemPrice DECIMAL(25,13),
+	@fItemTax DECIMAL(25,13),
+	@fShippingPrice DECIMAL(25,13),
+	@fShippingTax DECIMAL(25,13),
+	@cOrderItemId NVARCHAR(30), 
+	@nVersandt INT,
+	@cCarrier NVARCHAR(20),
+	@cTrackingNumber NVARCHAR(50),
+	@dEstimatedArrivalDate DATETIME,
+	@cFulfillmentCenterId NVARCHAR(20),
+	@cFullfillmentChannel NVARCHAR(20),
+	@cMerchantOrderItemid NVARCHAR(50),
+	@nErrorCode INT,
+	@cErrorMessage NVARCHAR(2000),
+	@dErrorErstellt DATETIME,
+	@fGeschenkverpackungKosten DECIMAL(25,13),
+	@cGeschenkverpackungTyp NVARCHAR(50),
+	@cGrusstext NVARCHAR(255),
+	@nGeschenk TINYINT,
+	@kFulfillmentAuftragPos INT,
+	@cCustomUrl NVARCHAR(255),
+	@cCustomJson NVARCHAR(MAX),
+	@cArchiveUrl NVARCHAR(512)
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5101;
+	BEGIN TRY  
+		DECLARE @fAnzahlOld DECIMAL(28,14);
+		DECLARE @kArtikelold INT;
+		DECLARE @kArtikelNew INT;
+		DECLARE @kUser INT;
+
+		SELECT
+				@kArtikelOld = kArtikel,
+				@fAnzahlOld = fAnzahl
+		FROM dbo.tExterneReservierung
+		WHERE tExterneReservierung.kKey = @kAmazonBestellungPos	AND tExterneReservierung.nTyp = 3;
+
+		SELECT @kUser = kUser 
+		FROM dbo.pf_amazon_bestellung 
+		WHERE pf_amazon_bestellung.kAmazonBestellung = @kAmazonBestellung;
+
+		SELECT @kArtikelNew = pf_amazon_angebot_mapping.kArtikel
+		FROM dbo.pf_amazon_angebot_mapping
+        JOIN dbo.tArtikel ON tArtikel.kArtikel = pf_amazon_angebot_mapping.kArtikel
+		WHERE pf_amazon_angebot_mapping.kUser = @kUser AND pf_amazon_angebot_mapping.cSellerSKU = @cArtNr
+
+		IF(@kArtikelNew IS NULL)
+		BEGIN
+			SELECT @kArtikelNew = tArtikel.kArtikel
+			FROM dbo.tArtikel 
+			WHERE tArtikel.cArtNr = @cArtNr
+		END		
+
+		DECLARE @TranCount INT = @@TRANCOUNT;
+        IF(@TranCount = 0)
+        BEGIN
+            BEGIN TRANSACTION  
+        END	   
+		
+		UPDATE dbo.pf_amazon_bestellungpos
+		SET kAmazonBestellung = @kAmazonBestellung,
+			cArtNr = @cArtNr,
+			cName = @cName,
+			nQuantityPurchased = @nQuantityPurchased,
+			fItemPrice = @fItemPrice,
+			fItemTax = @fItemTax,
+			fShippingPrice = @fShippingPrice,
+			fShippingTax = @fShippingTax,
+			cOrderItemId = @cOrderItemId,
+			nVersandt = @nVersandt,
+			cCarrier = @cCarrier,
+			cTrackingNumber = @cTrackingNumber,
+			dEstimatedArrivalDate = @dEstimatedArrivalDate,
+			cFulfillmentCenterId = @cFulfillmentCenterId,
+			cFulfillmentChannel = @cFullfillmentChannel,
+			cMerchantOrderItemId = @cMerchantOrderItemid,
+			nErrorCode = @nErrorCode,
+			cErrorMessage = @cErrorMessage,
+			dErrorErstellt = @dErrorErstellt,
+			fGeschenkverpackungKosten = @fGeschenkverpackungKosten,
+			cGeschenkverpackungTyp = @cGeschenkverpackungTyp,
+			cGrusstext = @cGrusstext,
+			nGeschenk = @nGeschenk,
+			kFulfillmentAuftragPos = @kFulfillmentAuftragPos,
+			cCustomUrl = @cCustomUrl,
+			cCustomJson = @cCustomJson,
+            pf_amazon_bestellungpos.cArchiveUrl = @cArchiveUrl
+		WHERE kAmazonBestellungPos = @kAmazonBestellungPos;
+			
+		IF(@nQuantityPurchased &lt; 0.0)
+		BEGIN
+			DELETE FROM dbo.tExterneReservierung
+			WHERE kKey = @kAmazonBestellungPos AND tExterneReservierung.nTyp = 3;
+			
+			DECLARE @lagerbestand TYPE_spUpdateLagerbestand;
+			INSERT INTO @lagerbestand (kArtikel)
+			VALUES(@kArtikelNew), (@kArtikelold);
+
+			EXEC dbo.spUpdateLagerbestand @Artikel = @lagerbestand					
+		END
+		ELSE
+		BEGIN
+			IF(@kArtikelold &lt;&gt; @kArtikelNew OR @fAnzahlOld &lt;&gt; @nQuantityPurchased)
+			BEGIN
+				UPDATE dbo.tExterneReservierung
+				SET kArtikel = @kArtikelNew,
+					fAnzahl = @nQuantityPurchased
+				WHERE kKey = @kAmazonBestellungPos AND tExterneReservierung.nTyp = 3;
+				
+				IF(@kArtikelold &lt;&gt; @kArtikelNew)
+				BEGIN
+					UPDATE dbo.tlagerbestand
+					SET fInAuftraegen = CASE 
+											WHEN kArtikel = @kArtikelOld
+												THEN fInAuftraegen - @fAnzahlOld
+											ELSE fInAuftraegen + @nQuantityPurchased
+										END,
+						fVerfuegbar = CASE 
+											WHEN kArtikel = @kArtikelOld
+												THEN fVerfuegbar + @fAnzahlOld
+											ELSE fVerfuegbar - @nQuantityPurchased
+										END
+					WHERE kArtikel IN(@kArtikelold, @kArtikelNew) AND tlagerbestand.nArtikelTyp &lt;&gt; 3;
+				END
+				ELSE
+				BEGIN
+					UPDATE dbo.tlagerbestand
+					SET fInAuftraegen = fInAuftraegen - @fAnzahlOld + @nQuantityPurchased,
+						fVerfuegbar = fVerfuegbar + @fAnzahlOld - @nQuantityPurchased
+					WHERE kArtikel = @kArtikelNew AND tlagerbestand.nArtikelTyp &lt;&gt; 3;
+				END
+		  END
+		END
+		SET @retry = 0;
+		SET CONTEXT_INFO 0x0;
+		IF(@TranCount = 0)
+        BEGIN           
+			COMMIT TRANSACTION      
+        END
+    END TRY       
+    BEGIN CATCH           
+        IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+        BEGIN              
+            SET @retry = @retry - 1;               
+            ROLLBACK       
+        END          
+        ELSE          
+        BEGIN              
+            SET @retry = 0;               
+            THROW;           
+        END      
+    END CATCH
+END
+SET CONTEXT_INFO 0x0;</code></pre>
+</body>
+</html>

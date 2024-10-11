@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>subset.spWarenlagerAusgangSchreiben</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>subset.spWarenlagerAusgangSchreiben</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure wird ein Warenlagerausgang gebucht, und dabei die Teilmenge auch Reduziert</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [subset].[spWarenlagerAusgangSchreiben]
+	@xWarenlagerAusgaenge XML = NULL,
+	--
+	-- XML Struktur
+	--
+	-- &lt;Warenausgang&gt;
+	--	&lt;kWarenlagerEingang&gt;
+	--	&lt;kLieferscheinPos&gt;
+	--	&lt;fAnzahl&gt;
+	--	&lt;kWarenlagerPlatz&gt;
+	--	&lt;kArtikel&gt;
+	--	&lt;cKommentar&gt;
+	--	&lt;kBenutzer&gt;
+	--	&lt;kBuchungsart&gt;
+	--	&lt;kSessionID&gt;
+	-- &lt;/WarenEingang&gt;
+	--
+	@kWarenLagerEingang INT = NULL,
+	@kLieferscheinPos INT = NULL,
+	@fQuantity INT = 0,
+	@cKommentar NVARCHAR(255) = NULL,
+	@kBenutzer INT = 0,
+	@kBuchungsart INT = NULL,
+	@nHistorieNichtSchreiben BIT = 0,
+	@kSessionID INT = NULL,
+	@nKeepFactor BIT = 0, -- Falls 1, wird die Anzahl NICHT mit dem Factor berechnet (F&#252;r F&#228;lle wo es schon vorher gemacht wird)
+	@kWarenlagerAusgang INT = NULL OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET XACT_ABORT OFF;
+BEGIN
+
+	DECLARE @hash VARBINARY(128);
+	DECLARE @fAnzahl DECIMAL(25,13);
+	DECLARE @fInputQuantity DECIMAL(25,13);
+
+
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;subset.spWarenlagerAusgangSchreiben&#39;);
+	
+	-- Daten f&#252;r spWarenlagereingang berechnen
+	IF(OBJECT_ID(&#39;tempdb..#WarenlagerAusgaenge_subset&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #WarenlagerAusgaenge_subset;
+	END;
+	CREATE TABLE #WarenlagerAusgaenge_subset(
+		kWarenlagerEingang INT NOT NULL,
+		kLieferscheinPos INT NULL,
+		fAnzahl DECIMAL(25,13) NOT NULL,
+		kWarenLagerPlatz INT NULL,
+		kArtikel INT NULL,
+		cKommentar NVARCHAR(255) NULL,
+		dErstellt DATETIME NULL,
+		kBenutzer INT NULL,
+		kBuchungsart INT NULL,
+		kSessionID INT NULL,
+		fInputQuantity DECIMAL(25,13) NULL
+	);
+	-- Tempor&#228;re Tabelle f&#252;llen
+	IF(@xWarenlagerAusgaenge IS NOT NULL)
+	BEGIN
+		INSERT INTO #WarenlagerAusgaenge_subset
+		(
+		    kWarenlagerEingang,
+		    kLieferscheinPos,
+		    fAnzahl,
+		    cKommentar,
+		    dErstellt,
+		    kBenutzer,
+			kBuchungsart,
+			kSessionID,
+			fInputQuantity
+		)
+		SELECT DISTINCT ParamValues.ID.value(&#39;kWarenLagerEingang[1]&#39;, &#39;NVARCHAR(20)&#39;),
+				ISNULL(ParamValues.ID.value(&#39;kLieferscheinPos[1]&#39;, &#39;NVARCHAR(20)&#39;),0),
+				ParamValues.ID.value(&#39;fAnzahl[1]&#39;, &#39;NVARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;cKommentar[1]&#39;, &#39;NVARCHAR(255)&#39;),
+				GETDATE(),
+				ParamValues.ID.value(&#39;kBenutzer[1]&#39;, &#39;NVARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;kBuchungsart[1]&#39;, &#39;NVARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;kSessionID[1]&#39;, &#39;NVARCHAR(20)&#39;),
+				ParamValues.ID.value(&#39;fAnzahl[1]&#39;, &#39;NVARCHAR(20)&#39;)
+			FROM @xWarenlagerAusgaenge.nodes(&#39;/WarenAusgang&#39;) AS ParamValues(ID);
+
+			IF(@nKeepFactor = 0)
+			BEGIN
+
+				UPDATE #WarenlagerAusgaenge_subset
+				SET fAnzahl = CONVERT(DECIMAL(25,13),#WarenlagerAusgaenge_subset.fAnzahl) * tWarenLagerEingangSubsets.fFactor , fInputQuantity = CONVERT(DECIMAL(25,13),#WarenlagerAusgaenge_subset.fAnzahl)
+				FROM dbo.tWarenLagerEingangSubsets 
+				JOIN #WarenlagerAusgaenge_subset ON #WarenlagerAusgaenge_subset.kWarenLagerEingang = tWarenLagerEingangSubsets.kWarenLagerEingang
+				WHERE tWarenLagerEingangSubsets.kWarenLagerEingang = #WarenlagerAusgaenge_subset.kWarenlagerEingang;
+
+			END;
+			ELSE
+			BEGIN
+
+				UPDATE #WarenlagerAusgaenge_subset
+				SET fInputQuantity = CONVERT(DECIMAL(25,13),#WarenlagerAusgaenge_subset.fAnzahl) / tWarenLagerEingangSubsets.fFactor 
+				FROM dbo.tWarenLagerEingangSubsets 
+				JOIN #WarenlagerAusgaenge_subset ON #WarenlagerAusgaenge_subset.kWarenLagerEingang = tWarenLagerEingangSubsets.kWarenLagerEingang
+				WHERE tWarenLagerEingangSubsets.kWarenLagerEingang = #WarenlagerAusgaenge_subset.kWarenlagerEingang;
+
+			END;
+
+	END
+	ELSE
+	BEGIN
+		IF(@nKeepFactor = 0)  -- Die SP wurde mit der Stueckmenge des Teilartikels aufgerufen
+		BEGIN
+		    SELECT @fAnzahl = CONVERT(DECIMAL(25,13),@fQuantity) * fFactor FROM dbo.tWarenLagerEingangSubsets WHERE kWarenLagerEingang = @kWarenLagerEingang;
+			SET @fInputQuantity = @fQuantity;
+		END;
+		ELSE  -- Die SP wurde mit der Menge des Warenlagereingangs aufgerufen
+		BEGIN
+			SELECT @fInputQuantity = CONVERT(DECIMAL(25,13),@fQuantity) / fFactor FROM dbo.tWarenLagerEingangSubsets WHERE kWarenLagerEingang = @kWarenLagerEingang;
+			SET @fAnzahl = @fQuantity;
+		END;
+	
+		INSERT INTO #WarenlagerAusgaenge_subset(kWarenlagerEingang, kLieferscheinPos, fAnzahl,
+		    cKommentar, dErstellt, kBenutzer, kBuchungsart,kSessionID,fInputQuantity)
+		VALUES(@kWarenLagerEingang, ISNULL(@kLieferscheinPos,0), @fAnzahl,  
+			 @cKommentar, GETDATE(), @kBenutzer, @kBuchungsart,@kSessionID,@fInputQuantity);
+	END;
+
+
+	DECLARE @retry INT = 5;
+	WHILE @retry &gt; 0
+	BEGIN      
+		BEGIN TRY  
+			DECLARE @TranCount INT = @@TRANCOUNT;
+			IF(@TranCount = 0)
+			BEGIN
+				BEGIN TRANSACTION  
+			END;
+
+			DECLARE @xWarenlagerEingaengeZumAusbuchen XML;
+			SET @xWarenlagerEingaengeZumAusbuchen = (
+			SELECT WLE.kWarenLagerEingang AS kWarenLagerEingang,WLE.kLieferscheinPos AS kLieferscheinPos,WLE.fAnzahl AS fAnzahl,WLE.cKommentar AS cKommentar,WLE.kBenutzer AS kBenutzer,WLE.kBuchungsart AS kBuchungsart
+			FROM #WarenlagerAusgaenge_subset AS WLE
+			FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+			);
+          
+			-- Neuen Warenlagerausgang erzeugen
+			EXECUTE [dbo].[spWarenlagerAusgangSchreiben]  @xWarenlagerEingaengeZumAusbuchen
+			,										  @kWarenLagerEingang
+			,										  @kLieferscheinPos
+			,										  @fAnzahl
+			,										  @cKommentar
+			,										  @kBenutzer
+			,										  @kBuchungsart
+			,										  @nHistorieNichtSchreiben
+			,										  @kSessionID
+			,										  @kWarenlagerAusgang OUTPUT;
+
+
+			---- Subset Informationen setzen
+			SET CONTEXT_INFO @hash;
+			
+
+
+
+			-- Bestehnde Subset Informationen um einen Verringern. Und neue Informationen hinterlegen
+			UPDATE dbo.tWarenLagerEingangSubsets 
+			SET tWarenLagerEingangSubsets.fQuantity = tWarenLagerEingangSubsets.fQuantity - SubSetWLE.fInputQuantity
+			FROM dbo.tWarenLagerEingangSubsets 
+			JOIN #WarenlagerAusgaenge_subset AS SubSetWLE ON SubSetWLE.kWarenlagereingang = tWarenLagerEingangSubsets.kWarenLagerEingang;
+			
+			
+
+			SET CONTEXT_INFO 0x0;
+
+
+			--8 IM tArtikelSpeicher die Fehlenden Teilmengen Nummer Speichern
+			INSERT INTO [dbo].[tArtikelSpeicher] (cNummer, kArtikel,nID,nAktiv) 
+			SELECT LTRIM(RTRIM(tWarenLagerEingangSubsets.cSubsetNumber)) AS Nummer, tWarenLagerEingang.kArtikel, 12 AS Art , CASE WHEN dbo.tOptions.cValue = &#39;1&#39; THEN 1 ELSE 0 END AS nAktiv
+			FROM dbo.tWarenLagerEingangSubsets
+			JOIN dbo.tWarenLagerEingang ON tWarenLagerEingangSubsets.kWarenLagerEingang = tWarenLagerEingang.kWarenLagerEingang
+			LEFT JOIN dbo.tOptions WITH(NOLOCK) ON dbo.tOptions.cKey = &#39;ArtikelEigenschaft SubsetNumber&#39;
+			LEFT JOIN 
+				dbo.tArtikelSpeicher 
+				ON tArtikelSpeicher.cNummer = LTRIM(RTRIM(tWarenLagerEingangSubsets.cSubsetNumber)) 
+				AND tArtikelSpeicher.kArtikel = tWarenLagerEingang.kArtikel
+				AND tArtikelSpeicher.nID = 12
+			WHERE tArtikelSpeicher.kArtikel IS NULL;
+			
+
+			SET @retry = 0;
+			IF(@TranCount = 0)
+			BEGIN           
+				COMMIT TRANSACTION      
+			END;
+		END TRY       
+		BEGIN CATCH           
+			IF(ERROR_NUMBER() = 1205 AND @TranCount = 0 AND XACT_STATE() &lt;&gt; 0)           
+			BEGIN              
+				SET @retry = @retry - 1;               
+				ROLLBACK       
+			END;          
+			ELSE          
+			BEGIN              
+				SET @retry = 0;               
+				THROW;           
+			END;      
+		END CATCH
+	END;
+
+
+	SET CONTEXT_INFO 0x000;
+	RETURN
+END;</code></pre>
+</body>
+</html>

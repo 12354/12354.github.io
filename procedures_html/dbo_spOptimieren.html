@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spOptimieren</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spOptimieren</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Indizes und Statistiken im SQL Server neu gebaut werden. </p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [dbo].[spOptimieren]
+-- Optimierung der DB-Strukturen
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT ON;
+BEGIN
+	-- F&#252;llfaktor alle Clustered Indizes auf 100% setzen
+	DECLARE @target tinyint=100;
+	DECLARE @query NVARCHAR(1024);
+
+	DECLARE c CURSOR
+	FOR
+	SELECT
+		&#39;ALTER TABLE &#39;+QUOTENAME(schemas.[name])+&#39;.&#39;+QUOTENAME(tables.[name])+&#39; REBUILD WITH (FILLFACTOR=100);&#39;
+	FROM sys.schemas
+	INNER JOIN sys.tables ON schemas.[schema_id]=tables.[schema_id]
+	INNER JOIN sys.indexes ON tables.[object_id]=indexes.[object_id]
+	WHERE indexes.index_id= 1 AND indexes.fill_factor NOT IN (0, 100) AND EXISTS (SELECT 1
+	FROM sys.index_columns
+	JOIN sys.columns ON columns.column_id = index_columns.column_id AND columns.object_id = index_columns.object_id
+	WHERE index_columns.key_ordinal = 1 AND columns.is_identity = 1 AND index_columns.index_id = indexes.index_id)
+	ORDER BY schemas.[name], tables.[name], indexes.index_id;
+
+	OPEN c; FETCH c INTO @query;
+
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+	PRINT @query;
+	EXEC sp_executesql @query;
+	FETCH c INTO @query;
+	END
+
+	CLOSE c; 
+	DEALLOCATE c;
+
+	-- Aufruf von IndexOptimize
+    DECLARE @db VARCHAR(128) = DB_NAME();
+	EXECUTE dbo.IndexOptimize
+		@Databases = @db,
+		@FragmentationLow = NULL,
+		@FragmentationMedium = &#39;INDEX_REORGANIZE,INDEX_REBUILD_ONLINE,INDEX_REBUILD_OFFLINE&#39;,
+		@FragmentationHigh = &#39;INDEX_REBUILD_ONLINE,INDEX_REBUILD_OFFLINE&#39;,
+		@FragmentationLevel1 = 5,
+		@FragmentationLevel2 = 30,
+		@UpdateStatistics = &#39;ALL&#39;;
+
+    DELETE dbo.toptions
+    WHERE toptions.cKey = &#39;letzte Index Defragmentierung&#39;;
+    
+	BEGIN TRY
+       EXEC sp_updatestats;
+	END TRY
+	BEGIN CATCH
+       EXEC sp_MSforeachtable &#39;UPDATE STATISTICS ?&#39;;
+	END CATCH
+
+    INSERT INTO dbo.toptions( cKey , 
+                              cValue )
+    SELECT &#39;letzte Index Defragmentierung&#39; , 
+           CONVERT( VARCHAR , GETDATE( ));
+
+END;</code></pre>
+</body>
+</html>

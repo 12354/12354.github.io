@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ebay.spEbayTransactionAendern</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Ebay.spEbayTransactionAendern</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in dbo.ebay_transaction verändert werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Ebay].[spEbayTransactionAendern]
+	@xTransaction XML = NULL,
+	@kTransaction INT= NULL,
+	@kBuyer INT= NULL,
+	@AdjustmentAmount DECIMAL(25,13) = NULL,
+	@AmountPaid DECIMAL(25,13) = NULL,
+	@BestOfferSale TINYINT = NULL,
+	@BuyerPaidStatus NVARCHAR(255) = NULL,
+	@ConvertedAdjustmentAmount DECIMAL(25,13) = NULL,
+	@ConvertedAmountPaid DECIMAL(25,13) = NULL,
+	@ConvertedTransactionPrice DECIMAL(25,13) = NULL,
+	@CreateDate DATETIME = NULL,
+	@FL_CommentText NVARCHAR(255) = NULL,
+	@FL_CommentType NVARCHAR(255) = NULL,
+	@FL_TargeUser NVARCHAR(255) = NULL,
+	@FR_CommentText NVARCHAR(255) = NULL,
+	@FR_CommentType NVARCHAR(255) = NULL,
+	@FR_TargetUser NVARCHAR(255) = NULL,
+	@FinalValueFee DECIMAL(25,13) = NULL,
+	@PaidTime DATETIME = NULL,
+	@QuantityPurchased INT = NULL,
+	@ShippedTime DATETIME = NULL,
+	@SSS_ExpeditedService TINYINT = NULL,
+	@SSS_ShippingInsuranceCost DECIMAL(25,13) = NULL,
+	@SSS_ShippingService NVARCHAR(255) = NULL,
+	@SSS_ShippingServiceAdditionalCost DECIMAL(25,13) = NULL,
+	@SSS_ShippingServiceCost DECIMAL(25,13) = NULL,
+	@Status_BuyerSelectedShipping TINYINT = NULL,
+	@Status_CheckoutStatus NVARCHAR(255) = NULL,
+	@Status_CompleteStatus NVARCHAR(255) = NULL,
+	@Stauts_eBayPaymentStatus NVARCHAR(255) = NULL,
+	@Status_LastTimeModified DATETIME = NULL,
+	@Status_PaymentMethodUsed NVARCHAR(255) = NULL,
+	@TransactionID NVARCHAR(255) = NULL,
+	@TransactionPrice DECIMAL(25,13) = NULL,
+	@Status TINYINT = NULL,
+	@ItemID NVARCHAR(255) = NULL,
+	@dZahlungsdatum DATETIME = NULL,
+	@kBestellung INT = NULL,
+	@kAlien TINYINT = NULL,
+	@VAT DECIMAL(25,13) = NULL,
+	@nCheckout TINYINT = NULL,
+	@cDispute NVARCHAR(255) = NULL,
+	@cDisputeInfo NVARCHAR(512) = NULL,
+	@kEigenschaftKombi INT = NULL,
+	@VariationTitle NVARCHAR(255) = NULL,
+	@SKU NVARCHAR(64) = NULL,
+	@SiteID INT = NULL,
+	@nKonfikt TINYINT = NULL,
+	@Currency NVARCHAR(255) = NULL,
+	@kEbayUser INT = NULL,
+	@nZuletztAktualisiert BIGINT = NULL
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+
+DECLARE @UseLotSize BIT = 0;
+
+SELECT @UseLotSize = ISNULL(TRY_CONVERT(BIT, cValue), 0)
+  FROM dbo.tOptions
+ WHERE cKey = &#39;eBay.ArtikelMengeMultiplizieren&#39;   
+
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5107;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			IF(OBJECT_ID(&#39;tempdb..#EbayTransaction&#39;) IS NOT NULL)
+			BEGIN
+				DROP TABLE #EbayTransaction;
+			END
+			CREATE TABLE #EbayTransaction(kTransaction INT, kBuyer INT, AdjustmentAmount DECIMAL(25,13), AmountPaid DECIMAL(25,13),
+										BestOfferSale TINYINT, BuyerPaidStatus NVARCHAR(255), ConvertedAdjustmentAmount DECIMAL(25,13),
+										ConvertedAmountPaid DECIMAL(25,13), ConvertedTransactionPrice DECIMAL(25,13), CreateDate DATETIME,
+										FL_CommentText NVARCHAR(255), FL_CommentType NVARCHAR(255), FL_TargeUser NVARCHAR(255), FR_CommentText NVARCHAR(255),
+										FR_CommentType NVARCHAR(255), FR_TargetUser NVARCHAR(255), FinalValueFee DECIMAL(25,13), PaidTime DATETIME,
+										QuantityPurchased INT, ShippedTime DATETIME, SSS_ExpeditedService TINYINT, SSS_ShippingInsuranceCost DECIMAL(25,13),
+										SSS_ShippingService NVARCHAR(255), SSS_ShippingServiceAdditionalCost DECIMAL(25,13), SSS_ShippingServiceCost DECIMAL(25,13),
+										Status_BuyerSelectedShipping TINYINT, Status_CheckoutStatus NVARCHAR(255), Status_CompleteStatus NVARCHAR(255),
+										Stauts_eBayPaymentStatus NVARCHAR(255), Status_LastTimeModified DATETIME, Status_PaymentMethodUsed NVARCHAR(255),
+										TransactionID NVARCHAR(255), TransactionPrice DECIMAL(25,13), Status TINYINT, ItemID NVARCHAR(255),
+										dZahlungsdatum DATETIME, kBestellung INT, kAlien TINYINT, VAT DECIMAL(25,13), nCheckout TINYINT,
+										cDispute NVARCHAR(255), cDisputeInfo NVARCHAR(512), kEigenschaftKombi INT, VariationTitle NVARCHAR(255),
+										SKU NVARCHAR(64), SiteID INT, nKonfikt TINYINT, Currency NVARCHAR(255), kEbayUser INT, kArtikel INT, StatusOld INT, LotSize INT,
+										nZuletztAktualisiert BIGINT);
+			IF(@xTransaction IS NOT NULL)
+			BEGIN
+				INSERT INTO #EbayTransaction(kTransaction, kBuyer, AdjustmentAmount, AmountPaid, BestOfferSale, BuyerPaidStatus, ConvertedAdjustmentAmount,
+											ConvertedAmountPaid, ConvertedTransactionPrice, CreateDate, FL_CommentText, FL_CommentType, FL_TargeUser,
+											FR_CommentText, FR_CommentType, FR_TargetUser, FinalValueFee, PaidTime, QuantityPurchased, ShippedTime,
+											SSS_ExpeditedService, SSS_ShippingInsuranceCost, SSS_ShippingService, SSS_ShippingServiceAdditionalCost,
+											SSS_ShippingServiceCost, Status_BuyerSelectedShipping, Status_CheckoutStatus, Status_CompleteStatus,
+											Stauts_eBayPaymentStatus, Status_LastTimeModified, Status_PaymentMethodUsed, TransactionID,
+											TransactionPrice, Status, ItemID, dZahlungsdatum, kBestellung, kAlien, VAT, nCheckout, cDispute,
+											cDisputeInfo, kEigenschaftKombi, VariationTitle, SKU, SiteID, nKonfikt, Currency, kEbayUser, kArtikel, StatusOld, LotSize,
+											nZuletztAktualisiert)
+					SELECT EbayTransaction.ID.value(&#39;kTransaction[1]&#39;, &#39;INT&#39;),
+							EbayTransaction.ID.value(&#39;kBuyer[1]&#39;, &#39;INT&#39;),
+							EbayTransaction.ID.value(&#39;AdjustemntAmount[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;AmountPaid[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;BestofferSale[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;BuyerPaidStatus[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;ConvertedAdjustmentAmount[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;ConvertedAmountPaid[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;ConvertedTransactionPrice[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;CreateDate[1]&#39;, &#39;DATETIME&#39;),
+							EbayTransaction.ID.value(&#39;FL_CommentText[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;FL_CommentType[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;FL_TargetUser[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;FR_CommentText[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;FR_CommentType[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;FR_TargetUser[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;FinalValueFee[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;PaidTime[1]&#39;, &#39;DATETIME&#39;),
+							EbayTransaction.ID.value(&#39;QuantityPurchased[1]&#39;, &#39;INT&#39;),
+							EbayTransaction.ID.value(&#39;ShippedTime[1]&#39;, &#39;DATETIME&#39;),
+							EbayTransaction.ID.value(&#39;SSS_ExpeditedService[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;SSS_ShippingInsuranceCost[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;SSS_ShippingService[1]&#39;, &#39;VARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;SSS_ShippingServiceAdditionalCost[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;SSS_ShippingServiceCost[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;Status_BuyerSelectedShipping[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;Status_CheckoutStatus[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;Status_CompleteStatus[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;Status_eBayPaymentStatus[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;Status_LastTimeModified[1]&#39;, &#39;DATETIME&#39;),
+							EbayTransaction.ID.value(&#39;Status_PaymentMethodUsed[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;TransactionID[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;TransactionPrice[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;Status[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;ItemID[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;dZahlungsdatum[1]&#39;, &#39;DATETIME&#39;),
+							CASE WHEN EbayTransaction.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) = 0 OR EbayTransaction.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) IS NULL
+								THEN dbo.ebay_transaction.kBestellung
+								ELSE EbayTransaction.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;)
+							END,
+							EbayTransaction.ID.value(&#39;kAlien[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;VAT[1]&#39;, &#39;DECIMAL(25,13)&#39;),
+							EbayTransaction.ID.value(&#39;nCheckout[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;cDispute[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;cDisputeInfo[1]&#39;, &#39;NVARCHAR(512)&#39;),
+							EbayTransaction.ID.value(&#39;kEigenschaftKombi[1]&#39;, &#39;INT&#39;),
+							EbayTransaction.ID.value(&#39;VariationTitle[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;SKU[1]&#39;, &#39;NVARCHAR(64)&#39;),
+							EbayTransaction.ID.value(&#39;SiteID[1]&#39;, &#39;INT&#39;),
+							EbayTransaction.ID.value(&#39;nKonflikt[1]&#39;, &#39;TINYINT&#39;),
+							EbayTransaction.ID.value(&#39;Currency[1]&#39;, &#39;NVARCHAR(255)&#39;),
+							EbayTransaction.ID.value(&#39;kEbayUser[1]&#39;, &#39;INT&#39;),
+							EbayTransaction.ID.value(&#39;nZuletztAktualisiert[1]&#39;, &#39;BIGINT&#39;),
+							dbo.tArtikel.kArtikel,
+							dbo.ebay_transaction.Status,
+							CASE WHEN @UseLotSize = 1 THEN dbo.ebay_item.LotSize ELSE 1 END AS LotSize
+						FROM @xTransaction.nodes(&#39;EbayTransaction&#39;) AS EbayTransaction(ID)
+						JOIN dbo.ebay_transaction ON EbayTransaction.ID.value(&#39;kTransaktion[1]&#39;, &#39;INT&#39;) = dbo.ebay_transaction.kTransaction
+						LEFT JOIN dbo.tArtikel ON EbayTransaction.ID.value(&#39;SKU[1]&#39;, &#39;NVARCHAR(64)&#39;) = dbo.tArtikel.cArtNr
+						LEFT JOIN dbo.ebay_item ON dbo.ebay_item.ItemID = dbo.ebay_transaction.ItemID;
+			END
+			ELSE
+			BEGIN
+				DECLARE @StatusOld INT;
+				DECLARE @kArtikelOld INT;
+				DECLARE @kArtikel INT;
+				DECLARE @fAnzahlOld INT;
+				DECLARE @LotSize INT = 1;
+
+				SELECT @kArtikel = kArtikel
+					FROM dbo.tArtikel  
+					WHERE dbo.tArtikel.cArtNr = @SKU;
+				
+				SELECT @StatusOld = Status,
+						@kBestellung = CASE WHEN @kBestellung = 0 OR @kBestellung IS NULL
+											THEN dbo.ebay_transaction.kBestellung
+											ELSE @kBestellung
+										END
+					FROM dbo.ebay_transaction 
+					WHERE dbo.ebay_transaction.kTransaction = @kTransaction;
+				   
+				IF (@UseLotSize = 1)
+				BEGIN
+				  SELECT @LotSize = ISNULL(ebay_item.LotSize, 1)
+				    FROM dbo.ebay_item 
+				   WHERE ebay_item.ItemId = @ItemId;
+				END
+				  
+				INSERT INTO #EbayTransaction(kTransaction, kBuyer, AdjustmentAmount, AmountPaid, BestOfferSale, BuyerPaidStatus, ConvertedAdjustmentAmount,
+											ConvertedAmountPaid, ConvertedTransactionPrice, CreateDate, FL_CommentText, FL_CommentType, FL_TargeUser,
+											FR_CommentText, FR_CommentType, FR_TargetUser, FinalValueFee, PaidTime, QuantityPurchased, ShippedTime,
+											SSS_ExpeditedService, SSS_ShippingInsuranceCost, SSS_ShippingService, SSS_ShippingServiceAdditionalCost,
+											SSS_ShippingServiceCost, Status_BuyerSelectedShipping, Status_CheckoutStatus, Status_CompleteStatus,
+											Stauts_eBayPaymentStatus, Status_LastTimeModified, Status_PaymentMethodUsed, TransactionID,
+											TransactionPrice, Status, ItemID, dZahlungsdatum, kBestellung, kAlien, VAT, nCheckout, cDispute,
+											cDisputeInfo, kEigenschaftKombi, VariationTitle, SKU, SiteID, nKonfikt, Currency, kEbayUser, kArtikel, StatusOld,
+											nZuletztAktualisiert)
+					VALUES(@kTransaction, @kBuyer, @AdjustmentAmount, @AmountPaid, @BestOfferSale, @BuyerPaidStatus, @ConvertedAdjustmentAmount,
+							@ConvertedAmountPaid, @ConvertedTransactionPrice, @CreateDate, @FL_CommentText, @FL_CommentType, @FL_TargeUser,
+							@FR_CommentText, @FR_CommentType, @FR_TargetUser, @FinalValueFee, @PaidTime, @QuantityPurchased, @ShippedTime,
+							@SSS_ExpeditedService, @SSS_ShippingInsuranceCost, @SSS_ShippingService, @SSS_ShippingServiceAdditionalCost, 
+							@SSS_ShippingServiceCost, @Status_BuyerSelectedShipping, @Status_CheckoutStatus, @Status_CompleteStatus,
+							@Stauts_eBayPaymentStatus, @Status_LastTimeModified, @Status_PaymentMethodUsed, @TransactionID,
+							@TransactionPrice, @Status, @ItemID, @dZahlungsdatum, @kBestellung, @kAlien, @VAT, @nCheckout, @cDispute,
+							@cDisputeInfo, @kEigenschaftKombi, @VariationTitle, @SKU, @SiteID, @nKonfikt, @Currency, @kEbayUser, @kArtikel, @StatusOld,
+							@nZuletztAktualisiert);
+			END
+			UPDATE dbo.ebay_transaction
+				SET kBuyer = #EbayTransaction.kBuyer,
+					AdjustmentAmount = #EbayTransaction.AdjustmentAmount,
+					AmountPaid = #EbayTransaction.AmountPaid,
+					BestOfferSale = #EbayTransaction.BestOfferSale,
+					BuyerPaidStatus = #EbayTransaction.BuyerPaidStatus,
+					ConvertedAdjustmentAmount = #EbayTransaction.ConvertedAdjustmentAmount,
+					ConvertedAmountPaid = #EbayTransaction.ConvertedAmountPaid,
+					ConvertedTransactionPrice = #EbayTransaction.ConvertedTransactionPrice,
+					CreateDate = #EbayTransaction.CreateDate,
+					FL_CommentText = #EbayTransaction.FL_CommentText,
+					FL_CommentType = #EbayTransaction.FL_CommentType,
+					FL_TargetUser = #EbayTransaction.FL_TargeUser,
+					FR_CommentText = #EbayTransaction.FR_CommentText,
+					FR_CommentType = #EbayTransaction.FR_CommentType,
+					FR_TargetUser = #EbayTransaction.FR_TargetUser,
+					FinalValueFee = #EbayTransaction.FinalValueFee,
+					PaidTime = #EbayTransaction.PaidTime,
+					QuantityPurchased = #EbayTransaction.QuantityPurchased,
+					ShippedTime = #EbayTransaction.ShippedTime,
+					SSS_ExpeditedService = #EbayTransaction.SSS_ExpeditedService,
+					SSS_ShippingInsuranceCost = #EbayTransaction.SSS_ShippingInsuranceCost,
+					SSS_ShippingService = #EbayTransaction.SSS_ShippingService,
+					SSS_ShippingServiceAdditionalCost = #EbayTransaction.SSS_ShippingServiceAdditionalCost,
+					SSS_ShippingServiceCost = #EbayTransaction.SSS_ShippingServiceCost,
+					Status_BuyerSelectedShipping = #EbayTransaction.Status_BuyerSelectedShipping,
+					Status_CheckoutStatus = #EbayTransaction.Status_CheckoutStatus,
+					Status_CompleteStatus = #EbayTransaction.Status_CompleteStatus,
+					Stauts_eBayPaymentStatus = #EbayTransaction.Stauts_eBayPaymentStatus,
+					Status_LastTimeModified = #EbayTransaction.Status_LastTimeModified,
+					Status_PaymentMethodUsed = #EbayTransaction.Status_PaymentMethodUsed,
+					TransactionID = #EbayTransaction.TransactionID,
+					TransactionPrice = #EbayTransaction.TransactionPrice,
+					Status = #EbayTransaction.Status,
+					ItemID = #EbayTransaction.ItemID,
+					dZahlungsdatum = #EbayTransaction.dZahlungsdatum,
+					kBestellung = #EbayTransaction.kBestellung,
+					kAlien = #EbayTransaction.kAlien,
+					VAT = #EbayTransaction.VAT,
+					nCheckout = #EbayTransaction.nCheckout,
+					cDispute = #EbayTransaction.cDispute,
+					cDisputeInfo = #EbayTransaction.cDisputeInfo,
+					kEigenschaftKombi = #EbayTransaction.kEigenschaftKombi,
+					VariationTitle = #EbayTransaction.VariationTitle,
+					SKU = #EbayTransaction.SKU,
+					SiteID = #EbayTransaction.SiteID,
+					nKonflikt = #EbayTransaction.nKonfikt,
+					Currency = #EbayTransaction.Currency,
+					kEbayUser = #EbayTransaction.kEbayUser,
+					nZuletztAktualisiert = #EbayTransaction.nZuletztAktualisiert
+				FROM #EbayTransaction 				
+				WHERE dbo.ebay_transaction.kTransaction = #EbayTransaction.kTransaction;
+			DECLARE @Type_spUpdateLagerbestand TYPE_spUpdateLagerbestand;
+			INSERT INTO @Type_spUpdateLagerbestand (kArtikel)
+				SELECT dbo.tExterneReservierung.kArtikel
+					FROM #EbayTransaction
+					JOIN dbo.tExterneReservierung ON tExterneReservierung.kKey = #EbayTransaction.kTransaction
+					WHERE #EbayTransaction.StatusOld &lt;&gt; #EbayTransaction.Status
+						AND tExterneReservierung.nTyp = 1;
+			IF(EXISTS(SELECT * FROM #EbayTransaction WHERE #EbayTransaction.StatusOld &lt;&gt; #EbayTransaction.Status 
+														AND #EbayTransaction.Status IN(6, 8)))
+			BEGIN
+				DELETE FROM dbo.tExterneReservierung
+					FROM dbo.tExterneReservierung
+					JOIN #EbayTransaction ON tExterneReservierung.kKey = #EbayTransaction.kTransaction
+													AND tExterneReservierung.nTyp = 1
+					WHERE #EbayTransaction.Status IN(6, 8);
+			END		
+			IF(EXISTS(SELECT * FROM @Type_spUpdateLagerbestand))
+			BEGIN
+				EXEC spUpdateLagerbestand @Type_spUpdateLagerbestand;
+			END
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lieferantenbestellung.spLieferantenBestellungErstellen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Lieferantenbestellung.spLieferantenBestellungErstellen</h1>
+    <p><strong>Description:</strong> Mit der Stored Procedure können Einträge in der Tabelle dbo.tLieferantenbestellung geschrieben werden.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Lieferantenbestellung].[spLieferantenBestellungErstellen]
+			@kLieferant INT,
+			@kSprache INT,
+			@kLieferantenBestellungRA INT,
+			@kLieferantenBestellungLA INT,
+			@cWaehrungISO NVARCHAR(5),
+			@cInternerKommentar NVARCHAR(MAX),
+			@cDruckAnmerkung NVARCHAR(MAX),
+			@nStatus INT,
+			@kFirma INT,
+			@kLager INT,
+			@kKunde INT,
+			@dLieferdatum DATETIME,
+			@cEigeneBestellnummer NVARCHAR(255),
+			@cBezugsAuftragsnummer NVARCHAR(255),
+			@nDropShipping INT,
+			@kLieferantenBestellungLieferant INT,
+			@kBenutzer INT,
+			@fFaktor DECIMAL(25,13),
+			@cFremdbelegnummer NVARCHAR(255),
+			@kLieferschein INT, 
+			@nBestaetigt TINYINT,
+			@istGedruckt INT, -- 0 nicht gedruckt / 1 gedruckt
+			@istGemailt INT, -- 0 nicht gemailt / 1 gemailt
+			@istGefaxt INT, -- 0 nicht gefaxt / 1 gefaxt
+			@nAngelegtDurchWMS INT, -- 0 nicht durch WMS anlegt / 1 durch WMS anlegt
+			@xLieferantenbestellungPos AS XML = NULL,
+				/* @xLieferantenbestellungPos
+					&lt;LieferantenbestellungPos&gt;
+						&lt;kArtikel&gt;
+						&lt;cArtNr&gt;
+						&lt;cLieferantenArtNr&gt;
+						&lt;cName&gt;
+						&lt;cLieferantenBezeichnung&gt;
+						&lt;fUST&gt;
+						&lt;fMenge&gt;
+						&lt;cHinweis&gt;
+						&lt;fEKNetto&gt;
+						&lt;nPosTyp&gt;
+						&lt;cNameLieeferant&gt;
+						&lt;nLiefertage&gt;
+						&lt;dLieferdatum&gt;
+						&lt;nSort&gt;
+						&lt;kLieferscheinPos&gt;
+						&lt;cVPEEinheit&gt;
+						&lt;nVPEMenge&gt;
+					&lt;/LieferantenbestellungPos&gt;
+				*/
+			@kLieferantenbestellung INT OUTPUT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @ErrorMessage NVARCHAR(4000);
+DECLARE @ErrorSeverity INT;
+DECLARE @ErrorState INT;
+DECLARE @retry INT;
+SET @retry = 5;
+WHILE @retry &gt; 0
+BEGIN
+	SET CONTEXT_INFO 0x5121;
+	BEGIN TRY
+		BEGIN TRANSACTION
+			--
+			-- Lieferantenbestellung anlegen
+			--
+			INSERT INTO dbo.tLieferantenbestellung
+					(kLieferant, kSprache, kLieferantenBestellungRA, kLieferantenBestellungLA, cWaehrungISO, cInternerKommentar, cDruckAnmerkung,
+					dGedruckt, dGemailt, dGefaxt, nStatus, dErstellt, kFirma, kLager, kKunde, dLieferdatum, cEigeneBestellnummer, cBezugsAuftragsNummer, 
+					nDropShipping,kLieferantenBestellungLieferant, kBenutzer, fFaktor, cFremdbelegnummer, kLieferschein, nBestaetigt,nAngelegtDurchWMS, 
+					dInBearbeitung)
+				SELECT	@kLieferant, @kSprache, @kLieferantenBestellungRA, @kLieferantenBestellungLA, @cWaehrungISO, @cInternerKommentar, @cDruckAnmerkung, 
+						CASE WHEN @istGedruckt = 1 THEN GETDATE() ELSE NULL END, 
+						CASE WHEN @istGemailt = 1 THEN GETDATE() ELSE NULL END,
+						CASE WHEN @istGefaxt = 1 THEN GETDATE() ELSE NULL END,
+						@nStatus, GETDATE(), @kFirma, @kLager, @kKunde, @dLieferdatum, @cEigeneBestellnummer, @cBezugsAuftragsNummer, @nDropShipping, 
+						@kLieferantenBestellungLieferant, @kBenutzer, @fFaktor, @cFremdbelegnummer, @kLieferschein, @nBestaetigt,@nAngelegtDurchWMS,
+						CASE WHEN @nStatus IN(20, 650) THEN GETDATE() ELSE NULL END;
+			SELECT @kLieferantenbestellung = SCOPE_IDENTITY();
+			
+			--
+			-- Lieferantenbestellung Positionen anlegen
+			--
+			
+			IF(@xLieferantenbestellungPos IS NOT NULL)  
+			BEGIN
+				DECLARE @kLieferantenbestellungPosOutPut INT = 0;
+
+			    	EXEC Lieferantenbestellung.spLieferantenBestellungPosErstellen
+				     @kLieferantenbestellung= @kLieferantenbestellung,
+				     @xLieferantenbestellungPos = @xLieferantenbestellungPos,
+				     @nStatus = @nStatus,
+				     @kLieferantenbestellungPos = @kLieferantenbestellungPosOutPut;
+			END;
+
+			SET @retry = -1;
+			SET CONTEXT_INFO 0x0;
+		COMMIT
+	END TRY
+	BEGIN CATCH
+	IF(ERROR_NUMBER() = 1205)
+			BEGIN
+				SET @retry = @retry - 1;
+				ROLLBACK;
+				IF(@retry = 0)
+				BEGIN
+					SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+					RAISERROR (	@ErrorMessage, 
+								@ErrorSeverity,
+								@ErrorState
+					);
+					SET CONTEXT_INFO 0x0;
+					RETURN;
+				END
+				WAITFOR DELAY &#39;00:00:00:5&#39;;
+			END
+			ELSE 
+			BEGIN
+				SET @retry = -1;
+				SELECT @ErrorMessage = ERROR_MESSAGE(), @ErrorSeverity = ERROR_SEVERITY(), @ErrorState = ERROR_STATE();
+				ROLLBACK;
+				RAISERROR (	@ErrorMessage, 
+							@ErrorSeverity,
+							@ErrorState
+				);
+				SET CONTEXT_INFO 0x0;
+				RETURN;
+			END
+	END CATCH
+	SET CONTEXT_INFO 0x0;	
+END</code></pre>
+</body>
+</html>

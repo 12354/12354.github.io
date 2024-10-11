@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spVersandBoxenPruefen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spVersandBoxenPruefen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spVersandBoxenPruefen]
+	@kWarenlager INT
+AS  
+BEGIN	  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF; 
+	DECLARE @kBestellung INT
+  	DECLARE cur_kBestellung CURSOR LOCAL FAST_FORWARD FOR  
+		SELECT tLhmStatus.kBestellung 
+			FROM tlhm WITH(NOLOCK)
+			JOIN tlhmstatus WITH(NOLOCK) ON tlhmstatus.klhmstatus = tlhm.klhmstatus
+			WHERE tlhmstatus.nstatus = 20
+				AND tlhm.klhmtyp = 4
+				AND tlhm.kwarenlager = @kWarenlager
+				AND tlhmstatus.kBestellung &gt; 0 	  
+	   
+	OPEN cur_kBestellung    
+	FETCH NEXT FROM cur_kBestellung INTO @kBestellung     	   
+	WHILE @@FETCH_STATUS = 0    
+	BEGIN    
+		EXEC WMS.spVersandBoxBestellungPruefen @kWarenlager = @kWarenlager, @kBestellung = @kBestellung
+		FETCH NEXT FROM cur_kBestellung INTO @kBestellung    
+	END  	
+	CLOSE cur_kBestellung    
+	DEALLOCATE cur_kBestellung   
+END</code></pre>
+</body>
+</html>

@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenAusliefern_Dropshipping</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenAusliefern_Dropshipping</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenAusliefern_Dropshipping]
+
+-- M&#246;gliche Fehler:
+-- Diese SP ist fehlerfrei
+--
+-- Transaction-Handling: siehe https://msdn.microsoft.com/en-us/library/ms188378.aspx
+--
+@kBenutzer AS INT,
+@kSessionId AS INT
+
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+
+DECLARE @TranCounter INT;
+SET @TranCounter = @@TRANCOUNT;
+IF @TranCounter &gt; 0
+    SAVE TRANSACTION spPA_Dropshipping
+ELSE
+    BEGIN TRANSACTION;
+
+BEGIN TRY
+    DECLARE @OldContextInfo VARBINARY(128)
+    SET @OldContextInfo = ISNULL(CONTEXT_INFO(), 0x0000);
+    SET CONTEXT_INFO 0x5129;
+
+    DECLARE @kLieferschein INT;
+    DECLARE @kLieferant INT;
+    DECLARE @kAnsprechpartner INT;
+    DECLARE @kFirma INT;
+    DECLARE @cLieferscheinNr NVARCHAR(255);
+    DECLARE @kPickliste INT;
+    DECLARE @kBestellung INT;
+    DECLARE @kLieferantenBestellungLA INT;
+    DECLARE @kLieferantenBestellungRA INT;
+    DECLARE @kLieferantenBestellungLieferant INT;
+    DECLARE @kLieferantenBestellung INT;
+    DECLARE @cLieferantenBestellungNr NVARCHAR(MAX);
+    DECLARE @xXml XML;
+
+    DECLARE cLieferschein CURSOR LOCAL FAST_FORWARD FOR
+	   SELECT 
+	      tAuftrag.kAuftrag AS kBestellung,
+	      tAuftrag.cAuftragsNr + &#39;-&#39; + STUFF(&#39;000&#39;, 4-LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), LEN(ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1), ISNULL(nNummer, 1) + ROW_NUMBER() OVER (PARTITION BY tAuftrag.kAuftrag ORDER BY tAuftrag.kAuftrag) - 1) AS cLieferscheinNr,
+		 dbo.tPickliste.kPickliste AS kPickliste,
+		 tAuftrag.kFirmaHistory AS kFirma,
+	      dbo.tPickliste.kLieferant AS kLieferant,
+		 dbo.tPickliste.kAnsprechpartner AS kAnsprechpartner
+	   FROM Verkauf.tAuftrag
+	   JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+	   JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+			AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+	   JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId AND dbo.tPickliste.kWarenLager = 0
+	   LEFT JOIN (
+	      SELECT 
+	         dbo.tLieferschein.kBestellung,
+	         CAST(REVERSE(LEFT(REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr)), CHARINDEX(&#39;-&#39;, REVERSE(MAX(dbo.tLieferschein.cLieferscheinNr))) - 1)) AS INT) + 1 AS nNummer
+	         FROM dbo.tLieferschein
+	         GROUP BY dbo.tLieferschein.kBestellung
+	      ) AS LieferNummer ON LieferNummer.kBestellung = tAuftrag.kAuftrag
+	   GROUP BY tAuftrag.kAuftrag, tAuftrag.cAuftragsNr, tAuftrag.kFirmaHistory, dbo.tPickliste.kPickliste, dbo.tPickliste.kLieferant, dbo.tPickliste.kAnsprechpartner, LieferNummer.nNummer
+
+    OPEN cLieferschein;
+    FETCH NEXT FROM cLieferschein INTO @kBestellung, @cLieferscheinNr, @kPickliste, @kFirma, @kLieferant, @kAnsprechpartner;
+    WHILE (@@FETCH_STATUS = 0)
+    BEGIN
+	   EXEC Versand.spLieferscheinErstellen
+		  @xLieferschein = NULL,
+		  @kBestellung = @kBestellung,
+		  @kBenutzer = @kBenutzer,
+		  @cLieferscheinNr = @cLieferscheinNr,
+		  @cHinweis = &#39;&#39;,
+		  @dMailVersand = NULL,
+		  @dGedruckt = NULL,
+		  @nFulfillment = 0,
+		  @kLieferantenBestellung = 0,
+		  @kSessionId = @kSessionId,
+		  @kLieferschein = @kLieferschein OUTPUT;
+ 
+	   -- Lieferscheinpositionen anlegen
+	   SET @xXml = 
+	   (
+		  SELECT 
+			 @kLieferschein AS kLieferschein,
+			 dbo.tPicklistePos.kBestellPos AS kBestellPos,
+			 SUM(dbo.tPicklistePos.fAnzahl) AS fAnzahl,
+			 tAuftragPosition.cHinweis AS cHinweis
+		  FROM Verkauf.tAuftrag
+		  JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftrag = tAuftrag.kAuftrag
+		  JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kBestellPos = tAuftragPosition.kAuftragPosition 
+		  WHERE dbo.tPicklistePos.kPickliste = @kPickliste 
+			AND tAuftrag.kAuftrag = @kBestellung 
+			AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+		  GROUP BY dbo.tPicklistePos.kBestellPos, tAuftragPosition.cHinweis
+		  FOR XML PATH(&#39;LieferscheinPos&#39;), TYPE
+	   );
+	   
+	   IF (@xXml IS NOT NULL)
+	   BEGIN
+		  EXEC Versand.spLieferscheinPosErstellen
+			 @xLieferscheinPos = @xXml,
+			 @kLieferschein = NULL,
+			 @kBestellPos = NULL,
+			 @fAnzahl = NULL,
+			 @cHinweis = NULL,
+			 @kLieferscheinPos = NULL;
+		  
+		   -- Picklistenpositionen auf ausgeliefert setzen
+		  UPDATE dbo.tPicklistePos
+			 SET dbo.tPicklistePos.kLieferscheinPos = dbo.tLieferscheinPos.kLieferscheinPos
+		  FROM dbo.tPicklistePos 
+		  JOIN Verkauf.tAuftragPosition ON tAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos		  
+		  JOIN dbo.tLieferscheinPos ON dbo.tLieferscheinPos.kBestellPos = tAuftragPosition.kAuftragPosition
+		  WHERE dbo.tPicklistePos.kPickliste = @kPickliste 
+			AND tAuftragPosition.kAuftrag = @kBestellung 
+			AND (tPicklistePos.nStatus &lt;= 10 OR (tAuftragPosition.nType IN(18, 20) AND tPicklistePos.nStatus &lt;= 20))
+			AND dbo.tLieferscheinPos.kLieferschein = @kLieferschein
+	   END;
+
+    	   INSERT INTO dbo.tLieferantenBestellungLA
+	   (
+	       cKundennummer,
+	       cFirma,
+	       cFirmenZusatz,
+	       cAnrede,
+	       cTitel,
+	       cVorname,
+	       cNachname,
+	       cStrasse,
+	       cAdresszusatz,
+	       cPLZ,
+	       cOrt,
+	       cBundesland,
+	       cLandISO,
+	       cTel,
+	       cFax,
+	       cMobil,
+	       cMail
+	   )
+	   SELECT 
+		  vLieferschein.cKundenNr,
+		  vLieferschein.cLieferadresseFirma,
+		  vLieferschein.cLieferadresseZusatz,
+		  vLieferschein.cLieferadresseAnrede,
+		  vLieferschein.cLieferadresseTitel,
+		  vLieferschein.cLieferadresseVorname,
+		  vLieferschein.cLieferadresseNachname,
+            vLieferschein.cLieferadresseStrasse,
+            vLieferschein.cLieferadresseAdressZusatz,
+            vLieferschein.cLieferadressePlz,
+            vLieferschein.cLieferadresseOrt,
+            vLieferschein.cLieferadresseBundesland,
+            vLieferschein.cLieferadresseLandIso,
+            vLieferschein.cLieferadresseTelefon,
+            vLieferschein.cLieferadresseFax,
+          vLieferschein.cLieferadresseMobil,
+            vLieferschein.cLieferadresseMail
+	   FROM 
+		  Auslieferung.vLieferschein
+	   WHERE 
+		  Auslieferung.vLieferschein.kLieferschein = @kLieferschein;
+	   SET @kLieferantenBestellungLA = (SELECT SCOPE_IDENTITY());
+
+	   INSERT INTO dbo.tLieferantenBestellungRA
+	   (
+	       cFirma,
+	       cFirmenZusatz,
+	       cAnrede,
+	       cTitel,
+	       cVorname,
+	       cNachname,
+	       cStrasse,
+	       cAdresszusatz,
+	       cPLZ,
+	       cOrt,
+	       cBundesland,
+	       cLandISO,
+	       cTel,
+	       cFax,
+	       cMobil,
+	       cMail
+	   )
+	   SELECT
+		  vLieferschein.cFirmaName,
+		  NULL,
+		  NULL,
+		  NULL,
+		  NULL,
+		  NULL,
+		  vLieferschein.cFirmaStrasse,
+		  NULL,
+		  vLieferschein.cFirmaPlz,
+		  vLieferschein.cFirmaOrt,
+		  NULL,
+		  vLieferschein.cFirmaLandISO,
+		  vLieferschein.cFirmaTelefon,
+		  vLieferschein.cFirmaFax,
+		  NULL,
+		  vLieferschein.cFirmaMail
+	   FROM
+		  Auslieferung.vLieferschein
+	   WHERE 
+		  Auslieferung.vLieferschein.kLieferschein = @kLieferschein;
+	   SET @kLieferantenBestellungRA = (SELECT SCOPE_IDENTITY());
+
+	   INSERT INTO dbo.tLieferantenBestellungLieferant
+	   (
+	       kLieferant,
+	       cFirma,
+	       cFirmenZusatz,
+	       cStrasse,
+	       cAdresszusatz,
+	       cPLZ,
+	       cOrt,
+	       cBundesland,
+	       cLandISO,
+	       cTel,
+	       cFax,
+	       cMobil,
+	       cMail,
+	       cAnsprechpartnerAnrede,
+	       cAnsprechpartnerVorname,
+	       cAnsprechpartnerName
+	   )
+	   SELECT
+		  dbo.tlieferant.kLieferant,
+		  dbo.tlieferant.cFirma,
+		  dbo.tlieferant.cFirmenZusatz,
+		  dbo.tlieferant.cStrasse,
+		  dbo.tlieferant.cAdresszusatz,
+		  dbo.tlieferant.cPLZ,
+		  dbo.tlieferant.cOrt,
+		  dbo.tlieferant.cBundesland,
+		  dbo.tlieferant.cISO,
+		  ISNULL(dbo.tlieferant.cTelDurchwahl, dbo.tlieferant.cTelZentralle),
+		  dbo.tlieferant.cFax,
+		  NULL,
+		  ISNULL(dbo.tansprechpartner.cMail, dbo.tlieferant.cEMail),
+		  dbo.tansprechpartner.cAnrede,
+		  dbo.tansprechpartner.cVorName,
+		  dbo.tansprechpartner.cName
+	   FROM
+		  dbo.tlieferant
+	   LEFT JOIN dbo.tansprechpartner ON dbo.tansprechpartner.kAnsprechpartner = @kAnsprechpartner
+	   WHERE dbo.tlieferant.kLieferant = @kLieferant;
+	   SET @kLieferantenBestellungLieferant = (SELECT SCOPE_IDENTITY());
+
+	   EXEC dbo.spGetNextNummer
+		  @cName = &#39;Bestellung&#39;,
+		  @kFirma = @kFirma,
+		  @nNoUpdate = 0,
+		  @cNeueNummer = @cLieferantenBestellungNr OUTPUT;
+
+	   INSERT INTO dbo.tLieferantenBestellung
+	   (
+	       kLieferant,
+	       kSprache,
+	       kLieferantenBestellungRA,
+	       kLieferantenBestellungLA,
+	       cWaehrungISO,
+	       --cInternerKommentar,
+	       --cDruckAnmerkung,
+	       --dGedruckt,
+	       --dGemailt,
+	       --dGefaxt,
+	       nStatus,
+	       dErstellt,
+	       kFirma,
+	       --kLager,
+	       kKunde,
+	       --dLieferdatum,
+	       cEigeneBestellnummer,
+	       cBezugsAuftragsNummer,
+	       nDropShipping,
+	       kLieferantenBestellungLieferant,
+	       kBenutzer,
+	       fFaktor,
+	       --dAngemahnt,
+	       --dInBearbeitung,
+	       --nDeleted,
+	       --nManuellAbgeschlossen,
+	       --cFremdbelegnummer,
+	       kLieferschein
+	       --nBestaetigt,
+	       --dExportiert
+	   )
+	   SELECT
+		  dbo.tlieferant.kLieferant AS kLieferant,
+		  dbo.tlieferant.kSprache AS kSprache,
+		  @kLieferantenBestellungRA AS kLieferantenBestellungRA,
+		  @kLieferantenBestellungLA AS kLieferantenBestellungLA,
+		  dbo.tlieferant.cWaehrungISO AS cWaehrungISO,
+		  600 AS nStatus, -- Status 600: DropshippingOffen
+		  GETDATE() AS dErstellt,
+		  vLieferschein.kFirma AS kFirma,
+		  vLieferschein.kKunde AS kKunde,
+		  @cLieferantenBestellungNr AS cEigeneBestellnummer,
+		  vLieferschein.cBestellNr AS cBezugsAuftragsNummer,
+		  1 AS nDropShipping,
+		  @kLieferantenBestellungLieferant AS kLieferantenBestellungLieferant,
+		  @kBenutzer AS kBenutzer,
+		  CASE 
+			 WHEN dbo.tWaehrung.fFaktor IS NULL THEN 1.0
+			 WHEN dbo.tWaehrung.fFaktor &lt; 0 THEN 1.0
+			 ELSE dbo.tWaehrung.fFaktor
+		  END AS fFaktor,
+		  Auslieferung.vLieferschein.kLieferschein
+	   FROM 
+		  dbo.tlieferant 
+	   CROSS JOIN Auslieferung.vLieferschein 
+	   LEFT JOIN dbo.tWaehrung ON dbo.tWaehrung.cEAMapping = dbo.tlieferant.cWaehrungISO
+	   WHERE dbo.tlieferant.kLieferant = @kLieferant AND Auslieferung.vLieferschein.kLieferschein = @kLieferschein;
+	   SET @kLieferantenBestellung = (SELECT SCOPE_IDENTITY());
+
+	   UPDATE
+		  dbo.tLieferschein
+	   SET
+	       dbo.tLieferschein.kLieferantenBestellung = @kLieferantenBestellung
+	   WHERE
+		  dbo.tLieferschein.kLieferschein = @kLieferschein
+
+	   INSERT INTO dbo.tLieferantenBestellungPos
+	   (
+	       --kLieferantenBestellungPos - this column value is auto-generated
+	       kLieferantenBestellung,
+	       kArtikel,
+	       cArtNr,
+	       cLieferantenArtNr,
+	       cName,
+	       cLieferantenBezeichnung,
+	       fUST,
+	       fMenge,
+		   fMengeGeliefert,
+	       cHinweis,
+	       fEKNetto,
+	       nPosTyp,
+	       cNameLieferant,
+	       nLiefertage,
+	       kLieferscheinPos,
+		   nSort
+	   )
+	   SELECT
+		  @kLieferantenBestellung,
+		  Auslieferung.vLieferscheinPos.kArtikel,
+		  Auslieferung.vLieferscheinPos.cArtNr,
+		  ISNULL(dbo.tliefartikel.cLiefArtNr, &#39;&#39;),
+		  Auslieferung.vLieferscheinPos.cString,
+		  ISNULL(dbo.tliefartikel.cName, &#39;&#39;),
+		  CASE 
+			 WHEN dbo.tlieferant.nVSTFrei &gt; 0 THEN 0.0
+			 WHEN Auslieferung.vLieferscheinPos.kArtikel = 0 THEN dbo.tlieferant.fMwStFreiposition
+			 ELSE ISNULL(dbo.tliefartikel.fMwSt, 0.0)
+		  END,
+		  Auslieferung.vLieferscheinPos.fAnzahl,
+		  0,
+		  Auslieferung.vLieferscheinPos.cHinweis,
+		  ISNULL(ISNULL((			 
+			 SELECT TOP(1) 
+				tLiefArtikelPreis.fPreisNetto 
+			 FROM 
+				dbo.tLiefArtikelPreis 
+			 WHERE
+				dbo.tLiefArtikelPreis.kLiefArtikel = dbo.tliefartikel.kLiefArtikel 
+				AND dbo.tLiefArtikelPreis.fAb &lt;= Auslieferung.vLieferscheinPos.fAnzahl
+			 ORDER BY tLiefArtikelPreis.fAb DESC
+		  ), dbo.tliefartikel.fEKNetto), 0.0),
+		  CASE 
+			 WHEN dbo.tliefartikel.kLiefArtikel IS NULL THEN 0 -- Freiposition
+			 ELSE 1 -- Artikel
+		  END,
+		  dbo.tlieferant.cFirma,
+		  ISNULL(dbo.tliefartikel.nLieferzeit, dbo.tlieferant.nLieferzeit),
+		  Auslieferung.vLieferscheinPos.kLieferscheinPos,
+		  Auslieferung.vLieferscheinPos.nSort
+	   FROM Auslieferung.vLieferscheinPos 
+	   CROSS JOIN dbo.tlieferant 
+	   LEFT JOIN dbo.tliefartikel ON dbo.tliefartikel.tLieferant_kLieferant = dbo.tlieferant.kLieferant AND dbo.tliefartikel.tArtikel_kArtikel = Auslieferung.vLieferscheinPos.kArtikel
+	   WHERE 
+		  dbo.tlieferant.kLieferant = @kLieferant
+		  AND Auslieferung.vLieferscheinPos.kLieferschein = @kLieferschein
+		  AND Auslieferung.vLieferscheinPos.kBestellStueckliste != Auslieferung.vLieferscheinPos.kBestellPos -- keine St&#252;cklistenv&#228;ter
+
+	   EXEC [Auslieferung].[spLieferantenbestellung_ZusatzpositionenErstellen]
+		  @kLieferantenbestellung = @kLieferantenBestellung;
+
+	   FETCH NEXT FROM cLieferschein INTO @kBestellung, @cLieferscheinNr, @kPickliste, @kFirma, @kLieferant, @kAnsprechpartner;
+    END
+
+    IF @TranCounter = 0 
+	   COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF @TranCounter = 0
+	BEGIN
+		IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION;
+	END
+    ELSE
+	BEGIN
+		IF XACT_STATE() &lt;&gt; -1
+		BEGIN
+			IF @@TRANCOUNT &gt; 0 ROLLBACK TRANSACTION spPA_Dropshipping;
+		END
+	END
+
+    SET CONTEXT_INFO @OldContextInfo;
+
+    DECLARE @ErrorMessage NVARCHAR(MAX);
+    DECLARE @ErrorSeverity INT;
+    DECLARE @ErrorState INT;
+
+    SELECT @ErrorMessage = ERROR_MESSAGE();
+    SELECT @ErrorSeverity = ERROR_SEVERITY();
+    SELECT @ErrorState = ERROR_STATE();
+
+    RAISERROR (@ErrorMessage, -- Message text.
+               @ErrorSeverity, -- Severity.
+               @ErrorState -- State.
+              );
+END CATCH</code></pre>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WMS.spPicklisteposStatusAendernManuell</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>WMS.spPicklisteposStatusAendernManuell</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:05</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:05</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [WMS].[spPicklisteposStatusAendernManuell]
+  @kPicklistePos INT,
+  @nNewStatus    INT,
+  @kBenutzer     INT,
+  @dTimestamp    DATETIME = NULL
+
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+DECLARE @dIsTimestamp DATETIME
+
+BEGIN
+	IF (@nNewStatus &gt; 0)
+	BEGIN
+		IF(@dTimestamp IS NULL)
+			SET @dIsTimestamp =  GETDATE();
+		ELSE
+			SET @dIsTimestamp =  @dTimestamp;
+
+	
+	DECLARE @OldContextInfo VARBINARY(128);
+	IF(CONTEXT_INFO() IS NOT NULL)
+	BEGIN
+		SET @OldContextInfo = CONTEXT_INFO();
+	END
+	ELSE
+	BEGIN
+		SET @OldContextInfo = 0x0;
+	END
+	
+    SET CONTEXT_INFO 0x5022;
+  
+    INSERT INTO dbo.tPicklistePosStatus (kPicklistePos,nStatus,kBenutzer,dZeitstempel)
+    SELECT @kPicklistePos,@nNewStatus,@kBenutzer,@dIsTimestamp
+   
+    DECLARE @newPicklistePosStatus INT =  SCOPE_IDENTITY();
+  
+    UPDATE dbo.tPicklistePos SET kPicklistePosStatus = @newPicklistePosStatus, nStatus = @nNewStatus
+    WHERE dbo.tPicklistePos.kPicklistePos = @kPicklistePos;
+  
+  	 SET CONTEXT_INFO @OldContextInfo;
+
+  
+    INSERT INTO dbo.tPicklisteStatus (kPickliste, kBenutzer, dZeitstempel, nStatus) 
+  	SELECT 
+  	 	dbo.tPickliste.kPickliste AS kPickliste,
+  	 	@kBenutzer AS kBenutzer, 
+  	 	@dIsTimestamp AS dZeitstempel,
+  	 	CASE 
+  	 		WHEN MIN(ISNULL(dbo.tPicklistePos.nStatus, 0)) = 10 AND MAX(ISNULL(dbo.tPicklistePos.nStatus, 0)) &gt; 10 THEN 11
+  	 		ELSE MIN(ISNULL(dbo.tPicklistePos.nStatus, 0)) 
+  	 	END AS nStatus
+  	 FROM dbo.tPickliste	WITH (NOLOCK)
+  	 JOIN dbo.tPicklistePos WITH (NOLOCK) ON dbo.tPicklistePos.kPickliste = dbo.tPickliste.kPickliste
+  	 WHERE dbo.tPickliste.kPickliste IN (
+  	 	SELECT DISTINCT dbo.tPicklistePos.kPickliste
+  	 	FROM dbo.tPicklistePos WITH (NOLOCK)
+  	 	WHERE kPicklistepos = @kPicklistePos
+  	 ) 
+  	 GROUP BY dbo.tPickliste.kPickliste, dbo.tPickliste.nStatus
+  	 HAVING dbo.tPickliste.nStatus != CASE 
+  	 WHEN MIN(ISNULL(dbo.tPicklistePos.nStatus, 0)) = 10 AND MAX(ISNULL(dbo.tPicklistePos.nStatus, 0)) &gt; 10 THEN 11
+  	 ELSE MIN(ISNULL(dbo.tPicklistePos.nStatus, 0)) END;
+  
+  										
+  	 UPDATE dbo.tPickliste
+  	 SET nStatus = AktStatus.nStatus,
+  	 		kPicklisteStatus = AktStatus.kPicklisteStatus,
+  	 		kPicklisteStatusAngelegt = ISNULL(dbo.tPickliste.kPicklisteStatusAngelegt, AktStatus.kPicklisteStatus)
+  	 FROM dbo.tPickliste
+  	 JOIN (SELECT dbo.tPicklisteStatus.kPickliste, MAX(dbo.tPicklisteStatus.nStatus) AS nStatus, MAX(dbo.tPicklisteStatus.kPicklisteStatus) AS kPicklisteStatus
+  	      FROM dbo.tPicklisteStatus
+  		  JOIN dbo.tPicklistePos ON dbo.tPicklistePos.kPickliste = dbo.tPicklisteStatus.kPickliste
+  	      WHERE tPicklistePos.kPicklistePos = @kPicklistePos 
+  	  AND NOT EXISTS (SELECT * FROM dbo.tPicklisteStatus t2
+  						  WHERE t2.kPickliste = tPicklisteStatus.kPickliste
+  						  AND t2.kPicklisteStatus &gt; tPicklisteStatus.kPicklisteStatus)
+      GROUP BY dbo.tPicklisteStatus.kPickliste) AS AktStatus ON AktStatus.kPickliste = tPickliste.kPickliste;
+  
+
+	END;
+END;</code></pre>
+</body>
+</html>

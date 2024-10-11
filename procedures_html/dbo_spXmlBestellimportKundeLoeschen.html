@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dbo.spXmlBestellimportKundeLoeschen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>dbo.spXmlBestellimportKundeLoeschen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:04</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:04</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE dbo.spXmlBestellimportKundeLoeschen
+	@kKunde INT
+AS
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @OldContextInfo VARBINARY(128);  
+	IF(CONTEXT_INFO() IS NOT NULL)   
+	BEGIN    
+		SET @OldContextInfo = CONTEXT_INFO();   
+	END   
+	ELSE   
+	BEGIN    
+		SET @OldContextInfo = 0x0;   
+	END   
+	DECLARE @hash VARBINARY(128);   
+	SELECT @hash = HASHBYTES(&#39;SHA1&#39;, &#39;dbo.spXmlBestellimportKundeLoeschen&#39;);   
+	SET CONTEXT_INFO @hash; 
+
+	DELETE FROM dbo.tkunde
+	WHERE tkunde.kKunde = @kKunde;
+
+	SET CONTEXT_INFO @OldContextInfo;     
+END</code></pre>
+</body>
+</html>

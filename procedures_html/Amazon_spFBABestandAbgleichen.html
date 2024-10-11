@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Amazon.spFBABestandAbgleichen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Amazon.spFBABestandAbgleichen</h1>
+    <p><strong>Description:</strong> Im Amazon Abgleich werden über diese Procedure die Bestände aus den FBA Lagern mit der JTL-Wawi synchronisiert.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Amazon].[spFBABestandAbgleichen]
+AS
+SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED;
+SET NOCOUNT, ANSI_NULLS, ANSI_NULL_DFLT_ON, ANSI_PADDING, CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+BEGIN
+	DECLARE @SessionTable AS TABLE (Nummer INT);
+	DECLARE @kSessionId AS INT;
+
+	--
+	-- Sicherstellen, dass alle Stammdaten korrekt sind
+	--
+	EXEC [Amazon].[spFBABestandAbgleichVorbereiten];
+
+    --
+	-- Quantity in pf_amazon_angebot_fba auf 0 setzen, f&#252;r FBA Angebote ohne Eintrag in pf_amazon_angeobt,
+	-- damit der Artikel nicht als FBA Bestandsf&#252;hrend in den Artikeldetails erkannt wird
+	--
+    UPDATE dbo.pf_amazon_angebot_fba
+    SET pf_amazon_angebot_fba.nQuantity = 0
+    FROM dbo.pf_amazon_angebot_fba
+    JOIN dbo.pf_amazon_angebot_mapping ON pf_amazon_angebot_mapping.cSellerSKU = pf_amazon_angebot_fba.cSellerSKU
+		AND pf_amazon_angebot_mapping.kUser = pf_amazon_angebot_fba.kUser
+    LEFT JOIN dbo.pf_amazon_angebot ON pf_amazon_angebot.cSellerSKU = pf_amazon_angebot_fba.cSellerSKU
+        AND pf_amazon_angebot.kUser = pf_amazon_angebot_fba.kUser
+    WHERE pf_amazon_angebot.cSellerSKU IS NULL;
+
+	--
+	-- Zu buchende Differenzen ermitteln
+	--
+	IF OBJECT_ID(&#39;tempdb..#BestandFBALagerVirtuell&#39;) IS NOT NULL
+	BEGIN
+		DROP TABLE #BestandFBALagerVirtuell;
+	END
+
+	CREATE TABLE #BestandFBALagerVirtuell
+	(
+		kArtikel INT NOT NULL,
+		kWarenLagerPlatz INT NOT NULL,
+		nBestandZuBuchen DECIMAL(25,13) NOT NULL
+	);
+
+	INSERT INTO #BestandFBALagerVirtuell (kArtikel, kWarenLagerPlatz, nBestandZuBuchen)
+		SELECT
+			Bestaende.kArtikel,
+			Bestaende.kWarenLagerPlatz,
+			Bestaende.fSummeBestand - Bestaende.nBestandZuBuchen AS nBestandZuBuchen
+		FROM
+		(
+			SELECT
+				BestandFba.kArtikel,
+				BestandFba.kWarenLagerPlatz,
+				SUM(BestandFba.fSummeBestand) AS fSummeBestand,
+				MIN(BestandFba.nBestandZuBuchen) AS nBestandZuBuchen
+			FROM
+			(
+				SELECT
+					tlagerbestandProLagerLagerartikel.kArtikel,
+					tWarenLagerPlatz.kWarenLagerPlatz,
+					CASE WHEN ISNULL(pf_amazon_angebot.cFulfillmentChannel, &#39;DEFAULT&#39;) = &#39;DEFAULT&#39; OR 
+						(pf_user.nGeteilterWarenbestandEUGB = 1 AND WarenlagerMarktplatzMapping.nGeteilterBestand = 0 AND (WarenlagerMarktplatzMapping.cRegion = &#39;EU&#39; 
+							OR WarenlagerMarktplatzMapping.cRegion = &#39;GB&#39;)) OR 
+						(pf_user.nGeteilterWarenbestandEUGB = 0 AND WarenlagerMarktplatzMapping.nGeteilterBestand = 1)
+								THEN 0.0
+							ELSE ISNULL(pf_amazon_angebot_fba.nQuantity, 0.0)
+						END AS fSummeBestand,
+					tlagerbestandProLagerLagerartikel.fBestand AS nBestandZuBuchen,
+					ROW_NUMBER() OVER (PARTITION BY pf_amazon_angebot_fba.cSellerSKU, tlagerbestandProLagerLagerartikel.kArtikel, pf_amazon_angebot_fba.cRegion, tWarenLagerPlatz.kWarenLagerPlatz
+						ORDER BY tlagerbestandProLagerLagerartikel.kArtikel) AS RowNum
+				FROM dbo.tlagerbestandProLagerLagerartikel
+				JOIN dbo.tWarenLager ON tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLager.kWarenLager
+					AND tWarenLager.nFulfillment = 2 -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+				JOIN dbo.tWarenLagerPlatz ON tWarenLager.kWarenLager = tWarenLagerPlatz.kWarenLager
+					AND tWarenLagerPlatz.kWarenLagerPlatzTyp = 0
+				JOIN Amazon.WarenlagerMarktplatzMapping ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+				JOIN dbo.pf_amazon_angebot_mapping ON pf_amazon_angebot_mapping.kArtikel = tlagerbestandProLagerLagerartikel.kArtikel
+					AND pf_amazon_angebot_mapping.kUser = tWarenLager.kUser
+				JOIN dbo.pf_user ON pf_user.kUser = pf_amazon_angebot_mapping.kUser
+				LEFT JOIN dbo.pf_amazon_angebot_fba ON pf_amazon_angebot_fba.cSellerSKU = pf_amazon_angebot_mapping.cSellerSKU
+					AND pf_amazon_angebot_fba.kUser = pf_amazon_angebot_mapping.kUser
+					AND pf_amazon_angebot_fba.cRegion = WarenlagerMarktplatzMapping.cRegion
+				LEFT JOIN dbo.pf_amazon_angebot ON pf_amazon_angebot.cSellerSKU = pf_amazon_angebot_fba.cSellerSKU
+                    AND pf_amazon_angebot.kUser = pf_user.kUser
+			) AS BestandFba
+			WHERE BestandFba.RowNum = 1
+			GROUP BY BestandFba.kArtikel,
+				BestandFba.kWarenLagerPlatz
+		) AS Bestaende
+
+	IF OBJECT_ID(&#39;tempdb..#BestandFBALagerPending&#39;) IS NOT NULL
+	BEGIN
+		DROP TABLE #BestandFBALagerPending;
+	END
+
+	CREATE TABLE #BestandFBALagerPending
+	(
+		kArtikel INT NOT NULL,
+		kWarenLagerPlatz INT NOT NULL,
+		nBestandZuBuchen DECIMAL(25,13) NOT NULL
+	);
+
+	INSERT INTO #BestandFBALagerPending (kArtikel, kWarenLagerPlatz, nBestandZuBuchen)
+		SELECT
+			Bestaende.kArtikel,
+			Bestaende.kWarenLagerPlatz,
+			Bestaende.fSummeBestand - Bestaende.nBestandZuBuchen AS nBestandZuBuchen
+		FROM
+		(
+			SELECT
+				BestandFba.kArtikel,
+				BestandFba.kWarenLagerPlatz,
+				SUM(BestandFba.fSummeBestand) AS fSummeBestand,
+				MIN(BestandFba.nBestandZuBuchen) AS nBestandZuBuchen
+			FROM
+			(
+				SELECT 
+					tlagerbestandProLagerLagerartikel.kArtikel,
+					tWarenLagerPlatz.kWarenLagerPlatz,
+					CASE WHEN ISNULL(pf_amazon_angebot.cFulfillmentChannel, &#39;DEFAULT&#39;) = &#39;DEFAULT&#39; OR
+						(pf_user.nGeteilterWarenbestandEUGB = 1 AND WarenlagerMarktplatzMapping.nGeteilterBestand = 0 AND (WarenlagerMarktplatzMapping.cRegion = &#39;EU&#39; 
+							OR WarenlagerMarktplatzMapping.cRegion = &#39;GB&#39;))OR 
+						(pf_user.nGeteilterWarenbestandEUGB = 0 AND WarenlagerMarktplatzMapping.nGeteilterBestand = 1)
+							THEN 0.0
+							ELSE ISNULL(pf_amazon_angebot_fba.nQtyReserved, 0.0) +
+								ISNULL(pf_amazon_angebot_fba.nQtyReceiving, 0.0) +
+								ISNULL(pf_amazon_angebot_fba.nQtyInboundWorking, 0.0) +
+								ISNULL(pf_amazon_angebot_fba.nQtyInboundShipped, 0.0)
+					END AS fSummeBestand,
+					tlagerbestandProLagerLagerartikel.fBestand AS nBestandZuBuchen,
+					ROW_NUMBER() OVER (PARTITION BY pf_amazon_angebot_fba.cSellerSKU, tlagerbestandProLagerLagerartikel.kArtikel, pf_amazon_angebot_fba.cRegion, tWarenLagerPlatz.kWarenLagerPlatz
+						ORDER BY tlagerbestandProLagerLagerartikel.kArtikel) AS RowNum
+				FROM dbo.tlagerbestandProLagerLagerartikel
+				JOIN dbo.tWarenLager ON tlagerbestandProLagerLagerartikel.kWarenlager = tWarenLager.kWarenLager
+					AND tWarenLager.nFulfillment = 4 -- WARENLAGER_FULFILLMENT_VIRTUELL (2) WARENLAGER_FULFILLMENT_PENDING (4)
+				JOIN dbo.tWarenLagerPlatz ON tWarenLager.kWarenLager = tWarenLagerPlatz.kWarenLager
+					AND tWarenLagerPlatz.kWarenLagerPlatzTyp = 0
+				JOIN Amazon.WarenlagerMarktplatzMapping ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+				JOIN dbo.pf_amazon_angebot_mapping ON pf_amazon_angebot_mapping.kArtikel = tlagerbestandProLagerLagerartikel.kArtikel
+					AND pf_amazon_angebot_mapping.kUser = tWarenLager.kUser
+				JOIN dbo.pf_user ON pf_user.kUser = pf_amazon_angebot_mapping.kUser
+				LEFT JOIN dbo.pf_amazon_angebot_fba ON pf_amazon_angebot_fba.cSellerSKU = pf_amazon_angebot_mapping.cSellerSKU
+					AND pf_amazon_angebot_fba.kUser = pf_amazon_angebot_mapping.kUser
+					AND pf_amazon_angebot_fba.cRegion = WarenlagerMarktplatzMapping.cRegion
+				LEFT JOIN dbo.pf_amazon_angebot ON pf_amazon_angebot.cSellerSKU = pf_amazon_angebot_fba.cSellerSKU
+                    AND pf_amazon_angebot.kUser = pf_user.kUser
+			) AS BestandFba
+			WHERE BestandFba.RowNum = 1
+			GROUP BY BestandFba.kArtikel, 
+				BestandFba.kWarenLagerPlatz
+		) AS Bestaende;
+
+	--
+	-- Best&#228;nde f&#252;r Artikel ohne pf_amazon_angebot_fba-Eintr&#228;ge ausbuchen
+	--
+	INSERT INTO #BestandFBALagerVirtuell (kArtikel, kWarenLagerPlatz, nBestandZuBuchen)
+		SELECT 
+			tWarenLagerPlatzArtikel.kArtikel,
+			tWarenLagerPlatz.kWarenLagerPlatz,
+			SUM(tWarenLagerEingang.fAnzahlAktuell) * -1 AS nBestandZuBuchen
+		FROM dbo.tWarenLager
+		JOIN dbo.tWarenLagerPlatz ON tWarenLagerPlatz.kWarenLager = tWarenLager.kWarenLager
+		JOIN dbo.tWarenLagerPlatzArtikel ON tWarenLagerPlatzArtikel.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+		JOIN dbo.tWarenLagerEingang ON tWarenLagerEingang.kWarenLagerPlatz = tWarenLagerPlatzArtikel.kWarenLagerPlatz
+			AND tWarenLagerEingang.kArtikel = tWarenLagerPlatzArtikel.kArtikel
+		JOIN Amazon.WarenlagerMarktplatzMapping ON tWarenLager.kWarenLager = WarenlagerMarktplatzMapping.kWarenlager
+		LEFT JOIN dbo.pf_amazon_angebot_mapping ON pf_amazon_angebot_mapping.kArtikel = tWarenLagerPlatzArtikel.kArtikel
+			AND pf_amazon_angebot_mapping.kUser = tWarenLager.kUser
+		LEFT JOIN dbo.pf_amazon_angebot_fba ON pf_amazon_angebot_fba.cSellerSKU = pf_amazon_angebot_mapping.cSellerSKU
+			AND pf_amazon_angebot_fba.kUser = pf_amazon_angebot_mapping.kUser
+			AND pf_amazon_angebot_fba.cRegion = WarenlagerMarktplatzMapping.cRegion
+		LEFT JOIN #BestandFBALagerVirtuell ON #BestandFBALagerVirtuell.kArtikel = pf_amazon_angebot_mapping.kArtikel
+			AND #BestandFBALagerVirtuell.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+		LEFT JOIN #BestandFBALagerPending ON #BestandFBALagerPending.kArtikel = pf_amazon_angebot_mapping.kArtikel
+			AND #BestandFBALagerPending.kWarenLagerPlatz = tWarenLagerPlatz.kWarenLagerPlatz
+		WHERE tWarenLager.nFulfillment IN (2,4)
+			AND pf_amazon_angebot_fba.cSellerSKU IS NULL
+			AND tWarenLagerEingang.fAnzahlAktuell &gt; 0
+			AND #BestandFBALagerVirtuell.kArtikel IS NULL
+			AND #BestandFBALagerPending.kArtikel IS NULL
+		GROUP BY tWarenLagerPlatz.kWarenLagerPlatz,
+			tWarenLagerPlatzArtikel.kArtikel;
+
+	IF(OBJECT_ID(&#39;tempdb..#Bestands&#228;nderungen&#39;) IS NOT NULL)
+	BEGIN
+		DROP TABLE #Bestands&#228;nderungen;
+	END;
+	CREATE TABLE #Bestands&#228;nderungen (kArtikel INT, kWarenlagerplatz INT, nBestandZuBuchen DECIMAL(25, 13), fEKNetto DECIMAL(25, 13), nCharge INT, nMHD INT);
+	CREATE UNIQUE CLUSTERED INDEX IX_Temp_Bestands&#228;nderungen ON #Bestands&#228;nderungen (kArtikel, kWarenlagerplatz);
+
+	INSERT INTO #Bestands&#228;nderungen(kArtikel, kWarenlagerplatz, nBestandZuBuchen, fEKNetto, nCharge, nMHD)
+		SELECT 
+			Bestands&#228;nderungen.kArtikel,
+			Bestands&#228;nderungen.kWarenLagerPlatz,
+			Bestands&#228;nderungen.nBestandZuBuchen,
+			tArtikel.fEKNetto,
+			tArtikel.nCharge,
+			tArtikel.nMHD
+		FROM dbo.tArtikel
+		JOIN
+		(	
+			SELECT
+				#BestandFBALagerVirtuell.kArtikel,
+				#BestandFBALagerVirtuell.kWarenLagerPlatz,
+				#BestandFBALagerVirtuell.nBestandZuBuchen
+			FROM #BestandFBALagerVirtuell
+			UNION
+			SELECT
+				#BestandFBALagerPending.kArtikel,
+				#BestandFBALagerPending.kWarenLagerPlatz,
+				#BestandFBALagerPending.nBestandZuBuchen
+			FROM #BestandFBALagerPending
+		) AS Bestands&#228;nderungen ON tArtikel.kArtikel = Bestands&#228;nderungen.kArtikel
+		WHERE tArtikel.kStueckliste = 0
+			AND tArtikel.nIstVater = 0
+			AND Bestands&#228;nderungen.nBestandZuBuchen &lt;&gt; 0.0
+		ORDER BY Bestands&#228;nderungen.kArtikel;
+		
+	--
+	-- Wareneing&#228;nge buchen
+	--
+	IF (SELECT COUNT(1) FROM @SessionTable) = 0
+	BEGIN
+		INSERT INTO @SessionTable (Nummer) EXEC spGetAndUpdatePK &#39;tWarenLagerEingangSessionID&#39;;
+	END
+
+	SET @kSessionId = (SELECT Nummer FROM @SessionTable);  
+
+	DECLARE @xWarenlagerEingaenge XML;
+	SET @xWarenlagerEingaenge = 
+	(
+		SELECT 
+			Bestands&#228;nderungen.kArtikel AS kArtikel, 
+			Bestands&#228;nderungen.kWarenLagerPlatz AS kWarenlagerPlatz, 
+			0 AS kLieferantenBestellungPos, 
+			(SELECT TOP 1 kBenutzer FROM eazybusiness.dbo.tbenutzer) AS kBenutzer, 
+			Bestands&#228;nderungen.nBestandZuBuchen AS fAnzahl, 
+			Bestands&#228;nderungen.fEKNetto AS fEKEinzel, 
+			&#39;&#39; AS cLieferscheinNr, 
+			CASE WHEN Bestands&#228;nderungen.nCharge &gt; 0 THEN &#39;AMAZON FBA&#39; ELSE &#39;&#39; END AS cChargenNr,
+			CASE WHEN Bestands&#228;nderungen.nMHD &gt; 0 THEN DATEADD(yy, 1, GETDATE()) ELSE NULL END AS dMHD,
+			&#39;FBA Bestand einbuchen f&#252;r Abgleich&#39; cKommentar, 
+			0 AS kGutschriftPos, 
+			0 AS kWarenLagerAusgang, 
+			0 AS kLHM, 
+			Bestands&#228;nderungen.nBestandZuBuchen  AS fAnzahlAktuell, 
+			0.0 AS fAnzahlReserviertPickpos, 
+			@kSessionId AS kSessionId,
+			0 AS kWarenLagerEingang_Ursprung, 
+			40 AS kBuchungsart, -- FBA Bestands&#228;nderung (40)
+			0 AS kBestellPosUmlagerung,
+			0 AS kRTMRetourePos
+		FROM #Bestands&#228;nderungen AS Bestands&#228;nderungen
+		WHERE Bestands&#228;nderungen.nBestandZuBuchen &gt; 0.0
+		FOR XML PATH(&#39;WarenEingang&#39;), TYPE
+	);
+
+	IF(NOT @xWarenlagerEingaenge IS NULL)
+	BEGIN
+		EXEC dbo.spWarenlagerEingangSchreiben @xWarenlagerEingaenge,  @nHistorieNichtSchreiben = 0;    
+	END
+
+	--
+	-- Warenausg&#228;nge buchen
+	--
+	DECLARE @Warenausg&#228;nge AS TABLE (kWarenLagerEingang INT, kWarenLagerPlatz INT, kArtikel INT, kBenutzer INT, nBestandzuBuchen DECIMAL(25, 13));
+	INSERT INTO @Warenausg&#228;nge (kWarenLagerEingang, kWarenLagerPlatz, kArtikel, kBenutzer, nBestandzuBuchen)
+		SELECT	
+			AusbuchenFiFo.kWarenLagerEingang,
+			AusbuchenFiFo.kWarenLagerPlatz,
+			AusbuchenFiFo.kArtikel,	
+			AusbuchenFiFo.kBenutzer,		
+			CASE WHEN AusbuchenFiFO.BestandLaufendeSumme &lt; ABS(AusbuchenFiFO.nBestandZuBuchenGesamt) 
+				THEN AusbuchenFiFo.fAnzahlAktuell 
+				ELSE AusbuchenFiFO.fAnzahlAktuell - (AusbuchenFiFO.BestandLaufendeSumme - ABS(AusbuchenFiFO.nBestandZuBuchenGesamt)) 
+			END AS nBestandzuBuchen
+		FROM
+		(
+			SELECT	
+				tWarenLagerEingang.kWarenLagerEingang,
+				tWarenLagerEingang.kWarenLagerPlatz,
+				tWarenLagerEingang.kArtikel,
+				tWarenLagerEingang.kBenutzer,
+				tWarenLagerEingang.fAnzahlAktuell,
+				SUM(tWarenLagerEingang.fAnzahlAktuell) OVER (PARTITION BY tWarenlagereingang.kArtikel, tWarenlagereingang.kWarenlagerplatz ORDER BY kWarenlagereingang) AS BestandLaufendeSumme,
+				Bestands&#228;nderungen.nBestandZuBuchen AS nBestandZuBuchenGesamt
+			FROM dbo.tWarenLagerEingang
+			JOIN #Bestands&#228;nderungen AS Bestands&#228;nderungen ON tWarenLagerEingang.kArtikel = Bestands&#228;nderungen.kArtikel
+				AND tWarenLagerEingang.kWarenLagerPlatz = Bestands&#228;nderungen.kWarenlagerplatz
+			WHERE tWarenLagerEingang.fAnzahlAktuell &gt; 0.0	
+				AND Bestands&#228;nderungen.nBestandZuBuchen &lt; 0.0	
+		) AS AusbuchenFiFO	
+		WHERE CASE WHEN AusbuchenFiFO.BestandLaufendeSumme &lt; ABS(AusbuchenFiFO.nBestandZuBuchenGesamt) 
+				THEN AusbuchenFiFo.fAnzahlAktuell 
+				ELSE AusbuchenFiFO.fAnzahlAktuell - (AusbuchenFiFO.BestandLaufendeSumme - ABS(AusbuchenFiFO.nBestandZuBuchenGesamt)) 
+			END &gt; 0.0
+		ORDER BY AusbuchenFiFO.kArtikel;	
+
+	DECLARE @xWarenlagerAusgaenge XML;
+	SET @xWarenlagerAusgaenge = 
+		(
+			SELECT
+				Warenausg&#228;nge.kWarenLagerEingang AS kWarenLagerEingang, 
+				0 AS kLieferscheinPos,
+				Warenausg&#228;nge.nBestandzuBuchen AS fAnzahl,
+				Warenausg&#228;nge.kWarenLagerPlatz AS kWarenLagerPlatz, 
+				Warenausg&#228;nge.kArtikel AS kArtikel, 
+				&#39;FBA Bestand ausbuchen f&#252;r Abgleich&#39; cKommentar, 
+				GETDATE() AS dErstellt, 
+				Warenausg&#228;nge.kBenutzer AS kBenutzer, 
+				40 AS kBuchungsart -- FBA Bestands&#228;nderung (40)
+			FROM @Warenausg&#228;nge AS Warenausg&#228;nge			
+			FOR XML PATH(&#39;WarenAusgang&#39;), TYPE
+		);
+
+	IF(NOT @xWarenlagerAusgaenge IS NULL)
+	BEGIN
+		EXEC spWarenlagerAusgangSchreiben @xWarenlagerAusgaenge,  @nHistorieNichtSchreiben = 0;    
+	END
+
+	DECLARE @letztesBuchungsdatum AS DATE
+	SET @letztesBuchungsdatum = (SELECT 
+								    MAX(pf_amazon_BestandAnDatum.dErstellt) AS letztesBuchungsdatum
+								 FROM dbo.pf_amazon_BestandAnDatum);
+
+	IF (DATEDIFF(dd, @letztesBuchungsdatum, GETDATE()) &gt; 100)
+	BEGIN
+		SET @letztesBuchungsdatum = GETDATE() - 100;
+	END;
+
+	IF(NOT @letztesBuchungsdatum IS NULL)
+	BEGIN
+		--
+		-- Zeitraum bis heute auff&#252;llen
+		--
+		;WITH DateTable
+		AS
+		(
+			SELECT 
+				DATEADD(dd, 1, @letztesBuchungsdatum) AS DateCounter
+			WHERE @letztesBuchungsdatum &lt; CONVERT(DATE, GETDATE())
+			UNION ALL
+			SELECT 
+				DATEADD(dd, 1, DateCounter) AS DateCounter
+			FROM DateTable
+			WHERE DATEADD(dd, 1, DateCounter) &lt; CONVERT(DATE, GETDATE())
+		)
+		INSERT INTO dbo.pf_amazon_BestandAnDatum (kUser, cSellerSKU, dErstellt)
+			SELECT DISTINCT 
+				pf_amazon_BestandAnDatum.kUser AS kUser,
+				pf_amazon_BestandAnDatum.cSellerSKU AS cSellerSKU,
+				DateTable.DateCounter AS dErstellt
+			FROM DateTable
+			JOIN dbo.pf_amazon_BestandAnDatum ON @letztesBuchungsdatum = pf_amazon_BestandAnDatum.dErstellt            
+			WHERE pf_amazon_BestandAnDatum.dErstellt = @letztesBuchungsdatum;
+	END
+
+	--
+	-- Aktuelle Best&#228;nde einbuchen
+	--
+	INSERT INTO dbo.pf_amazon_BestandAnDatum (kUser, cSellerSKU, dErstellt)
+		SELECT DISTINCT
+			pf_amazon_angebot_fba.kUser AS kUser,
+			pf_amazon_angebot_fba.cSellerSKU AS cSellerSKU,
+			CONVERT(DATE, GETDATE()) AS dErstellt
+		FROM pf_amazon_angebot_fba
+		LEFT JOIN dbo.pf_amazon_BestandAnDatum ON CONVERT(DATE, GETDATE()) = pf_amazon_BestandAnDatum.dErstellt 
+			AND pf_amazon_BestandAnDatum.cSellerSKU = pf_amazon_angebot_fba.cSellerSKU
+		WHERE pf_amazon_angebot_fba.nQuantity &gt; 0
+			AND pf_amazon_BestandAnDatum.dErstellt IS NULL;
+END</code></pre>
+</body>
+</html>

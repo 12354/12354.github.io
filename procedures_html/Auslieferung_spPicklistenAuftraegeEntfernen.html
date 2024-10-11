@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auslieferung.spPicklistenAuftraegeEntfernen</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 20px; }
+        h1 { color: #333; }
+        pre { background-color: #f4f4f4; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Auslieferung.spPicklistenAuftraegeEntfernen</h1>
+    <p><strong>Description:</strong> Keine Beschreibung hinterlegt.</p>
+    <p><strong>Long Description:</strong> Keine ausführliche Beschreibung hinterlegt.</p>
+    <p><strong>Created At:</strong> 2024-01-12 03:32:03</p>
+    <p><strong>Updated At:</strong> 2024-01-12 03:32:03</p>
+    <h2>Code:</h2>
+    <pre><code>CREATE PROCEDURE [Auslieferung].[spPicklistenAuftraegeEntfernen]  
+
+-- Format:
+-- &lt;Bestellung&gt;
+--   &lt;kBestellung&gt;1&lt;/kBestellung&gt;
+-- &lt;/Bestellung&gt;
+
+@Auftraege XML,
+
+-- Enth&#228;lt den Benutzer zur eindeutigen Zuordnung
+@kBenutzer INT,
+
+-- Sitzungsid
+@kSessionId INT
+
+AS  
+SET NOCOUNT ON;
+SET ANSI_NULLS ON;
+SET ANSI_NULL_DFLT_ON ON;
+SET ANSI_PADDING ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET XACT_ABORT OFF;
+  
+-- 
+-- XML-Geraffel umkopieren
+-- 
+IF(OBJECT_ID(&#39;tempdb..#Bestellungen&#39;) IS NOT NULL)
+BEGIN
+	DROP TABLE #Bestellungen;
+END
+CREATE TABLE #Bestellungen(
+	kBestellung INT
+)
+INSERT INTO #Bestellungen
+(
+	#Bestellungen.kBestellung
+)
+SELECT
+	ParamValues.ID.value(&#39;kBestellung[1]&#39;, &#39;INT&#39;) AS kBestellung
+FROM @Auftraege.nodes(&#39;/Bestellung&#39;) AS ParamValues(ID)
+
+DELETE dbo.tPicklistePos
+FROM dbo.tPicklistePos 
+JOIN dbo.tPickliste ON dbo.tPickliste.kPickliste = dbo.tPicklistePos.kPickliste AND dbo.tPickliste.kSessionId = @kSessionId
+JOIN Verkauf.vAuftragPosition ON vAuftragPosition.kAuftragPosition = dbo.tPicklistePos.kBestellPos
+JOIN #Bestellungen ON #Bestellungen.kBestellung = vAuftragPosition.kAuftrag</code></pre>
+</body>
+</html>
